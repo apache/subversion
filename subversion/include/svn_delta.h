@@ -490,18 +490,37 @@ svn_txdelta_send_contents(const unsigned char *contents,
  * MD5 digest of the resulting fulltext.
  *
  * If @a error_info is non-NULL, it is inserted parenthetically into
- * the error string for any error returned by svn_txdelta_apply() or
+ * the error string for any error returned by svn_txdelta_apply2() or
  * @a *handler.  (It is normally used to provide path information,
  * since there's nothing else in the delta application's context to
  * supply a path for error messages.)
  *
- * The @a source stream will NOT be closed. The @a target stream will be
- * closed when the window handler is given a null window to signal the
- * end of the delta.
+ * @note both @a source and @a target will be closed when the window
+ * handler is given a null window to signal the end of the delta.
+ * If the closure is not desired, then you can use svn_stream_disown()
+ * to protect either or both of the streams from being closed.
  *
  * @note To avoid lifetime issues, @a error_info is copied into
  * @a pool or a subpool thereof.
+ *
+ * @since New in 1.15.
  */
+void
+svn_txdelta_apply2(svn_stream_t *source,
+                   svn_stream_t *target,
+                   unsigned char *result_digest,
+                   const char *error_info,
+                   apr_pool_t *pool,
+                   svn_txdelta_window_handler_t *handler,
+                   void **handler_baton);
+
+/** Similar to svn_txdelta_apply2(), but the @a source stream is NOT closed.
+ * The @a target stream will be closed when the window handler is given
+ * a null window to signal the end of the delta.
+ *
+ * @deprecated Provided for backward compatibility with the 1.14 API.
+ */
+SVN_DEPRECATED
 void
 svn_txdelta_apply(svn_stream_t *source,
                   svn_stream_t *target,

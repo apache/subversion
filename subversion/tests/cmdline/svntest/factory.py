@@ -972,7 +972,7 @@ class TestFactory:
 
   def really_safe_rmtree(self, dir):
     # Safety catch. We don't want to remove outside the sandbox.
-    if dir.find('svn-test-work') < 0:
+    if dir.find(main.work_dir) < 0:
       raise Failure("Tried to remove path outside working area: " + dir)
     main.safe_rmtree(dir)
 

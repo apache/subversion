@@ -47,6 +47,7 @@ sys.path.insert(0, os.path.join('build', 'generator'))
 sys.path.insert(1, 'build')
 
 gen_modules = {
+  'cmake' : ('gen_cmake', 'CMake build system'),
   'make' : ('gen_make', 'Makefiles for POSIX systems'),
   'vcproj' : ('gen_vcnet_vcproj', 'VC.Net project files'),
   }
@@ -206,6 +207,9 @@ def _usage_exit(err=None):
   print("  --with-static-openssl")
   print("           Use static openssl")
   print("")
+  print("  --with-shared-serf")
+  print("           Use shared library version of serf")
+  print("")
   print("  --vsnet-version=VER")
   print("           generate for VS.NET version VER (2005-2017 or 9.0-15.0)")
   print("           [implies '-t vcproj']")
@@ -257,6 +261,7 @@ if __name__ == '__main__':
                             'with-apr_memcache=',
                             'with-static-apr',
                             'with-static-openssl',
+                            'with-shared-serf',
                             'enable-pool-debug',
                             'enable-purify',
                             'enable-quantify',

@@ -31,6 +31,9 @@
 
 #include <serf.h>
 #include <serf_bucket_types.h>
+#if defined(SVN__SERF_EXPERIMENTAL) && SERF_VERSION_AT_LEAST(1, 5, 0)
+#include <serf_bucket_util.h>
+#endif
 
 #include "svn_hash.h"
 #include "svn_dirent_uri.h"
@@ -39,6 +42,7 @@
 #include "svn_string.h"
 #include "svn_props.h"
 #include "svn_dirent_uri.h"
+#include "svn_sorts.h"
 
 #include "../libsvn_ra/ra_loader.h"
 #include "private/svn_dep_compat.h"
@@ -480,7 +484,8 @@ load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
   return SVN_NO_ERROR;
 }
 
-#if SERF_VERSION_AT_LEAST(1, 4, 0) && defined(SVN__SERF_TEST_HTTP2)
+#ifdef SVN__SERF_EXPERIMENTAL
+#if SERF_VERSION_AT_LEAST(1, 5, 0) && defined(SVN__SERF_TEST_HTTP2)
 /* Implements serf_ssl_protocol_result_cb_t */
 static apr_status_t
 conn_negotiate_protocol(void *data,
@@ -510,6 +515,7 @@ conn_negotiate_protocol(void *data,
 
   return APR_SUCCESS;
 }
+#endif
 #endif
 
 static svn_error_t *
@@ -557,7 +563,8 @@ conn_setup(apr_socket_t *sock,
               SVN_ERR(load_authorities(conn, conn->session->ssl_authorities,
                                        conn->session->pool));
             }
-#if SERF_VERSION_AT_LEAST(1, 4, 0) && defined(SVN__SERF_TEST_HTTP2)
+#ifdef SVN__SERF_EXPERIMENTAL
+#if SERF_VERSION_AT_LEAST(1, 5, 0) && defined(SVN__SERF_TEST_HTTP2)
           if (APR_SUCCESS ==
                 serf_ssl_negotiate_protocol(conn->ssl_context, "h2,http/1.1",
                                             conn_negotiate_protocol, conn))
@@ -566,6 +573,7 @@ conn_setup(apr_socket_t *sock,
                             conn->conn,
                             SERF_CONNECTION_FRAMING_TYPE_NONE);
             }
+#endif
 #endif
         }
 
@@ -1139,7 +1147,7 @@ svn_ra_serf__expect_empty_body(serf_request_t *request,
 {
   svn_ra_serf__handler_t *handler = baton;
   serf_bucket_t *hdrs;
-  const char *val;
+  const char *val = 0;
 
   /* This function is just like handle_multistatus_only() except for the
      XML parsing callbacks. We want to look for the -readable element.  */
@@ -1151,7 +1159,9 @@ svn_ra_serf__expect_empty_body(serf_request_t *request,
   SVN_ERR_ASSERT(handler->server_error == NULL);
 
   hdrs = serf_bucket_response_get_headers(response);
-  val = serf_bucket_headers_get(hdrs, "Content-Type");
+  if (hdrs)
+    val = serf_bucket_headers_get(hdrs, "Content-Type");
+
   if (val
       && (handler->sline.code < 200 || handler->sline.code >= 300)
       && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
@@ -2152,3 +2162,128 @@ svn_ra_serf__get_dirent_props(apr_uint32_t dirent_fields,
   return props;
 }
 
+static apr_status_t
+bucket_limited_readline(serf_bucket_t *bucket, int acceptable,
+                        apr_size_t requested, int *found,
+                        const char **data, apr_size_t *len)
+{
+  apr_status_t status;
+  const char *peek_data;
+  apr_size_t peek_len;
+
+  status = bucket->type->peek(bucket, &peek_data, &peek_len);
+  if (SERF_BUCKET_READ_ERROR(status))
+    return status;
+
+  if (peek_len == 0)
+    {
+      /* peek() returned no data.  */
+
+      /* ... if that's because the bucket has no data, then we're done.  */
+      if (APR_STATUS_IS_EOF(status))
+        {
+          *found = SERF_NEWLINE_NONE;
+          *len = 0;
+          return APR_EOF;
+        }
+
+      /* We can only read and return a single character.
+
+         For example, if we tried reading 2 characters seeking CRLF, and
+         got CR followed by 'a', then we have over-read the line, and
+         consumed a character from the next line. Bad.
+
+         The only exception is when we *only* allow CRLF as newline. In that
+         case CR followed by 'a' would just be raw line data, not a line
+         break followed by data. If we allow any other type of newline we
+         can't use this trick.
+       */
+
+      if ((acceptable & SERF_NEWLINE_ANY) == SERF_NEWLINE_CRLF)
+        requested = MIN(requested, 2); /* Only CRLF is allowed */
+      else
+        requested = MIN(requested, 1);
+    }
+  else
+    {
+      /* peek_len > 0  */
+
+      const char *cr = NULL;
+      const char *lf = NULL;
+
+      if (peek_len > requested)
+        peek_len = requested;
+
+      if ((acceptable & SERF_NEWLINE_CR) || (acceptable & SERF_NEWLINE_CRLF))
+        cr = memchr(peek_data, '\r', peek_len);
+      if ((acceptable & SERF_NEWLINE_LF))
+        lf = memchr(peek_data, '\n', peek_len);
+
+      if (cr && lf)
+        cr = MIN(cr, lf);
+      else if (lf)
+        cr = lf;
+
+      /* ### When we are only looking for CRLF we may return too small
+             chunks here when the data contains CR or LF without the other.
+             That isn't incorrect, but it could be optimized.
+
+         ### But as that case is not common, the caller has to assume
+             partial reads anyway and this is just a not very inefficient
+             fallback implementation...
+
+             Let's make the buffering in the caller handle that case
+             for now. */
+
+      if (cr && *cr == '\r' && (acceptable & SERF_NEWLINE_CRLF) &&
+          ((cr + 1) < (peek_data + peek_len)) && *(cr + 1) == '\n')
+        {
+          requested = (cr + 2) - peek_data;
+        }
+      else if (cr)
+        requested = (cr + 1) - peek_data;
+      else
+        requested = peek_len;
+    }
+
+  status = bucket->type->read(bucket, requested, data, len);
+  if (SERF_BUCKET_READ_ERROR(status))
+    return status;
+
+  if (*len == 0)
+    {
+      *found = SERF_NEWLINE_NONE;
+    }
+  else if ((acceptable & SERF_NEWLINE_CRLF) && *len >= 2 &&
+           (*data)[*len - 1] == '\n' && (*data)[*len - 2] == '\r')
+    {
+      *found = SERF_NEWLINE_CRLF;
+    }
+  else if ((acceptable & SERF_NEWLINE_LF) && (*data)[*len - 1] == '\n')
+    {
+      *found = SERF_NEWLINE_LF;
+    }
+  else if ((acceptable & (SERF_NEWLINE_CRLF | SERF_NEWLINE_CR)) &&
+           (*data)[*len - 1] == '\r')
+    {
+      *found = (acceptable & (SERF_NEWLINE_CRLF)) ? SERF_NEWLINE_CRLF_SPLIT
+                                                  : SERF_NEWLINE_CR;
+    }
+  else
+    *found = SERF_NEWLINE_NONE;
+
+  return status;
+}
+
+apr_status_t
+svn_ra_serf__default_readline(serf_bucket_t *bucket, int acceptable,
+                              int *found,
+                              const char **data, apr_size_t *len)
+{
+#if defined(SVN__SERF_EXPERIMENTAL) && SERF_VERSION_AT_LEAST(1, 5, 0)
+  return serf_default_readline(bucket, acceptable, found, data, len);
+#else
+  return bucket_limited_readline(bucket, acceptable, SERF_READ_ALL_AVAIL,
+                                 found, data, len);
+#endif
+}

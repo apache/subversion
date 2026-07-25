@@ -172,7 +172,9 @@ class SubversionClientTestCase(unittest.TestCase):
 
     path = self.temper.alloc_empty_dir('-checkout')
 
-    self.assertRaises(ValueError, client.checkout2,
+    # TypeError is raised since SWIG 4.3.0
+    self.assertRaises((ValueError, TypeError), r'Received a NULL pointer',
+                      client.checkout2,
                       self.repos_uri, path, None, None, True, True,
                       self.client_ctx)
 
@@ -233,9 +235,17 @@ class SubversionClientTestCase(unittest.TestCase):
                                                         u" message")
     self.client_ctx.log_msg_baton3 = bogus_log_message_func
 
-    with self.assertRaises(UnicodeEncodeError):
-      commit_info = client.mkdir3((directory,), 1, {b'customprop':b'value'},
-                                  self.client_ctx)
+    if not utils.IS_PY3 and utils.is_defaultencoding_utf8():
+      # 'utf-8' codecs on Python 2 does not raise UnicodeEncodeError
+      # on surrogate code point U+dc00 - U+dcff, however it causes
+      # Subversion error on property validation of svn:log
+      with self.assertRaises(core.SubversionException):
+        commit_info = client.mkdir3((directory,), 1, {b'customprop':b'value'},
+                                    self.client_ctx)
+    else:
+      with self.assertRaises(UnicodeEncodeError):
+        commit_info = client.mkdir3((directory,), 1, {b'customprop':b'value'},
+                                    self.client_ctx)
 
   def test_log3_url(self):
     """Test svn_client_log3 on a file:// URL"""
@@ -292,9 +302,9 @@ class SubversionClientTestCase(unittest.TestCase):
 
     self.received_log_entries = []
 
-    # (Python 3: pass tuple of bytes and str mixture as revprops argument)
+    # (Pass tuple of bytes and str(unicode) mixture as revprops argument)
     client.log5((directory,), start, (rev_range,), 1, True, False, False,
-                ('svn:author', b'svn:log'),
+                (u'svn:author', b'svn:log'),
                 log_entry_receiver_whole, self.client_ctx)
     self.assertEqual(len(self.received_log_entries), 1)
     revprops = self.received_log_entries[0].revprops
@@ -302,10 +312,14 @@ class SubversionClientTestCase(unittest.TestCase):
     self.assertEqual(revprops[b'svn:author'], b"john")
     with self.assertRaises(KeyError):
       commit_date = revprops['svn:date']
-    with self.assertRaises(UnicodeEncodeError):
-      client.log5((directory,), start, (rev_range,), 1, True, False, False,
-                  (u'svn:\udc61uthor', b'svn:log'),
-                  log_entry_receiver_whole, self.client_ctx)
+    if utils.IS_PY3 or not utils.is_defaultencoding_utf8():
+      # 'utf-8' codecs on Python 2 does not raise UnicodeEncodeError
+      # on surrogate code point U+dc00 - U+dcff. So we need to skip
+      # below in such a case.
+      with self.assertRaises(UnicodeEncodeError):
+        client.log5((directory,), start, (rev_range,), 1, True, False, False,
+                    (u'svn:\udc61uthor', b'svn:log'),
+                    log_entry_receiver_whole, self.client_ctx)
 
   def test_uuid_from_url(self):
     """Test svn_client_uuid_from_url on a file:// URL"""
@@ -505,6 +519,59 @@ class SubversionClientTestCase(unittest.TestCase):
                      self.proplist_receiver_dir1, self.client_ctx)
     self.assertEqual(self.proplist_receiver_dir1_calls, 1)
 
+  def test_propset_local(self):
+    """Test svn_client_propset_local.
+(also, testing const svn_string_t * input)"""
+
+    head = core.svn_opt_revision_t()
+    head.kind = core.svn_opt_revision_head
+    unspecified = core.svn_opt_revision_t()
+    unspecified.kind = core.svn_opt_revision_working
+
+    path = self.temper.alloc_empty_dir('-propset_local')
+
+    target_path = core.svn_dirent_join(path, b'trunk/README.txt')
+    target_prop = b'local_prop_test'
+    prop_val1 = b'foo'
+
+    co_rev = client.checkout3(self.repos_uri, path, head, head,
+                              core.svn_depth_infinity, True, True,
+                              self.client_ctx)
+
+    client.propset_local(target_prop, prop_val1, [target_path],
+                         core.svn_depth_empty, False, None, self.client_ctx)
+    props, iprops, prop_rev = client.propget5(target_prop, target_path,
+                                              unspecified, unspecified,
+                                              core.svn_depth_empty,
+                                              None, self.client_ctx)
+    self.assertFalse(iprops)
+    self.assertEqual(prop_rev, co_rev)
+    self.assertEqual(props, { target_path : prop_val1 })
+
+    # Using str(unicode) to specify property value.
+    prop_val2 = b'bar'
+    client.propset_local(target_prop, prop_val2.decode('utf-8'), [target_path],
+                         core.svn_depth_empty, False, None, self.client_ctx)
+    props, iprops, prop_rev = client.propget5(target_prop, target_path,
+                                              unspecified, unspecified,
+                                              core.svn_depth_empty,
+                                              None, self.client_ctx)
+    self.assertEqual(props, { target_path : prop_val2 })
+
+    # Using str(unicode) and check if it uses 'utf-8' codecs on Python 3
+    # (or Python 2, only if its default encoding is 'utf-8')
+    if utils.IS_PY3 or utils.is_defaultencoding_utf8():
+      # prop_val3 = '(checkmark)UNICODE'
+      prop_val3_str = (u'\u2705\U0001F1FA\U0001F1F3\U0001F1EE'
+                       u'\U0001F1E8\U0001F1F4\U0001F1E9\U0001F1EA')
+      client.propset_local(target_prop, prop_val3_str, [target_path],
+                           core.svn_depth_empty, False, None, self.client_ctx)
+      props, iprops, prop_rev = client.propget5(target_prop, target_path,
+                                                unspecified, unspecified,
+                                              core.svn_depth_empty,
+                                              None, self.client_ctx)
+      self.assertEqual(props, { target_path : prop_val3_str.encode('utf-8') })
+
   def test_update4(self):
     """Test update and the notify function callbacks"""
 
@@ -514,7 +581,9 @@ class SubversionClientTestCase(unittest.TestCase):
 
     path = self.temper.alloc_empty_dir('-update')
 
-    self.assertRaises(ValueError, client.checkout2,
+    # TypeError is raised since SWIG 4.3.0
+    self.assertRaises((ValueError, TypeError), r'Received a NULL pointer',
+                      client.checkout2,
                       self.repos_uri, path, None, None, True, True,
                       self.client_ctx)
 

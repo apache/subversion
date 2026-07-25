@@ -691,17 +691,20 @@ compare_p2l_to_rev(svn_fs_t *fs,
            * during later stages of the verification process. */
           if (   (entry->type == SVN_FS_FS__ITEM_TYPE_CHANGES)
               != (entry->item.number == SVN_FS_FS__ITEM_INDEX_CHANGES))
-            return svn_error_createf(SVN_ERR_FS_INDEX_CORRUPTION,
-                                     NULL,
-                                     _("p2l index entry for changes in"
-                                       " revision r%ld is item"
-                                       " %"APR_UINT64_T_FMT
-                                       " of type %u at offset %s"),
-                                     entry->item.revision,
-                                     entry->item.number,
-                                     (unsigned int)entry->type,
-                                     apr_off_t_toa(pool, offset));
-
+            {
+              const char *num_str = apr_psprintf(pool,
+                                                 "%" APR_UINT64_T_FMT,
+                                                 entry->item.number);
+              return svn_error_createf(SVN_ERR_FS_INDEX_CORRUPTION,
+                                       NULL,
+                                       _("p2l index entry for changes in"
+                                         " revision r%ld is item %s"
+                                         " of type %u at offset %s"),
+                                       entry->item.revision,
+                                       num_str,
+                                       (unsigned int)entry->type,
+                                       apr_off_t_toa(pool, offset));
+            }
           /* Check contents. */
           if (entry->type == SVN_FS_FS__ITEM_TYPE_UNUSED)
             {

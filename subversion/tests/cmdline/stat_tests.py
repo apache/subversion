@@ -3,7 +3,7 @@
 #  stat_tests.py:  testing the svn stat command
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -559,7 +559,7 @@ def status_uninvited_parent_directory(sbox):
 
   for line in out:
     # The "/?" is just to allow for an optional trailing slash.
-    if re.match("\\s+\\*.*\.other/?$", line):
+    if re.match(r"\s+\*.*\.other/?$", line):
       raise svntest.Failure
 
 @Issue(1289)
@@ -1950,7 +1950,7 @@ def modified_modulo_translation(sbox):
 
   # CRLF it.
   with open(sbox.ospath('iota'), 'wb') as f:
-    f.write("This is the file 'iota'.\r\n")
+    f.write(b"This is the file 'iota'.\r\n")
 
   # Run status.  Expect some output.
   # TODO: decide how such files should show in the output; whether they

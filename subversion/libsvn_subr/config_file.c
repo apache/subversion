@@ -610,7 +610,7 @@ svn_config__sys_config_path(const char **path_p,
   {
     char folder[B_PATH_NAME_LENGTH];
 
-    status_t error = find_directory(B_COMMON_SETTINGS_DIRECTORY, -1, false,
+    status_t error = find_directory(B_SYSTEM_SETTINGS_DIRECTORY, -1, false,
                                     folder, sizeof(folder));
     if (error)
       return SVN_NO_ERROR;
@@ -807,6 +807,7 @@ svn_config__parse_stream(svn_stream_t *stream,
           SVN_ERR(open_section(ctx, &stop));
           if (stop)
             return SVN_NO_ERROR;
+          ++(ctx->line);
           break;
 
         case '#':               /* Comment */
@@ -1236,7 +1237,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### It does not remove or invalidate existing stored credentials."  NL
         "### To do that, see the 'svn auth --remove' command, or remove the" NL
         "### cache files by hand as described in the Subversion book at"     NL
-        "### http://svnbook.red-bean.com/nightly/en/svn.serverconfig.netmodel.html#svn.tour.initial.authn-cache-purge"
+        "### https://svnbook.red-bean.com/nightly/en/svn.serverconfig.netmodel.html#svn.tour.initial.authn-cache-purge"
                                                                              NL
         "###"                                                                NL
         "### HTTP timeouts, if given, are specified in seconds.  A timeout"  NL
@@ -1442,11 +1443,12 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### is defined.  The command (or environment variable) may contain" NL
         "### arguments, using standard shell quoting for arguments with"     NL
         "### spaces.  The command will be invoked as:"                       NL
-        "###   <command> <hostname> svnserve -t"                             NL
-        "### (If the URL includes a username, then the hostname will be"     NL
-        "### passed to the tunnel agent as <user>@<hostname>.)  If the"      NL
-        "### built-in ssh scheme were not predefined, it could be defined"   NL
-        "### as:"                                                            NL
+        "###   <command> <hostinfo> svnserve -t"                             NL
+        "### where <hostinfo> is the hostname part of the URL.  If the URL"  NL
+        "### specified a username and/or a port, those are included in the"  NL
+        "### <hostinfo> argument in the usual way: <user>@<hostname>:<port>."NL
+        "### If the built-in ssh scheme were not predefined, it could be"    NL
+        "### defined as:"                                                    NL
         "# ssh = $SVN_SSH ssh -q --"                                         NL
         "### If you wanted to define a new 'rsh' scheme, to be used with"    NL
         "### 'svn+rsh:' URLs, you could do so as follows:"                   NL
@@ -1552,6 +1554,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### returning an error.  The default is 10000, i.e. 10 seconds."    NL
         "### Longer values may be useful when exclusive locking is enabled." NL
         "# busy-timeout = 10000"                                             NL
+        "### Set the default working copy format version.  Newly created"    NL
+        "### and upgraded working copies will by default be compatible with" NL
+        "### the specified Subversion version."                              NL
+        "# compatible-version = 1.8"                                         NL
         ;
 
       err = svn_io_file_open(&f, path,

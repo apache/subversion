@@ -1006,7 +1006,7 @@ parse_pretty_mergeinfo_line(svn_boolean_t *found_mergeinfo,
                 }
               (*number_of_reverse_merges)--;
             }
-          else if (number_of_forward_merges > 0) /* forward merges */
+          else if (*number_of_forward_merges > 0) /* forward merges */
             {
               if (patch->reverse)
                 {
@@ -1545,12 +1545,12 @@ static svn_error_t *
 git_start(enum parse_state *new_state, char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  const char *old_path_start;
+  char *old_path_start;
   char *old_path_end;
-  const char *new_path_start;
+  char *new_path_start;
   const char *new_path_end;
   char *new_path_marker;
-  const char *old_path_marker;
+  char *old_path_marker;
 
   /* ### Add handling of escaped paths
    * http://www.kernel.org/pub/software/scm/git/docs/git-diff.html:
@@ -1947,32 +1947,6 @@ add_property_hunk(svn_patch_t *patch, const char *prop_name,
   return SVN_NO_ERROR;
 }
 
-struct svn_patch_file_t
-{
-  /* The APR file handle to the patch file. */
-  apr_file_t *apr_file;
-
-  /* The file offset at which the next patch is expected. */
-  apr_off_t next_patch_offset;
-};
-
-svn_error_t *
-svn_diff_open_patch_file(svn_patch_file_t **patch_file,
-                         const char *local_abspath,
-                         apr_pool_t *result_pool)
-{
-  svn_patch_file_t *p;
-
-  p = apr_palloc(result_pool, sizeof(*p));
-  SVN_ERR(svn_io_file_open(&p->apr_file, local_abspath,
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
-                           result_pool));
-  p->next_patch_offset = 0;
-  *patch_file = p;
-
-  return SVN_NO_ERROR;
-}
-
 /* Parse hunks from APR_FILE and store them in PATCH->HUNKS.
  * Parsing stops if no valid next hunk can be found.
  * If IGNORE_WHITESPACE is TRUE, lines without
@@ -2192,13 +2166,38 @@ static struct transition transitions[] =
   {"GIT binary patch",  state_git_mode_seen,    binary_patch_start},
 };
 
+
+/*** svn_diff_patch_parser_t implementation ***/
+
+struct svn_diff_patch_parser_t
+{
+  /* The APR file handle to the patch file. */
+  apr_file_t *apr_file;
+
+  /* The file offset at which the next patch is expected. */
+  apr_off_t next_patch_offset;
+};
+
+svn_diff_patch_parser_t *
+svn_diff_patch_parser_create(apr_file_t *patch_file,
+                             apr_pool_t *result_pool)
+{
+  svn_diff_patch_parser_t *result;
+
+  result = apr_palloc(result_pool, sizeof(*result));
+  result->apr_file = patch_file;
+  result->next_patch_offset = 0;
+
+  return result;
+}
+
 svn_error_t *
-svn_diff_parse_next_patch(svn_patch_t **patch_p,
-                          svn_patch_file_t *patch_file,
-                          svn_boolean_t reverse,
-                          svn_boolean_t ignore_whitespace,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
+svn_diff_patch_parser_next(svn_patch_t **patch_p,
+                           svn_diff_patch_parser_t *patch_file,
+                           svn_boolean_t reverse,
+                           svn_boolean_t ignore_whitespace,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   apr_off_t pos, last_line;
   svn_boolean_t eof;
@@ -2368,6 +2367,50 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
 
   *patch_p = patch;
   return SVN_NO_ERROR;
+}
+
+
+/*** svn_patch_file_t implementation ***/
+
+struct svn_patch_file_t
+{
+  /* The APR file handle to the patch file. */
+  apr_file_t *apr_file;
+
+  /* Inner parser for svn_diff_patch_parser_next() */
+  svn_diff_patch_parser_t *parser;
+};
+
+svn_error_t *
+svn_diff_open_patch_file(svn_patch_file_t **patch_file,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool)
+{
+  svn_patch_file_t *p;
+
+  p = apr_palloc(result_pool, sizeof(*p));
+  SVN_ERR(svn_io_file_open(&p->apr_file, local_abspath,
+                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                           result_pool));
+
+  p->parser = svn_diff_patch_parser_create(p->apr_file, result_pool);
+
+  *patch_file = p;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_diff_parse_next_patch(svn_patch_t **patch_p,
+                          svn_patch_file_t *patch_file,
+                          svn_boolean_t reverse,
+                          svn_boolean_t ignore_whitespace,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_diff_patch_parser_next(patch_p, patch_file->parser,
+                                                    reverse, ignore_whitespace,
+                                                    result_pool, scratch_pool));
 }
 
 svn_error_t *

@@ -136,6 +136,34 @@ svn_client__pathrev_fspath(const svn_client__pathrev_t *pathrev,
 }
 
 
+svn_client__merge_source_t *
+svn_client__merge_source_create(const svn_client__pathrev_t *loc1,
+                                const svn_client__pathrev_t *loc2,
+                                svn_boolean_t ancestral,
+                                apr_pool_t *result_pool)
+{
+  svn_client__merge_source_t *s
+    = apr_palloc(result_pool, sizeof(*s));
+
+  s->loc1 = svn_client__pathrev_dup(loc1, result_pool);
+  s->loc2 = svn_client__pathrev_dup(loc2, result_pool);
+  s->ancestral = ancestral;
+  return s;
+}
+
+svn_client__merge_source_t *
+svn_client__merge_source_dup(const svn_client__merge_source_t *source,
+                             apr_pool_t *result_pool)
+{
+  svn_client__merge_source_t *s = apr_palloc(result_pool, sizeof(*s));
+
+  s->loc1 = svn_client__pathrev_dup(source->loc1, result_pool);
+  s->loc2 = svn_client__pathrev_dup(source->loc2, result_pool);
+  s->ancestral = source->ancestral;
+  return s;
+}
+
+
 svn_client_commit_item3_t *
 svn_client_commit_item3_create(apr_pool_t *pool)
 {
@@ -426,7 +454,7 @@ fetch_base_func(const char **filename,
     }
 
   /* Reads the pristine of WORKING, not of BASE */
-  err = svn_wc_get_pristine_contents2(&pristine_stream, scb->wc_ctx,
+  err = svn_wc_get_pristine_contents3(&pristine_stream, scb->wc_ctx,
                                       local_abspath, scratch_pool,
                                       scratch_pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)

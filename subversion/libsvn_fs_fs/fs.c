@@ -34,6 +34,7 @@
 #include "svn_pools.h"
 #include "fs.h"
 #include "fs_fs.h"
+#include "fs_init.h"
 #include "tree.h"
 #include "lock.h"
 #include "hotcopy.h"

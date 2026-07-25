@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,14 +17,15 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 package org.apache.subversion.javahl;
 
 import static org.junit.Assert.*;
 
 import org.apache.subversion.javahl.callback.*;
+import org.apache.subversion.javahl.remote.*;
 import org.apache.subversion.javahl.types.*;
+import org.apache.subversion.javahl.NativeException;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -36,6 +36,7 @@ import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.text.ParseException;
@@ -237,9 +238,10 @@ public class BasicTests extends SVNTests
      */
     public void testRuntimeVersion() throws Throwable
     {
+        RuntimeVersion runtimeVersion = null;
         try
         {
-            RuntimeVersion runtimeVersion = client.getRuntimeVersion();
+            runtimeVersion = client.getRuntimeVersion();
             String versionString = runtimeVersion.toString();
             if (versionString == null || versionString.trim().length() == 0)
             {
@@ -252,11 +254,103 @@ public class BasicTests extends SVNTests
                  "native libraries failed to initialize: " + e);
         }
 
-        RuntimeVersion runtimeVersion = client.getRuntimeVersion();
+        assertNotNull(runtimeVersion);
         Version version = client.getVersion();
         assertTrue(runtimeVersion.getMajor() > version.getMajor()
                    || (runtimeVersion.getMajor() == version.getMajor()
                        && runtimeVersion.getMinor() >= version.getMinor()));
+    }
+
+    /**
+     * Test defaultWcVersion
+     * @throws Throwable
+     */
+    public void testDefaultWcVersion() throws Throwable
+    {
+        try
+        {
+            Version defaultWcVersion = client.defaultWcVersion();
+            String versionString = defaultWcVersion.toString();
+            if (versionString == null || versionString.trim().length() == 0)
+            {
+                throw new Exception("Version string empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("defaultWcVersion should always be available unless " +
+                 "the native libraries failed to initialize: " + e);
+        }
+    }
+
+    /**
+     * Test oldestWcVersion
+     */
+    public void testOldestWcVersion()
+    {
+        try
+        {
+            Version oldestWcVersion = SVNClient.oldestWcVersion();
+            String versionString = oldestWcVersion.toString();
+            if (versionString == null || versionString.trim().length() == 0)
+            {
+                throw new Exception("Version string empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("oldestWcVersion should always be available unless " +
+                 "the native libraries failed to initialize: " + e);
+        }
+    }
+
+    /**
+     * Test latestWcVersion
+     */
+    public void testLatestWcVersion()
+    {
+        try
+        {
+            Version latestWcVersion = SVNClient.latestWcVersion();
+            String versionString = latestWcVersion.toString();
+            if (versionString == null || versionString.trim().length() == 0)
+            {
+                throw new Exception("Version string empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("latestWcVersion should always be available unless " +
+                 "the native libraries failed to initialize: " + e);
+        }
+
+    }
+
+    /**
+     * Test relationships between WC versions
+     * @throws Throwable
+     */
+    public void testWcVersionOrder() throws Throwable
+    {
+        Version defaultWcVersion = client.defaultWcVersion();
+        Version oldestWcVersion = SVNClient.oldestWcVersion();
+        Version latestWcVersion = SVNClient.latestWcVersion();
+
+        assertNotEquals(0, defaultWcVersion.getMajor());
+        assertNotEquals(0, defaultWcVersion.getMinor());
+        assertEquals(0, defaultWcVersion.getPatch());
+
+        assertNotEquals(0, oldestWcVersion.getMajor());
+        assertNotEquals(0, oldestWcVersion.getMinor());
+        assertEquals(0, oldestWcVersion.getPatch());
+
+        assertNotEquals(0, latestWcVersion.getMajor());
+        assertNotEquals(0, latestWcVersion.getMinor());
+        assertEquals(0, latestWcVersion.getPatch());
+
+        assertTrue(latestWcVersion.isAtLeast(oldestWcVersion));
+        assertTrue(latestWcVersion.isAtLeast(defaultWcVersion));
+        assertTrue(defaultWcVersion.isAtLeast(oldestWcVersion));
     }
 
     /**
@@ -767,7 +861,8 @@ public class BasicTests extends SVNTests
         {
             // obstructed checkout must fail
             client.checkout(thisTest.getUrl() + "/A", thisTest.getWCPath(),
-                            null, null, Depth.infinity, false, false);
+                            null, null, Depth.infinity, false, false,
+                            null, Tristate.Unknown);
             fail("missing exception");
         }
         catch (ClientException expected)
@@ -798,13 +893,87 @@ public class BasicTests extends SVNTests
 
         // recheckout the working copy
         client.checkout(thisTest.getUrl().toString(), thisTest.getWCPath(),
-                   null, null, Depth.infinity, false, false);
+                        null, null, Depth.infinity, false, false,
+                        null, Tristate.Unknown);
 
         // deleted file should reapear
         thisTest.getWc().setItemTextStatus("A/B/lambda", Status.Kind.normal);
 
         // check the status of the working copy
         thisTest.checkStatus();
+    }
+
+    /**
+     * Test checkout with the current runtime WC version
+     * @throws Throwable
+     */
+    public void testCurrentWcVersionCheckout() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        client.checkout(thisTest.getUrl() + "/A",
+                        thisTest.getWCPath()  + "/ZZZ",
+                        null, null, Depth.infinity, false, false,
+                        client.getRuntimeVersion(),
+                        Tristate.Unknown);
+    }
+
+    /**
+     * Test checkout with unsupported WC version
+     * @throws Throwable
+     */
+    public void testAncientWcVersionCheckout() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+
+        try
+        {
+            // Checkout with invalid version must fail
+            client.checkout(thisTest.getUrl() + "/A",
+                            thisTest.getWCPath()  + "/ZZZ",
+                            null, null, Depth.infinity, false, false,
+                            Version.getInstance(0, 9, 0),
+                            Tristate.Unknown);
+            fail("missing exception");
+        }
+        catch (ClientException expected)
+        {
+        }
+    }
+
+    /**
+     * Test the basic SVNClient.upgrade functionality.
+     * @throws Throwable
+     */
+    public void testBasicUpgrade() throws Throwable
+    {
+        OneTest thisTest = new OneTest(true, true, true);
+        Version oldestVersion = SVNClient.oldestWcVersion();
+        Version defaultVersion = client.defaultWcVersion();
+
+        Version upgradedVersion =
+            client.upgrade(thisTest.getWCPath(), null);
+
+        assertNotNull(upgradedVersion);
+        assertTrue(upgradedVersion.isAtLeast(oldestVersion));
+        assertTrue(upgradedVersion.isAtLeast(defaultVersion));
+        assertTrue(defaultVersion.isAtLeast(upgradedVersion));
+    }
+
+    /**
+     * Test SVNClient.upgrade to the latest version.
+     * @throws Throwable
+     */
+    public void testLatestUpgrade() throws Throwable
+    {
+        OneTest thisTest = new OneTest(true, true, true);
+        Version latestVersion = SVNClient.latestWcVersion();
+
+        Version upgradedVersion =
+            client.upgrade(thisTest.getWCPath(), latestVersion);
+
+        assertNotNull(upgradedVersion);
+        assertTrue(upgradedVersion.isAtLeast(latestVersion));
+        assertTrue(latestVersion.isAtLeast(upgradedVersion));
     }
 
     /**
@@ -2214,8 +2383,9 @@ public class BasicTests extends SVNTests
 
         // check out the previous revision
         client.checkout(thisTest.getUrl()+"/A/D",
-                thisTest.getWCPath()+"/new_D", new Revision.Number(1),
-                new Revision.Number(1), Depth.infinity, false, false);
+                        thisTest.getWCPath()+"/new_D", new Revision.Number(1),
+                        new Revision.Number(1), Depth.infinity, false, false,
+                        null, Tristate.Unknown);;
     }
 
     /**
@@ -2437,6 +2607,13 @@ public class BasicTests extends SVNTests
                      Info.ScheduleKind.normal, info.getSchedule());
         assertEquals("wrong node kind from info", NodeKind.file,
                      info.getKind());
+        assertTrue("unexpected store-pristine", info.getStorePristine());
+
+        Version current = info.getWorkingCopyVersion();
+        assertNotNull("WC version not available", current);
+        Version expected = client.defaultWcVersion();
+        assertTrue("unexpected WC version", current.isAtLeast(expected));
+        assertTrue("unexpected WC version", expected.isAtLeast(current));
     }
 
     /**
@@ -2589,8 +2766,9 @@ public class BasicTests extends SVNTests
         String secondWC = thisTest.getWCPath() + ".empty";
         removeDirOrFile(new File(secondWC));
 
-        client.checkout(thisTest.getUrl().toString(), secondWC, null, null,
-                       Depth.empty, false, true);
+        client.checkout(thisTest.getUrl().toString(), secondWC,
+                        null, null, Depth.empty, false, true,
+                        null, Tristate.Unknown);
 
         infos = collectInfos(secondWC, null, null, Depth.empty, null);
 
@@ -3921,19 +4099,19 @@ public class BasicTests extends SVNTests
 
     }
 
-    /**
+    /*
+      This is currently commented out, because we don't have an XFail method
+      for JavaHL.  The resolution is pending the result of issue #3680:
+      https://issues.apache.org/jira/browse/SVN-3680
+
+   / **
      * Test tolerance of unversioned obstructions when adding paths with
      * {@link org.apache.subversion.javahl.SVNClient#checkout()},
      * {@link org.apache.subversion.javahl.SVNClient#update()}, and
      * {@link org.apache.subversion.javahl.SVNClient#doSwitch()}
      * @throws IOException
      * @throws SubversionException
-     */
-    /*
-      This is currently commented out, because we don't have an XFail method
-      for JavaHL.  The resolution is pending the result of issue #3680:
-      https://issues.apache.org/jira/browse/SVN-3680
-
+     * /
     public void testObstructionTolerance()
             throws SubversionException, IOException
     {
@@ -4417,6 +4595,346 @@ public class BasicTests extends SVNTests
         assertEquals("fake", new String(revprop));
     }
 
+    public static int FLAG_ECHO          = 0x00000001;
+    public static int FLAG_THROW_IN_OPEN = 0x00000002;
+
+    public enum Actions
+    {
+        READ_CLIENT,    // Read a request from SVN client
+        EMUL_SERVER,    // Emulate server response
+        WAIT_TUNNEL,    // Wait for tunnel to be closed
+    };
+
+    public static class ScriptItem
+    {
+        Actions action;
+        String value;
+
+        ScriptItem(Actions action, String value)
+        {
+            this.action = action;
+            this.value = value;
+        }
+    }
+
+    private static class TestTunnelAgent extends Thread
+        implements TunnelAgent
+    {
+        ScriptItem[] script;
+        int flags;
+        String error = null;
+        ReadableByteChannel request;
+        WritableByteChannel response;
+
+        final CloseTunnelCallback closeTunnelCallback = () ->
+        {
+            if ((flags & FLAG_ECHO) != 0)
+                System.out.println("TunnelAgent.CloseTunnelCallback");
+        };
+
+        TestTunnelAgent(int flags, ScriptItem[] script)
+        {
+            this.flags = flags;
+            this.script = script;
+        }
+
+        public void joinAndTest()
+        {
+            try
+            {
+                join();
+            }
+            catch (InterruptedException e)
+            {
+                fail("InterruptedException was caught");
+            }
+
+            if (error != null)
+                fail(error);
+        }
+
+        @Override
+        public boolean checkTunnel(String name)
+        {
+            return true;
+        }
+
+        private String readClient(ByteBuffer readBuffer)
+            throws IOException
+        {
+            readBuffer.reset();
+            request.read(readBuffer);
+
+            final int offset = readBuffer.arrayOffset();
+            return new String(readBuffer.array(),
+                offset,
+                readBuffer.position() - offset);
+        }
+
+        private void emulateServer(String serverMessage)
+            throws IOException
+        {
+            final byte[] responseBytes = serverMessage.getBytes();
+            response.write(ByteBuffer.wrap(responseBytes));
+        }
+
+        private void doScriptItem(ScriptItem scriptItem, ByteBuffer readBuffer)
+            throws Exception
+        {
+            switch (scriptItem.action)
+            {
+            case READ_CLIENT:
+                final String actualLine = readClient(readBuffer);
+
+                if ((flags & FLAG_ECHO) != 0)
+                {
+                    System.out.println("SERVER: " + scriptItem.value);
+                    System.out.flush();
+                }
+
+                if (!actualLine.contains(scriptItem.value))
+                {
+                    System.err.println("Expected: " + scriptItem.value);
+                    System.err.println("Actual:   " + actualLine);
+                    System.err.flush();
+
+                    // Unblock the SVN thread by emulating a server error
+                    final String serverError = "( success ( ( ) 0: ) ) ( failure ( ( 160000 39:Test script received unexpected request 0: 0 ) ) ) ";
+                    emulateServer(serverError);
+
+                    fail("Unexpected client request");
+                }
+                break;
+            case EMUL_SERVER:
+                if ((flags & FLAG_ECHO) != 0)
+                {
+                    System.out.println("CLIENT: " + scriptItem.value);
+                    System.out.flush();
+                }
+
+                emulateServer(scriptItem.value);
+                break;
+            case WAIT_TUNNEL:
+                // The loop will end with an exception when tunnel is closed
+                for (;;)
+                {
+                    readClient(readBuffer);
+                }
+            }
+        }
+
+        public void run()
+        {
+            final ByteBuffer readBuffer = ByteBuffer.allocate(1024 * 1024);
+            readBuffer.mark();
+
+            for (ScriptItem scriptItem : script)
+            {
+                try
+                {
+                    doScriptItem(scriptItem, readBuffer);
+                }
+                catch (ClosedChannelException ex)
+                {
+                    // Expected when closed properly
+                }
+                catch (IOException e)
+                {
+                    // IOException occurs when already-freed apr_file_t was lucky
+                    // to have reasonable fields to avoid the crash. It still
+                    // indicates a problem.
+                    error = "IOException was caught in run()";
+                    return;
+                }
+                catch (Throwable t)
+                {
+                    // No other exceptions are expected here.
+                    error = "Exception was caught in run()";
+                    t.printStackTrace();
+                    return;
+                }
+            }
+        }
+
+        @Override
+        public CloseTunnelCallback openTunnel(ReadableByteChannel request,
+                                              WritableByteChannel response,
+                                              String name,
+                                              String user,
+                                              String hostname,
+                                              int port)
+            throws Throwable
+        {
+            this.request = request;
+            this.response = response;
+
+            start();
+
+            if ((flags & FLAG_THROW_IN_OPEN) != 0)
+                throw ClientException.fromException(new RuntimeException("Test exception"));
+
+            return closeTunnelCallback;
+        }
+    };
+
+    /**
+     * Test scenario which previously caused a JVM crash.
+     * In this scenario, GC is invoked before closing tunnel.
+     */
+    public void testCrash_RemoteSession_nativeDispose()
+    {
+        final ScriptItem[] script = new ScriptItem[]
+        {
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( 2 2 ( ) ( edit-pipeline svndiff1 absent-entries commit-revprops depth log-revprops atomic-revprops partial-replay inherited-props ephemeral-txnprops file-revs-reverse ) ) ) "),
+            new ScriptItem(Actions.READ_CLIENT, "edit-pipeline"),
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ( ANONYMOUS ) 36:0113e071-0208-4a7b-9f20-3038f9caf0f0 ) ) "),
+            new ScriptItem(Actions.READ_CLIENT, "ANONYMOUS"),
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ) ) ( success ( 36:00000000-0000-0000-0000-000000000000 25:svn+test://localhost/test ( mergeinfo ) ) ) "),
+        };
+
+        final TestTunnelAgent tunnelAgent = new TestTunnelAgent(0, script);
+        final RemoteFactory remoteFactory = new RemoteFactory();
+        remoteFactory.setTunnelAgent(tunnelAgent);
+
+        ISVNRemote remote = null;
+        try
+        {
+            remote = remoteFactory.openRemoteSession("svn+test://localhost/test", 1);
+        }
+        catch (SubversionException e)
+        {
+            fail("SubversionException was caught");
+        }
+
+        // Previously, 'OperationContext::openTunnel()' didn't 'NewGlobalRef()'
+        // callback returned by 'TunnelAgent.openTunnel()'. This caused JVM to
+        // dispose it on next GC. JavaHL calls callback in 'remote.dispose()'.
+        // If the callback was disposed, this caused a JVM crash.
+        System.gc();
+        remote.dispose();
+
+        tunnelAgent.joinAndTest();
+    }
+
+    /**
+     * Test scenario which previously caused a JVM crash.
+     * In this scenario, tunnel was not properly closed after exception in
+     * 'TunnelAgent.openTunnel()'.
+     */
+    public void testCrash_RequestChannel_nativeRead_AfterException()
+    {
+        // Previously, exception caused TunnelChannel's native side to be
+        // destroyed with the following abbreviated stack:
+        //   TunnelChannel.nativeClose()
+        //   svn_pool_destroy(sesspool)
+        //   svn_ra_open5()
+        // TunnelAgent was unaware and called 'RequestChannel.nativeRead()'
+        // or 'ResponseChannel.nativeWrite()', causing either a crash or
+        // an attempt to use a random file.
+        final int flags = FLAG_THROW_IN_OPEN;
+
+        final ScriptItem[] script = new ScriptItem[]
+        {
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( 2 2 ( ) ( edit-pipeline svndiff1 absent-entries commit-revprops depth log-revprops atomic-revprops partial-replay inherited-props ephemeral-txnprops file-revs-reverse ) ) ) "),
+            new ScriptItem(Actions.WAIT_TUNNEL, ""),
+        };
+
+        final TestTunnelAgent tunnelAgent = new TestTunnelAgent(flags, script);
+        final SVNClient svnClient = new SVNClient();
+        svnClient.setTunnelAgent(tunnelAgent);
+
+        try
+        {
+            svnClient.openRemoteSession("svn+test://localhost/test");
+        }
+        catch (SubversionException e)
+        {
+            // RuntimeException("Test exception") is expected here
+        }
+
+        // In this test, there is a race condition that sometimes results in
+        // IOException when 'WAIT_TUNNEL' tries to read from a pipe that
+        // already has its read end closed. This is not an error, but
+        // it's hard to distinguish this case from other IOException which
+        // indicate a problem. To reproduce, simply wrap this test's body in
+        // a loop. The workaround is to ignore any detected IOException.
+        try
+        {
+            tunnelAgent.join();
+        }
+        catch (InterruptedException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Test scenario which previously caused a JVM crash.
+     * In this scenario, tunnel was not properly closed after an SVN error.
+     */
+    public void testCrash_RequestChannel_nativeRead_AfterSvnError()
+    {
+        final String wcRoot = new File("tempSvnRepo").getAbsolutePath();
+
+        final ScriptItem[] script = new ScriptItem[]
+        {
+            // openRemoteSession
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( 2 2 ( ) ( edit-pipeline svndiff1 absent-entries commit-revprops depth log-revprops atomic-revprops partial-replay inherited-props ephemeral-txnprops file-revs-reverse ) ) ) "),
+            new ScriptItem(Actions.READ_CLIENT, "edit-pipeline"),
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ( ANONYMOUS ) 36:0113e071-0208-4a7b-9f20-3038f9caf0f0 ) ) "),
+            new ScriptItem(Actions.READ_CLIENT, "ANONYMOUS"),
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ) ) ( success ( 36:00000000-0000-0000-0000-000000000000 25:svn+test://localhost/test ( mergeinfo ) ) ) "),
+            // checkout
+            new ScriptItem(Actions.READ_CLIENT, "( get-latest-rev ( ) ) "),
+            // Previously, error caused a SubversionException to be created,
+            // which then skipped closing the Tunnel properly due to
+            // 'ExceptionOccurred()' in 'OperationContext::closeTunnel()'.
+            // If TunnelAgent was unaware and called 'RequestChannel.nativeRead()',
+            // it either crashed or tried to use a random file.
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ( ) 0: ) ) ( failure ( ( 160006 20:This is a test error 0: 0 ) ) ) "),
+            // Pretend that TunnelAgent tries to read more
+            new ScriptItem(Actions.WAIT_TUNNEL, ""),
+        };
+
+        final TestTunnelAgent tunnelAgent = new TestTunnelAgent(0, script);
+        final SVNClient svnClient = new SVNClient();
+        svnClient.setTunnelAgent(tunnelAgent);
+
+        try
+        {
+            svnClient.checkout("svn+test://localhost/test",
+                               wcRoot,
+                               Revision.getInstance(1),
+                               null,
+                               Depth.infinity,
+                               true,
+                               false,
+                               null,
+                               Tristate.Unknown);
+
+            svnClient.dispose();
+        }
+        catch (ClientException ex)
+        {
+            final int SVN_ERR_FS_NO_SUCH_REVISION = 160006;
+            if (SVN_ERR_FS_NO_SUCH_REVISION != ex.getAllMessages().get(0).getCode())
+                ex.printStackTrace();
+        }
+
+        tunnelAgent.joinAndTest();
+    }
+
+    /**
+     * Test getMessage in NativeException.
+     * @throws Throwable
+     */
+    public void testGetMessage() throws Throwable
+    {
+	/* NativeException with a null message previously threw a NullPointerException */
+	assertEquals("", new NativeException(null, null, null, 0).getMessage());
+	assertEquals("messagesvn: source: (apr_err=0)", new NativeException("message", "source", null, 0).getMessage());
+    }
+
     /**
      * @return <code>file</code> converted into a -- possibly
      * <code>canonical</code>-ized -- Subversion-internal path
@@ -4605,11 +5123,13 @@ public class BasicTests extends SVNTests
                                          int direntFields, boolean fetchLocks)
         throws ClientException
     {
-        class MyListCallback implements ListCallback
+        class MyListItemCallback implements ListItemCallback
         {
             private List<DirEntry> dirents = new ArrayList<DirEntry>();
 
-            public void doEntry(DirEntry dirent, Lock lock)
+            public void doEntry(DirEntry dirent, Lock lock,
+                                String externalParentURL,
+                                String externalTarget)
             {
                 // All of this is meant to retain backward compatibility with
                 // the old svn_client_ls-style API.  For further information
@@ -4643,9 +5163,9 @@ public class BasicTests extends SVNTests
             }
         }
 
-        MyListCallback callback = new MyListCallback();
-        client.list(url, revision, pegRevision, depth, direntFields,
-                    fetchLocks, callback);
+        MyListItemCallback callback = new MyListItemCallback();
+        client.list(url, revision, pegRevision, null, depth, direntFields,
+                    fetchLocks, false, callback);
         return callback.getDirEntryArray();
     }
 

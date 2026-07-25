@@ -171,6 +171,8 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE_CLIENTS  "exclusive-locking-clients"
 /** @since New in 1.9. */
 #define SVN_CONFIG_OPTION_SQLITE_BUSY_TIMEOUT       "busy-timeout"
+/** @since New in 1.15. */
+#define SVN_CONFIG_OPTION_COMPATIBLE_VERSION        "compatible-version"
 /** @} */
 
 /** @name Repository conf directory configuration files strings

@@ -539,6 +539,21 @@ svn_client__update_internal(svn_revnum_t *result_rev,
    the repos are tolerated; if FALSE, these obstructions cause the checkout
    to fail.
 
+   If SETTINGS_FROM_CONTEXT is TRUE, the working copy settings such as
+   WC_FORMAT_VERSION and STORE_PRISTINE will be determined from context
+   (see svn_wc__settings_from_context) and the values of the corresponding
+   arguments are ignored.  Otherwise, their values take effect as described
+   below:
+
+   - A new working copy, if needed, will be created in the format corresponding
+     to the WC_FORMAT_VERSION of the client.  The format of any existing
+     working copy will remain unchanged.
+
+   - If STORE_PRISTINE is svn_tristate_true, the pristine contents of all
+     files in the working copy will be stored on disk.  If STORE_PRISTINE is
+     svn_tristate_false, the pristine contents will be fetched on-demand when
+     required by the operation.
+
    If RA_SESSION is NOT NULL, it may be used to avoid creating a new
    session. The session may point to a different URL after returning.
    */
@@ -552,6 +567,9 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
+                              svn_boolean_t settings_from_context,
+                              const svn_version_t *wc_format_version,
+                              svn_tristate_t store_pristine,
                               svn_ra_session_t *ra_session,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
@@ -1155,7 +1173,7 @@ svn_client__remote_propget(apr_hash_t *props,
                            apr_pool_t *scratch_pool);
 
 /* */
-typedef struct merge_source_t
+typedef struct svn_client__merge_source_t
 {
   /* "left" side URL and revision (inclusive iff youngest) */
   const svn_client__pathrev_t *loc1;
@@ -1165,10 +1183,23 @@ typedef struct merge_source_t
 
   /* True iff LOC1 is an ancestor of LOC2 or vice-versa (history-wise). */
   svn_boolean_t ancestral;
-} merge_source_t;
+} svn_client__merge_source_t;
+
+/* Return a new merge_source_t structure, allocated in RESULT_POOL,
+ * initialized with deep copies of LOC1 and LOC2 and ANCESTRAL. */
+svn_client__merge_source_t *
+svn_client__merge_source_create(const svn_client__pathrev_t *loc1,
+                                const svn_client__pathrev_t *loc2,
+                                svn_boolean_t ancestral,
+                                apr_pool_t *result_pool);
+
+/* Return a deep copy of SOURCE, allocated in RESULT_POOL. */
+svn_client__merge_source_t *
+svn_client__merge_source_dup(const svn_client__merge_source_t *source,
+                             apr_pool_t *result_pool);
 
 /* Description of the merge target root node (a WC working node) */
-typedef struct merge_target_t
+typedef struct svn_client__merge_target_t
 {
   /* Absolute path to the WC node */
   const char *abspath;
@@ -1178,23 +1209,7 @@ typedef struct merge_target_t
    * REPOS_ROOT_URL and REPOS_UUID are always valid. */
   svn_client__pathrev_t loc;
 
-} merge_target_t;
-
-/*
- * Similar API to svn_client_merge_peg5().
- */
-svn_error_t *
-svn_client__merge_elements(svn_boolean_t *use_sleep,
-                           apr_array_header_t *merge_sources,
-                           merge_target_t *target,
-                           svn_ra_session_t *ra_session,
-                           svn_boolean_t diff_ignore_ancestry,
-                           svn_boolean_t force_delete,
-                           svn_boolean_t dry_run,
-                           const apr_array_header_t *merge_options,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
+} svn_client__merge_target_t;
 
 /* Data for reporting when a merge aborted because of raising conflicts.
  *
@@ -1205,7 +1220,7 @@ typedef struct svn_client__conflict_report_t
 {
   const char *target_abspath;
   /* The revision range during which conflicts were raised */
-  const merge_source_t *conflicted_range;
+  const svn_client__merge_source_t *conflicted_range;
   /* Was the conflicted range the last range in the whole requested merge? */
   svn_boolean_t was_last_range;
 } svn_client__conflict_report_t;
@@ -1235,6 +1250,47 @@ svn_client__merge_locked(svn_client__conflict_report_t **conflict_report,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
+
+/* Synchronize the state of the text-base contents for the LOCAL_ABSPATH tree.
+ *
+ * If ALLOW_HYDRATE is true, fetch the required but missing text-base contents.
+ * If ALLOW_DEHYDRATE is true, remove the on disk text-base contents that are
+ * not required.
+ *
+ * The missing contents will be fetched using the provided RA_SESSION if it
+ * is not NULL.  If RA_SESSION is NULL and some of the text-bases have to be
+ * fetched, a new RA session will be opened internally.  If RA_SESSION_P is
+ * not NULL, the session used during fetch will be returned in *RA_SESSION_P.
+ * If this is the session that was opened internally, it will be allocated in
+ * RESULT_POOL.  Note that *RA_SESSION_P may be set to NULL if no fetching
+ * took place.
+ */
+svn_error_t *
+svn_client__textbase_sync(svn_ra_session_t **ra_session_p,
+                          const char *local_abspath,
+                          svn_boolean_t allow_hydrate,
+                          svn_boolean_t allow_dehydrate,
+                          svn_client_ctx_t *ctx,
+                          svn_ra_session_t *ra_session,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+/* Returns the first version that supported the working copy metadata format
+ * where pristine content is optional and can be fetched on demand. */
+const svn_version_t *
+svn_client__compatible_wc_version_optional_pristine(apr_pool_t *result_pool);
+
+/* Helper for svn_client_args_to_target_array2 and
+ * svn_client_args_to_target_array3.
+ */
+svn_error_t *
+svn_client__process_target_array(apr_array_header_t **targets_p,
+                                 apr_array_header_t *utf8_targets,
+                                 const apr_array_header_t *known_targets,
+                                 svn_client_ctx_t *ctx,
+                                 svn_boolean_t keep_last_origpath_on_truepath_collision,
+                                 apr_pool_t *pool);
+
 
 /* Internal helper for svn_client_add() and svn_client_addremove().
  * Only call this if the on-disk node kind is a file. */

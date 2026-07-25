@@ -21,6 +21,7 @@
 import unittest, setup_path
 import os
 import tempfile
+import weakref
 import svn.delta
 import svn.core
 from sys import version_info # For Python version check
@@ -116,6 +117,19 @@ class DeltaTestCase(unittest.TestCase):
 
     # Check that the ops inherit the window's pool
     self.assertEqual(window.ops[0]._parent_pool, window._parent_pool)
+
+  def testMakeEditorLeak(self):
+    """Issue 4916, check ref-count leak on svn.delta.make_editor()"""
+    pool = svn.core.Pool()
+    editor = svn.delta.Editor()
+    editor_ref = weakref.ref(editor)
+    e_ptr, e_baton = svn.delta.make_editor(editor, pool)
+    del e_ptr, e_baton
+    self.assertNotEqual(editor_ref(), None)
+    del pool
+    self.assertNotEqual(editor_ref(), None)
+    del editor
+    self.assertEqual(editor_ref(), None)
 
 def suite():
   return unittest.defaultTestLoader.loadTestsFromTestCase(DeltaTestCase)

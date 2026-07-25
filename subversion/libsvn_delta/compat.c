@@ -854,10 +854,12 @@ ev2_apply_textdelta(void *file_baton,
   target = svn_stream_lazyopen_create(open_delta_target, change,
                                       FALSE, fb->eb->edit_pool);
 
-  svn_txdelta_apply(hb->source, target,
-                    NULL, NULL,
-                    handler_pool,
-                    &hb->apply_handler, &hb->apply_baton);
+  /* Keep historical behavior by disowning the stream; adjust if needed. */
+  svn_txdelta_apply2(svn_stream_disown(hb->source, handler_pool),
+                     target,
+                     NULL, NULL,
+                     handler_pool,
+                     &hb->apply_handler, &hb->apply_baton);
 
   hb->pool = handler_pool;
 

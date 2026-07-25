@@ -1,0 +1,1538 @@
+Group: defaults
+Subject: r2 - in subversion/trunk: build build/generator build/generator/swig subversion/tests/cmdline subversion/tests/cmdline/legacy subversion/tests/cmdline/svntest tools/dist
+
+Author: dsahlberg
+Date: Sat Sep 30 13:13:16 2023
+New Revision: 2
+
+Log:
+Fix `invalid escape sequence` in Python scripts to prevent many
+`SyntaxWarning`s since Python 3.12.
+
+* build/generator/gen_win.py
+* build/generator/gen_win_dependencies.py
+* build/generator/swig/__init__.py
+* build/transform_sql.py
+* subversion/tests/cmdline/basic_tests.py
+* subversion/tests/cmdline/changelist_tests.py
+* subversion/tests/cmdline/checkout_tests.py
+* subversion/tests/cmdline/copy_tests.py
+* subversion/tests/cmdline/diff_tests.py
+* subversion/tests/cmdline/getopt_tests.py
+* subversion/tests/cmdline/info_tests.py
+* subversion/tests/cmdline/legacy/utf8_tests.py
+* subversion/tests/cmdline/lock_tests.py
+* subversion/tests/cmdline/log_tests.py
+* subversion/tests/cmdline/merge_authz_tests.py
+* subversion/tests/cmdline/merge_automatic_tests.py
+* subversion/tests/cmdline/merge_tests.py
+* subversion/tests/cmdline/merge_tree_conflict_tests.py
+* subversion/tests/cmdline/patch_tests.py
+* subversion/tests/cmdline/prop_tests.py
+* subversion/tests/cmdline/special_tests.py
+* subversion/tests/cmdline/stat_tests.py
+* subversion/tests/cmdline/svnadmin_tests.py
+* subversion/tests/cmdline/svnfsfs_tests.py
+* subversion/tests/cmdline/svnmover_tests.py
+* subversion/tests/cmdline/svnmucc_tests.py
+* subversion/tests/cmdline/svntest/actions.py
+* subversion/tests/cmdline/svntest/main.py
+* subversion/tests/cmdline/svntest/verify.py
+* subversion/tests/cmdline/svntest/wc.py
+* subversion/tests/cmdline/trans_tests.py
+* subversion/tests/cmdline/update_tests.py
+* subversion/tests/cmdline/upgrade_tests.py
+* subversion/tests/manual/tree-conflicts-add-vs-add.py
+* tools/dist/release.py
+  Use raw literals or correct escape sequences.
+
+Patch by: jun66j5
+Review by: futatuki
+
+Discussed: https://lists.apache.org/thread/m5s9zpj2jvsmtof07c0vvpjlwnwpdwsl
+
+Modified:
+   subversion/trunk/build/generator/gen_win.py
+   subversion/trunk/build/generator/gen_win_dependencies.py
+   subversion/trunk/build/generator/swig/__init__.py
+   subversion/trunk/build/transform_sql.py
+   subversion/trunk/subversion/tests/cmdline/basic_tests.py
+   subversion/trunk/subversion/tests/cmdline/changelist_tests.py
+   subversion/trunk/subversion/tests/cmdline/checkout_tests.py
+   subversion/trunk/subversion/tests/cmdline/copy_tests.py
+   subversion/trunk/subversion/tests/cmdline/diff_tests.py
+   subversion/trunk/subversion/tests/cmdline/getopt_tests.py
+   subversion/trunk/subversion/tests/cmdline/info_tests.py
+   subversion/trunk/subversion/tests/cmdline/legacy/utf8_tests.py
+   subversion/trunk/subversion/tests/cmdline/lock_tests.py
+   subversion/trunk/subversion/tests/cmdline/log_tests.py
+   subversion/trunk/subversion/tests/cmdline/merge_authz_tests.py
+   subversion/trunk/subversion/tests/cmdline/merge_automatic_tests.py
+   subversion/trunk/subversion/tests/cmdline/merge_tests.py
+   subversion/trunk/subversion/tests/cmdline/merge_tree_conflict_tests.py
+   subversion/trunk/subversion/tests/cmdline/patch_tests.py
+   subversion/trunk/subversion/tests/cmdline/prop_tests.py
+   subversion/trunk/subversion/tests/cmdline/special_tests.py
+   subversion/trunk/subversion/tests/cmdline/stat_tests.py
+   subversion/trunk/subversion/tests/cmdline/svnadmin_tests.py
+   subversion/trunk/subversion/tests/cmdline/svnfsfs_tests.py
+   subversion/trunk/subversion/tests/cmdline/svnmover_tests.py
+   subversion/trunk/subversion/tests/cmdline/svnmucc_tests.py
+   subversion/trunk/subversion/tests/cmdline/svntest/actions.py
+   subversion/trunk/subversion/tests/cmdline/svntest/main.py
+   subversion/trunk/subversion/tests/cmdline/svntest/verify.py
+   subversion/trunk/subversion/tests/cmdline/svntest/wc.py
+   subversion/trunk/subversion/tests/cmdline/trans_tests.py
+   subversion/trunk/subversion/tests/cmdline/update_tests.py
+   subversion/trunk/subversion/tests/cmdline/upgrade_tests.py
+   subversion/trunk/tools/dist/release.py
+
+Modified: subversion/trunk/build/generator/gen_win.py
+==============================================================================
+--- subversion/trunk/build/generator/gen_win.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/build/generator/gen_win.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -574,7 +574,7 @@
+     # This section parses those dependencies and adds them to the dependency list
+     # for this target.
+     if name.startswith('javahl') or name == 'libsvnjavahl':
+-      for dep in re.findall('\$\(([^\)]*)_DEPS\)', target.add_deps):
++      for dep in re.findall(r'\$\(([^\)]*)_DEPS\)', target.add_deps):
+         dep = dep.replace('_', '-')
+         depends.extend(self.sections[dep].get_targets())
+ 
+@@ -728,7 +728,7 @@
+ 
+     for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
+       if dep.external_lib:
+-        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
++        for elib in re.findall(r'\$\(SVN_([^)]*)_LIBS\)', dep.external_lib):
+           external_lib = elib.lower()
+ 
+         if external_lib in self._libraries:
+@@ -758,7 +758,7 @@
+ 
+     for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
+       if dep.external_lib:
+-        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
++        for elib in re.findall(r'\$\(SVN_([^)]*)_LIBS\)', dep.external_lib):
+           external_lib = elib.lower()
+ 
+         if external_lib in self._libraries:
+@@ -833,7 +833,7 @@
+ 
+     for dep in self.get_win_depends(target, FILTER_LIBS):
+       if dep.external_lib:
+-        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
++        for elib in re.findall(r'\$\(SVN_([^)]*)_LIBS\)', dep.external_lib):
+           external_lib = elib.lower()
+ 
+           if external_lib not in self._libraries:
+@@ -887,7 +887,7 @@
+       nondeplibs.extend(dep.msvc_libs)
+ 
+       if dep.external_lib:
+-        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
++        for elib in re.findall(r'\$\(SVN_([^)]*)_LIBS\)', dep.external_lib):
+ 
+           external_lib = elib.lower()
+ 
+@@ -938,7 +938,7 @@
+ 
+     for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
+       if dep.external_lib:
+-        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
++        for elib in re.findall(r'\$\(SVN_([^)]*)_LIBS\)', dep.external_lib):
+           external_lib = elib.lower()
+ 
+         if external_lib in self._libraries:
+
+Modified: subversion/trunk/build/generator/gen_win_dependencies.py
+==============================================================================
+--- subversion/trunk/build/generator/gen_win_dependencies.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/build/generator/gen_win_dependencies.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -235,22 +235,22 @@
+       elif opt == '-D':
+         self.cpp_defines.append(val)
+       elif opt == '--vsnet-version':
+-        if val == '2002' or re.match('^7(\.\d+)?$', val):
++        if val == '2002' or re.match(r'^7(\.\d+)?$', val):
+           self.vs_version = '2002'
+           self.sln_version = '7.00'
+           self.vcproj_version = '7.00'
+           self.vcproj_extension = '.vcproj'
+-        elif val == '2003' or re.match('^8(\.\d+)?$', val):
++        elif val == '2003' or re.match(r'^8(\.\d+)?$', val):
+           self.vs_version = '2003'
+           self.sln_version = '8.00'
+           self.vcproj_version = '7.10'
+           self.vcproj_extension = '.vcproj'
+-        elif val == '2005' or re.match('^9(\.\d+)?$', val):
++        elif val == '2005' or re.match(r'^9(\.\d+)?$', val):
+           self.vs_version = '2005'
+           self.sln_version = '9.00'
+           self.vcproj_version = '8.00'
+           self.vcproj_extension = '.vcproj'
+-        elif val == '2008' or re.match('^10(\.\d+)?$', val):
++        elif val == '2008' or re.match(r'^10(\.\d+)?$', val):
+           self.vs_version = '2008'
+           self.sln_version = '10.00'
+           self.vcproj_version = '9.00'
+@@ -290,14 +290,14 @@
+           self.sln_version = '12.00'
+           self.vcproj_version = '14.3'
+           self.vcproj_extension = '.vcxproj'
+-        elif re.match('^20\d+$', val):
++        elif re.match(r'^20\d+$', val):
+           print('WARNING: Unknown VS.NET version "%s",'
+                 ' assuming VS2012. Your VS can probably upgrade')
+           self.vs_version = '2012'
+           self.sln_version = '12.00'
+           self.vcproj_version = '11.0'
+           self.vcproj_extension = '.vcxproj'
+-        elif re.match('^1\d+$', val):
++        elif re.match(r'^1\d+$', val):
+           self.vs_version = val
+           self.sln_version = '12.00'
+           self.vcproj_version = val + '.0'
+
+Modified: subversion/trunk/build/generator/swig/__init__.py
+==============================================================================
+--- subversion/trunk/build/generator/swig/__init__.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/build/generator/swig/__init__.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -72,7 +72,7 @@
+ 
+     if not self._swigVersion:
+       swig_version = subprocess.check_output([self.swig_path, "-version"]).decode('utf8')
+-      m = re.search("Version (\d+).(\d+).(\d+)", swig_version)
++      m = re.search(r"Version (\d+).(\d+).(\d+)", swig_version)
+       if m:
+         self._swigVersion = tuple(map(int, m.groups()))
+       else:
+
+Modified: subversion/trunk/build/transform_sql.py
+==============================================================================
+--- subversion/trunk/build/transform_sql.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/build/transform_sql.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -50,7 +50,7 @@
+ 
+   # a few SQL comments that act as directives for this transform system
+   re_format = re.compile('-- *format: *([0-9]+)')
+-  re_statement = re.compile('-- *STMT_([A-Z_0-9]+)( +\(([^\)]*)\))?')
++  re_statement = re.compile(r'-- *STMT_([A-Z_0-9]+)( +\(([^)]*)\))?')
+   re_include = re.compile('-- *include: *([-a-z]+)')
+   re_define = re.compile('-- *define: *([A-Z_0-9]+)')
+ 
+
+Modified: subversion/trunk/subversion/tests/cmdline/basic_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/basic_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/basic_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -705,8 +705,8 @@
+ 
+   # "Extra" files that we expect to result from the conflicts.
+   # These are expressed as list of regexps.  What a cool system!  :-)
+-  extra_files = ['mu.*\.r1', 'mu.*\.r2', 'mu.*\.mine',
+-                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine',]
++  extra_files = [r'mu.*\.r1', r'mu.*\.r2', r'mu.*\.mine',
++                 r'rho.*\.r1', r'rho.*\.r2', r'rho.*\.mine',]
+ 
+   # Do the update and check the results in three ways.
+   # All "extra" files are passed to detect_conflict_files().
+@@ -2267,11 +2267,11 @@
+ 
+   # "Extra" files that we expect to result from the conflicts.
+   # These are expressed as list of regexps.  What a cool system!  :-)
+-  extra_files = ['mu.*\.r1', 'mu.*\.r2', 'mu.*\.mine',
+-                 'lambda.*\.r1', 'lambda.*\.r2', 'lambda.*\.mine',
+-                 'omega.*\.r1', 'omega.*\.r2', 'omega.*\.mine',
+-                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine',
+-                 'tau.*\.r1', 'tau.*\.r2', 'tau.*\.mine',
++  extra_files = [r'mu.*\.r1', r'mu.*\.r2', r'mu.*\.mine',
++                 r'lambda.*\.r1', r'lambda.*\.r2', r'lambda.*\.mine',
++                 r'omega.*\.r1', r'omega.*\.r2', r'omega.*\.mine',
++                 r'rho.*\.r1', r'rho.*\.r2', r'rho.*\.mine',
++                 r'tau.*\.r1', r'tau.*\.r2', r'tau.*\.mine',
+                  ]
+ 
+   # Do the update and check the results in three ways.
+@@ -2347,7 +2347,7 @@
+                                           ""]))
+ 
+   # Set the expected extra files for the test
+-  extra_files = ['omega.*\.r1', 'omega.*\.r2', 'omega.*\.mine',]
++  extra_files = [r'omega.*\.r1', r'omega.*\.r2', r'omega.*\.mine',]
+ 
+   # Set the expected status for the test
+   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+
+Modified: subversion/trunk/subversion/tests/cmdline/changelist_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/changelist_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/changelist_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -130,9 +130,9 @@
+ 
+ 
+ # Regular expressions for 'svn changelist' output.
+-_re_cl_rem_pattern = "^D \[(.*)\] (.*)"
+-_re_cl_skip = re.compile("Skipped '(.*)'")
+-_re_cl_add  = re.compile("^A \[(.*)\] (.*)")
++_re_cl_rem_pattern = r"^D \[(.*)\] (.*)"
++_re_cl_skip = re.compile(r"Skipped '(.*)'")
++_re_cl_add  = re.compile(r"^A \[(.*)\] (.*)")
+ _re_cl_rem  = re.compile(_re_cl_rem_pattern)
+ 
+ def verify_changelist_output(output, expected_adds=None,
+
+Modified: subversion/trunk/subversion/tests/cmdline/checkout_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/checkout_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/checkout_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -882,8 +882,8 @@
+     })
+ 
+   # "Extra" files that we expect to result from the conflicts.
+-  extra_files = ['eta\.r0', 'eta\.r2', 'eta\.mine',
+-                 'kappa\.r0', 'kappa\.r2', 'kappa\.mine']
++  extra_files = [r'eta\.r0', r'eta\.r2', r'eta\.mine',
++                 r'kappa\.r0', r'kappa\.r2', r'kappa\.mine']
+ 
+   # Perform the checkout and check the results in three ways.
+   # We use --force here because run_and_verify_checkout() will delete
+
+Modified: subversion/trunk/subversion/tests/cmdline/copy_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/copy_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/copy_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -1419,7 +1419,7 @@
+   if re.match(b'[^\\r]\\n', raw_contents):
+     raise svntest.Failure
+ 
+-  if not re.match(b'.*\$LastChangedRevision:\s*\d+\s*\$', line_contents[3]):
++  if not re.match(b'.*\\$LastChangedRevision:\\s*\\d+\\s*\\$', line_contents[3]):
+     raise svntest.Failure
+ 
+ #-------------------------------------------------------------
+
+Modified: subversion/trunk/subversion/tests/cmdline/diff_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/diff_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/diff_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -833,7 +833,7 @@
+     ' This is the file \'mu\'.\n',
+     '+\n',
+     '+Actually, it\'s a new mu.\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+   ]
+ 
+   svntest.actions.run_and_verify_svn(expected_output, [],
+@@ -1024,7 +1024,7 @@
+     None, [], 'diff', '-r', 'BASE:2', wc_dir)
+ 
+   # to do the comparison, remove all output lines starting with +++ or ---
+-  re_infoline = re.compile('^(\+\+\+|---).*$')
++  re_infoline = re.compile(r'^(\+\+\+|---).*$')
+   list1 = []
+   list2 = []
+ 
+@@ -4256,7 +4256,7 @@
+     '+++ %s\t(working copy)\n' % sbox.path('A/B/E'),
+     '@@ -0,0 +1 @@\n',
+     '+text\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+   ]
+ 
+   svntest.actions.run_and_verify_svn(expected_output, [],
+@@ -4464,7 +4464,7 @@
+     'Added: K\n',
+     '## -0,0 +1 ##\n',
+     '+V\n',
+-    '\ No newline at end of property\n',
++    '\\ No newline at end of property\n',
+     'Index: %s\n' % (sbox.path('iota'),),
+     '===================================================================\n',
+     '--- %s\t(revision 1)\n' % (sbox.path('iota'),),
+@@ -4475,7 +4475,7 @@
+     'Added: K\n',
+     '## -0,0 +1 ##\n',
+     '+V\n',
+-    '\ No newline at end of property\n',
++    '\\ No newline at end of property\n',
+   ]
+   svntest.actions.run_and_verify_svn(expected_output, [], 'diff', wc_dir)
+ 
+@@ -4639,7 +4639,7 @@
+                         'Deleted: svn:mime-type\n',
+                         '## -1 +0,0 ##\n',
+                         '-text/plain\n',
+-                        '\ No newline at end of property\n']
++                        '\\ No newline at end of property\n']
+     svntest.actions.run_and_verify_svn(expected_output, [], 'diff',
+                                        '-r2:1', newfile)
+ 
+@@ -4661,7 +4661,7 @@
+     '@@ -1 +1,2 @@\n',
+     ' This is the file \'mu\'.\n',
+     '+Mu????\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+   ]
+   svntest.actions.run_and_verify_svn(expected_output, [],
+                                      'diff', '-r', '1', sbox.ospath('iota'))
+@@ -4676,7 +4676,7 @@
+     '-This is the file \'iota\'.\n',
+     '+This is the file \'mu\'.\n',
+     '+Mu????\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+   ]
+   svntest.actions.run_and_verify_svn(expected_output, [],
+                                      'diff', '-r', '1', sbox.ospath(''))
+@@ -4709,7 +4709,7 @@
+       'Deleted: A\n',
+       '## -1 +0,0 ##\n',
+       '-B\n',
+-      '\ No newline at end of property\n',
++      '\\ No newline at end of property\n',
+     ]
+ 
+     svntest.actions.run_and_verify_svn(expected_output, [],
+@@ -4726,7 +4726,7 @@
+       'Deleted: A\n',
+       '## -1 +0,0 ##\n',
+       '-B\n',
+-      '\ No newline at end of property\n',
++      '\\ No newline at end of property\n',
+     ]
+ 
+     svntest.actions.run_and_verify_svn(expected_output, [],
+@@ -4823,7 +4823,7 @@
+       'Added: p2\n',
+       '## -0,0 +1 ##\n',
+       '+v2\n',
+-      '\ No newline at end of property\n',
++      '\\ No newline at end of property\n',
+     ]
+ 
+     svntest.actions.run_and_verify_svn(expected_output_C2, [],
+@@ -5036,14 +5036,14 @@
+     '+++ %s\t(working copy)\n' % sbox.path('to-iota'),
+     '@@ -0,0 +1 @@\n',
+     '+link iota\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+     '\n',
+     'Property changes on: %s\n' % sbox.path('to-iota'),
+     '___________________________________________________________________\n',
+     'Added: svn:special\n',
+     '## -0,0 +1 ##\n',
+     '+*\n',
+-    '\ No newline at end of property\n',
++    '\\ No newline at end of property\n',
+   ], [], 'diff', wc_dir)
+ 
+   svntest.actions.run_and_verify_svn([
+@@ -5055,14 +5055,14 @@
+     '+++ b/to-iota\t(working copy)\n',
+     '@@ -0,0 +1 @@\n',
+     '+iota\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+     '\n',
+     'Property changes on: to-iota\n',
+     '___________________________________________________________________\n',
+     'Added: svn:special\n',
+     '## -0,0 +1 ##\n',
+     '+*\n',
+-    '\ No newline at end of property\n',
++    '\\ No newline at end of property\n',
+   ], [], 'diff', wc_dir, '--git')
+ 
+   sbox.simple_commit()
+@@ -5076,9 +5076,9 @@
+     '+++ %s\t(working copy)\n' % sbox.path('to-iota'),
+     '@@ -1 +1 @@\n',
+     '-link iota\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+     '+link A/B/E/alpha\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+   ], [], 'diff', wc_dir)
+ 
+   svntest.actions.run_and_verify_svn([
+@@ -5090,9 +5090,9 @@
+     '+++ b/to-iota\t(working copy)\n',
+     '@@ -1 +1 @@\n',
+     '-iota\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+     '+A/B/E/alpha\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+   ], [], 'diff', wc_dir, '--git')
+ 
+ 
+
+Modified: subversion/trunk/subversion/tests/cmdline/getopt_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/getopt_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/getopt_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -94,7 +94,7 @@
+                   'version X.Y.Z '),
+                  # The copyright end date keeps changing; fix forever.
+                  (re.compile(r'Copyright \(C\) 20\d\d The Apache '
+-                              'Software Foundation\.'),
++                             r'Software Foundation\.'),
+                   'Copyright (C) YYYY The Apache Software Foundation'),
+                  # In 'svn --version --quiet', we print only the version
+                  # number in a single line.
+@@ -120,7 +120,7 @@
+ # seen switch_res_line.
+ switched_rep_lines_res = [
+                           # We don't care about the actual canonical host
+-                          (re.compile('^\* running on.*$'), '* running on'),
++                          (re.compile(r'^\* running on.*$'), '* running on'),
+                          ]
+ 
+ def process_lines(lines):
+
+Modified: subversion/trunk/subversion/tests/cmdline/info_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/info_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/info_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -96,7 +96,7 @@
+   atttribute_re = re.compile(
+                  r"\s+(?P<key>[\w-]+)\s*=\s*(['\"])(?P<val>[^'\"]*)\2", re.M)
+   self_closing_re = re.compile(r"\s*/>", re.M)
+-  content_re_str = "\\s*>(?P<content>.*?)</%s\s*>"
++  content_re_str = r"\s*>(?P<content>.*?)</%s\s*>"
+ 
+   m = start_tag_re.match(str)
+   if not m:
+@@ -402,7 +402,7 @@
+         'Path'              : re.escape(os.path.basename(sbox.repo_dir)),
+         'Repository Root'   : re.escape(sbox.repo_url),
+         'URL'               : re.escape(sbox.repo_url),
+-        'Relative URL'      : '\^/', # escape ^ -- this isn't a regexp
++        'Relative URL'      : r'\^/', # escape ^ -- this isn't a regexp
+         'Revision'          : '1',
+         'Node Kind'         : 'directory',
+         'Last Changed Rev'  : '1',
+@@ -412,7 +412,7 @@
+         'Name'              : 'iota',
+         'Repository Root'   : re.escape(sbox.repo_url),
+         'URL'               : re.escape(sbox.repo_url + '/iota'),
+-        'Relative URL'      : '\^/iota', # escape ^ -- this isn't a regexp
++        'Relative URL'      : r'\^/iota', # escape ^ -- this isn't a regexp
+         'Revision'          : '1',
+         'Node Kind'         : 'file',
+         'Last Changed Rev'  : '1',
+
+Modified: subversion/trunk/subversion/tests/cmdline/legacy/utf8_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/legacy/utf8_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/legacy/utf8_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -143,7 +143,7 @@
+ # Also check that the environment contains the expected locale settings
+ # either by default, or because we set them above.
+ if localematch:
+-  localeregex = re.compile('^en_US\.ISO-?8859-1$', re.I)
++  localeregex = re.compile(r'^en_US\.ISO-?8859-1$', re.I)
+   for env in [ 'LC_ALL', 'LC_CTYPE', 'LANG' ]:
+     env_value = os.getenv(env)
+     if env_value:
+
+Modified: subversion/trunk/subversion/tests/cmdline/lock_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/lock_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/lock_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -91,8 +91,8 @@
+                                      '-m', '', file_path)
+ 
+   # --- Meanwhile, in our other working copy... ---
+-  err_re = "(svn\: E195022\: File '.*iota' is locked in another)|" + \
+-           "(svn\: E160039: User '?jconstant'? does not own lock on path.*iota')"
++  err_re = r"(svn\: E195022\: File '.*iota' is locked in another)|" + \
++           r"(svn\: E160039: User '?jconstant'? does not own lock on path.*iota')"
+ 
+   svntest.main.run_svn(None, 'update', wc_b)
+   # -- Try to change a file --
+@@ -112,8 +112,8 @@
+   # change the locked file's properties
+   svntest.main.run_svn(None, 'propset', 'sneakyuser', 'Sally', file_path_b)
+ 
+-  err_re = "(svn\: E195022\: File '.*iota' is locked in another)|" + \
+-           "(svn\: E160039\: User '?jconstant'? does not own lock on path)"
++  err_re = r"(svn\: E195022\: File '.*iota' is locked in another)|" + \
++           r"(svn\: E160039\: User '?jconstant'? does not own lock on path)"
+ 
+   # attempt (and fail) to commit as user Sally
+   svntest.actions.run_and_verify_commit(wc_b, None, None, err_re,
+@@ -1275,8 +1275,8 @@
+                                      [], "lock", fname)
+ 
+   # Make sure ls shows it being locked.
+-  expected_output = " +2 " + re.escape(svntest.main.wc_author) + " +O .+f|" \
+-                    " +2 " + re.escape(svntest.main.wc_author) + "    .+\./"
++  expected_output = r" +2 %(author)s +O .+f| +2 %(author)s    .+\./" % \
++                    {'author': re.escape(svntest.main.wc_author)}
+   svntest.actions.run_and_verify_svn(expected_output, [],
+                                      "list", "-v", dirname)
+ 
+
+Modified: subversion/trunk/subversion/tests/cmdline/log_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/log_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/log_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -471,8 +471,7 @@
+ 
+   # Regular expression to match the header line of a log message, with
+   # these groups: (revision number), (author), (date), (num lines).
+-  header_re = re.compile('^r([0-9]+) \| ' \
+-                         + '([^|]*) \| ([^|]*) \| ([0-9]+) lines?')
++  header_re = re.compile(r'^r([0-9]+) \| ([^|]*) \| ([^|]*) \| ([0-9]+) lines?')
+ 
+   # The log chain to return.
+   chain = []
+@@ -984,10 +983,10 @@
+ 
+   # Verify the output contains either the expected fuzzy escape
+   # sequence, or the literal control char.
+-  match_unescaped_ctrl_re = "This msg contains a Ctrl-T \(.\) " \
+-                            "and a Ctrl-I \(\t\)\."
+-  match_escaped_ctrl_re = "^This msg contains a Ctrl-T \(\?\\\\020\) " \
+-                          "and a Ctrl-I \(\t\)\."
++  match_unescaped_ctrl_re = r"This msg contains a Ctrl-T \(.\) " \
++                            r"and a Ctrl-I \(\t\)\."
++  match_escaped_ctrl_re = r"^This msg contains a Ctrl-T \(\?\\020\) " \
++                          r"and a Ctrl-I \(\t\)\."
+   matched = None
+   for line in output:
+     if re.match(match_unescaped_ctrl_re, line) \
+@@ -1490,8 +1489,8 @@
+ 
+   # Can't set revprops with log.
+   svntest.actions.run_and_verify_log_xml(
+-    expected_stderr=(".*cannot assign with 'with-revprop' option"
+-                     " \(drop the '='\)"),
++    expected_stderr=(r".*cannot assign with 'with-revprop' option"
++                     r" \(drop the '='\)"),
+     args=['--with-revprop=foo=bar'])
+ 
+   # basic test without revprop options
+@@ -2670,8 +2669,8 @@
+                                      '-r2')
+ 
+   expected_output = svntest.verify.RegexListOutput([
+-    '-+\\n',
+-    'r3\ .*\n',
++    r'-+\n',
++    r'r3 .*\n',
+     re.escape('Changed paths:\n'),
+     re.escape('   D /A/B/E\n'),
+     re.escape('   A /E (from /A/B/E:2)\n'), # Patched - Direct move
+@@ -2680,7 +2679,7 @@
+     re.escape('   D /iota\n'),
+     re.escape('   A /iotb (from /iota:2)\n'), # Patched - Direct move
+     re.escape('   A /mutb (from /A/mu:1)\n'), # Copy (always r1)
+-    '-+\\n'
++    r'-+\n',
+   ])
+   svntest.actions.run_and_verify_svn(expected_output, [],
+                                      'log', '-v', '-q', sbox.wc_dir,
+
+Modified: subversion/trunk/subversion/tests/cmdline/merge_authz_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/merge_authz_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/merge_authz_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -773,7 +773,7 @@
+     'Added: k\n',
+     '## -0,0 +1 ##\n',
+     '+v\n',
+-    '\ No newline at end of property\n'
++    '\\ No newline at end of property\n'
+   ]
+   svntest.actions.run_and_verify_svn(expected_output, [],
+                                      'diff', sbox.repo_url + '/A', '-c', '2')
+@@ -830,9 +830,9 @@
+       'Modified: this-is\n',
+       '## -1 +1 ##\n',
+       '-E\n',
+-      '\ No newline at end of property\n',
++      '\\ No newline at end of property\n',
+       '+G\n',
+-      '\ No newline at end of property\n',
++      '\\ No newline at end of property\n',
+     ]
+   else:
+     # ### We should also see a property deletion here!
+@@ -847,7 +847,7 @@
+     'Deleted: this-is\n',
+     '## -1 +0,0 ##\n',
+     '-E\n',
+-    '\ No newline at end of property\n',
++    '\\ No newline at end of property\n',
+     'Index: .\n',
+     '===================================================================\n',
+     '--- .\t(nonexistent)\n',
+@@ -858,7 +858,7 @@
+       'Added: this-is\n',
+       '## -0,0 +1 ##\n',
+       '+G\n',
+-      '\ No newline at end of property\n',
++      '\\ No newline at end of property\n',
+     ]
+ 
+   # Use two url diff, because 'svn diff url -c' uses copyfrom to diff against
+
+Modified: subversion/trunk/subversion/tests/cmdline/merge_automatic_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/merge_automatic_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/merge_automatic_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -1361,9 +1361,9 @@
+ 
+   # Let commit fix the eols
+   sbox.simple_add_text('with\rCRLF\rhere!', 'A/crlf')
+-  sbox.simple_add_text('with\rnative\r\eol', 'A/native')
+-  sbox.simple_add_text('with\rCR\r\eol', 'A/cr')
+-  sbox.simple_add_text('with\rLF\r\eol', 'A/lf')
++  sbox.simple_add_text('with\rnative\r\\eol', 'A/native')
++  sbox.simple_add_text('with\rCR\r\\eol', 'A/cr')
++  sbox.simple_add_text('with\rLF\r\\eol', 'A/lf')
+ 
+   # And apply the magic property
+   sbox.simple_propset('svn:eol-style', 'CRLF',   'A/crlf')
+
+Modified: subversion/trunk/subversion/tests/cmdline/merge_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/merge_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/merge_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -247,9 +247,9 @@
+ 
+   expected_skip = wc.State('', { })
+ 
+-  tau_conflict_support_files = ["tau\.working",
+-                                "tau\.merge-right\.r3",
+-                                "tau\.merge-left\.r1"]
++  tau_conflict_support_files = [r"tau\.working",
++                                r"tau\.merge-right\.r3",
++                                r"tau\.merge-left\.r1"]
+ 
+   svntest.actions.run_and_verify_merge(other_wc, '1', '3',
+                                        sbox.repo_url, None,
+@@ -2629,7 +2629,7 @@
+   expected_skip = wc.State('', { })
+ 
+   # should have 3 'prej' files left behind, describing prop conflicts:
+-  extra_files = ['alpha.*\.prej', 'beta.*\.prej', 'dir_conflicts.*\.prej']
++  extra_files = [r'alpha.*\.prej', r'beta.*\.prej', r'dir_conflicts.*\.prej']
+ 
+   svntest.actions.run_and_verify_merge(B2_path, '3', '4', B_url, None,
+                                        expected_output,
+@@ -2752,7 +2752,7 @@
+   expected_skip = wc.State('', { })
+ 
+   # should have 2 'prej' files left behind, describing prop conflicts:
+-  extra_files = ['alpha.*\.prej', 'dir_conflicts.*\.prej']
++  extra_files = [r'alpha.*\.prej', r'dir_conflicts.*\.prej']
+ 
+   svntest.actions.run_and_verify_merge(B2_path, '3', '4', B_url, None,
+                                        expected_output,
+@@ -2952,9 +2952,9 @@
+                                        expected_skip,
+                                        expected_error,
+                                        extra_files=
+-                                       ["mu\.working",
+-                                        "mu\.merge-right\.r4",
+-                                        "mu\.merge-left\.r3"])
++                                       [r"mu\.working",
++                                        r"mu\.merge-right\.r4",
++                                        r"mu\.merge-left\.r3"])
+ 
+ #----------------------------------------------------------------------
+ # Test for issue 2135
+@@ -14517,9 +14517,9 @@
+                       "=======\n"
+                       "New content>>>>>>> .merge-right.r3\n")
+   expected_status.tweak('D/H/psi', status='C ')
+-  psi_conflict_support_files = ["psi\.working",
+-                                "psi\.merge-right\.r3",
+-                                "psi\.merge-left\.r2"]
++  psi_conflict_support_files = [r"psi\.working",
++                                r"psi\.merge-right\.r3",
++                                r"psi\.merge-left\.r2"]
+   svntest.actions.run_and_verify_merge(A_COPY_path, '2', '3',
+                                        sbox.repo_url + '/A', None,
+                                        expected_output,
+@@ -17301,7 +17301,7 @@
+ 
+   # r4
+   svntest.main.file_write(sbox.ospath('dir/binary-file'),
+-                          '\9\8\7\6\5\4\3\2\1')
++                          '\x09\x08\7\6\5\4\3\2\1')
+   sbox.simple_commit()
+ 
+   sbox.simple_update()
+
+Modified: subversion/trunk/subversion/tests/cmdline/merge_tree_conflict_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/merge_tree_conflict_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/merge_tree_conflict_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -1856,9 +1856,9 @@
+   actions.run_and_verify_status(wc_dir, expected_status)
+ 
+   # Check the tree conflict types:
+-  expected_stdout = '(R.*)|(Summary of conflicts.*)|(  Tree conflicts.*)' \
+-                    '|(.*local delete, incoming replace upon merge.*)' \
+-                    '|(      \>.*)'
++  expected_stdout = r'(R.*)|(Summary of conflicts.*)|(  Tree conflicts.*)' \
++                    r'|(.*local delete, incoming replace upon merge.*)' \
++                    r'|(      \>.*)'
+   tree_conflicted_path = [A_B_E, A_mu, A_D_G_pi, A_D_H]
+   for path in tree_conflicted_path:
+     actions.run_and_verify_svn2(expected_stdout, [], 0, 'st',
+
+Modified: subversion/trunk/subversion/tests/cmdline/patch_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/patch_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/patch_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -3433,7 +3433,7 @@
+     value = "v\n"
+   else:
+     value = "v"
+-    unidiff_patch += ['\ No newline at end of property\n']
++    unidiff_patch += ['\\ No newline at end of property\n']
+ 
+   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch), 'wb')
+ 
+@@ -5807,7 +5807,7 @@
+     'Added: svn:mime-type\n',
+     '## -0,0 +1 ##\n',
+     '+application/binary\n',
+-    '\ No newline at end of property\n',
++    '\\ No newline at end of property\n',
+   ]
+ 
+   _, diff_output, _ = svntest.actions.run_and_verify_svn(expected_output, [],
+@@ -6005,7 +6005,7 @@
+    '@@ -1 +1 @@\n',
+    '-This is the file \'mu\'.\n',
+    '+This is the file \'mu\'.\n',
+-   '\ No newline at end of file\n',
++   '\\ No newline at end of file\n',
+    'Index: iota\n',
+    '===================================================================\n',
+    '--- iota\t(revision 1)\n',
+@@ -6013,7 +6013,7 @@
+    '@@ -1 +1 @@\n',
+    '-This is the file \'iota\'.\n',
+    '+This is the file \'iota\'.\n',
+-   '\ No newline at end of file' # Missing EOL
++   '\\ No newline at end of file' # Missing EOL
+   ]
+ 
+   patch = sbox.get_tempname('patch')
+@@ -6073,7 +6073,7 @@
+     '+++ A/mu\t(working copy)\n',
+     '@@ -1 +1 @@\n',
+     '-This is the file \'mu\'.\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+     '+This is the file \'mu\'.\n',
+     'Index: iota\n',
+     '===================================================================\n',
+@@ -6081,7 +6081,7 @@
+     '+++ iota\t(working copy)\n',
+     '@@ -1 +1 @@\n',
+     '-This is the file \'iota\'.\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+     '+This is the file \'iota\'.' # Missing eol
+   ]
+ 
+@@ -6746,9 +6746,9 @@
+   sbox.build()
+   wc_dir = sbox.wc_dir
+ 
+-  eicar_data = 'X5O!P%@AP[4\PZX54(P^)7CC)7}$' \
++  eicar_data = 'X5O!P%@AP[4\\PZX54(P^)7CC)7}$' \
+                'EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*\0'
+-  other_data = 'X5O!P%@AP[4\PZX54(P^)7CC)7}$' \
++  other_data = 'X5O!P%@AP[4\\PZX54(P^)7CC)7}$' \
+                'SOME-LESS-INTERESTING-OTHER-TEXT!!!$H+H*\0' \
+                '\0\0\0\0\0\0\0\0'
+ 
+@@ -6912,7 +6912,7 @@
+     '+++ b/link-to-iota\n',
+     '@@ -0,0 +1 @@\n',
+     '+iota\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+   ]
+ 
+   patch_edit = [
+@@ -6922,9 +6922,9 @@
+     '+++ b/link-to-iota\n',
+     '@@ -1 +1 @@\n',
+     '-iota\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+     '+A/mu\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+   ]
+ 
+   patch_to_file = [
+@@ -6935,7 +6935,7 @@
+     '+++ /dev/null\n',
+     '@@ -1 +0,0 @@\n',
+     '-A/mu\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+     'diff --git a/link-to-iota b/link-to-iota\n',
+     'new file mode 100644\n',
+     'index 0000000..1b130bf\n',
+@@ -7039,7 +7039,7 @@
+     '+++ b/link-to-iota\n',
+     '@@ -0,0 +1 @@\n',
+     '+iota\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+   ]
+ 
+   patch_edit = [
+@@ -7049,9 +7049,9 @@
+     '+++ b/link-to-iota\n',
+     '@@ -1 +1 @@\n',
+     '-iota\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+     '+A/mu\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+   ]
+ 
+   patch_to_file = [
+@@ -7062,7 +7062,7 @@
+     '+++ /dev/null\n',
+     '@@ -1 +0,0 @@\n',
+     '-A/mu\n',
+-    '\ No newline at end of file\n',
++    '\\ No newline at end of file\n',
+     'diff --git a/link-to-iota b/link-to-iota\n',
+     'new file mode 100644\n',
+     'index 0000000..1b130bf\n',
+@@ -7709,7 +7709,7 @@
+       ' J\n'
+       ' K\n'
+       ' L\n'
+-      '\ No newline at end of file', mode='wb')
++      '\\ No newline at end of file', mode='wb')
+ 
+   expected_skip = wc.State('', { })
+   expected_output = wc.State(wc_dir, {
+@@ -7735,7 +7735,7 @@
+       ' J\n'
+       ' K\n'
+       ' L\n'
+-      '\ No newline at end of file', mode='wb')
++      '\\ No newline at end of file', mode='wb')
+ 
+   svntest.actions.run_and_verify_patch(wc_dir, local_patch,
+                                        expected_output, None,
+@@ -7871,7 +7871,7 @@
+     value = "v\n"
+   else:
+     value = "v"
+-    unidiff_patch += ['\ No newline at end of property\n']
++    unidiff_patch += ['\\ No newline at end of property\n']
+ 
+   patch_file_path = sbox.get_tempname('my.patch')
+   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch), 'wb')
+
+Modified: subversion/trunk/subversion/tests/cmdline/prop_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/prop_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/prop_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -349,7 +349,7 @@
+   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+   expected_status.tweak('A/mu', 'A', status=' C')
+ 
+-  extra_files = ['mu.*\.prej', 'dir_conflicts.*\.prej']
++  extra_files = [r'mu.*\.prej', r'dir_conflicts.*\.prej']
+   # Do the update and check the results in three ways... INCLUDING PROPS
+   svntest.actions.run_and_verify_update(wc_dir,
+                                         expected_output,
+
+Modified: subversion/trunk/subversion/tests/cmdline/special_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/special_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/special_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -71,7 +71,7 @@
+   exit_code, stdout_lines, stderr_lines = svntest.main.run_svn(1, 'diff',
+                                                                wc_dir)
+ 
+-  regex = '^\+link linktarget'
++  regex = r'^\+link linktarget'
+   for line in stdout_lines:
+     if re.match(regex, line):
+       break
+
+Modified: subversion/trunk/subversion/tests/cmdline/stat_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/stat_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/stat_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -559,7 +559,7 @@
+ 
+   for line in out:
+     # The "/?" is just to allow for an optional trailing slash.
+-    if re.match("\\s+\\*.*\.other/?$", line):
++    if re.match(r"\s+\*.*\.other/?$", line):
+       raise svntest.Failure
+ 
+ @Issue(1289)
+
+Modified: subversion/trunk/subversion/tests/cmdline/svnadmin_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/svnadmin_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/svnadmin_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -1790,7 +1790,7 @@
+       "Owner: jrandom",
+       "Created:.*",
+       "Expires:.*",
+-      "Comment \(1 line\):",
++      r"Comment \(1 line\):",
+       "Locking files",
+       "\n", # empty line
+       ]
+@@ -3514,8 +3514,8 @@
+ 
+   # Check log.
+   expected_output = svntest.verify.RegexListOutput([
+-    '-+\\n',
+-    'r1\ .*\n',
++    r'-+\n',
++    r'r1 .*\n',
+     # '/A/D/H' and '/A/B/E' is not added.
+     re.escape('Changed paths:\n'),
+     re.escape('   A /A\n'),
+@@ -3531,7 +3531,7 @@
+     re.escape('   A /A/D/gamma\n'),
+     re.escape('   A /A/mu\n'),
+     re.escape('   A /iota\n'),
+-    '-+\\n'
++    r'-+\n',
+   ])
+   svntest.actions.run_and_verify_svn(expected_output, [],
+                                      'log', '-v', '-q', sbox2.repo_url)
+@@ -3567,18 +3567,18 @@
+ 
+   # Check log.
+   expected_output = svntest.verify.RegexListOutput([
+-    '-+\\n',
+-    'r2\ .*\n',
++    r'-+\n',
++    r'r2 .*\n',
+     re.escape('Changed paths:\n'),
+     # Simple add, not copy.
+     re.escape('   A /branches/branch1\n'),
+-    '-+\\n',
+-    'r1\ .*\n',
++    r'-+\n',
++    r'r1 .*\n',
+     # '/trunk' is not added.
+     re.escape('Changed paths:\n'),
+     re.escape('   A /branches\n'),
+     re.escape('   A /tags\n'),
+-    '-+\\n'
++    r'-+\n',
+   ])
+   svntest.actions.run_and_verify_svn(expected_output, [],
+                                      'log', '-v', '-q', sbox2.repo_url)
+@@ -3612,13 +3612,13 @@
+ 
+   # Check log.
+   expected_output = svntest.verify.RegexListOutput([
+-    '-+\\n',
+-    'r1\ .*\n',
++    r'-+\n',
++    r'r1 .*\n',
+     # '/B' is not added.
+     re.escape('Changed paths:\n'),
+     re.escape('   A /A\n'),
+     re.escape('   A /C\n'),
+-    '-+\\n'
++    r'-+\n',
+   ])
+   svntest.actions.run_and_verify_svn(expected_output, [],
+                                      'log', '-v', '-q', sbox2.repo_url)
+@@ -3654,17 +3654,17 @@
+ 
+   # Check log.
+   expected_output = svntest.verify.RegexListOutput([
+-    '-+\\n',
+-    'r2\ .*\n',
++    r'-+\n',
++    r'r2 .*\n',
+     re.escape('Changed paths:\n'),
+     # Simple add, not copy.
+     re.escape('   A /branches/branch1\n'),
+-    '-+\\n',
+-    'r1\ .*\n',
++    r'-+\n',
++    r'r1 .*\n',
+     # Only '/branches' is added in r1.
+     re.escape('Changed paths:\n'),
+     re.escape('   A /branches\n'),
+-    '-+\\n'
++    r'-+\n',
+   ])
+   svntest.actions.run_and_verify_svn(expected_output, [],
+                                      'log', '-v', '-q', sbox2.repo_url)
+@@ -3696,12 +3696,12 @@
+ 
+   # Check log.
+   expected_output = svntest.verify.RegexListOutput([
+-    '-+\\n',
+-    'r1\ .*\n',
++    r'-+\n',
++    r'r1 .*\n',
+     re.escape('Changed paths:\n'),
+     # Only '/bbc' is added in r1.
+     re.escape('   A /bbc\n'),
+-    '-+\\n'
++    r'-+\n',
+   ])
+   svntest.actions.run_and_verify_svn(expected_output, [],
+                                      'log', '-v', '-q', sbox2.repo_url)
+@@ -3733,14 +3733,14 @@
+ 
+   # Check log.
+   expected_output = svntest.verify.RegexListOutput([
+-    '-+\\n',
+-    'r1\ .*\n',
++    r'-+\n',
++    r'r1 .*\n',
+     # '/bbc' is not added.
+     re.escape('Changed paths:\n'),
+     re.escape('   A /aaa\n'),
+     re.escape('   A /aab\n'),
+     re.escape('   A /aac\n'),
+-    '-+\\n'
++    r'-+\n',
+   ])
+   svntest.actions.run_and_verify_svn(expected_output, [],
+                                      'log', '-v', '-q', sbox2.repo_url)
+@@ -3785,27 +3785,27 @@
+ 
+   # Check log. Revision properties ('svn:log' etc.) should be empty for r2.
+   expected_output = svntest.verify.RegexListOutput([
+-    '-+\\n',
+-    'r3 | jrandom | .* | 1 line\\n',
++    r'-+\n',
++    r'r3 \| jrandom \| .* \| 1 line\n',
+     re.escape('Changed paths:'),
+     re.escape('   A /r3a'),
+     re.escape('   A /r3b'),
+     re.escape('   A /r3c'),
+     '',
+     re.escape('Revision 3.'),
+-    '-+\\n',
++    r'-+\n',
+     re.escape('r2 | (no author) | (no date) | 1 line'),
+     '',
+     '',
+-    '-+\\n',
+-    'r1 | jrandom | .* | 1 line\\n',
++    r'-+\n',
++    r'r1 | jrandom | .* | 1 line\n',
+     re.escape('Changed paths:'),
+     re.escape('   A /r1a'),
+     re.escape('   A /r1b'),
+     re.escape('   A /r1c'),
+     '',
+     re.escape('Revision 1.'),
+-    '-+\\n',
++    r'-+\n',
+   ])
+   svntest.actions.run_and_verify_svn(expected_output, [],
+                                      'log', '-v',  sbox2.repo_url)
+@@ -3947,8 +3947,8 @@
+ 
+   # Check log.
+   expected_output = svntest.verify.RegexListOutput([
+-    '-+\\n',
+-    'r2\ .*\n',
++    r'-+\n',
++    r'r2 .*\n',
+     # Only '/COPY' is added
+     re.escape('Changed paths:\n'),
+     re.escape('   A /COPY'),
+@@ -3961,9 +3961,9 @@
+     re.escape('   A /COPY/H/omega'),
+     re.escape('   A /COPY/H/psi'),
+     re.escape('   A /COPY/gamma'),
+-    '-+\\n',
+-    'r1\ .*\n',
+-    '-+\\n'
++    r'-+\n',
++    r'r1 .*\n',
++    r'-+\n',
+   ])
+   svntest.actions.run_and_verify_svn(expected_output, [],
+                                      'log', '-v', '-q', sbox2.repo_url)
+
+Modified: subversion/trunk/subversion/tests/cmdline/svnfsfs_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/svnfsfs_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/svnfsfs_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -167,38 +167,38 @@
+                       'Histogram of directory property sizes:',
+                       'Histogram of directory property representation sizes:']
+   patterns_to_find = {
+-    'Reading revisions' : ['\s+ 0[ 0-9]*'],
+-    'Global .*'         : ['.*\d+ bytes in .*\d+ revisions',
+-                           '.*\d+ bytes in .*\d+ changes',
+-                           '.*\d+ bytes in .*\d+ node revision records',
+-                           '.*\d+ bytes in .*\d+ representations',
+-                           '.*\d+ bytes expanded representation size',
+-                           '.*\d+ bytes with rep-sharing off' ],
+-    'Noderev .*'        : ['.*\d+ bytes in .*\d+ nodes total',
+-                           '.*\d+ bytes in .*\d+ directory noderevs',
+-                           '.*\d+ bytes in .*\d+ file noderevs' ],
+-    'Representation .*' : ['.*\d+ bytes in .*\d+ representations total',
+-                           '.*\d+ bytes in .*\d+ directory representations',
+-                           '.*\d+ bytes in .*\d+ file representations',
+-                           '.*\d+ bytes in .*\d+ representations of added file nodes',
+-                           '.*\d+ bytes in .*\d+ directory property representations',
+-                           '.*\d+ bytes in .*\d+ file property representations',
+-                           '.*\d+ average delta chain length',
+-                           '.*\d+ bytes in header & footer overhead' ],
++    'Reading revisions' : [r'\s+ 0[ 0-9]*'],
++    'Global .*'         : [r'.*\d+ bytes in .*\d+ revisions',
++                           r'.*\d+ bytes in .*\d+ changes',
++                           r'.*\d+ bytes in .*\d+ node revision records',
++                           r'.*\d+ bytes in .*\d+ representations',
++                           r'.*\d+ bytes expanded representation size',
++                           r'.*\d+ bytes with rep-sharing off' ],
++    'Noderev .*'        : [r'.*\d+ bytes in .*\d+ nodes total',
++                           r'.*\d+ bytes in .*\d+ directory noderevs',
++                           r'.*\d+ bytes in .*\d+ file noderevs' ],
++    'Representation .*' : [r'.*\d+ bytes in .*\d+ representations total',
++                           r'.*\d+ bytes in .*\d+ directory representations',
++                           r'.*\d+ bytes in .*\d+ file representations',
++                           r'.*\d+ bytes in .*\d+ representations of added file nodes',
++                           r'.*\d+ bytes in .*\d+ directory property representations',
++                           r'.*\d+ bytes in .*\d+ file property representations',
++                           r'.*\d+ average delta chain length',
++                           r'.*\d+ bytes in header & footer overhead' ],
+     '.* representation statistics:' :
+-                          ['.*\d+ bytes in .*\d+ reps',
+-                           '.*\d+ bytes in .*\d+ shared reps',
+-                           '.*\d+ bytes expanded size',
+-                           '.*\d+ bytes expanded shared size',
+-                           '.*\d+ bytes with rep-sharing off',
+-                           '.*\d+ shared references',
+-                           '.*\d+ average delta chain length'],
+-    'Largest.*:'        : ['.*\d+ r\d+ */\S*'],
++                          [r'.*\d+ bytes in .*\d+ reps',
++                           r'.*\d+ bytes in .*\d+ shared reps',
++                           r'.*\d+ bytes expanded size',
++                           r'.*\d+ bytes expanded shared size',
++                           r'.*\d+ bytes with rep-sharing off',
++                           r'.*\d+ shared references',
++                           r'.*\d+ average delta chain length'],
++    'Largest.*:'        : [r'.*\d+ r\d+ */\S*'],
+     'Extensions by number .*:' :
+-                          ['.*\d+ \( ?\d+%\) representations'],
++                          [r'.*\d+ \( ?\d+%\) representations'],
+     'Extensions by size .*:' :
+-                          ['.*\d+ \( ?\d+%\) bytes'],
+-    'Histogram of .*:'  : ['.*\d+ \.\. < \d+.*\d+ \( ?\d+%\) bytes in *\d+ \( ?\d+%\) items']
++                          [r'.*\d+ \( ?\d+%\) bytes'],
++    'Histogram of .*:'  : [r'.*\d+ \.\. < \d+.*\d+ \( ?\d+%\) bytes in *\d+ \( ?\d+%\) items']
+   }
+ 
+   # check that the output contains all sections
+
+Modified: subversion/trunk/subversion/tests/cmdline/svnmover_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/svnmover_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/svnmover_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -35,7 +35,7 @@
+ ######################################################################
+ 
+ _commit_re = re.compile('^Committed r([0-9]+)')
+-_log_re = re.compile('^   ([ADRM] /[^\(]+($| \(from .*:[0-9]+\)$))')
++_log_re = re.compile(r'^   ([ADRM] /[^\(]+($| \(from .*:[0-9]+\)$))')
+ _err_re = re.compile('^svnmover: (.*)$')
+ 
+ def mk_file(sbox, file_name):
+
+Modified: subversion/trunk/subversion/tests/cmdline/svnmucc_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/svnmucc_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/svnmucc_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -49,7 +49,7 @@
+                                          sbox.repo_url + '/A')
+ 
+ _svnmucc_re = re.compile(b'^(r[0-9]+) committed by jrandom at (.*)$')
+-_log_re = re.compile('^   ([ADRM] /[^\(]+($| \(from .*:[0-9]+\)$))')
++_log_re = re.compile(r'^   ([ADRM] /[^\(]+($| \(from .*:[0-9]+\)$))')
+ _err_re = re.compile('^svnmucc: (.*)$')
+ 
+ def test_svnmucc(repo_url, expected_path_changes, *varargs):
+
+Modified: subversion/trunk/subversion/tests/cmdline/svntest/actions.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/svntest/actions.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/svntest/actions.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -1046,9 +1046,9 @@
+       # normal line
+       key, value = line.split(':', 1)
+ 
+-      if re.search(' \(\d+ lines?\)$', key):
++      if re.search(r' \(\d+ lines?\)$', key):
+         # numbered continuation lines
+-        match = re.match('^(.*) \((\d+) lines?\)$', key)
++        match = re.match(r'^(.*) \((\d+) lines?\)$', key)
+         key = match.group(1)
+         lock_comment_lines = int(match.group(2))
+       elif len(value) > 1:
+
+Modified: subversion/trunk/subversion/tests/cmdline/svntest/main.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/svntest/main.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/svntest/main.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -1511,7 +1511,7 @@
+   merge operation on revisions REVSTART through REVEND.  Omit both
+   REVSTART and REVEND for the case where the left and right sides of
+   the merge are from different URLs."""
+-  from_foreign_phrase = foreign and "\(from foreign repository\) " or ""
++  from_foreign_phrase = foreign and r"\(from foreign repository\) " or ""
+   if target:
+     target_re = re.escape(target)
+   else:
+
+Modified: subversion/trunk/subversion/tests/cmdline/svntest/verify.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/svntest/verify.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/svntest/verify.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -1024,7 +1024,7 @@
+   ] + make_diff_prop_val("+", pval)
+ 
+ def make_diff_prop_modified(pname, pval1, pval2):
+-  """Return a property diff for modification of property PNAME, old value
++  r"""Return a property diff for modification of property PNAME, old value
+      PVAL1, new value PVAL2.
+ 
+      PVAL is a single string with no embedded newlines.  A newline at the
+
+Modified: subversion/trunk/subversion/tests/cmdline/svntest/wc.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/svntest/wc.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/svntest/wc.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -93,30 +93,30 @@
+                               '([KOBT ])'
+                               '([C ]) '
+                               '([* ]) +'
+-                              '((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?'
++                              r'((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?'
+                               '(?P<path>.+)$')
+ 
+ _re_parse_status_ex = re.compile('^      ('
+-               '(  \> moved (from (?P<moved_from>.+)|to (?P<moved_to>.*)))'
+-              '|(  \> swapped places with (?P<swapped_with>.+).*)'
+-              '|(\>   (?P<tc>.+))'
++               r'(  \> moved (from (?P<moved_from>.+)|to (?P<moved_to>.*)))'
++              r'|(  \> swapped places with (?P<swapped_with>.+).*)'
++              r'|(\>   (?P<tc>.+))'
+   ')$')
+ 
+ _re_parse_skipped = re.compile("^(Skipped[^']*) '(.+)'( --.*)?\n")
+ 
+ _re_parse_summarize = re.compile("^([MAD ][M ])      (.+)\n")
+ 
+-_re_parse_checkout = re.compile('^([RMAGCUDE_ B][MAGCUDE_ ])'
+-                                '([B ])'
+-                                '([CAUD ])\s+'
+-                                '(.+)')
+-_re_parse_co_skipped = re.compile('^(Restored|Skipped|Removed external)'
+-                                  '\s+\'(.+)\'(( --|: ).*)?')
+-_re_parse_co_restored = re.compile('^(Restored)\s+\'(.+)\'')
++_re_parse_checkout = re.compile(r'^([RMAGCUDE_ B][MAGCUDE_ ])'
++                                r'([B ])'
++                                r'([CAUD ])\s+'
++                                r'(.+)')
++_re_parse_co_skipped = re.compile(r'^(Restored|Skipped|Removed external)'
++                                  r'\s+\'(.+)\'(( --|: ).*)?')
++_re_parse_co_restored = re.compile(r'^(Restored)\s+\'(.+)\'')
+ 
+ # Lines typically have a verb followed by whitespace then a path.
+-_re_parse_commit_ext = re.compile('^(([A-Za-z]+( [a-z]+)*)) \'(.+)\'( --.*)?')
+-_re_parse_commit = re.compile('^(\w+(  \(bin\))?)\s+(.+)')
++_re_parse_commit_ext = re.compile("^(([A-Za-z]+( [a-z]+)*)) '(.+)'( --.*)?")
++_re_parse_commit = re.compile(r'^(\w+(  \(bin\))?)\s+(.+)')
+ 
+ #rN: eids 0 15 branches 4
+ _re_parse_eid_header = re.compile('^r(-1|[0-9]+): eids ([0-9]+) ([0-9]+) '
+
+Modified: subversion/trunk/subversion/tests/cmdline/trans_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/trans_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/trans_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -304,7 +304,7 @@
+   fp = open(url_unexp_path, 'r')
+   lines = fp.readlines()
+   if not ((len(lines) == 1)
+-          and (re.match("\$URL: (http|https|file|svn|svn\\+ssh)://",
++          and (re.match(r"\$URL: (http|https|file|svn|svn\+ssh)://",
+                         lines[0]))):
+     logger.warn("URL expansion failed for %s", url_unexp_path)
+     raise svntest.Failure
+@@ -314,7 +314,7 @@
+   fp = open(url_exp_path, 'r')
+   lines = fp.readlines()
+   if not ((len(lines) == 1)
+-          and (re.match("\$URL: (http|https|file|svn|svn\\+ssh)://",
++          and (re.match(r"\$URL: (http|https|file|svn|svn\+ssh)://",
+                         lines[0]))):
+     logger.warn("URL expansion failed for %s", url_exp_path)
+     raise svntest.Failure
+@@ -324,7 +324,7 @@
+   fp = open(id_unexp_path, 'r')
+   lines = fp.readlines()
+   if not ((len(lines) == 1)
+-          and (re.match("\$Id: id_unexp", lines[0]))):
++          and (re.match(r"\$Id: id_unexp", lines[0]))):
+     logger.warn("Id expansion failed for %s", id_exp_path)
+     raise svntest.Failure
+   fp.close()
+@@ -333,7 +333,7 @@
+   fp = open(id_exp_path, 'r')
+   lines = fp.readlines()
+   if not ((len(lines) == 1)
+-          and (re.match("\$Id: id_exp", lines[0]))):
++          and (re.match(r"\$Id: id_exp", lines[0]))):
+     logger.warn("Id expansion failed for %s", id_exp_path)
+     raise svntest.Failure
+   fp.close()
+@@ -342,7 +342,7 @@
+   fp = open(header_unexp_path, 'r')
+   lines = fp.readlines()
+   if not ((len(lines) == 1)
+-          and (re.match("\$Header: (https?|file|svn|svn\\+ssh)://.* jrandom",
++          and (re.match(r"\$Header: (https?|file|svn|svn\+ssh)://.* jrandom",
+                         lines[0]))):
+     logger.warn("Header expansion failed for %s", header_unexp_path)
+     raise svntest.Failure
+@@ -352,7 +352,7 @@
+   fp = open(header_exp_path, 'r')
+   lines = fp.readlines()
+   if not ((len(lines) == 1)
+-          and (re.match("\$Header: (https?|file|svn|svn\\+ssh)://.* jrandom",
++          and (re.match(r"\$Header: (https?|file|svn|svn\+ssh)://.* jrandom",
+                         lines[0]))):
+     logger.warn("Header expansion failed for %s", header_exp_path)
+     raise svntest.Failure
+@@ -409,7 +409,7 @@
+   fp = open(id_with_space_path, 'r')
+   lines = fp.readlines()
+   if not ((len(lines) == 1)
+-          and (re.match("\$Id: .*id with space", lines[0]))):
++          and (re.match(r"\$Id: .*id with space", lines[0]))):
+     logger.warn("Id expansion failed for %s", id_with_space_path)
+     raise svntest.Failure
+   fp.close()
+@@ -418,7 +418,7 @@
+   fp = open(id_exp_with_dollar_path, 'r')
+   lines = fp.readlines()
+   if not ((len(lines) == 1)
+-          and (re.match("\$Id: .*id_exp with_\$_sign [^$]* jrandom \$",
++          and (re.match(r"\$Id: .*id_exp with_\$_sign [^$]* jrandom \$",
+                         lines[0]))):
+     logger.warn("Id expansion failed for %s", id_exp_with_dollar_path)
+ 
+@@ -645,7 +645,7 @@
+   fp = open(other_url_path, 'r')
+   lines = fp.readlines()
+   if not ((len(lines) == 1)
+-          and (re.match("\$URL: (http|https|file|svn|svn\\+ssh)://",
++          and (re.match(r"\$URL: (http|https|file|svn|svn\+ssh)://",
+                         lines[0]))):
+     logger.warn("URL expansion failed for %s", other_url_path)
+     raise svntest.Failure
+
+Modified: subversion/trunk/subversion/tests/cmdline/update_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/update_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/update_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -620,8 +620,8 @@
+ 
+   # "Extra" files that we expect to result from the conflicts.
+   # These are expressed as list of regexps.  What a cool system!  :-)
+-  extra_files = ['mu.*\.r1', 'mu.*\.r2', 'mu.*\.mine',
+-                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine', 'rho.*\.prej']
++  extra_files = [r'mu.*\.r1', r'mu.*\.r2', r'mu.*\.mine',
++                 r'rho.*\.r1', r'rho.*\.r2', r'rho.*\.mine', r'rho.*\.prej']
+ 
+   # Do the update and check the results in three ways.
+   # All "extra" files are passed to detect_conflict_files().
+@@ -2700,10 +2700,10 @@
+     })
+ 
+   # "Extra" files that we expect to result from the conflicts.
+-  extra_files = ['eta\.r0', 'eta\.r2', 'eta\.mine',
+-                 'kappa\.r0', 'kappa\.r2', 'kappa\.mine',
+-                 'epsilon\.r0', 'epsilon\.r2', 'epsilon\.mine',
+-                 'kappa.prej', 'zeta.prej', 'dir_conflicts.prej']
++  extra_files = [r'eta\.r0', r'eta\.r2', r'eta\.mine',
++                 r'kappa\.r0', r'kappa\.r2', r'kappa\.mine',
++                 r'epsilon\.r0', r'epsilon\.r2', r'epsilon\.mine',
++                 r'kappa.prej', r'zeta.prej', r'dir_conflicts.prej']
+ 
+   # Perform forced update and check the results in three
+   # ways (including props).
+@@ -3826,9 +3826,9 @@
+                                              'foo\n'))
+ 
+   # Set the expected extra files for the test
+-  extra_files = ['iota.*\.r2', 'iota.*\.r3', 'iota.*\.mine',
+-                 'lambda.*\.r2', 'lambda.*\.r3', 'lambda.*\.mine',
+-                 'rho.*\.r2', 'rho.*\.r3', 'rho.*\.mine']
++  extra_files = [r'iota.*\.r2', r'iota.*\.r3', r'iota.*\.mine',
++                 r'lambda.*\.r2', r'lambda.*\.r3', r'lambda.*\.mine',
++                 r'rho.*\.r2', r'rho.*\.r3', r'rho.*\.mine']
+ 
+   # Set the expected status for the test
+   expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
+
+Modified: subversion/trunk/subversion/tests/cmdline/upgrade_tests.py
+==============================================================================
+--- subversion/trunk/subversion/tests/cmdline/upgrade_tests.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/subversion/tests/cmdline/upgrade_tests.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -51,7 +51,7 @@
+ Issue = svntest.testcase.Issue_deco
+ Wimp = svntest.testcase.Wimp_deco
+ 
+-wc_is_too_old_regex = (".*is too old \(format \d+.*\).*")
++wc_is_too_old_regex = (r".*is too old \(format \d+.*\).*")
+ 
+ 
+ def get_current_format():
+
+Modified: subversion/trunk/tools/dist/release.py
+==============================================================================
+--- subversion/trunk/tools/dist/release.py	Sat Sep 30 11:00:27 2023	(r1)
++++ subversion/trunk/tools/dist/release.py	Sat Sep 30 13:13:16 2023	(r2)
+@@ -1567,7 +1567,7 @@
+     mergeinfo = mergeinfo.splitlines()
+ 
+     separator_pattern = re.compile('^-{72}$')
+-    revline_pattern = re.compile('^r(\d+) \| [^\|]+ \| [^\|]+ \| \d+ lines?$')
++    revline_pattern = re.compile(r'^r(\d+) \| [^|]+ \| [^|]+ \| \d+ lines?$')
+     changes_prefix_pattern = re.compile(r'^\[(U|D)?:?([^\]]+)?\](.+)$')
+     changes_suffix_pattern = re.compile(r'^(.+)\[(U|D)?:?([^\]]+)?\]$')
+     # TODO: push this into backport.status as a library function

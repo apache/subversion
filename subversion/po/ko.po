@@ -5705,7 +5705,7 @@ msgstr "fsfs에 대한 지원하지 않는 파일시스템 로더 버전(%d)입�
 
 #: ../libsvn_fs_fs/fs_fs.c:444
 #, c-format
-msgid "Found format '%d', only created by unreleased dev builds; see http://subversion.apache.org/docs/release-notes/1.7#revprop-packing"
+msgid "Found format '%d', only created by unreleased dev builds; see https://subversion.apache.org/docs/release-notes/1.7#revprop-packing"
 msgstr ""
 
 #: ../libsvn_fs_fs/fs_fs.c:455
@@ -9944,12 +9944,12 @@ msgid ""
 "Copyright (C) 2017 The Apache Software Foundation.\n"
 "This software consists of contributions made by many people;\n"
 "see the NOTICE file for more information.\n"
-"Subversion is open source software, see http://subversion.apache.org/\n"
+"Subversion is open source software, see https://subversion.apache.org/\n"
 msgstr ""
 "Copyright (C) 2011 The Apache Software Foundation.\n"
 "이 소프트웨어는 많은 사람들의 공헌으로 이루어졌습니다;\n"
 "NOTICE 파일을 참고하시면 보다 많은 정보를 얻으실 수 있습니다.\n"
-"Subversion은 오픈 소스 소프트웨어입니다 http://subversion.apache.org/ 를 방문하세요\n"
+"Subversion은 오픈 소스 소프트웨어입니다 https://subversion.apache.org/ 를 방문하세요\n"
 "\n"
 
 #: ../libsvn_subr/version.c:224 ../libsvn_subr/version.c:235
@@ -11229,7 +11229,7 @@ msgid ""
 "This client is too old to work with the working copy at\n"
 "'%s' (format %d).\n"
 "You need to get a newer Subversion client. For more details, see\n"
-"  http://subversion.apache.org/faq.html#working-copy-format-change\n"
+"  https://subversion.apache.org/faq.html#working-copy-format-change\n"
 msgstr ""
 
 #: ../libsvn_wc/wc_db_wcroot.c:349
@@ -12115,10 +12115,10 @@ msgstr ""
 #: ../svn/help-cmd.c:67 ../svnbench/help-cmd.c:62
 msgid ""
 "Subversion is a tool for version control.\n"
-"For additional information, see http://subversion.apache.org/\n"
+"For additional information, see https://subversion.apache.org/\n"
 msgstr ""
 "Subversion은 형상관리를 위한 도구입니다.\n"
-"더 상세한 정보를 위해서는 http://subversion.apache.org/ 를 방문하세요\n"
+"더 상세한 정보를 위해서는 https://subversion.apache.org/ 를 방문하세요\n"
 
 #: ../svn/help-cmd.c:71 ../svnbench/help-cmd.c:66 ../svnrdump/svnrdump.c:589
 #: ../svnsync/svnsync.c:1933

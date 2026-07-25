@@ -2,7 +2,7 @@
 # repos.py: public Python interface for repos components
 #
 # Subversion is a tool for revision control.
-# See http://subversion.apache.org for more information.
+# See https://subversion.apache.org for more information.
 #
 ######################################################################
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -336,5 +336,16 @@ class ParseFns3:
         pass
 
 
-def make_parse_fns3(parse_fns3, pool=None):
-    return svn_swig_py_make_parse_fns3(parse_fns3, pool)
+def make_parse_fns3(parse_fns3, pool=None, baton=None):
+  from libsvn.delta import _AncBaton
+
+  class _ParseBaton(_AncBaton):
+    # Drive _close_dumpstream method when the instance is deleted.
+    # For backward compatibility before Subversion 1.15, we call it even if
+    # the instance would not be used by C API, or the C API would cause
+    # some error.
+    def __del__(self):
+      self.editor._close_dumpstream()
+
+  parse_baton = _ParseBaton(parse_fns3, pool, baton)
+  return svn_swig_py_make_parse_fns3(pool), parse_baton

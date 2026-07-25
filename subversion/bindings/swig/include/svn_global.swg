@@ -34,6 +34,11 @@
 #ifdef SWIGPYTHON
 %begin %{
 #define SWIG_PYTHON_STRICT_BYTE_CHAR
+#if defined(_MSC_VER)
+/* Prevent "non-constant aggregate initializer" errors from Python.h in
+ * Python 3.9 */
+# pragma warning(default : 4204)
+#endif
 %}
 #endif
 
@@ -242,3 +247,40 @@ static VALUE *_global_vresult_address = &vresult;
 /* Now, include the main Subversion typemap library. */
 %include svn_types.swg
 %include proxy.swg
+
+
+#ifdef SWIGPYTHON
+/* Since Python 3.8+ on Windows, DLL dependencies when loading *.pyd file
+ * searches only the system paths, the directory containing the *.pyd file and
+ * the directories added with os.add_dll_directory().
+ * See also https://bugs.python.org/issue36085.
+ */
+%define SVN_PYTHON_MODULEIMPORT
+"
+def _dll_paths():
+    import os
+    if hasattr(os, 'add_dll_directory'):  # Python 3.8+ on Windows
+        cookies = []
+        for path in os.environ.get('PATH', '').split(os.pathsep):
+            if path and os.path.isabs(path):
+                try:
+                    cookie = os.add_dll_directory(path)
+                except OSError:
+                    continue
+                else:
+                    cookies.append(cookie)
+        return cookies
+    else:
+        return ()
+
+_dll_paths = _dll_paths()
+try:
+    from . import $module
+finally:
+    _dll_path = None
+    for _dll_path in _dll_paths:
+        _dll_path.close()
+    del _dll_paths, _dll_path
+"
+%enddef
+#endif

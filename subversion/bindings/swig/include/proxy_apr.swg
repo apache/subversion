@@ -142,9 +142,15 @@ struct apr_pool_t {
         are still valid"""
         try:
           self._is_valid
-          return True
         except AttributeError:
           return False
+        # We must check whether the parent pool is valid even if
+        # the pool is valid because weakref's callback is not
+        # invoked when it is finalized by cyclic garbage collector
+        if self._parent_pool:
+          return self._parent_pool.valid()
+        else:
+          return True
 
       def assert_valid(self):
         """Assert that this memory_pool is still valid."""

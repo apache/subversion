@@ -39,7 +39,16 @@
  *   "base-deleted" -- node represents a delete of a BASE node
  */
 
-/* One big list of statements to create our (current) schema.  */
+/* One big list of statements to create our initial schema.
+
+   STMT_CREATE_SCHEMA creates the schema for the minimum WC format
+   supported by the client (SVN_WC__SUPPORTED_VERSION).
+
+   When we're creating a new working copy, we first execute
+   STMT_CREATE_SCHEMA, and then use the normal WC upgrade code (using
+   STMT_UPGRADE_TO_xx) to bring the schema up to any higher requested
+   format.
+ */
 -- STMT_CREATE_SCHEMA
 
 /* ------------------------------------------------------------------------- */
@@ -227,7 +236,6 @@ CREATE TABLE WC_LOCK (
 
   PRIMARY KEY (wc_id, local_dir_relpath)
  );
-
 
 /* ------------------------------------------------------------------------- */
 
@@ -563,8 +571,9 @@ CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
                                                       local_relpath);
 
 
+/* Identify the WC format corresponding to the schema we have created. */
 PRAGMA user_version =
--- define: SVN_WC__VERSION
+-- define: SVN_WC__SUPPORTED_VERSION
 ;
 
 
@@ -636,7 +645,7 @@ ON NODES (wc_id, moved_to, op_depth);
 
 CREATE INDEX IF NOT EXISTS I_PRISTINE_MD5 ON PRISTINE (md5_checksum);
 
-UPDATE nodes SET presence = "server-excluded" WHERE presence = "absent";
+UPDATE nodes SET presence = 'server-excluded' WHERE presence = 'absent';
 
 /* Just to be sure clear out file external skels from pre 1.7.0 development
    working copies that were never updated by 1.7.0+ style clients */
@@ -699,9 +708,104 @@ WHERE l.op_depth = 0
 
 
 /* ------------------------------------------------------------------------- */
-/* Format 32 ....  */
-/* -- STMT_UPGRADE_TO_32
-PRAGMA user_version = 32; */
+/* Format 32 adds support for optional pristine contents with the
+   following schema changes:
+   - Add the 'hydrated' column to the PRISTINE table.
+   - Add the I_PRISTINE_UNREFERENCED index.
+   - Add the TEXTBASE_REFS table.
+   - Add the SETTINGS table. */
+-- STMT_UPGRADE_TO_32
+/* True iff the pristine contents are currently available on disk. */
+ALTER TABLE PRISTINE ADD COLUMN hydrated INTEGER NOT NULL DEFAULT 1;
+
+CREATE INDEX I_PRISTINE_UNREFERENCED ON PRISTINE (refcount, refcount=0);
+
+/* This table contains references to the on disk text-base contents.
+   Every row corresponds to a row in NODES table with the same key.
+   While a row is present is this table, the contents identified by the
+   corresponding NODES.checksum cannot be dehydrated from the pristine store.
+ */
+CREATE TABLE TEXTBASE_REFS (
+  /* Same key columns as in the NODES table */
+  wc_id  INTEGER NOT NULL,
+  local_relpath  TEXT NOT NULL,
+  op_depth  INTEGER NOT NULL,
+
+  PRIMARY KEY (wc_id, local_relpath, op_depth)
+  );
+
+DROP TRIGGER nodes_delete_trigger;
+
+CREATE TRIGGER nodes_delete_trigger
+AFTER DELETE ON nodes
+WHEN OLD.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+  DELETE FROM textbase_refs
+  WHERE wc_id = OLD.wc_id
+    AND local_relpath = OLD.local_relpath
+    AND op_depth = OLD.op_depth;
+END;
+
+DROP TRIGGER nodes_update_checksum_trigger;
+
+CREATE TRIGGER nodes_update_checksum_trigger
+AFTER UPDATE OF checksum ON nodes
+WHEN NEW.checksum IS NOT OLD.checksum
+  /* AND (NEW.checksum IS NOT NULL OR OLD.checksum IS NOT NULL) */
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+  DELETE FROM textbase_refs
+  WHERE wc_id = OLD.wc_id
+    AND local_relpath = OLD.local_relpath
+    AND op_depth = OLD.op_depth;
+END;
+
+/* This table contains settings of a working copy, identified by WC_ID. */
+CREATE TABLE SETTINGS (
+  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id) PRIMARY KEY,
+  store_pristine  INTEGER
+);
+
+/* Migrate existing working copy settings. */
+INSERT OR IGNORE INTO SETTINGS SELECT id, 1 FROM WCROOT;
+
+PRAGMA user_version = 32;
+
+/* ------------------------------------------------------------------------- */
+/* Format 33 ....  */
+
+/* Note: we use checksums to detect if the file contents have been modified
+   in textbase.c and in the svn_wc__internal_file_modified_p() function.
+
+   The new working copy format SHOULD incorporate a switch to a different
+   checksum type without known collisions.
+
+   For the updated pristine table schema, we MAY want to add a new column
+   containing a checksum of the first 8KB of the file to allow saying that
+   the file is modified without reading all its content.  That could speed
+   up the check for large modified files whose size did not change, for
+   example if they are allocated in certain extents. */
+
+/* -- STMT_UPGRADE_TO_33
+PRAGMA user_version = 33; */
+
+/* ------------------------------------------------------------------------- */
+/* When bumping the format, also update:
+ *
+ *   * subversion/tests/libsvn_wc/wc-queries-test.c
+ *     (schema_statements, create_memory_db)
+ *   * The implementation of svn_client_latest_wc_version()
+ *   * The implementation of svn_wc__format_from_version()
+ *   * The implementation of svn_client_get_wc_formats_supported()
+ *   * subversion/tests/cmdline/svntest/main.py:wc_format()
+ *   * The comment above the comment above SVN_WC__VERSION
+ *   * The value of SVN_WC__VERSION, if needed
+ */
 
 
 /* ------------------------------------------------------------------------- */

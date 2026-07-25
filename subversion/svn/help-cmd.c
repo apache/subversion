@@ -32,12 +32,38 @@
 #include "svn_config.h"
 #include "svn_dirent_uri.h"
 #include "svn_error.h"
+#include "svn_version.h"
+#include "svn_client.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
 
 
 /*** Code. ***/
+
+/* Append a textual list of the supported WC formats to OUTPUT. */
+static svn_error_t *
+print_supported_wc_formats(svn_stringbuf_t *output,
+                           const char *prefix,
+                           apr_pool_t *pool)
+{
+  const int *wc_formats = svn_client_get_wc_formats_supported(pool);
+  int i;
+
+  for (i = 0; wc_formats[i]; i++)
+    {
+      const svn_version_t *ver
+        = svn_client_wc_version_from_format(wc_formats[i], pool);
+      const char *s
+        = apr_psprintf(
+            pool,
+            _("%sWC format %d, compatible with Subversion v%d.%d and newer\n"),
+            prefix, wc_formats[i], ver->major, ver->minor);
+
+      svn_stringbuf_appendcstr(output, s);
+    }
+  return SVN_NO_ERROR;
+}
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
@@ -46,7 +72,7 @@ svn_cl__help(apr_getopt_t *os,
              apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = NULL;
-  svn_stringbuf_t *version_footer = NULL;
+  svn_stringbuf_t *version_footer = svn_stringbuf_create_empty(pool);
   const char *config_path;
 
   char help_header[] =
@@ -65,10 +91,7 @@ svn_cl__help(apr_getopt_t *os,
 
   char help_footer[] =
   N_("Subversion is a tool for version control.\n"
-     "For additional information, see http://subversion.apache.org/\n");
-
-  const char *ra_desc_start
-    = _("The following repository access (RA) modules are available:\n\n");
+     "For additional information, see https://subversion.apache.org/\n");
 
   if (baton)
     {
@@ -121,10 +144,9 @@ svn_cl__help(apr_getopt_t *os,
 
       if (store_plaintext_passwords && store_auth_creds && store_passwords)
         {
-          version_footer = svn_stringbuf_create(
-              _("WARNING: Plaintext password storage is enabled!\n\n"),
-              pool);
-          svn_stringbuf_appendcstr(version_footer, ra_desc_start);
+          svn_stringbuf_appendcstr(
+              version_footer,
+              _("WARNING: Plaintext password storage is enabled!\n\n"));
         }
 #  endif /* !WIN32 */
 #endif /* !SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE */
@@ -132,8 +154,20 @@ svn_cl__help(apr_getopt_t *os,
       opt_state = cmd_baton->opt_state;
     }
 
-  if (!version_footer)
-    version_footer = svn_stringbuf_create(ra_desc_start, pool);
+  /*
+   * Show supported working copy versions.
+   */
+  svn_stringbuf_appendcstr(version_footer,
+                           _("Supported working copy (WC) formats:\n\n"));
+  SVN_ERR(print_supported_wc_formats(version_footer, "* ", pool));
+  svn_stringbuf_appendcstr(version_footer, "\n");
+
+  /*
+   * Show available repository access modules.
+   */
+  svn_stringbuf_appendcstr(
+      version_footer,
+      _("The following repository access (RA) modules are available:\n\n"));
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
   /*
@@ -144,8 +178,9 @@ svn_cl__help(apr_getopt_t *os,
                                                     : NULL,
                                           NULL,
                                           pool));
-  svn_stringbuf_appendcstr(version_footer,
-                           _("\nThe following authentication credential caches are available:\n\n"));
+  svn_stringbuf_appendcstr(
+      version_footer,
+      _("\nThe following authentication credential caches are available:\n\n"));
 
   /*### There is no API to query available providers at run time. */
   if (config_path)
@@ -173,7 +208,7 @@ svn_cl__help(apr_getopt_t *os,
   svn_stringbuf_appendcstr(version_footer, "* GPG-Agent\n");
 #endif
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
-  svn_stringbuf_appendcstr(version_footer, "* Mac OS X Keychain\n");
+  svn_stringbuf_appendcstr(version_footer, "* macOS Keychain\n");
 #endif
 #ifdef SVN_HAVE_KWALLET
   svn_stringbuf_appendcstr(version_footer, "* KWallet (KDE)\n");

@@ -475,21 +475,19 @@ svn_checksum(svn_checksum_t **checksum,
              apr_size_t len,
              apr_pool_t *pool)
 {
-  apr_sha1_ctx_t sha1_ctx;
-
   SVN_ERR(validate_kind(kind));
   *checksum = svn_checksum_create(kind, pool);
 
   switch (kind)
     {
       case svn_checksum_md5:
-        apr_md5((unsigned char *)(*checksum)->digest, data, len);
+        SVN_ERR(svn_checksum__md5((unsigned char *)(*checksum)->digest, data,
+                                  len));
         break;
 
       case svn_checksum_sha1:
-        apr_sha1_init(&sha1_ctx);
-        apr_sha1_update(&sha1_ctx, data, (unsigned int)len);
-        apr_sha1_final((unsigned char *)(*checksum)->digest, &sha1_ctx);
+        SVN_ERR(svn_checksum__sha1((unsigned char *)(*checksum)->digest, data,
+                                   len));
         break;
 
       case svn_checksum_fnv1a_32:
@@ -527,142 +525,6 @@ svn_checksum_empty_checksum(svn_checksum_kind_t kind,
         /* We really shouldn't get here, but if we do... */
         SVN_ERR_MALFUNCTION_NO_RETURN();
     }
-}
-
-struct svn_checksum_ctx_t
-{
-  void *apr_ctx;
-  svn_checksum_kind_t kind;
-};
-
-svn_checksum_ctx_t *
-svn_checksum_ctx_create(svn_checksum_kind_t kind,
-                        apr_pool_t *pool)
-{
-  svn_checksum_ctx_t *ctx = apr_palloc(pool, sizeof(*ctx));
-
-  ctx->kind = kind;
-  switch (kind)
-    {
-      case svn_checksum_md5:
-        ctx->apr_ctx = apr_palloc(pool, sizeof(apr_md5_ctx_t));
-        apr_md5_init(ctx->apr_ctx);
-        break;
-
-      case svn_checksum_sha1:
-        ctx->apr_ctx = apr_palloc(pool, sizeof(apr_sha1_ctx_t));
-        apr_sha1_init(ctx->apr_ctx);
-        break;
-
-      case svn_checksum_fnv1a_32:
-        ctx->apr_ctx = svn_fnv1a_32__context_create(pool);
-        break;
-
-      case svn_checksum_fnv1a_32x4:
-        ctx->apr_ctx = svn_fnv1a_32x4__context_create(pool);
-        break;
-
-      default:
-        SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
-
-  return ctx;
-}
-
-svn_error_t *
-svn_checksum_ctx_reset(svn_checksum_ctx_t *ctx)
-{
-  switch (ctx->kind)
-    {
-      case svn_checksum_md5:
-        memset(ctx->apr_ctx, 0, sizeof(apr_md5_ctx_t));
-        apr_md5_init(ctx->apr_ctx);
-        break;
-
-      case svn_checksum_sha1:
-        memset(ctx->apr_ctx, 0, sizeof(apr_sha1_ctx_t));
-        apr_sha1_init(ctx->apr_ctx);
-        break;
-
-      case svn_checksum_fnv1a_32:
-        svn_fnv1a_32__context_reset(ctx->apr_ctx);
-        break;
-
-      case svn_checksum_fnv1a_32x4:
-        svn_fnv1a_32x4__context_reset(ctx->apr_ctx);
-        break;
-
-      default:
-        SVN_ERR_MALFUNCTION();
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_checksum_update(svn_checksum_ctx_t *ctx,
-                    const void *data,
-                    apr_size_t len)
-{
-  switch (ctx->kind)
-    {
-      case svn_checksum_md5:
-        apr_md5_update(ctx->apr_ctx, data, len);
-        break;
-
-      case svn_checksum_sha1:
-        apr_sha1_update(ctx->apr_ctx, data, (unsigned int)len);
-        break;
-
-      case svn_checksum_fnv1a_32:
-        svn_fnv1a_32__update(ctx->apr_ctx, data, len);
-        break;
-
-      case svn_checksum_fnv1a_32x4:
-        svn_fnv1a_32x4__update(ctx->apr_ctx, data, len);
-        break;
-
-      default:
-        /* We really shouldn't get here, but if we do... */
-        return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_checksum_final(svn_checksum_t **checksum,
-                   const svn_checksum_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  *checksum = svn_checksum_create(ctx->kind, pool);
-
-  switch (ctx->kind)
-    {
-      case svn_checksum_md5:
-        apr_md5_final((unsigned char *)(*checksum)->digest, ctx->apr_ctx);
-        break;
-
-      case svn_checksum_sha1:
-        apr_sha1_final((unsigned char *)(*checksum)->digest, ctx->apr_ctx);
-        break;
-
-      case svn_checksum_fnv1a_32:
-        *(apr_uint32_t *)(*checksum)->digest
-          = htonl(svn_fnv1a_32__finalize(ctx->apr_ctx));
-        break;
-
-      case svn_checksum_fnv1a_32x4:
-        *(apr_uint32_t *)(*checksum)->digest
-          = htonl(svn_fnv1a_32x4__finalize(ctx->apr_ctx));
-        break;
-
-      default:
-        /* We really shouldn't get here, but if we do... */
-        return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
-    }
-
-  return SVN_NO_ERROR;
 }
 
 apr_size_t

@@ -345,6 +345,13 @@ typedef struct svn_ra__vtable_t {
                        void *receiver_baton,
                        apr_pool_t *scratch_pool);
 
+  /* See svn_ra_fetch_file_contents(). */
+  svn_error_t *(*fetch_file_contents)(svn_ra_session_t *session,
+                                      const char *path,
+                                      svn_revnum_t revision,
+                                      svn_stream_t *stream,
+                                      apr_pool_t *scratch_pool);
+
   /* Experimental support below here */
 
   /* See svn_ra__register_editor_shim_callbacks() */
@@ -411,17 +418,6 @@ typedef svn_error_t *
 (*svn_ra__init_func_t)(const svn_version_t *loader_version,
                        const svn_ra__vtable_t **vtable,
                        apr_pool_t *pool);
-
-/* Declarations of the init functions for the available RA libraries. */
-svn_error_t *svn_ra_local__init(const svn_version_t *loader_version,
-                                const svn_ra__vtable_t **vtable,
-                                apr_pool_t *pool);
-svn_error_t *svn_ra_svn__init(const svn_version_t *loader_version,
-                              const svn_ra__vtable_t **vtable,
-                              apr_pool_t *pool);
-svn_error_t *svn_ra_serf__init(const svn_version_t *loader_version,
-                               const svn_ra__vtable_t **vtable,
-                               apr_pool_t *pool);
 
 
 

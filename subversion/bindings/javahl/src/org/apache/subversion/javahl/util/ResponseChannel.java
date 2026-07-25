@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl.util;
@@ -42,15 +40,18 @@ class ResponseChannel
 
     public int write(ByteBuffer src) throws IOException
     {
-        long channel = this.nativeChannel.get();
-        if (channel != 0)
-            try {
-                return nativeWrite(channel, src);
-            } catch (IOException ex) {
-                nativeChannel.set(0); // Close the channel
-                throw ex;
-            }
-        throw new ClosedChannelException();
+        synchronized (nativeChannel)
+        {
+            long channel = this.nativeChannel.get();
+            if (channel != 0)
+                try {
+                    return nativeWrite(channel, src);
+                } catch (IOException ex) {
+                    nativeChannel.set(0); // Close the channel
+                    throw ex;
+                }
+            throw new ClosedChannelException();
+        }
     }
 
     private static native int nativeWrite(long nativeChannel, ByteBuffer src)

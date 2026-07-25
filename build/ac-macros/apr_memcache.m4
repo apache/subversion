@@ -29,7 +29,7 @@ AC_DEFUN(SVN_LIB_APR_MEMCACHE,
 [
   apr_memcache_found=no
 
-  AC_ARG_WITH(apr_memcache,AC_HELP_STRING([--with-apr_memcache=PREFIX],
+  AC_ARG_WITH(apr_memcache,AS_HELP_STRING([--with-apr_memcache=PREFIX],
                                   [Standalone apr_memcache client library]),
   [
     if test "$withval" = "yes" ; then
@@ -77,6 +77,7 @@ dnl We are already linking apr-util everywhere, so no special treatement needed.
     svn_lib_apr_memcache=no
   fi
 
+  SVN_DOT_CLANGD([$SVN_APR_MEMCACHE_INCLUDES])
   AC_SUBST(SVN_APR_MEMCACHE_INCLUDES)
   AC_SUBST(SVN_APR_MEMCACHE_LIBS)
 ])

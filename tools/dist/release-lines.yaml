@@ -19,12 +19,13 @@ tool_versions:
   '1.12': *TOOL_VERSIONS_1_10
   '1.13': *TOOL_VERSIONS_1_10
   '1.14': *TOOL_VERSIONS_1_10
-  'trunk': *TOOL_VERSIONS_1_10
+  '1.15': &TOOL_VERSIONS_1_15
+    autoconf: ['2.69', '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969']
+    libtool: ['2.4.7', '04e96c2404ea70c590c546eba4202a4e12722c640016c12b9b2f1ce3d481e9a8']
+    swig: ['3.0.12', '7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d']
+  'trunk': *TOOL_VERSIONS_1_15
 
 # The version that is our current recommended release
-recommended_release: '1.13'
+recommended_release: '1.14'
 # For clean-dist, a whitelist of artifacts to keep, by version.
-supported_release_lines: ['1.9', '1.10', '1.13']
-# Long-Term Support (LTS) versions
-lts_release_lines: ['1.9', '1.10', '1.14']
-
+supported_release_lines: ['1.14']

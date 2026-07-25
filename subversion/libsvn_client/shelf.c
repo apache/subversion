@@ -26,6 +26,9 @@
 /* We define this here to remove any further warnings about the usage of
    experimental functions in this file. */
 #define SVN_EXPERIMENTAL
+/* We currently allow using deprecated functions in this experimental
+   context. */
+#define SVN_DEPRECATED
 
 #include "svn_client.h"
 #include "svn_wc.h"
@@ -1033,6 +1036,8 @@ shelf_copy_base(svn_client__shelf_version_t *new_shelf_version,
                                         svn_depth_infinity,
                                         TRUE /*ignore_externals*/,
                                         FALSE /*allow_unver_obstructions*/,
+                                        TRUE, /*settings_from_context*/
+                                        NULL, svn_tristate_unknown,
                                         ra_session,
                                         ctx, scratch_pool));
   /* ### hopefully we won't eventually need to sleep_here... */

@@ -34,6 +34,7 @@ Blanket commit access:
           maxb   Max Bowsher <maxb1@ukf.net>
        dberlin   Daniel Berlin <dberlin@dberlin.org>
      danderson   David Anderson <david.anderson@natulte.net>
+          ivan   Ivan Zhakov <chemodax@gmail.com>
         djames   David James <james@cs.toronto.edu>
         pburba   Paul Burba <pburba@collab.net>
        glasser   David Glasser <glasser@davidglasser.net>
@@ -41,11 +42,10 @@ Blanket commit access:
        hwright   Hyrum Wright <hyrum@hyrumwright.org>
     vgeorgescu   Vlad Georgescu <vgeorgescu@gmail.com>
        kameshj   Kamesh Jayachandran <kamesh.jayachandran@gmail.com>
-      markphip   Mark Phippard <mphippard@collab.net>
+      markphip   Mark Phippard <markphip@gmail.com>
       arfrever   Arfrever Frehtes Taifersar Arahesis <arfrever.fta@gmail.com>
           stsp   Stefan Sperling <stsp@elego.de>
            kou   Kouhei Sutou <kou@cozmixng.org>
-      danielsh   Daniel Shahaf <d.s@daniel.shahaf.name>
         peters   Peter Samuelson <peter@p12n.org>
       rhuijben   Bert Huijben <rhuijben@apache.org>
       stylesen   Senthil Kumaran S <stylesen@gmail.com>
@@ -57,14 +57,17 @@ Blanket commit access:
        stefan2   Stefan Fuhrmann <stefan2@apache.org>
        jcorvel   Johan Corveleyn <jcorvel@gmail.com>
          trent   Trent Nelson <trent@snakebite.org>
-        kotkov   Evgeny Kotkov <evgeny.kotkov@visualsvn.com>
+        kotkov   Evgeny Kotkov <evgeny.kotkov@axiorema.com>
       astieger   Andreas Stieger <andreas.stieger@gmx.de>
       jamessan   James McCoy <jamessan@jamessan.com>
-      luke1410   Stefan Hett <luke1410@posteo.de>
   troycurtisjr   Troy Curtis, Jr <troycurtisjr@gmail.com>
  hartmannathan   Nathan Hartman <hartman.nathan@gmail.com>
       futatuki   Yasuhito Futatsuki <futatuki@yf.bsdclub.org>
        jun66j5   Jun Omae <jun66j5@gmail.com>
+     dsahlberg   Daniel Sahlberg <daniel.l.sahlberg@gmail.com>
+        vinc17   Vincent Lefevre <vincent@vinc17.net>
+        rinrab   Timofei Zhakov <tima@chemodax.net>
+       minfrin   Graham Leggett <minfrin@sharp.fm>
 
 [[END ACTIVE FULL COMMITTERS.  LEAVE THIS LINE HERE; SCRIPTS LOOK FOR IT.]]
 
@@ -82,7 +85,8 @@ Full committers who have asked to be listed as dormant:
        malcolm   Malcolm Rowe <malcolm-svn-dev@farside.org.uk>
          naked   Nuutti Kotivuori <naked@iki.fi>
      ringstrom   Tobias Ringström <tobias@ringstrom.mine.nu>
-          ivan   Ivan Zhakov <chemodax@gmail.com>
+      luke1410   Stefan Hett <luke1410@posteo.de>
+      danielsh   Daniel Shahaf <d.s@daniel.shahaf.name>
 
 
 Partial committers who have asked to be listed as dormant:
@@ -108,6 +112,7 @@ Commit access for specific areas:
        rschupp   Roderich Schupp <roderich.schupp@gmail.com> (Swig bindings)
         stilor   Alexey Neyman <stilor@att.net>              (Python bindings,
                                                              svn-vendor.py)
+ amiloslavskiy   Alexandr Miloslavskiy <amiloslavskiy@apache.org> (JavaHL bindings)
 
   Packages:
 
@@ -180,10 +185,13 @@ Commit access for specific areas:
        niqueco   Nicolás Lichtmaier <nick@reloco.com.ar>     (po: es)
         luebbe   Lübbe Onken <luebbe@tigris.org>             (po: de)
     jensseidel   Jens Seidel <jensseidel@users.sf.net>       (po: de)
-      oyvindmo   Øyvind Møll <svn@moll.no>                   (po: nb)
+      oyvindmo   Øyvind Møll <svn@moll.no>                   (po: nb) [EMAIL
+                                                             IS BOUNCING]
       sunny256   Øyvind A. Holm <sunny@sunbase.org>          (po: nb)
-        jzgoda   Jaroslaw Zgoda <jzgoda@o2.pl>               (po: pl)
-        plasma   Wei-Hon Chen <plasma@ms9.hinet.net>         (po: zh_TW)
+        jzgoda   Jaroslaw Zgoda <jzgoda@o2.pl>               (po: pl) [EMAIL
+                                                             IS BOUNCING]
+        plasma   Wei-Hon Chen <plasma@ms9.hinet.net>         (po: zh_TW) [EMAIL
+                                                             IS BOUNCING]
        jihuang   June-Yen Huang <jihuang@iis.sinica.edu.tw>  (po: zh_TW) [EMAIL
                                                              IS BOUNCING]
        marcosc   Marcos Chaves <marcos.nospam@gmail.com>     (po: pt_BR)
@@ -217,6 +225,8 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
         holden   Holden Karau <holden@pigscanfly.ca>         (scheme-bindings br.)
          moklo   Morten Kloster <morklo@gmail.com>           (diff-improvements br.)
           vmpn   Vladimir Berezniker <vmpn@hitechman.com>    (javahl-ra br.)
+       peterba   Peter Balogh <peterba@apache.org>           (mfa)
+         jpeck   Jordan Peck <jordan.me2@gmail.com>          (cow-pristines br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

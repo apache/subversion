@@ -173,7 +173,7 @@ typedef struct svn_cl__opt_state_t
   /* Was --no-unlock specified? */
   svn_boolean_t no_unlock;
 
-  const char *message;           /* log message (not converted to UTF-8) */
+  const char *message;           /* log message */
   svn_boolean_t force;           /* be more forceful, as in "svn rm -f ..." */
   svn_boolean_t force_log;       /* force validity of a suspect log msg file */
   svn_boolean_t incremental;     /* yield output suitable for concatenation */
@@ -185,7 +185,7 @@ typedef struct svn_cl__opt_state_t
   svn_stringbuf_t *filedata;     /* contents of file used as option data
                                     (not converted to UTF-8) */
   const char *encoding;          /* the locale/encoding of 'message' and of
-                                    'filedata' (not converted to UTF-8) */
+                                    'filedata' */
   svn_boolean_t help;            /* print usage message */
   const char *auth_username;     /* auth username */
   const char *auth_password;     /* auth password */
@@ -275,6 +275,8 @@ typedef struct svn_cl__opt_state_t
       svn_cl__viewspec_classic,
       svn_cl__viewspec_svn11
   } viewspec;                     /* value of --x-viewspec */
+  svn_version_t *compatible_version; /* working copy compatibility version */
+  svn_boolean_t store_pristine;
 } svn_cl__opt_state_t;
 
 /* Conflict stats for operations such as update and merge. */
@@ -374,6 +376,8 @@ typedef enum svn_cl__longopt_t {
   opt_vacuum_pristines,
   opt_drop,
   opt_viewspec,
+  opt_compatible_version,
+  opt_store_pristine
 } svn_cl__longopt_t;
 
 /* Options for giving a log message.  (Some of these also have other uses.)
@@ -708,6 +712,11 @@ svn_cl__notifier_mark_export(void *baton);
 svn_error_t *
 svn_cl__notifier_mark_wc_to_repos_copy(void *baton);
 
+/* Make the notifier for use with BATON suppress progress notifications
+ */
+svn_error_t *
+svn_cl__notifier_suppress_progress_output(void *baton);
+
 /* Baton for use with svn_cl__check_externals_failed_notify_wrapper(). */
 struct svn_cl__check_externals_failed_notify_baton
 {
@@ -731,6 +740,10 @@ svn_cl__check_externals_failed_notify_wrapper(void *baton,
  */
 svn_error_t *
 svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool);
+
+/* Get whether a WC upgrade notification was received. */
+svn_boolean_t
+svn_cl__notifier_get_wc_was_upgraded(void *baton);
 
 
 /*** Log message callback stuffs. ***/
@@ -869,7 +882,7 @@ typedef enum svn_cl__prop_use_e
 svn_cl__prop_use_t;
 
 /* If PROPNAME looks like but is not identical to one of the svn:
- * poperties, raise an error and suggest a better spelling. Names that
+ * properties, raise an error and suggest a better spelling. Names that
  * raise errors look like this:
  *
  *   - start with svn: but do not exactly match a known property; or,

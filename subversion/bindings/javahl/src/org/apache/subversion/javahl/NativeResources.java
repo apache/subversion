@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl;
@@ -142,7 +140,7 @@ public class NativeResources
     private static final void init()
     {
         final int SVN_VER_MAJOR = 1;
-        final int SVN_VER_MINOR = 15;
+        final int SVN_VER_MINOR = 16;
         initNativeLibrary();
         version = new Version();
         if (!version.isAtLeast(SVN_VER_MAJOR, SVN_VER_MINOR, 0))

@@ -1595,6 +1595,10 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
  * #SVN_PROP_REVISION_AUTHOR and #SVN_PROP_REVISION_LOG properties,
  * respectively.  @a user and @a log_msg may both be @c NULL.
  *
+ * @note The @a repos_url parameter has been renamed for clarity to
+ * @a repos_url_decoded in svn_repos_get_commit_editor5(), but remains
+ * functionally the same.
+ *
  * @since New in 1.4.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.

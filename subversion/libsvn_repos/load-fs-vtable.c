@@ -42,6 +42,7 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_subr_private.h"
 
 /*----------------------------------------------------------------------*/
 
@@ -77,6 +78,8 @@ struct parse_baton
      contents are allocated in POOL. */
   /* ### See https://issues.apache.org/jira/browse/SVN-3903
      ### for discussion about improving the memory costs of this mapping. */
+  /* Using svn_revnum_t as a key can interact badly with APR's default hash
+     see tools/dev/hash-test.c. Use svn_hash__make to get a suitable hash. */
   apr_hash_t *rev_map;
 
   /* The most recent (youngest) revision from the dump stream mapped in
@@ -1255,7 +1258,7 @@ svn_repos_get_fs_build_parser6(const svn_repos_parse_fns3_t **callbacks,
   pb->parent_dir = parent_dir;
   pb->pool = pool;
   pb->notify_pool = svn_pool_create(pool);
-  pb->rev_map = apr_hash_make(pool);
+  pb->rev_map = svn_hash__make(pool);
   pb->oldest_dumpstream_rev = SVN_INVALID_REVNUM;
   pb->last_rev_mapped = SVN_INVALID_REVNUM;
   pb->start_rev = start_rev;

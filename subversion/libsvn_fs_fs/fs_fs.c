@@ -444,7 +444,7 @@ check_format(int format)
     return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
                              _("Found format '%d', only created by "
                                "unreleased dev builds; see "
-                               "http://subversion.apache.org"
+                               "https://subversion.apache.org"
                                "/docs/release-notes/1.7#revprop-packing"),
                              format);
 

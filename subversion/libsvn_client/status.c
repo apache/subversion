@@ -637,7 +637,7 @@ svn_client_status6(svn_revnum_t *result_rev,
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
              working copy and HEAD. */
-          SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx,
+          SVN_ERR(svn_wc_crawl_revisions6(ctx->wc_ctx,
                                           target_abspath,
                                           &lock_fetch_reporter, &rb,
                                           FALSE /* restore_files */,

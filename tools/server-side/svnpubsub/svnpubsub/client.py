@@ -131,6 +131,8 @@ class Client(asynchat.async_chat):
 class Notification(object):
   def __init__(self, data):
     self.__dict__.update(data)
+  def __repr__(self):
+    return '%s(%r)' % (self.KIND, self.__dict__)
 
 class Commit(Notification):
   KIND = 'COMMIT'

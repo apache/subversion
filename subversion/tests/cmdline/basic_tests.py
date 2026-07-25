@@ -3,7 +3,7 @@
 #  basic_tests.py:  testing working-copy interactions with ra_local
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -40,6 +40,7 @@ XFail = svntest.testcase.XFail_deco
 Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
+RequireUtf8 = svntest.testcase.RequireUtf8_deco
 Item = wc.StateItem
 
 # Generic UUID-matching regular expression
@@ -115,11 +116,10 @@ def basic_status(sbox):
 
 #----------------------------------------------------------------------
 
-def basic_commit(sbox):
-  "basic commit command"
-
+def _basic_commit_common(sbox, expected_error=[], *args):
   sbox.build()
   wc_dir = sbox.wc_dir
+  svntest.main.use_editor('prepend_foo')
 
   # Make a couple of local mods to files
   mu_path = sbox.ospath('A/mu')
@@ -128,20 +128,48 @@ def basic_commit(sbox):
   svntest.main.file_append(rho_path, 'new appended text for rho')
 
   # Created expected output tree for 'svn ci'
-  expected_output = wc.State(wc_dir, {
-    'A/mu' : Item(verb='Sending'),
-    'A/D/G/rho' : Item(verb='Sending'),
+  if expected_error:
+    expected_output = []
+  else:
+    expected_output = wc.State(wc_dir, {
+      'A/mu' : Item(verb='Sending'),
+      'A/D/G/rho' : Item(verb='Sending'),
     })
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu and rho should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
+  if expected_error:
+    expected_status.tweak('A/mu', 'A/D/G/rho', status='M ')
+  else:
+    expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
 
-  svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status)
+  prepend_wc_dir_name = len(args) > 0
+  append_log_message = not (len(args) or expected_error)
+  svntest.actions.run_and_verify_commit2(wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         prepend_wc_dir_name,
+                                         append_log_message,
+                                         expected_error,
+                                         *args)
 
+def basic_commit(sbox):
+  "basic commit command"
+
+  return _basic_commit_common(sbox)
+
+def basic_commit_use_editor(sbox):
+  "basic commit using editor"
+
+  # Note: svn's stdin is not a terminal, so it defaults to non-interactive.
+  return _basic_commit_common(sbox,
+                              "svn: E205001: .* editor .* non-interactive.*")
+
+def basic_commit_use_editor_force_interactive(sbox):
+  "basic commit using editor and force-interactive"
+
+  return _basic_commit_common(sbox, [], '--force-interactive')
 
 #----------------------------------------------------------------------
 
@@ -377,6 +405,10 @@ def basic_commit_corruption(sbox):
   mu_path = sbox.ospath('A/mu')
   svntest.main.file_append(mu_path, 'appended mu text')
 
+  # We are about to manually edit mu's text-base, so run "diff" to
+  # guarantee that the text-base is available in all pristine modes.
+  svntest.actions.run_and_verify_svn(None, [], 'diff', mu_path)
+
   # Created expected output tree for 'svn ci'
   expected_output = wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'),
@@ -428,11 +460,10 @@ def basic_update_corruption(sbox):
   ##
   ##    1. Make a working copy at rev 1, duplicate it.  Now we have
   ##        two working copies at rev 1.  Call them first and second.
-  ##    2. Make a local mod to `first/A/mu'.
-  ##    3. Repair the text-base, commit again, expect success.
-  ##    4. Intentionally corrupt `second/A/.svn/text-base/mu.svn-base'.
-  ##    5. Try to update `second', expect failure.
-  ##    6. Repair the text-base, update again, expect success.
+  ##    2. Make a local mod to `first/A/mu' and commit it.
+  ##    3. Intentionally corrupt `second/A/.svn/text-base/mu.svn-base'.
+  ##    4. Try to update `second', expect failure.
+  ##    5. Repair the text-base, update again, expect success.
   ##
   ## Here we go...
 
@@ -444,6 +475,12 @@ def basic_update_corruption(sbox):
 
   svntest.actions.run_and_verify_svn(None, [],
                                      'co', sbox.repo_url, other_wc)
+
+  # The test manually edits mu's text-base when mu is unmodified.
+  # Unmodified files don't have their text-bases available with
+  # --store-pristine=no, so skip if that is the case.
+  if not svntest.actions.get_wc_store_pristine(other_wc):
+    raise svntest.Skip('Test assumes a working copy with pristine')
 
   # Make a local mod to mu
   mu_path = sbox.ospath('A/mu')
@@ -696,8 +733,8 @@ def basic_conflict(sbox):
 
   # "Extra" files that we expect to result from the conflicts.
   # These are expressed as list of regexps.  What a cool system!  :-)
-  extra_files = ['mu.*\.r1', 'mu.*\.r2', 'mu.*\.mine',
-                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine',]
+  extra_files = [r'mu.*\.r1', r'mu.*\.r2', r'mu.*\.mine',
+                 r'rho.*\.r1', r'rho.*\.r2', r'rho.*\.mine',]
 
   # Do the update and check the results in three ways.
   # All "extra" files are passed to detect_conflict_files().
@@ -2258,11 +2295,11 @@ def automatic_conflict_resolution(sbox):
 
   # "Extra" files that we expect to result from the conflicts.
   # These are expressed as list of regexps.  What a cool system!  :-)
-  extra_files = ['mu.*\.r1', 'mu.*\.r2', 'mu.*\.mine',
-                 'lambda.*\.r1', 'lambda.*\.r2', 'lambda.*\.mine',
-                 'omega.*\.r1', 'omega.*\.r2', 'omega.*\.mine',
-                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine',
-                 'tau.*\.r1', 'tau.*\.r2', 'tau.*\.mine',
+  extra_files = [r'mu.*\.r1', r'mu.*\.r2', r'mu.*\.mine',
+                 r'lambda.*\.r1', r'lambda.*\.r2', r'lambda.*\.mine',
+                 r'omega.*\.r1', r'omega.*\.r2', r'omega.*\.mine',
+                 r'rho.*\.r1', r'rho.*\.r2', r'rho.*\.mine',
+                 r'tau.*\.r1', r'tau.*\.r2', r'tau.*\.mine',
                  ]
 
   # Do the update and check the results in three ways.
@@ -2338,7 +2375,7 @@ def automatic_conflict_resolution(sbox):
                                           ""]))
 
   # Set the expected extra files for the test
-  extra_files = ['omega.*\.r1', 'omega.*\.r2', 'omega.*\.mine',]
+  extra_files = [r'omega.*\.r1', r'omega.*\.r2', r'omega.*\.mine',]
 
   # Set the expected status for the test
   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
@@ -2541,33 +2578,38 @@ def basic_auth_test(sbox):
   # Set up a custom config directory
   config_dir = sbox.create_config_dir()
 
+  common_opts = ('--config-dir', config_dir)
+  if svntest.main.options.wc_format_version:
+    common_opts += ('--compatible-version',
+                    svntest.main.options.wc_format_version)
+  if svntest.main.options.store_pristine:
+    common_opts += ('--store-pristine',
+                    svntest.main.options.store_pristine)
+
   # Checkout with jrandom
   exit_code, output, errput = svntest.main.run_command(
     svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
-    '--username', 'jrandom', '--password', 'rayjandom',
-    '--config-dir', config_dir)
+    '--username', 'jrandom', '--password', 'rayjandom', *common_opts)
 
   exit_code, output, errput = svntest.main.run_command(
     svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
-    '--username', 'jrandom', '--non-interactive', '--config-dir', config_dir)
+    '--username', 'jrandom', '--non-interactive', *common_opts)
 
   # Checkout with jconstant
   exit_code, output, errput = svntest.main.run_command(
     svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
-    '--username', 'jconstant', '--password', 'rayjandom',
-    '--config-dir', config_dir)
+    '--username', 'jconstant', '--password', 'rayjandom', *common_opts)
 
   exit_code, output, errput = svntest.main.run_command(
     svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
-    '--username', 'jconstant', '--non-interactive',
-    '--config-dir', config_dir)
+    '--username', 'jconstant', '--non-interactive', *common_opts)
 
   # Checkout with jrandom which should fail since we do not provide
   # a password and the above cached password belongs to jconstant
   expected_err = ["authorization failed: Could not authenticate to server:"]
   exit_code, output, errput = svntest.main.run_command(
     svntest.main.svn_binary, expected_err, True, 'co', sbox.repo_url, wc_dir,
-    '--username', 'jrandom', '--non-interactive', '--config-dir', config_dir)
+    '--username', 'jrandom', '--non-interactive', *common_opts)
 
 def basic_add_svn_format_file(sbox):
   'test add --parents .svn/format'
@@ -3242,6 +3284,134 @@ def filtered_ls_top_level_path(sbox):
     exit_code, output, error = svntest.actions.run_and_verify_svn(
       [], [], 'ls', f_path, '--search=*/*', *extra_opts)
 
+def keep_local_reverted_properly(sbox):
+  "rm --keep-local, /bin/rm, revert"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  lambda_path = sbox.ospath('A/B/lambda')
+  E_path =  sbox.ospath('A/B/E')
+  targets = [ lambda_path, E_path ]
+
+  # Modify
+  sbox.simple_append('A/B/lambda', "added text\n")
+  svntest.main.run_svn(None, 'ps', 'k', 'v', E_path)
+
+  # Schedule for removal
+  svntest.main.run_svn(None, 'rm', '--keep-local', *targets)
+
+  # Remove from disk
+  os.unlink(lambda_path)
+  shutil.rmtree(E_path)
+
+  # Revert
+  svntest.main.run_svn(None, 'revert', *targets)
+
+  # Check that the modifications are absent
+  #
+  # alpha and beta are still scheduled for deletion because 'revert' doesn't
+  # recurse by default.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta')
+  expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_output.tweak('A/B/E/alpha', 'A/B/E/beta', status='D ')
+  #
+  svntest.actions.verify_disk(sbox.wc_dir, expected_disk, check_props=True)
+  svntest.actions.run_and_verify_status(wc_dir, expected_output)
+
+
+@SkipUnless(svntest.main.is_os_windows)
+def argv_with_best_fit_chars(sbox):
+  """argv with best fit chars"""
+
+  import ctypes
+  from ctypes import windll, wintypes
+
+  CP_ACP = 0
+  kernel32 = windll.kernel32
+  WideCharToMultiByte = kernel32.WideCharToMultiByte
+  WideCharToMultiByte.argtypes = [
+    wintypes.UINT, wintypes.DWORD, wintypes.LPCWSTR, ctypes.c_int,
+    wintypes.LPSTR, ctypes.c_int, wintypes.LPCSTR, wintypes.LPBOOL,
+  ]
+  WideCharToMultiByte.restype = ctypes.c_int
+  codepage = kernel32.GetACP()
+
+  def regexlines(*patterns):
+    return svntest.verify.RegexListOutput(list(patterns), match_all=True)
+
+  def iter_bestfit_chars():
+    chars = {b'"': 0, b'\\': 0, b' ': 0}
+    for c in range(0x80, 0x10000):
+      wcs = ctypes.create_unicode_buffer(chr(c))
+      mbcs = ctypes.create_string_buffer(8)
+      rc = WideCharToMultiByte(CP_ACP, 0, wcs, len(wcs), mbcs, len(mbcs), None,
+                               None)
+      if rc == 0:
+        continue
+      mbcs = mbcs.value
+      if chars.get(mbcs) != 0:
+        continue
+      chars[mbcs] = c
+      yield chr(c), mbcs
+
+  count = 0
+  # The argument is accepted as utf-8, but the output to the pipe is applied
+  # best-fit encoding conversion.
+  for wc, mbcs in iter_bestfit_chars():
+    count += 1
+    logger.info('Code page %r - U+%04x -> 0x%s', codepage, ord(wc), mbcs.hex())
+    if mbcs == b'"':
+      expected_stderr = r'^"foo" "bar": unknown command'
+      svntest.actions.run_and_verify_svn2(None, expected_stderr, 0, 'help',
+                                          'foo{0} {0}bar'.format(wc))
+    elif mbcs == b'\\':
+      expected_stderr = r'^"foo\\" \\"bar": unknown command'
+      svntest.actions.run_and_verify_svn2(None, expected_stderr, 0, 'help',
+                                          'foo{0}" {0}"bar'.format(wc))
+    elif mbcs == b' ':
+      expected_stderr = r'^"foo bar": unknown command'
+      svntest.actions.run_and_verify_svn2(None, expected_stderr, 0, 'help',
+                                          'foo{0}bar'.format(wc))
+  if count == 0:
+    raise svntest.Skip('No best fit characters in code page %r' % codepage)
+
+@RequireUtf8
+def unicode_arguments_test(sbox: svntest.sandbox.Sandbox):
+  """test unicode arguments"""
+
+  UNICODE_TEST_STRING = '\U0001f449\U0001f448'
+  sbox.build(read_only=False, empty=True)
+
+  unicode_item = sbox.ospath(UNICODE_TEST_STRING)
+  test_item = sbox.ospath("test")
+
+  svntest.actions.run_and_verify_svn2(None, [], 0, "mkdir", unicode_item)
+  svntest.actions.run_and_verify_svn2(None, [], 0, "mkdir", test_item)
+  svntest.actions.run_and_verify_svn2(None, [], 0, "propset",
+                                      "name", UNICODE_TEST_STRING, unicode_item)
+  svntest.actions.run_and_verify_svn2(None, [], 0, "ci", sbox.wc_dir,
+                                      "-m", UNICODE_TEST_STRING,
+                                      "--with-revprop",
+                                      "revprop=" + UNICODE_TEST_STRING)
+
+  expected_disk = wc.State("", {
+    UNICODE_TEST_STRING: Item(props={ "name": UNICODE_TEST_STRING }),
+    "test"             : Item(),
+  })
+
+  svntest.actions.verify_disk(sbox.wc_dir, expected_disk, check_props=True)
+  os.chdir(sbox.wc_dir)
+  svntest.actions.run_and_verify_log_xml(
+    expected_revprops=[{
+      "svn:author": "jrandom",
+      "svn:date": "",
+      "svn:log": UNICODE_TEST_STRING,
+      "revprop": UNICODE_TEST_STRING
+    }],
+    args=["-r1", "--with-all-revprops"])
+
 
 ########################################################################
 # Run the tests
@@ -3251,6 +3421,8 @@ test_list = [ None,
               basic_checkout,
               basic_status,
               basic_commit,
+              basic_commit_use_editor,
+              basic_commit_use_editor_force_interactive,
               basic_update,
               basic_mkdir_url,
               basic_mkdir_url_with_parents,
@@ -3318,6 +3490,9 @@ test_list = [ None,
               null_update_last_changed_revision,
               null_prop_update_last_changed_revision,
               filtered_ls_top_level_path,
+              keep_local_reverted_properly,
+              argv_with_best_fit_chars,
+              unicode_arguments_test,
              ]
 
 if __name__ == '__main__':

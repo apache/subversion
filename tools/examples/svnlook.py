@@ -237,7 +237,7 @@ class SVNLook(object):
 
 # ---------------------------------------------------------
 # Delta Editors. For documentation see:
-# http://subversion.apache.org/docs/community-guide/#docs
+# https://subversion.apache.org/docs/community-guide/community-guide.html#docs
 
 # this one doesn't process delete_entry, change_dir_prop, apply_text_delta,
 # change_file_prop, close_file, close_edit, abort_edit

@@ -308,8 +308,7 @@ add_file_or_directory(const char *path,
   svn_boolean_t was_copied = FALSE;
   const char *full_path, *canonicalized_path;
 
-  /* Reject paths which contain control characters (related to issue #4340). */
-  SVN_ERR(svn_path_check_valid(path, pool));
+  SVN_ERR(svn_repos__validate_new_path(path, pool));
 
   SVN_ERR(svn_relpath_canonicalize_safe(&canonicalized_path, NULL, path,
                                         pool, pool));

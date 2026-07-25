@@ -3,7 +3,7 @@
 #  merge_authz_tests.py:  merge tests that need to write an authz file
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -773,7 +773,7 @@ def diff_unauth_parent(sbox):
     'Added: k\n',
     '## -0,0 +1 ##\n',
     '+v\n',
-    '\ No newline at end of property\n'
+    '\\ No newline at end of property\n'
   ]
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'diff', sbox.repo_url + '/A', '-c', '2')
@@ -830,9 +830,9 @@ def diff_unauth_parent(sbox):
       'Modified: this-is\n',
       '## -1 +1 ##\n',
       '-E\n',
-      '\ No newline at end of property\n',
+      '\\ No newline at end of property\n',
       '+G\n',
-      '\ No newline at end of property\n',
+      '\\ No newline at end of property\n',
     ]
   else:
     # ### We should also see a property deletion here!
@@ -847,7 +847,7 @@ def diff_unauth_parent(sbox):
     'Deleted: this-is\n',
     '## -1 +0,0 ##\n',
     '-E\n',
-    '\ No newline at end of property\n',
+    '\\ No newline at end of property\n',
     'Index: .\n',
     '===================================================================\n',
     '--- .\t(nonexistent)\n',
@@ -858,7 +858,7 @@ def diff_unauth_parent(sbox):
       'Added: this-is\n',
       '## -0,0 +1 ##\n',
       '+G\n',
-      '\ No newline at end of property\n',
+      '\\ No newline at end of property\n',
     ]
 
   # Use two url diff, because 'svn diff url -c' uses copyfrom to diff against

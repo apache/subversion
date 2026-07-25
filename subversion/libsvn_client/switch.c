@@ -297,6 +297,9 @@ switch_internal(svn_revnum_t *result_rev,
 
   SVN_ERR(svn_ra_reparent(ra_session, anchor_url, pool));
 
+  SVN_ERR(svn_client__textbase_sync(NULL, local_abspath, TRUE, TRUE, ctx,
+                                    ra_session, pool, pool));
+
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
@@ -340,7 +343,7 @@ switch_internal(svn_revnum_t *result_rev,
   /* Drive the reporter structure, describing the revisions within
      LOCAL_ABSPATH.  When this calls reporter->finish_report, the
      reporter will drive the switch_editor. */
-  SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
+  SVN_ERR(svn_wc_crawl_revisions6(ctx->wc_ctx, local_abspath, reporter,
                                   report_baton, TRUE,
                                   depth, (! depth_is_sticky),
                                   (! server_supports_depth),
@@ -368,6 +371,9 @@ switch_internal(svn_revnum_t *result_rev,
                                            depth, timestamp_sleep, ra_session,
                                            ctx, pool));
     }
+
+  SVN_ERR(svn_client__textbase_sync(NULL, local_abspath, FALSE, TRUE, ctx,
+                                    NULL, pool, pool));
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)

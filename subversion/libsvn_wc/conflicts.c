@@ -3365,6 +3365,13 @@ svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
                           void *notify_baton,
                           apr_pool_t *scratch_pool)
 {
+  svn_boolean_t store_pristine;
+
+  SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, wc_ctx, local_abspath,
+                               scratch_pool));
+  if (!store_pristine)
+    return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
+
   return svn_error_trace(svn_wc__resolve_conflicts(wc_ctx, local_abspath,
                                                    depth, resolve_text,
                                                    resolve_prop, resolve_tree,

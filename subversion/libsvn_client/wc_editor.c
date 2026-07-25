@@ -495,13 +495,14 @@ file_textdelta(void *file_baton,
                                  target_dir, svn_io_file_del_none,
                                  fb->pool, fb->pool));
 
-  svn_txdelta_apply(fb->wc_file_read_stream,
-                    fb->tmp_file_write_stream,
-                    fb->digest,
-                    fb->local_abspath,
-                    fb->pool,
-                    /* Provide the handler directly */
-                    handler, handler_baton);
+  /* Keep historical behavior by disowning the stream; adjust if needed. */
+  svn_txdelta_apply2(svn_stream_disown(fb->wc_file_read_stream, fb->pool),
+                     fb->tmp_file_write_stream,
+                     fb->digest,
+                     fb->local_abspath,
+                     fb->pool,
+                     /* Provide the handler directly */
+                     handler, handler_baton);
 
   return SVN_NO_ERROR;
 }

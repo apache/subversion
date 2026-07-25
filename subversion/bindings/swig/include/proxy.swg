@@ -66,7 +66,6 @@
         fn()
 
 %}
-#if defined(SWIGPYTHON_PY3)
 #if SWIG_VERSION >= 0x040000
 %pythoncode %{
   # -classic and -modern options have been dropped and this variable
@@ -76,7 +75,7 @@
   _set_instance_attr = _swig_setattr_nondynamic_instance_variable(object.__setattr__)
 
 %}
-#else
+#elif defined(SWIGPYTHON_PY3)
 %pythoncode %{
   # SWIG classes generated with -modern do not define this variable
   try:
@@ -90,7 +89,6 @@
   _set_instance_attr = _swig_setattr_nondynamic_method(object.__setattr__)
 
 %}
-#endif
 #else
 %pythoncode %{
   # SWIG classes generated with -classic do not define this variable,

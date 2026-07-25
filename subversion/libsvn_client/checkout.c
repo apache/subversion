@@ -38,8 +38,10 @@
 #include "svn_io.h"
 #include "svn_opt.h"
 #include "svn_time.h"
+#include "svn_version.h"
 #include "client.h"
 
+#include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
@@ -48,9 +50,11 @@
 /*** Public Interfaces. ***/
 
 static svn_error_t *
-initialize_area(const char *local_abspath,
+initialize_area(int target_format,
+                const char *local_abspath,
                 const svn_client__pathrev_t *pathrev,
                 svn_depth_t depth,
+                svn_boolean_t store_pristine,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
@@ -58,9 +62,10 @@ initialize_area(const char *local_abspath,
     depth = svn_depth_infinity;
 
   /* Make the unversioned directory into a versioned one.  */
-  SVN_ERR(svn_wc_ensure_adm4(ctx->wc_ctx, local_abspath, pathrev->url,
+  SVN_ERR(svn_wc__ensure_adm(ctx->wc_ctx,
+                             target_format, local_abspath, pathrev->url,
                              pathrev->repos_root_url, pathrev->repos_uuid,
-                             pathrev->rev, depth, pool));
+                             pathrev->rev, depth, store_pristine, pool));
   return SVN_NO_ERROR;
 }
 
@@ -75,10 +80,16 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
+                              svn_boolean_t settings_from_context,
+                              const svn_version_t *wc_format_version,
+                              svn_tristate_t store_pristine,
                               svn_ra_session_t *ra_session,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool)
 {
+  int target_format;
+  svn_boolean_t target_store_pristine;
+  svn_boolean_t fail_on_format_mismatch;
   svn_node_kind_t kind;
   svn_client__pathrev_t *pathrev;
   svn_opt_revision_t resolved_rev = { svn_opt_revision_number };
@@ -93,6 +104,58 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       && (revision->kind != svn_opt_revision_date)
       && (revision->kind != svn_opt_revision_head))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
+
+  if (settings_from_context)
+    {
+      SVN_ERR(svn_wc__settings_from_context(&target_format,
+                                            &target_store_pristine,
+                                            ctx->wc_ctx, local_abspath,
+                                            scratch_pool));
+      fail_on_format_mismatch = FALSE;
+    }
+  else
+    {
+      const svn_version_t *target_format_version;
+
+      if (store_pristine == svn_tristate_unknown)
+        target_store_pristine = TRUE;
+      else if (store_pristine == svn_tristate_true)
+        target_store_pristine = TRUE;
+      else
+        target_store_pristine = FALSE;
+
+      if (wc_format_version)
+        {
+          target_format_version = wc_format_version;
+          /* Fail if the existing WC's format is different than requested. */
+          fail_on_format_mismatch = TRUE;
+        }
+      else
+        {
+          /* A NULL wc_format_version translates to the minimum compatible
+             version. */
+          SVN_ERR(svn_client_default_wc_version(&target_format_version, ctx,
+                                                scratch_pool, scratch_pool));
+
+          if (!target_store_pristine)
+            {
+              const svn_version_t *required_version =
+                svn_client__compatible_wc_version_optional_pristine(scratch_pool);
+
+              if (!svn_version__at_least(target_format_version,
+                                         required_version->major,
+                                         required_version->minor,
+                                         required_version->patch))
+                target_format_version = required_version;
+            }
+
+          fail_on_format_mismatch = FALSE;
+        }
+
+      SVN_ERR(svn_wc__format_from_version(&target_format,
+                                          target_format_version,
+                                          scratch_pool));
+    }
 
   /* Get the RA connection, if needed. */
   if (ra_session)
@@ -144,24 +207,39 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
          entries file should only have an entry for THIS_DIR with a
          URL, revnum, and an 'incomplete' flag.  */
       SVN_ERR(svn_io_make_dir_recursively(local_abspath, scratch_pool));
-      SVN_ERR(initialize_area(local_abspath, pathrev, depth, ctx,
-                              scratch_pool));
+      SVN_ERR(initialize_area(target_format, local_abspath, pathrev, depth,
+                              target_store_pristine, ctx, scratch_pool));
     }
   else if (kind == svn_node_dir)
     {
-      int wc_format;
+      int present_format;
       const char *entry_url;
 
-      SVN_ERR(svn_wc_check_wc2(&wc_format, ctx->wc_ctx, local_abspath,
+      SVN_ERR(svn_wc_check_wc2(&present_format, ctx->wc_ctx, local_abspath,
                                scratch_pool));
 
-      if (! wc_format)
+      if (! present_format)
         {
-          SVN_ERR(initialize_area(local_abspath, pathrev, depth, ctx,
-                                  scratch_pool));
+          SVN_ERR(initialize_area(target_format, local_abspath, pathrev, depth,
+                                  target_store_pristine, ctx, scratch_pool));
         }
       else
         {
+          svn_boolean_t wc_store_pristine;
+
+          SVN_ERR(svn_wc__get_settings(NULL, &wc_store_pristine, ctx->wc_ctx,
+                                       local_abspath, scratch_pool));
+
+          if ((target_store_pristine && !wc_store_pristine) ||
+              (!target_store_pristine && wc_store_pristine))
+            {
+              return svn_error_createf(
+                  SVN_ERR_WC_INCOMPATIBLE_SETTINGS, NULL,
+                  _("'%s' is an existing working copy with different '%s' setting"),
+                  svn_dirent_local_style(local_abspath, scratch_pool),
+                  "store-pristine");
+            }
+
           /* Get PATH's URL. */
           SVN_ERR(svn_wc__node_get_url(&entry_url, ctx->wc_ctx, local_abspath,
                                        scratch_pool, scratch_pool));
@@ -171,10 +249,17 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
              interrupted checkout.  Otherwise bail out. */
           if (strcmp(entry_url, pathrev->url) != 0)
             return svn_error_createf(
-                          SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                          _("'%s' is already a working copy for a"
-                            " different URL"),
-                          svn_dirent_local_style(local_abspath, scratch_pool));
+                SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                _("'%s' is already a working copy for a different URL"),
+                svn_dirent_local_style(local_abspath, scratch_pool));
+
+          if (fail_on_format_mismatch && present_format != target_format)
+            return svn_error_createf(
+                SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                _("'%s' is already a working copy for the same URL"
+                  " but its format is %d instead of the expected %d"),
+                svn_dirent_local_style(local_abspath, scratch_pool),
+                present_format, target_format);
         }
     }
   else
@@ -198,7 +283,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
 }
 
 svn_error_t *
-svn_client_checkout3(svn_revnum_t *result_rev,
+svn_client_checkout4(svn_revnum_t *result_rev,
                      const char *URL,
                      const char *path,
                      const svn_opt_revision_t *peg_revision,
@@ -206,6 +291,8 @@ svn_client_checkout3(svn_revnum_t *result_rev,
                      svn_depth_t depth,
                      svn_boolean_t ignore_externals,
                      svn_boolean_t allow_unver_obstructions,
+                     const svn_version_t *wc_format_version,
+                     svn_tristate_t store_pristine,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
@@ -220,6 +307,9 @@ svn_client_checkout3(svn_revnum_t *result_rev,
                                       peg_revision, revision, depth,
                                       ignore_externals,
                                       allow_unver_obstructions,
+                                      FALSE, /* settings_from_context */
+                                      wc_format_version,
+                                      store_pristine,
                                       NULL /* ra_session */,
                                       ctx, pool);
   if (sleep_here)

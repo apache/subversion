@@ -124,16 +124,12 @@ extern "C" {
  * if unaligned access is supported for integers.
  *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.14 API.
  */
-#ifndef SVN_UNALIGNED_ACCESS_IS_OK
-# if defined(_M_IX86) || defined(i386) \
-     || defined(_M_X64) || defined(__x86_64) \
-     || defined(__powerpc__) || defined(__ppc__)
-#  define SVN_UNALIGNED_ACCESS_IS_OK 1
-# else
-#  define SVN_UNALIGNED_ACCESS_IS_OK 0
-# endif
+#ifdef SVN_UNALIGNED_ACCESS_IS_OK
+#  undef SVN_UNALIGNED_ACCESS_IS_OK
 #endif
+#define SVN_UNALIGNED_ACCESS_IS_OK 0
 
 
 
@@ -243,6 +239,35 @@ typedef struct svn_version_t svn_version_t;
 /** easier array-pushing syntax */
 #ifndef APR_ARRAY_PUSH
 #define APR_ARRAY_PUSH(ary,type) (*((type *)apr_array_push(ary)))
+#endif
+
+/** @} */
+
+
+
+/** @defgroup apr_hash_utilities APR Hash Table Helpers
+ * These functions enable the caller to dereference an APR hash table index
+ * without type casts or temporary variables.
+ *
+ * These functions are provided by APR itself from version 1.5.
+ * Definitions are provided here for when using older versions of APR.
+ * @{
+ */
+
+#if !APR_VERSION_AT_LEAST(1, 5, 0)
+
+/** Return the key of the hash table entry indexed by @a hi. */
+const void *
+apr_hash_this_key(apr_hash_index_t *hi);
+
+/** Return the key length of the hash table entry indexed by @a hi. */
+apr_ssize_t
+apr_hash_this_key_len(apr_hash_index_t *hi);
+
+/** Return the value of the hash table entry indexed by @a hi. */
+void *
+apr_hash_this_val(apr_hash_index_t *hi);
+
 #endif
 
 /** @} */
@@ -581,7 +606,7 @@ svn_dirent_create(apr_pool_t *result_pool);
  * keywords (e.g., $NetBSD$).  See
  *
  * @verbatim
-      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8921
+      https://svn.haxx.se/dev/archive-2001-12/0479.shtml
       =====
       From: "Jonathan M. Manning" <jmanning@alisa-jon.net>
       To: dev@subversion.tigris.org
@@ -592,7 +617,7 @@ svn_dirent_create(apr_pool_t *result_pool);
  * and Eric Gillespie's support of same:
  *
  * @verbatim
-      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8757
+      https://svn.haxx.se/dev/archive-2001-12/0315.shtml
       =====
       From: "Eric Gillespie, Jr." <epg@pretzelnet.org>
       To: dev@subversion.tigris.org
@@ -849,7 +874,7 @@ typedef struct svn_log_entry_t
    * value as changed_paths for compatibility with users assuming an older
    * version.
    *
-   * @note See http://svn.haxx.se/dev/archive-2010-08/0362.shtml for
+   * @note See https://svn.haxx.se/dev/archive-2010-08/0362.shtml for
    * further explanation.
    *
    * @since New in 1.6.

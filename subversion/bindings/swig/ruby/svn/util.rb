@@ -17,10 +17,10 @@
 #    under the License.
 # ====================================================================
 
-if /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
+if /cygwin|mingw|mswin|bccwin32/.match(RUBY_PLATFORM)
   $LOAD_PATH.each do |load_path|
     svn_ext_path = File.join(load_path, "svn", "ext")
-    if File.exists?(svn_ext_path)
+    if File.exist?(svn_ext_path)
       svn_ext_path_win = File.expand_path(svn_ext_path)
       svn_ext_path_win = svn_ext_path.gsub(File::SEPARATOR, File::ALT_SEPARATOR)
       unless ENV["PATH"].split(";").find {|path| path == svn_ext_path_win}
@@ -122,7 +122,7 @@ EOC
     end
 
     def reset_message_directory
-      if /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
+      if /cygwin|mingw|mswin|bccwin32/.match(RUBY_PLATFORM)
         top_directory = File.join(File.dirname(__FILE__), "..", "..")
         top_directory = File.expand_path(top_directory)
         locale_directory = File.join(top_directory, "share", "locale")
@@ -147,7 +147,7 @@ EOC
     end
 
     def windows?
-      /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
+      /cygwin|mingw|mswin|bccwin32/.match(RUBY_PLATFORM)
     end
   end
 end

@@ -34,11 +34,16 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
-#include "client.h"
 #include "svn_props.h"
+#include "svn_version.h"
+#include "svn_hash.h"
+
+#include "client.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_subr_private.h"
+#include "../libsvn_wc/wc.h"
 
 
 /*** Code. ***/
@@ -89,13 +94,16 @@ fetch_repos_info(const char **repos_root,
 static svn_error_t *
 upgrade_externals_from_properties(svn_client_ctx_t *ctx,
                                   const char *local_abspath,
+                                  int wc_format,
                                   struct repos_info_baton *info_baton,
                                   apr_pool_t *scratch_pool);
 
-svn_error_t *
-svn_client_upgrade(const char *path,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *scratch_pool)
+static svn_error_t *
+upgrade_internal(int *result_format_p,
+                 const char *path,
+                 int target_format,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
   apr_hash_t *externals;
@@ -111,11 +119,12 @@ svn_client_upgrade(const char *path,
                              _("'%s' is not a local path"), path);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-  SVN_ERR(svn_wc_upgrade(ctx->wc_ctx, local_abspath,
-                         fetch_repos_info, &info_baton,
-                         ctx->cancel_func, ctx->cancel_baton,
-                         ctx->notify_func2, ctx->notify_baton2,
-                         scratch_pool));
+  SVN_ERR(svn_wc__upgrade(result_format_p, ctx->wc_ctx,
+                          local_abspath, target_format,
+                          fetch_repos_info, &info_baton,
+                          ctx->cancel_func, ctx->cancel_baton,
+                          ctx->notify_func2, ctx->notify_baton2,
+                          scratch_pool));
 
   SVN_ERR(svn_wc__externals_defined_below(&externals,
                                           ctx->wc_ctx, local_abspath,
@@ -149,7 +158,9 @@ svn_client_upgrade(const char *path,
 
           if (kind == svn_node_dir)
             {
-              svn_error_t *err = svn_client_upgrade(ext_abspath, ctx, iterpool);
+              svn_error_t *err = upgrade_internal(NULL, ext_abspath,
+                                                  target_format, ctx,
+                                                  iterpool);
 
               if (err)
                 {
@@ -174,15 +185,175 @@ svn_client_upgrade(const char *path,
          (There is no way to detect the difference from libsvn_client :( ) */
 
       SVN_ERR(upgrade_externals_from_properties(ctx, local_abspath,
-                                                &info_baton, scratch_pool));
+                                                target_format, &info_baton,
+                                                scratch_pool));
     }
+
+  SVN_ERR(svn_client__textbase_sync(NULL, local_abspath, FALSE, TRUE, ctx,
+                                    NULL, scratch_pool, scratch_pool));
+
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_upgrade2(const svn_version_t **result_format_version_p,
+                    const char *path,
+                    const svn_version_t *target_format_version,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  int result_format;
+  int target_format;
+  svn_boolean_t fail_on_downgrade;
+
+  if (target_format_version)
+    {
+      SVN_ERR(svn_wc__format_from_version(&target_format,
+                                          target_format_version,
+                                          scratch_pool));
+      /* Fail on downgrade attempts if format version was passed explicitly. */
+      fail_on_downgrade = TRUE;
+    }
+  else
+    {
+      const svn_version_t *default_version;
+
+      SVN_ERR(svn_client_default_wc_version(&default_version, ctx,
+                                            scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__format_from_version(&target_format, default_version,
+                                          scratch_pool));
+      fail_on_downgrade = FALSE;
+    }
+
+  SVN_ERR(upgrade_internal(&result_format, path, target_format,
+                           ctx, scratch_pool));
+
+  if (fail_on_downgrade && result_format > target_format)
+    return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+                             _("Working copy '%s' is already at version %s "
+                               "(format %d) and cannot be downgraded to "
+                               "version %s (format %d)"),
+                             svn_dirent_local_style(path, scratch_pool),
+                             svn_wc__version_string_from_format(result_format),
+                             result_format,
+                             svn_wc__version_string_from_format(target_format),
+                             target_format);
+
+  if (result_format_version_p)
+    *result_format_version_p = svn_client_wc_version_from_format(
+                                 result_format, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+const svn_version_t *
+svn_client_wc_version_from_format(int wc_format,
+                                  apr_pool_t *result_pool)
+{
+  const svn_wc__version_info_t *const version_info =
+    svn_wc__version_info_from_format(wc_format);
+
+  /* NOTE: This can be the "null" version "0.0.0" and that's an
+           unrecoverable programming error. */
+  SVN_ERR_ASSERT_NO_RETURN(version_info->text != NULL);
+
+  return &version_info->version;
+}
+
+const int *
+svn_client_get_wc_formats_supported(apr_pool_t *result_pool)
+{
+  static const int versions[] = {
+    SVN_WC__SUPPORTED_VERSION,
+    SVN_WC__VERSION,
+    0
+  };
+
+  return versions;
+}
+
+const svn_version_t *
+svn_client_oldest_wc_version(apr_pool_t *result_pool)
+{
+  const svn_wc__version_info_t *const version_info =
+    svn_wc__version_info_from_format(SVN_WC__SUPPORTED_VERSION);
+
+  /* See note in svn_client_wc_version_from_format(), above. */
+  SVN_ERR_ASSERT_NO_RETURN(version_info->text != NULL);
+
+  return &version_info->version;
+}
+
+svn_error_t *
+svn_client_default_wc_version(const svn_version_t **version_p,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  svn_config_t *config;
+  const char *value;
+  const svn_version_t *version;
+
+  if (ctx->config)
+    config = svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG);
+  else
+    config = NULL;
+
+  svn_config_get(config, &value,
+                 SVN_CONFIG_SECTION_WORKING_COPY,
+                 SVN_CONFIG_OPTION_COMPATIBLE_VERSION,
+                 NULL);
+  if (value)
+    {
+      svn_version_t *mutable;
+      SVN_ERR(svn_version__parse_version_string(&mutable, value, result_pool));
+      version = mutable;
+    }
+  else
+    {
+      const svn_wc__version_info_t *const version_info =
+        svn_wc__version_info_from_format(SVN_WC__SUPPORTED_VERSION);
+
+      /* See note in svn_client_wc_version_from_format(), above. */
+      SVN_ERR_ASSERT(version_info->text != NULL);
+
+      version = &version_info->version;
+    }
+
+  *version_p = version;
+  return SVN_NO_ERROR;
+}
+
+const svn_version_t *
+svn_client_latest_wc_version(apr_pool_t *result_pool)
+{
+  const svn_wc__version_info_t *const version_info =
+    svn_wc__version_info_from_format(SVN_WC__VERSION);
+
+  /* See note in svn_client_wc_version_from_format(), above. */
+  SVN_ERR_ASSERT_NO_RETURN(version_info->text != NULL);
+
+  return &version_info->version;
+}
+
+const svn_version_t *
+svn_client__compatible_wc_version_optional_pristine(apr_pool_t *result_pool)
+{
+  const svn_wc__version_info_t *const version_info =
+    svn_wc__version_info_from_format(SVN_WC__HAS_OPTIONAL_PRISTINE);
+
+  /* See note in svn_client_wc_version_from_format(), above. */
+  SVN_ERR_ASSERT_NO_RETURN(version_info->text != NULL);
+
+  return &version_info->version;
 }
 
 /* Helper for upgrade_externals_from_properties: upgrades one external ITEM
    in EXTERNALS_PARENT. Uses SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 upgrade_external_item(svn_client_ctx_t *ctx,
+                      int wc_format,
                       const char *externals_parent_abspath,
                       const char *externals_parent_url,
                       const char *externals_parent_repos_root_url,
@@ -211,7 +382,7 @@ upgrade_external_item(svn_client_ctx_t *ctx,
               externals_parent_url,
               scratch_pool, scratch_pool));
 
-  /* This is a hack. We only need to call svn_wc_upgrade() on external
+  /* This is a hack. We only need to call svn_wc__upgrade() on external
    * dirs, as file externals are upgraded along with their defining
    * WC.  Reading the kind will throw an exception on an external dir,
    * saying that the wc must be upgraded.  If it's a file, the lookup
@@ -225,7 +396,8 @@ upgrade_external_item(svn_client_ctx_t *ctx,
     {
       svn_error_clear(err);
 
-      SVN_ERR(svn_client_upgrade(external_abspath, ctx, scratch_pool));
+      SVN_ERR(upgrade_internal(NULL, external_abspath, wc_format, ctx,
+                               scratch_pool));
     }
   else if (err)
     return svn_error_trace(err);
@@ -298,6 +470,7 @@ upgrade_external_item(svn_client_ctx_t *ctx,
 static svn_error_t *
 upgrade_externals_from_properties(svn_client_ctx_t *ctx,
                                   const char *local_abspath,
+                                  int wc_format,
                                   struct repos_info_baton *info_baton,
                                   apr_pool_t *scratch_pool)
 {
@@ -386,7 +559,8 @@ upgrade_externals_from_properties(svn_client_ctx_t *ctx,
           item = APR_ARRAY_IDX(externals_p, i, svn_wc_external_item2_t*);
 
           svn_pool_clear(inner_iterpool);
-          err = upgrade_external_item(ctx, externals_parent_abspath,
+          err = upgrade_external_item(ctx, wc_format,
+                                      externals_parent_abspath,
                                       externals_parent_url,
                                       externals_parent_repos_root_url,
                                       item, info_baton, inner_iterpool);

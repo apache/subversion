@@ -43,3 +43,4 @@ SVN::TxDelta::send_txstream($txstream, @$handle);
 # TEST
 is($result, $tgttext, 'delta self test');
 
+close $aresult;

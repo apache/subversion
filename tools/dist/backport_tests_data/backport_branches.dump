@@ -547,13 +547,13 @@ Approved changes:
 
 
 Revision-number: 10
-Prop-content-length: 146
-Content-length: 146
+Prop-content-length: 147
+Content-length: 147
 
 K 10
 svn:author
-V 6
-daniel
+V 7
+jrandom
 K 7
 svn:log
 V 91
@@ -623,13 +623,13 @@ resolved
 
 
 Revision-number: 11
-Prop-content-length: 93
-Content-length: 93
+Prop-content-length: 94
+Content-length: 94
 
 K 10
 svn:author
-V 6
-daniel
+V 7
+jrandom
 K 7
 svn:log
 V 38

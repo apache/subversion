@@ -3,7 +3,7 @@
 #  authz_tests.py:  testing authorization.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -1657,11 +1657,26 @@ def remove_access_after_commit(sbox):
 
   # And expect a mixed rev copy
   expected_status.tweak('A/D/G/rho', status='A ', entry_status='  ')
-  svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        [], True)
+
+  if svntest.actions.get_wc_store_pristine(wc_dir):
+    svntest.actions.run_and_verify_update(wc_dir,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status,
+                                          [], True)
+  else:
+    # We are unable to fetch the pristine without read access.
+    # So in a working copy without local pristines, the update is
+    # currently expected to fail.
+    if svntest.main.is_ra_type_dav():
+      expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
+    elif svntest.main.is_ra_type_svn():
+      expected_err = ".*svn: E170001: Authorization failed.*"
+    else:
+      raise svntest.Failure
+
+    svntest.actions.run_and_verify_update(wc_dir, None, None, None,
+                                          expected_err, True)
 
 @Issue(4793)
 @Skip(svntest.main.is_ra_type_file)
@@ -1732,6 +1747,123 @@ def empty_group(sbox):
                                      sbox.repo_url)
 
 
+@Issue(4878)
+@XFail(svntest.main.is_ra_type_dav)
+@Skip(svntest.main.is_ra_type_file)
+def delete_file_with_starstar_rules(sbox):
+  "delete file with ** rules"
+
+  # mod_dav_svn unnecessarily requires svn_authz_recursive access on DELETE of
+  # a file.  See:
+  #
+  #     https://mail-archives.apache.org/mod_mbox/subversion-users/202107.mbox/%3C20210731004148.GA26581%40tarpaulin.shahaf.local2%3E
+  #     https://mail-archives.apache.org/mod_mbox/subversion-dev/202107.mbox/%3C20210731004148.GA26581%40tarpaulin.shahaf.local2%3E
+  #     (Both links go to the same message.)
+  #
+  # The test will XPASS if the glob rule is removed.
+  #
+  # Note that the /**/lorem rule can't possibly match ^/iota, but its existence
+  # nevertheless affects the results of the authz check.
+
+  sbox.build(create_wc = False)
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  prefixed_rules = dict()
+  prefixed_rules[':glob:/**/lorem'] = '* = \n'
+  prefixed_rules['/'] = '%s = rw\n' % (svntest.main.wc_author,)
+  prefixed_rules['/A'] = '%s = \n' % (svntest.main.wc_author,)
+  prefixed_rules['/iota'] = '%s = rw\n' % (svntest.main.wc_author,)
+  write_authz_file(sbox, None, prefixed_rules = prefixed_rules)
+
+  svntest.main.run_svn(None, 'rm', sbox.repo_url + '/iota', '-m', 'rm by URL')
+
+# test for the bug also known as CVE-2021-28544
+@Skip(svntest.main.is_ra_type_file)
+def log_inaccessible_copyfrom(sbox):
+  "log doesn't leak inaccessible copyfrom paths"
+
+  sbox.build(empty=True)
+  sbox.simple_add_text('secret', 'private')
+  sbox.simple_commit(message='log message for r1')
+  sbox.simple_copy('private', 'public')
+  sbox.simple_commit(message='log message for r2')
+
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+  # Remove svn:date and svn:author for predictable output.
+  svntest.actions.run_and_verify_svn(None, [], 'propdel', '--revprop',
+                                     '-r2', 'svn:date', sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, [], 'propdel', '--revprop',
+                                     '-r2', 'svn:author', sbox.repo_url)
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  # First test with blanket access.
+  write_authz_file(sbox,
+                   {"/" : "* = rw"})
+  expected_output = svntest.verify.ExpectedOutput([
+    "------------------------------------------------------------------------\n",
+    "r2 | (no author) | (no date) | 1 line\n",
+    "Changed paths:\n",
+    "   A /public (from /private:1)\n",
+    "\n",
+    "log message for r2\n",
+    "------------------------------------------------------------------------\n",
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-r2', '-v',
+                                     sbox.repo_url)
+
+  # Now test with an inaccessible copy source (/private).
+  write_authz_file(sbox,
+                   {"/" : "* = rw"},
+                   {"/private" : "* ="})
+  expected_output = svntest.verify.ExpectedOutput([
+    "------------------------------------------------------------------------\n",
+    "r2 | (no author) | (no date) | 1 line\n",
+    "Changed paths:\n",
+    # The copy is shown as a plain add with no copyfrom info.
+    "   A /public\n",
+    "\n",
+    # No log message, as the revision is only partially visible.
+    "\n",
+    "------------------------------------------------------------------------\n",
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-r2', '-v',
+                                     sbox.repo_url)
+
+@Skip(svntest.main.is_ra_type_file)
+def cat_base_after_repo_access_removed(sbox):
+  "cat_base_after_repo_access_removed"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.write_restrictive_svnserve_conf(sbox.repo_dir)
+  svntest.main.write_authz_file(sbox, { "/"      : "*=rw",
+                                        "/A/D"   : "*="})
+
+  # Local modification so base can't be derived from working version
+  sbox.simple_append('A/D/G/pi', 'appended\n')
+
+  # With repository read access denied, expect we can still access the
+  # text base locally, if and only if text bases are present.
+  if svntest.actions.get_wc_store_pristine(wc_dir):
+    svntest.actions.run_and_verify_svn("This is the file 'pi'.\n", [],
+                                       'cat', sbox.ospath('A/D/G/pi') + '@BASE')
+  else:
+    if svntest.main.is_ra_type_dav():
+      expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
+    elif svntest.main.is_ra_type_svn():
+      expected_err = ".*svn: E170001: Authorization failed.*"
+    else:
+      raise svntest.Failure
+
+    svntest.actions.run_and_verify_svn(None, expected_err,
+                                       'cat', sbox.ospath('A/D/G/pi') + '@BASE')
+
+
 ########################################################################
 # Run the tests
 
@@ -1771,6 +1903,9 @@ test_list = [ None,
               inverted_group_membership,
               group_member_empty_string,
               empty_group,
+              delete_file_with_starstar_rules,
+              log_inaccessible_copyfrom,
+              cat_base_after_repo_access_removed,
              ]
 serial_only = True
 

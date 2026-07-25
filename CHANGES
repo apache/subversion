@@ -4,9 +4,264 @@
 # To view an issue listed as (issue #XXXX), visit:
 #   https://subversion.apache.org/issue-XXXX
 
+Version 1.16.0
+(?? ??? 20XX, from /branches/1.16.x)
+https://svn.apache.org/repos/asf/subversion/tags/1.16.0
+
 Version 1.15.0
-(?? ??? 20XX, from /branches/1.15.x)
+(12 Aug 2026, from /branches/1.15.x)
 https://svn.apache.org/repos/asf/subversion/tags/1.15.0
+
+See the 1.15 release notes for a more verbose overview of the changes since
+the 1.14 release:  https://subversion.apache.org/docs/release-notes/1.15.html
+
+ User-visible changes:
+  - Major new features:
+    * New 'pristineless' mode for working copies that eliminates overhead
+      from storing cached pristine content (r1905955, issue #525)
+    * Support for multiple working copy formats (r1898187, issue #4883)
+
+  - Minor new features and improvements:
+    * Re-enable plaintext credential store by default on Unix (r1909351)
+    * Optimize checkout, update and export by simultaneously streaming
+      data to both pristine and working files (r1886490 et al)
+
+  - Client-side improvements and bugfixes:
+    * Disable best-fit Unicode mapping for Windows command-line arguments
+      (r1927953)
+    * Optimize checkout, update and export on Windows by reducing the
+      number of file reopens (r1886490 et al)
+    * Use a cryptographic checksum comparison to determine if a file
+      has been modified in a working copy (r1892645)
+    * Warn on merges from foreign repositories if UUIDs match but URLs
+      differ (r1888474 et al, issue #4874)
+    * Fix assertion on 'svn move [URL] [URL]/subdir' (r1909127, issue #4913)
+    * ra_serf: Fix segfault on unexpected server responses (r1929793)
+    * ra_serf: Optimize array filling for inherited properties (r1878084)
+    * svn: Print character encoding in 'svn --version --verbose' (r1926252)
+    * svn: Show new macOS versions in 'svn --version --verbose' (r1882127 et al)
+    * svn: Document trailing-@ trick to avoid peg-revision parsing (r1910826)
+    * svnlook: Fix handling of negative --limit arguments (r1919535)
+    * svnmucc: Fix handling of revision arguments like 'Head' (r1925905)
+    * svnmucc: Fix handling of revision arguments like 'r123' (r1925907)
+    * svnmucc: Ensure that log messages are using UTF-8 (r1925913)
+    * svnmucc: Ensure that property values are using UTF-8 (r1926023)
+    * svnmucc: Show usage instead of help for empty actions (r1926034)
+    * Use distinct temporary file names for regular and revision property
+      edits (r1885997)
+    * Expand ~username directories in tab completion (r1896619, issue #3714)
+    * Reimplement macOS Keychain auth provider with SecItem* API (r1926564)
+    * Add Windows manifest with compatibility information to executable files
+      (r1933257)
+
+  - Server-side improvements and bugfixes:
+    * fsfs: Fix uninitialized read in the logical addressing code (r1880374)
+    * fsfs: Reduce spurious conflicts when file content and directory
+      properties are changed in parallel (r1908595)
+    * fsx: Fix uninitialized read in the logical addressing code (r1880374)
+    * fsx: Fix uninitialized memory access (r1934786)
+    * fsx: Reduce spurious conflicts when file content and directory
+      properties are changed in parallel (r1908595)
+    * mod_dav_svn: Use mod_dav's DAVBasePath setting to determine the
+      repository root path (r1926683)
+    * svnadmin: Minor optimization in 'svnadmin load' (r1908751)
+    * svnserve: Add SIGTERM/SIGINT handling (r1908547, r1934784)
+
+  - Other tool improvements and bugfixes:
+    * case-insensitive.py: Update for Python 3 compatibility (r1881774)
+    * check-mime-type.pl: Support property-modified files (r1911931)
+    * fsfsfixer: Update to work with svnadmin verify versions 1.9+ (r1886928)
+    * fsfsfixer: Update to work with packed repositories (r1887170)
+    * fsfsverify.py: Support FSFS format >= 4 property lists (r1909337)
+    * mailer.py: Support message buffering (r1914915)
+    * mailer.py: Support maximum message length (r1917168)
+    * mailer.py: Omit diff content when messages are too long (r1917169)
+    * svn_apply_autoprops.py: Fix Windows compatibility (r1917382)
+    * svn_apply_autoprops.py: Support @-containing filenames (r1917397)
+    * svn_apply_autoprops.py: Update for Python 3 compatibility (r1917446)
+    * svn_load_dirs.pl: Update to handle 'svn propget' errors for non-existent
+      properties (r1912002, issue #4621)
+    * wc-format.py: Minor update for Python 3 compatibility (r1880178)
+
+ Developer-visible changes:
+  - General:
+    * Support building using CMake (r1920717 et al)
+    * Drop support for Python 2.x in test scripts (r1899944, r1925713)
+    * Support building for Windows on ARM64 (r1890668, r1890673)
+    * Support Visual Studio 2022 project generation (r1899028)
+    * Enable multi-processor compilation (/MP) on Windows (r1906011)
+    * Support shared RA modules on Windows with CMake (r1921006 et al)
+    * Support running Valgrind during 'make check' (r1908546)
+    * Fix building against static Serf on Windows (r1888560)
+    * Fix building with zlib 1.3.2+ on Windows (r1934466)
+    * Fix finding libexpat on static library builds on Windows (r1888565)
+    * Fix 'make clean' in out-of-tree builds (r1883939)
+    * Default AR_FLAGS to 'cr' to fix GNU archiver warnings (r1884094)
+    * Support generation of .clangd file with '--enable-dot-clangd' (r1925652)
+    * Fix propagation of libsvn_fs_x_LDFLAGS to the Makefile (r1908721)
+    * Support C++11 and later (r1883715)
+    * Allow selecting the C++ language standard with '--enable-c++' (r1883715)
+    * Remove use of some deprecated autoconf macros (r1908543)
+    * Guard experimental Serf logic with SVN__SERF_EXPERIMENTAL (r1930808)
+    * Add 'reverse-merge' attribute to the log schema (r1892455)
+    * Replace obsolete AC_HELP_STRING construct in configure.ac (r1934466)
+    * Use snprintf() instead sprintf() if available (r1934788 et al)
+    * Guard from accessing uninitialized memory in conflict resolver (r1934787)
+    * tests: Allow testing ra_serf using Digest authentication (r1926790)
+    * tests: Avoid DNS reverse name lookups during configuration (r1933475)
+    * tests: Close file descriptor using the context manager (r1884279)
+    * tests: Fix an error when running 'davautocheck USE_SSL=1' (r1931266)
+    * tests: Fix TypeError in some test cases (r1897708)
+    * tests: Stop encoding a test's number in the svntest library (r1897443)
+    * tests: Verify command XML output (r1925717, r1935776)
+    * tests: Use 2048-bit RSA for the server certificate and key (r1931265)
+
+  - Bindings:
+    * JavaHL: Fix JNI setup for translateOutputStream (r1886280)
+    * JavaHL: Fix test failures with Java 25 on Windows (r1930973, r1934367)
+    * JavaHL: Silence warnings about missing bootstrap classpath (r1933796)
+    * JavaHL: Silence org.tigris package deprecation warnings (r1933877)
+    * JavaHL: Make the JAR an automatic module (r1933892)
+    * JavaHL: Guard against native code modifying a final attribute (r1936070)
+    * swig: Allow NULL wri_abspath in svn_client_ra_session2() (r1917448)
+    * swig-py: Allow str(unicode) input for string types (r1885370)
+    * swig-py: Allow SubversionException to carry attributes (r1880967)
+    * swig-rb: Block SWIG 4.2.0 because it produces broken external
+      runtime code (r1915235)
+    * swig-pl: Fix 'unable to close filehandle' warnings in tests (r1915576)
+    * swig-py: Fix test cleanup failing with Python 3 on Windows due
+      to a circular reference of the raised exception (r1897441)
+
+Version 1.14.5
+(7 Dec 2024, from /branches/1.14.x)
+https://svn.apache.org/repos/asf/subversion/tags/1.14.5
+ User-visible changes:
+  - Server-side bugfixes:
+    * Fix CVE-2024-46901: mod_dav_svn denial-of-service via control chars
+ Developer-visible changes:
+    * Fix detection of zlib version 1.3 in gen-make.py on Windows (r1921266)
+    * Supress gen-make.py errors on Windows without Perl or Ruby (r1921267)
+    * Fix printf-format build warnings in swig-rb (r1921264)
+    * Add a regression test for CVE-2024-45720 (r1921266)
+    * Make swig-py compatible with SWIG 4.3.0 (r1921505)
+
+Version 1.14.4
+(8 Oct 2024, from /branches/1.14.x)
+https://svn.apache.org/repos/asf/subversion/tags/1.14.4
+ User-visible changes:
+  - Client-side improvements and bugfixes:
+    * Fix CVE-2024-45720: command line argument injection on Windows
+    * Fix unbounded memory usage in propget and proplist --xml (r1918138, -39)
+    * Fix cmdline parsing bugs in --change (-c) argument (r1917864, -944)
+    * Improve help message for svnmucc PUT (r1914222)
+  - Server-side bugfixes:
+    * mailer.py: Fix inconsistency in Config.which_group() arguments (r1914518)
+
+ Developer-visible changes:
+    * Fix svnadmin_tests.py failing with Python 3.11+ on Windows (r1910464)
+    * Support building swig-rb with clang 16 / GCC14 (r1915236, -39)
+    * Convert path to local style in error message from diff API (r1917946)
+    * Fix `invalid escape sequence` in .py scripts for Python 3.12 (r1912632)
+    * swig-py: Fix `none_dealloc` error caused by refcount issue (r1915316)
+    * Fix a msgid in svnadmin.c which was not a valid C string (r1887710)
+
+Version 1.14.3
+(20 Dec 2023, from /branches/1.14.x)
+https://svn.apache.org/repos/asf/subversion/tags/1.14.3
+ User-visible changes:
+  - Client-side bugfixes:
+    * Fix svn:mergeinfo diff parser bug when parsing forward merges (r1906502)
+    * Fix redirected URL handling with file externals (r1908926, issue #4911)
+
+  - Server-side bugfixes:
+    (none)
+
+ Developer-visible changes:
+    * swig-rb: Fix uses of 'File.exist?', deprecated since Ruby 2.1 (r1904472)
+    * Build: Fix uses of deprecated Python APIs (r1900882, issue #4899)
+    * Build: Retain ability to build SWIG Python 2 bindings (r1900890)
+    * Fix reading WC lock status with svn_wc_status2_t (r1904193, issue #4908)
+    * JavaHL: Add @Deprecated to silence compiler warnings (r1904936)
+    * JavaHL: Fix crash in case of null message in getMessage (r1904938)
+    * Fix build breakage of release tarballs by installed swig (r1878379 et al)
+    * Add regression test for issue #4711 "invalid xml file" (r1877310)
+    * swig-py: Fix building with SWIG 4.1.0 (r1904167)
+    * Makefile.in: Fix cleaning of __pycache__ dirs and *.pyc (r1903267)
+    * swig-py: Avoid deprecated options to SWIG >= 4.1.0 (r1904198, r1904287)
+    * swig-py: Use sysconfig to allow building with Python 3.12 (r1910098)
+    * INSTALL: Document not to use SVN with APR 1.7.3 on Windows (r1911278)
+    * Fix test suite broken by syntax error when --enable-sasl (r1907124)
+    * swig-py: Fix issues #4916, #4917, #4918 (r1912500 et al)
+    * swig-py: Improve error when no external diff (r1912724, -743, issue #1778)
+    * autogen.sh: Fix building when Python is not named "python" (r1903245)
+
+Version 1.14.2
+(12 Apr 2022, from /branches/1.14.x)
+ User-visible changes:
+  - Client-side bugfixes:
+    * Fix -r option documentation for some svnadmin subcommands (r1896877)
+    * Fix error message encoding when system() call fails (r1887641, r1890013)
+    * Fix assertion failure in conflict resolver (r1892470, -471, -541)
+
+  - Server-side bugfixes:
+    * Fix CVE-2021-28544: authz protected copyfrom paths regression (r1899227)
+    * Fix CVE-2022-24070: use-after-free in mod_dav_svn (issue #4880)
+ 
+ Developer-visible changes:
+    * Add test coverage for CVE-2020-17525 (r1883838 et al)
+    * Fix «make davautocheck» failure due to unbuilt dependency (r1891908)
+    * Follow up to r1866587, r1866588: Unbreak a msgid. (r1887704)
+    * swig-py: Fix double-free with cyclic garbage collector (r1889487)
+    * swig-py: Skip some tests on Python2 if encoding is 'utf-8' (r1885199)
+    * swig-py: Fix dependency of make copy-swig-py target (r1886708)
+    * Document how the port number is passed to custom tunnels (r1889629)
+    * tests: Include additional information in an error message (r1897449)
+    * Fix an error message when running make davautocheck (r1892121)
+    * Use the APR-1.4+ API for flushing file contents to disk (r1883355)
+    * JavaHL: Fix RequestChannel_nativeRead_AfterException failure (r1898633)
+
+Version 1.14.1
+(10 Feb 2021, from /branches/1.14.x)
+ User-visible changes:
+  - Client-side improvements and bugfixes:
+    * Fix non-deterministic generation of mergeinfo (issue #4862)
+    * Fix merge removing a folder with non-inheritable mergeinfo (issue #4859)
+    * Do not suggest --help -v for commands which do not support -v (r1882157)
+    * Fix invalid SQL quoting in working copy upgrade system (r1879198)
+    * Fix problems in human-readable file size formatting (r1878909, -18, -50)
+    * Improve an error message from svnmucc (r1877072)
+    * Fix 'svn info --xml' gives wrong 'source-right' of conflict (issue #4869)
+    * Fix filename encoding/quoting when invoking editor on Windows (r1885953)
+    * Convert filename for editor from UTF-8 to the locale's encoding (r1882234)
+
+  - Server-side improvements and bugfixes:
+    * Fix authz doesn't combine global and repository rules (issue #4762)
+    * Make the hot-backup.py script work with Python 3 (r1878855, r1878859)
+    * Fix an uninitialized read in FSFS (r1880374)
+    * Make mailer.py work properly with Python 3 (r1884427 et al)
+    * Fix CVE-2020-17525: NULL dereference in mod_authz_svn (r1886019)
+
+ Developer-visible changes:
+  - General:
+    * Restore support for building with APR 1.4 (r1881958, r1882128)
+    * Rewrite internal test data to avoid literal trailing spaces (r1875675)
+    * Remove use of os.dup2() from tests for Python 3.6 on Windows (r1883337)
+    * Note in INSTALL that non-release mode is required for Python 2 (r1877960)
+    * Make gen-make.py --debug work with Python 3 (r1876906)
+    * Make test suite run correctly with Python 3 on Windows (r1876707 et al)
+    * Fix compilation errors with Visual Studio 2008 (r1877259)
+    * Use Doxygen comment leader for comments with doxygen syntax (r1877794)
+  - Bindings:
+    * Fix win-tests.py to load Python 3 bindings with debug config (r1884642)
+    * Fix C4204 errors building swig-py with Python 3.9 on Windows (r1883570)
+    * Fix unable to load *.pyd files with Python 3.8.x on Windows (r1883335)
+    * Add SWIG4 support for SWIG Python binding on Windows (r1877338)
+    * Fix incorrect cache in JavaHL SVNBase::createCppBoundObject (r1882115)
+    * Fix crash in JavaHL JNI wrapper caused by object lifetimes (r1880886)
+    * autogen.sh: Remove .swig_*_checked files from release tarballs (r1878413)
+    * Avoid version check for Python if --without-swig is used (r1876662)
+    * swig-py: Fix a syntax error for Python 3.6 and later (r1885112)
+    * Fix several crashes and JNI warnings in javahl TunnelAgent (r1886029)
 
 Version 1.14.0
 (27 May 2020, from /branches/1.14.x)
@@ -225,6 +480,45 @@ http://svn.apache.org/repos/asf/subversion/tags/1.11.0
     * Enable building against Java 10 (r1841180 et al)
     * Fix a potential crash in JavaHL (issue #4764)
 
+Version 1.10.8
+(12 Apr 2022, from /branches/1.10.x)
+ User-visible changes:
+  - Client-side bugfixes:
+    * Fix merge assertion failure in svn_sort__array_insert (issue #4840)
+
+  - Server-side bugfixes:
+    * Fix CVE-2021-28544: authz protected copyfrom paths regression (r1899227)
+    * Fix CVE-2022-24070: use-after-free in mod_dav_svn (issue #4880)
+    * Fix authz doesn't combine global and repository rules (issue #4762)
+
+ Developer-visible changes:
+    * Add test coverage for CVE-2020-17525 (r1883838 et al)
+    * Fix «make davautocheck» failure due to unbuilt dependency (r1891908)
+    * Follow up to r1866587, r1866588: Unbreak a msgid (r1887704)
+    * Remove incorrect include paths from svn_cv_ruby_includes (r1875602)
+
+Version 1.10.7
+(10 Feb 2021, from /branches/1.10.x)
+ User-visible changes:
+  - Client-side bugfixes:
+    * Fix 'svn patch' setting mode 0600 on patched files with props (r1864440)
+    * Fix invalid SQL quoting in working copy upgrade system (r1879198)
+    * Fix non-deterministic generation of mergeinfo (issue #4862)
+    * Fix a crash seen when using git-svn with kwallet (r1875680)
+    * Fix merge removing a folder with non-inheritable mergeinfo (issue #4859)
+    * Fix 'svn info --xml' gives wrong 'source-right' of conflict (issue #4869)
+
+  - Server-side bugfixes:
+    * mod_dav_svn: install cleanup handler for FS warning logging (r1865266)
+    * mod_dav_svn: Fix missing Last-Modified header on 'external' GET requests (r1866425)
+    * Fix formatting type size mismatches in FSFS (r1865987, -8)
+    * Fix an undefined behavior problem in FSFS caching code (r1876054)
+    * Fix CVE-2020-17525: NULL dereference in mod_authz_svn (r1886019)
+
+ Developer-visible changes:
+    * Fix Requires(.private) fields in pkg-config files (r1863987, -90)
+    * Fix crash in JavaHL JNI wrapper caused by object lifetimes (r1880886)
+    * Fix an EOL issue in tests on Windows (r1881985 et al)
 
 Version 1.10.6
 (24 Jul 2019, from /branches/1.10.x)
@@ -775,10 +1069,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.6
     * fsfs: improve error message upon failure to open rep-cache (r1781655)
     * fsfs: never attempt to share directory representations (r1785053)
     * fsfs: make consistency independent of hash algorithms (r1785737 et al)
-	This change makes Subversion resilient to collision attacks, including
-	SHA-1 collision attacks such as <http://shattered.io/>.  See also our
-	documentation at <https://subversion.apache.org/faq#shattered-sha1> and
-	<https://subversion.apache.org/docs/release-notes/1.9#shattered-sha1>.
+    This change makes Subversion resilient to collision attacks, including
+    SHA-1 collision attacks such as <http://shattered.io/>.  See also our
+    documentation at <https://subversion.apache.org/faq#shattered-sha1> and
+    <https://subversion.apache.org/docs/release-notes/1.9#shattered-sha1>.
 
   - Client-side and server-side bugfixes:
     * work around an APR bug related to file truncation (r1759116)
@@ -1764,10 +2058,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.18
   - Server-side bugfixes:
     * fsfs: never attempt to share directory representations (r1785053)
     * fsfs: make consistency independent of hash algorithms (r1785737 et al)
-	This change makes Subversion resilient to collision attacks, including
-	SHA-1 collision attacks such as <http://shattered.io/>.  See also our
-	documentation at <https://subversion.apache.org/faq#shattered-sha1> and
-	<https://subversion.apache.org/docs/release-notes/1.8#shattered-sha1>.
+    This change makes Subversion resilient to collision attacks, including
+    SHA-1 collision attacks such as <http://shattered.io/>.  See also our
+    documentation at <https://subversion.apache.org/faq#shattered-sha1> and
+    <https://subversion.apache.org/docs/release-notes/1.8#shattered-sha1>.
 
   - Client-side and server-side bugfixes:
     * work around an APR bug related to file truncation (r1759116)
@@ -2350,7 +2644,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.1
     * svnadmin upgrade: fix data loss when cancelling in last stage (r1494298)
     * mod_dav_svn: fix incorrect path canonicalization (r1503528)
             See CVE-2013-4131, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2013-4131-advisory.txt
+            https://subversion.apache.org/security/CVE-2013-4131-advisory.txt
 
   - Other tool improvements and bugfixes:
     * fsfs-stats (tool): resolve segfault when passing invalid path (r1492164)
@@ -2947,12 +3241,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.11
   - Server-side bugfixes:
     * mod_dav_svn: fix incorrect path canonicalization (r1503528)
             See CVE-2013-4131, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2013-4131-advisory.txt
+            https://subversion.apache.org/security/CVE-2013-4131-advisory.txt
 
   - Other tool improvements and bugfixes:
     * fix argument processing in contrib hook scripts (r1485350)
             See CVE-2013-2088, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2013-2088-advisory.txt
+            https://subversion.apache.org/security/CVE-2013-2088-advisory.txt
 
  Developer-visible changes:
   - Bindings:
@@ -2979,10 +3273,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.10
   - Server-side bugfixes:
     * fix FSFS repository corruption due to newline in filename (issue #4340)
             See CVE-2013-1968, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2013-1968-advisory.txt
+            https://subversion.apache.org/security/CVE-2013-1968-advisory.txt
     * fix svnserve exiting when a client connection is aborted (r1482759)
             See CVE-2013-2112, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2013-2112-advisory.txt
+            https://subversion.apache.org/security/CVE-2013-2112-advisory.txt
     * fix svnserve memory use after clear (issue #4365)
     * fix repository corruption on power/disk failure on Windows (r1483781)
 
@@ -3010,7 +3304,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.9
   - Server-side bugfixes:
       See CVE-2013-1845, CVE-2013-1846, CVE-2013-1847, CVE-2013-1849,
       and CVE-2013-1884, and descriptive advisories at
-            http://subversion.apache.org/security/
+            https://subversion.apache.org/security/
     * svnserve will log the replayed rev not the low-water rev. (r1461278)
     * mod_dav_svn will omit some property values for activity urls (r1453780)
     * fix an assertion in mod_dav_svn when acting as a proxy on / (issue #4272)
@@ -3350,7 +3644,7 @@ Version 1.7.0
 http://svn.apache.org/repos/asf/subversion/tags/1.7.0
 
 See the 1.7 release notes for a more verbose overview of the changes since
-the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
+the 1.6 release:  https://subversion.apache.org/docs/release-notes/1.7.html
 
  User-visible changes:
   - General:
@@ -3549,7 +3843,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.23
     * fix FSFS repository corruption due to newline in filename (issue #4340)
     * fix svnserve exiting when a client connection is aborted (r1482759)
             See CVE-2013-2112, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2013-2112-advisory.txt
+            https://subversion.apache.org/security/CVE-2013-2112-advisory.txt
 
   - Other tool improvements and bugfixes:
     * fix argument processing in contrib hook scripts (r1485350)
@@ -3647,7 +3941,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
     * fixed: file externals cause mixed-revision working copies (issue #3816)
     * fix crash in mod_dav_svn with GETs of baselined resources (r1104126)
             See CVE-2011-1752, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2011-1752-advisory.txt
+            https://subversion.apache.org/security/CVE-2011-1752-advisory.txt
     * fixed: write-through proxy could directly commit to slave (r917523)
     * detect a particular corruption condition in FSFS (r1100213)
     * improve error message when clients refer to unknown revisions (r939000)
@@ -3660,10 +3954,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
     * server-side validation of svn:mergeinfo syntax during commit (issue #3895)
     * fix remotely triggerable mod_dav_svn DoS (r1130303)
             See CVE-2011-1783, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2011-1783-advisory.txt
+            https://subversion.apache.org/security/CVE-2011-1783-advisory.txt
     * fix potential leak of authz-protected file contents (r1130303)
             See CVE-2011-1921, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2011-1921-advisory.txt
+            https://subversion.apache.org/security/CVE-2011-1921-advisory.txt
 
   Developer-visible changes:
     * fix reporting FS-level post-commit processing errors (r1104098)
@@ -3679,7 +3973,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.16
    * more improvement to the 'blame -g' memory leak from 1.6.15 (r1041438)
    * avoid a crash in mod_dav_svn when using locks (r1071239, -307)
             See CVE-2011-0715, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2011-0715-advisory.txt
+            https://subversion.apache.org/security/CVE-2011-0715-advisory.txt
    * avoid unnecessary globbing for performance (r1068988)
    * don't add tree conflicts when one already exists (issue #3486)
    * fix potential crash when requesting mergeinfo (r902467)
@@ -3754,7 +4048,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.13
    * fixed: record-only merges create self-referential mergeinfo (issue #3646)
    * fixed: 'SVNPathAuthz short_circuit' unsolicited read access (issue #3695)
             See CVE-2010-3315, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2010-3315-advisory.txt
+            https://subversion.apache.org/security/CVE-2010-3315-advisory.txt
    * make 'svnmucc propset' handle existing and non-existing URLs (r1000607)
    * add new 'propsetf' subcommand to svnmucc (r1000612)
    * warn about copied dirs during 'svn ci' with limited depth (r1002094)
@@ -3930,7 +4224,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.4
  User-visible changes:
   * fixed: heap overflow vulnerability on server and client
            See CVE-2009-2411, and descriptive advisory at
-           http://subversion.apache.org/security/CVE-2009-2411-advisory.txt
+           https://subversion.apache.org/security/CVE-2009-2411-advisory.txt
 
 
 Version 1.6.3
@@ -4166,7 +4460,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.5.9
   * improve memory performance in 'svn merge' (issue #3393)
   * fixed: 'SVNPathAuthz short_circuit' unsolicited read access (issue #3695)
            See CVE-2010-3315, and descriptive advisory at
-           http://subversion.apache.org/security/CVE-2010-3315-advisory.txt
+           https://subversion.apache.org/security/CVE-2010-3315-advisory.txt
   * prevent crash in mod_dav_svn when using SVNParentPath (r1033166)
   * limit memory fragmentation in svnserve (r1022675)
   * fix server-side memory leaks triggered by 'blame -g' (r1032808)
@@ -4191,7 +4485,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.5.7
  User-visible changes:
   * fixed: heap overflow vulnerability on server and client
            See CVE-2009-2411, and descriptive advisory at
-           http://subversion.apache.org/security/CVE-2009-2411-advisory.txt
+           https://subversion.apache.org/security/CVE-2009-2411-advisory.txt
 
 
 Version 1.5.6
@@ -4624,7 +4918,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.4.5
  User-visible changes:
  * fixed: file placement vulnerability (Win32 clients only)
           See CVE-2007-3846, and descriptive advisory at
-          http://subversion.apache.org/security/CVE-2007-3846-advisory.txt
+          https://subversion.apache.org/security/CVE-2007-3846-advisory.txt
 
 
 Version 1.4.4
@@ -5203,7 +5497,7 @@ Version 1.2.0
 http://svn.apache.org/repos/asf/subversion/tags/1.2.0
 
 See the 1.2 release notes for a more verbose overview of the changes since
-the 1.1 release:  http://subversion.apache.org/docs/release-notes/1.2.html
+the 1.1 release:  https://subversion.apache.org/docs/release-notes/1.2.html
 
  User-visible changes:
   - Client:
@@ -5499,7 +5793,7 @@ Version 1.1.0
 http://svn.apache.org/repos/asf/subversion/tags/1.1.0
 
 See the 1.1 release notes for a more verbose overview of the changes since
-1.0.x: http://subversion.apache.org/docs/release-notes/1.1.html
+1.0.x: https://subversion.apache.org/docs/release-notes/1.1.html
 
  User-visible changes:
  * new non-database repository back-end (libsvn_fs_fs)
@@ -5629,7 +5923,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.0.8
  User-visible changes:
  * fixed: mod_authz_svn path and log-message metadata leaks.
           See CAN-2004-0749, and descriptive advisory at 
-          http://subversion.apache.org/security/CAN-2004-0749-advisory.txt
+          https://subversion.apache.org/security/CAN-2004-0749-advisory.txt
 
 
 Version 1.0.7
@@ -6015,8 +6309,8 @@ http://svn.apache.org/repos/asf/subversion/tags/0.32.1
 
  NOTICE: This release is to correct for the problems in the 0.32.0
          release.  There are no user or developer changes in this release
-	 other than the subversion/include/svn_version.h now reflects
-	 the correct version number.
+         other than the subversion/include/svn_version.h now reflects
+         the correct version number.
 
  NOTICE: This release of Subversion causes an ra_dav client/server
          compatibility break with Subversions older than 0.28.0.

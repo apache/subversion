@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl;
@@ -34,7 +32,7 @@ import java.io.OutputStream;
 
 /**
  * Encapsulates an RA session object and related operations.
- * @see <a href="http://svn.apache.org/repos/asf/subversion/trunk/subversion/include/svn_ra.h">svn_ra.h</a>,
+ * @see <a href="https://svn.apache.org/repos/asf/subversion/trunk/subversion/include/svn_ra.h">svn_ra.h</a>,
  *      the documentation of the <code>svn_ra_open</code> function.
  * @since 1.9
  */

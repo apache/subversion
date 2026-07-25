@@ -160,6 +160,30 @@ const char *
 svn_client__pathrev_fspath(const svn_client__pathrev_t *pathrev,
                            apr_pool_t *result_pool);
 
+/* State provided by the diff drivers; used by the diff writer */
+typedef struct svn_client__diff_driver_info_t
+{
+  /* The anchor to prefix before wc paths */
+  const char *anchor;
+
+  /* Relative path of ra session from repos_root_url.
+
+     Used only in printing git diff headers. The repository-root-relative
+     path of ... ### what user-visible property of the diff? */
+  const char *session_relpath;
+
+  /* Used only in printing git diff headers. Used to find the
+     repository-root-relative path of a WC path. */
+  svn_wc_context_t *wc_ctx;
+
+  /* The original targets passed to the diff command.  We may need
+     these to construct distinctive diff labels when comparing the
+     same relative path in the same revision, under different anchors
+     (for example, when comparing a trunk against a branch). */
+  const char *orig_path_1;
+  const char *orig_path_2;
+} svn_client__diff_driver_info_t;
+
 /* Given PATH_OR_URL, which contains either a working copy path or an
    absolute URL, a peg revision PEG_REVISION, and a desired revision
    REVISION, create an RA connection to that object as it exists in
@@ -321,8 +345,12 @@ svn_client__mergeinfo_log(svn_boolean_t finding_merged,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
-/** Return a diff processor that will print a Subversion-style
- * (not git-style) diff.
+/** Return a diff processor that will print a diff in Subversion-style
+ *  or git-style, based on @a use_git_diff_format value.
+ *
+ * @a ddi_p will be initialized with a svn_client__diff_driver_info_t,
+ * which should describe some settings of the diff writer. It can be modified
+ * in future as required, and the writer should accept with them.
  *
  * @a anchor is optional (may be null), and is the 'anchor' path to prefix
  * to the diff-processor paths before displaying.
@@ -335,6 +363,7 @@ svn_client__mergeinfo_log(svn_boolean_t finding_merged,
 svn_error_t *
 svn_client__get_diff_writer_svn(
                 svn_diff_tree_processor_t **diff_processor,
+                svn_client__diff_driver_info_t **ddi_p,
                 const char *anchor,
                 const char *orig_path_1,
                 const char *orig_path_2,
@@ -346,6 +375,7 @@ svn_client__get_diff_writer_svn(
                 svn_boolean_t ignore_content_type,
                 svn_boolean_t ignore_properties,
                 svn_boolean_t properties_only,
+                svn_boolean_t use_git_diff_format,
                 svn_boolean_t pretty_print_mergeinfo,
                 const char *header_encoding,
                 svn_stream_t *outstream,

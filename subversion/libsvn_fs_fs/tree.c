@@ -220,11 +220,6 @@ hash_func(svn_revnum_t revision,
   apr_size_t i;
   apr_uint32_t hash_value = (apr_uint32_t)revision;
 
-#if SVN_UNALIGNED_ACCESS_IS_OK
-  /* "randomizing" / distributing factor used in our hash function */
-  const apr_uint32_t factor = 0xd1f3da69;
-#endif
-
   /* Calculate the hash value
      (HASH_VALUE has been initialized to REVISION).
 
@@ -233,35 +228,8 @@ hash_func(svn_revnum_t revision,
      make as much of *PATH influence the result as possible to get an "even"
      spread across the hash buckets (maximizes our cache retention rate and
      thus the hit rates).
-
-     When chunked access is possible (independent of the PATH pointer's
-     value!), we read 4 bytes at once and multiply the hash value with a
-     FACTOR that mirror / pattern / shift all 4 input bytes to various bits
-     of the result.  The final result will be taken from the MSBs.
-
-     When chunked access is not possible (not supported by CPU or odd bytes
-     at the end of *PATH), we use the simple traditional "* 33" hash
-     function that works very well with texts / paths and that e.g. APR uses.
-
-     Please note that the bytewise and the chunked calculation are *NOT*
-     interchangeable as they will yield different results for the same input.
-     For any given machine and *PATH, we must use a fixed combination of the
-     two functions.
    */
-  i = 0;
-#if SVN_UNALIGNED_ACCESS_IS_OK
-  /* We relax the dependency chain between iterations by processing
-     two chunks from the input per hash_value self-multiplication.
-     The HASH_VALUE update latency is now 1 MUL latency + 1 ADD latency
-     per 2 chunks instead of 1 chunk.
-   */
-  for (; i + 8 <= path_len; i += 8)
-    hash_value = hash_value * factor * factor
-               + (  *(const apr_uint32_t*)(path + i) * factor
-                  + *(const apr_uint32_t*)(path + i + 4));
-#endif
-
-  for (; i < path_len; ++i)
+  for (i = 0; i < path_len; ++i)
     /* Help GCC to minimize the HASH_VALUE update latency by splitting the
        MUL 33 of the naive implementation: h = h * 33 + path[i].  This
        shortens the dependency chain from 1 shift + 2 ADDs to 1 shift + 1 ADD.
@@ -1977,7 +1945,30 @@ merge(svn_stringbuf_t *conflict_p,
        different contents. */
     SVN_ERR(svn_fs_fs__prop_rep_equal(&same, fs, src_nr, anc_nr, pool));
     if (! same)
-      return conflict_err(conflict_p, target_path);
+      {
+        apr_hash_t *proplist;
+
+        /* There is a prop difference between source and ancestor, if
+           there is no property difference between target and ancestor
+           then this txn didn't change props and we can simply update
+           target to match source.
+
+           Commit calls merge in a loop until it manages to get the
+           write lock with source=head. Copying the properties like
+           this will only work on the first iteration as later
+           iterations will see tgt.prop!=anc.prop and won't know that
+           the txn did not change properties. This means we
+           successfully handle a race between this txn and a
+           propchange txn while building this txn, but we don't handle
+           a race that occurs after the first iteration of the merge
+           loop -- we will raise an unwanted conflict. */
+        SVN_ERR(svn_fs_fs__prop_rep_equal(&same, fs, tgt_nr, anc_nr, pool));
+        if (! same)
+          return conflict_err(conflict_p, target_path);
+
+        SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, source, pool));
+        SVN_ERR(svn_fs_fs__dag_set_proplist(target, proplist, pool));
+      }
 
     /* The directory entries got changed in the repository but the directory
        properties did not. */
@@ -2494,7 +2485,7 @@ fs_dir_optimal_order(apr_array_header_t **ordered_p,
 static svn_error_t *
 check_newline(const char *path, apr_pool_t *pool)
 {
-  char *c = strchr(path, '\n');
+  const char *c = strchr(path, '\n');
 
   if (c)
     return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
@@ -3066,13 +3057,14 @@ apply_textdelta(void *baton, apr_pool_t *pool)
                                          tb->pool));
 
   /* Now, create a custom window handler that uses our two streams. */
-  svn_txdelta_apply(tb->source_stream,
-                    tb->target_stream,
-                    NULL,
-                    tb->path,
-                    tb->pool,
-                    &(tb->interpreter),
-                    &(tb->interpreter_baton));
+  /* Keep historical behavior by disowning the stream; adjust if needed. */
+  svn_txdelta_apply2(svn_stream_disown(tb->source_stream, tb->pool),
+                     tb->target_stream,
+                     NULL,
+                     tb->path,
+                     tb->pool,
+                     &(tb->interpreter),
+                     &(tb->interpreter_baton));
 
   /* Make a record of this modification in the changes table. */
   return add_change(tb->root->fs, txn_id, tb->path,

@@ -394,16 +394,13 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
     apr_hash_t *conflicts = apr_hash_make(pool);
     const char *marker_abspath;
 
-    apr_hash_set(mine, "prop", APR_HASH_KEY_STRING,
-                 svn_string_create("Mine", pool));
+    svn_hash_sets(mine, "prop", svn_string_create("Mine", pool));
 
-    apr_hash_set(their_old, "prop", APR_HASH_KEY_STRING,
-                 svn_string_create("Their-Old", pool));
+    svn_hash_sets(their_old, "prop", svn_string_create("Their-Old", pool));
 
-    apr_hash_set(theirs, "prop", APR_HASH_KEY_STRING,
-                 svn_string_create("Theirs", pool));
+    svn_hash_sets(theirs, "prop", svn_string_create("Theirs", pool));
 
-    apr_hash_set(conflicts, "prop", APR_HASH_KEY_STRING, "");
+    svn_hash_sets(conflicts, "prop", "");
 
     SVN_ERR(svn_io_open_unique_file3(NULL, &marker_abspath, sbox.wc_abspath,
                                      svn_io_file_del_on_pool_cleanup, pool,

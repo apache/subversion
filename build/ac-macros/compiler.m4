@@ -71,12 +71,16 @@ AC_DEFUN([SVN_CC_MODE_SETUP],
     ])
   fi
 
+  dnl check for snprintf so that we can use it instead of sprintf.
+  AC_CHECK_FUNCS(snprintf)
+
   CMODEFLAGS="$CFLAGS"
   CFLAGS=""
+  SVN_DOT_CLANGD_CC([$CMODEFLAGS])
 
   if test "$GCC" = "yes"; then
     dnl Find flags to silence all warnings
-    SVN_CFLAGS_ADD_IFELSE([-w])
+    SVN_CFLAGS_ADD_IFELSE([-w],[SVN_DOT_CLANGD_CC([-w])])
   fi
 
   CNOWARNFLAGS="$CFLAGS"
@@ -89,7 +93,9 @@ AC_DEFUN([SVN_CC_MODE_SETUP],
 
   if test "$GCC" = "yes"; then
     dnl Tell clang to not accept unknown warning flags
-    SVN_CFLAGS_ADD_IFELSE([-Werror=unknown-warning-option])
+    SVN_CFLAGS_ADD_IFELSE([-Werror=unknown-warning-option],[
+      SVN_DOT_CLANGD_CC([-Werror=unknown-warning-option])
+    ])
   fi
 ])
 
@@ -100,17 +106,44 @@ AC_DEFUN([SVN_CXX_MODE_SETUP],
   CXXFLAGS=""
 
   if test "$GXX" = "yes"; then
-    dnl Find flags to force C++98 mode
+    dnl Find flags to force C++ mode
                   dnl g++ and clang++
-    SVN_CXXFLAGS_ADD_IFELSE([-std=c++11])
+    if test "$cxx_language_level" = "any"; then
+      SVN_CXXFLAGS_ADD_IFELSE([-std=c++23],[],[
+        SVN_CXXFLAGS_ADD_IFELSE([-std=c++20],[],[
+          SVN_CXXFLAGS_ADD_IFELSE([-std=c++17],[],[
+            SVN_CXXFLAGS_ADD_IFELSE([-std=c++11])
+          ])
+        ])
+      ])
+    else
+      SVN_CXXFLAGS_ADD_IFELSE([-std=$cxx_language_level],[],[
+        AC_MSG_ERROR([$CXX does not accept -std=$cxx_language_level (see option --enable-c++)])
+      ])
+      dnl We require at least C++11
+      AC_MSG_CHECKING([if '$CXX $CXXFLAGS' supports at least a C++11])
+      AC_LANG_PUSH([C++])
+      AC_COMPILE_IFELSE([
+        AC_LANG_SOURCE([
+          #if !defined(__cplusplus) || __cplusplus < 201103
+          #error "Not C++11"
+          #endif
+        ])
+      ],[AC_MSG_RESULT([yes])],[
+        AC_MSG_RESULT([no])
+        AC_MSG_ERROR([JavHL and C++ bindings require at least C++11])
+      ])
+      AC_LANG_POP([C++])
+    fi
   fi
 
   CXXMODEFLAGS="$CXXFLAGS"
   CXXFLAGS=""
+  SVN_DOT_CLANGD_CXX([$CXXMODEFLAGS])
 
   if test "$GXX" = "yes"; then
     dnl Find flags to silence all warnings
-    SVN_CXXFLAGS_ADD_IFELSE([-w])
+    SVN_CXXFLAGS_ADD_IFELSE([-w],[SVN_DOT_CLANGD_CXX([-w])])
   fi
 
   CXXNOWARNFLAGS="$CXXFLAGS"
@@ -123,6 +156,8 @@ AC_DEFUN([SVN_CXX_MODE_SETUP],
 
   if test "$GXX" = "yes"; then
     dnl Tell clang++ to not accept unknown warning flags
-    SVN_CXXFLAGS_ADD_IFELSE([-Werror=unknown-warning-option])
+    SVN_CXXFLAGS_ADD_IFELSE([-Werror=unknown-warning-option],[
+      SVN_DOT_CLANGD_CXX([-Werror=unknown-warning-option])
+    ])
   fi
 ])

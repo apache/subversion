@@ -3,7 +3,7 @@
 #  log_tests.py:  testing "svn log"
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -471,8 +471,7 @@ def parse_log_output(log_lines, with_diffs=False):
 
   # Regular expression to match the header line of a log message, with
   # these groups: (revision number), (author), (date), (num lines).
-  header_re = re.compile('^r([0-9]+) \| ' \
-                         + '([^|]*) \| ([^|]*) \| ([0-9]+) lines?')
+  header_re = re.compile(r'^r([0-9]+) \| ([^|]*) \| ([^|]*) \| ([0-9]+) lines?')
 
   # The log chain to return.
   chain = []
@@ -984,10 +983,10 @@ PROPS-END
 
   # Verify the output contains either the expected fuzzy escape
   # sequence, or the literal control char.
-  match_unescaped_ctrl_re = "This msg contains a Ctrl-T \(.\) " \
-                            "and a Ctrl-I \(\t\)\."
-  match_escaped_ctrl_re = "^This msg contains a Ctrl-T \(\?\\\\020\) " \
-                          "and a Ctrl-I \(\t\)\."
+  match_unescaped_ctrl_re = r"This msg contains a Ctrl-T \(.\) " \
+                            r"and a Ctrl-I \(\t\)\."
+  match_escaped_ctrl_re = r"^This msg contains a Ctrl-T \(\?\\020\) " \
+                          r"and a Ctrl-I \(\t\)\."
   matched = None
   for line in output:
     if re.match(match_unescaped_ctrl_re, line) \
@@ -1009,7 +1008,7 @@ def log_xml_empty_date(sbox):
   date_re = re.compile('<date')
 
   # Ensure that we get a date before we delete the property.
-  exit_code, output, errput = svntest.actions.run_and_verify_svn(
+  exit_code, output, errput = svntest.actions.run_and_verify_svn_xml(
     None, [], 'log', '--xml', '-r1', sbox.wc_dir)
 
   matched = 0
@@ -1024,7 +1023,7 @@ def log_xml_empty_date(sbox):
                                      'pdel', '--revprop', '-r1', 'svn:date',
                                      sbox.wc_dir)
 
-  exit_code, output, errput = svntest.actions.run_and_verify_svn(
+  exit_code, output, errput = svntest.actions.run_and_verify_svn_xml(
     None, [], 'log', '--xml', '-r1', sbox.wc_dir)
 
   for line in output:
@@ -1490,8 +1489,8 @@ def retrieve_revprops(sbox):
 
   # Can't set revprops with log.
   svntest.actions.run_and_verify_log_xml(
-    expected_stderr=(".*cannot assign with 'with-revprop' option"
-                     " \(drop the '='\)"),
+    expected_stderr=(r".*cannot assign with 'with-revprop' option"
+                     r" \(drop the '='\)"),
     args=['--with-revprop=foo=bar'])
 
   # basic test without revprop options
@@ -2670,8 +2669,8 @@ def log_revision_move_copy(sbox):
                                      '-r2')
 
   expected_output = svntest.verify.RegexListOutput([
-    '-+\\n',
-    'r3\ .*\n',
+    r'-+\n',
+    r'r3 .*\n',
     re.escape('Changed paths:\n'),
     re.escape('   D /A/B/E\n'),
     re.escape('   A /E (from /A/B/E:2)\n'), # Patched - Direct move
@@ -2680,7 +2679,7 @@ def log_revision_move_copy(sbox):
     re.escape('   D /iota\n'),
     re.escape('   A /iotb (from /iota:2)\n'), # Patched - Direct move
     re.escape('   A /mutb (from /A/mu:1)\n'), # Copy (always r1)
-    '-+\\n'
+    r'-+\n',
   ])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-v', '-q', sbox.wc_dir,
@@ -2783,7 +2782,7 @@ def log_on_deleted_deep(sbox):
 @Issue(4711)
 def log_with_merge_history_and_search(sbox):
   "log --use-merge-history --search"
-  
+
   sbox.build()
 
   # r2: create branch
@@ -2799,22 +2798,54 @@ def log_with_merge_history_and_search(sbox):
   sbox.simple_commit(message='r4: merge')
   sbox.simple_update()
 
-  # Helper function
-  def count(haystack, needle):
-    """Return the number of times the string NEEDLE occurs in the string
-    HAYSTACK."""
-    return len(haystack.split(needle)) - 1
-
   # Check the output is valid
-  # ### Since the test is currently XFail, we only smoke test the output.
-  # ### When fixing this test to PASS, extend this validation.
   _, output, _ = svntest.main.run_svn(None, 'log', '--xml', '-g',
                                       '--search', "this will have no matches",
                                       sbox.ospath('A2'))
+  svntest.verify.validate_xml_schema('log', output)
 
-  output = '\n'.join(output)
-  if count(output, "<logentry") != count(output, "</logentry"):
-    raise svntest.Failure("Apparently invalid XML in " + repr(output))
+
+@XFail(lambda: (svntest.main.is_ra_type_file()))
+@Issue(4856)
+def log_xml_with_merge_history(sbox):
+  "log --use-merge-history --xml"
+
+  sbox.build()
+
+  # r2-r4: create branches
+  sbox.simple_repo_copy('A', 'A2')
+  sbox.simple_repo_copy('A', 'A3')
+  sbox.simple_repo_copy('A', 'A4')
+
+  # r5: mod in trunk
+  sbox.simple_append('A/mu', 'line 2')
+  sbox.simple_commit(message='r5: mod')
+  sbox.simple_update()
+
+  # r6-r7: merge A=>A2, A2=>A3
+  svntest.main.run_svn(None, 'merge', '-c', '5', sbox.repo_url + '/A', sbox.ospath('A2'))
+  sbox.simple_commit(message='r6: merge A=>A2')
+  sbox.simple_update()
+  svntest.main.run_svn(None, 'merge', '-c', '6', sbox.repo_url + '/A2', sbox.ospath('A3'))
+  sbox.simple_commit(message='r7: merge A2=>A3')
+  sbox.simple_update()
+
+  # r8: add file in A3
+  xi_path = os.path.join(sbox.wc_dir, 'A3/xi')
+  svntest.main.file_write(xi_path, "This is the file 'A3/xi'.\n")
+  svntest.main.run_svn(None, 'add', xi_path)
+  sbox.simple_commit(message='r8: add A3/xi')
+  sbox.simple_update()
+
+  # r9: merge A3=>A4
+  svntest.main.run_svn(None, 'merge', '-r', '6:8', sbox.repo_url + '/A3', sbox.ospath('A4'))
+  sbox.simple_commit(message='r9: merge A3=>A4')
+  sbox.simple_update()
+
+  # Check the output is valid
+  _, output, _ = svntest.main.run_svn(None, 'log', '--xml', '-g', '-r', '8:9',
+                                      sbox.ospath('A4'))
+  svntest.verify.validate_xml_schema('log', output)
 
 ########################################################################
 # Run the tests
@@ -2867,6 +2898,7 @@ test_list = [ None,
               log_revision_move_copy,
               log_on_deleted_deep,
               log_with_merge_history_and_search,
+              log_xml_with_merge_history,
              ]
 
 if __name__ == '__main__':

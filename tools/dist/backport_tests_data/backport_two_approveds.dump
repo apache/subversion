@@ -458,13 +458,13 @@ Approved changes:
 
 
 Revision-number: 7
-Prop-content-length: 132
-Content-length: 132
+Prop-content-length: 133
+Content-length: 133
 
 K 10
 svn:author
-V 6
-daniel
+V 7
+jrandom
 K 7
 svn:log
 V 77
@@ -531,13 +531,13 @@ First change
 
 
 Revision-number: 8
-Prop-content-length: 132
-Content-length: 132
+Prop-content-length: 133
+Content-length: 133
 
 K 10
 svn:author
-V 6
-daniel
+V 7
+jrandom
 K 7
 svn:log
 V 77
@@ -749,13 +749,13 @@ Approved changes:
 
 
 Revision-number: 12
-Prop-content-length: 132
-Content-length: 132
+Prop-content-length: 133
+Content-length: 133
 
 K 10
 svn:author
-V 6
-daniel
+V 7
+jrandom
 K 7
 svn:log
 V 77
@@ -827,13 +827,13 @@ First change
 
 
 Revision-number: 13
-Prop-content-length: 132
-Content-length: 132
+Prop-content-length: 133
+Content-length: 133
 
 K 10
 svn:author
-V 6
-daniel
+V 7
+jrandom
 K 7
 svn:log
 V 77
@@ -900,13 +900,13 @@ Approved changes:
 
 
 Revision-number: 14
-Prop-content-length: 134
-Content-length: 134
+Prop-content-length: 135
+Content-length: 135
 
 K 10
 svn:author
-V 6
-daniel
+V 7
+jrandom
 K 7
 svn:log
 V 79

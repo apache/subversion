@@ -86,7 +86,7 @@ for entry_para in sf.entries_paras():
     if backport.merger.svn_version() < (1,6):
       output = re.compile('^(......)', re.MULTILINE).sub(r'\1 ', output)
 
-    pattern = re.compile(r'(?:C......|.C.....|......C)\s(.*)', re.MULTILINE)
+    pattern = re.compile(r'^(?:C......|.C.....|......C)\s(.*)$', re.MULTILINE)
     conflicts = pattern.findall(output)
     if conflicts and not entry.depends:
       if len(conflicts) == 1:

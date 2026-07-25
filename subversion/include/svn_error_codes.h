@@ -576,6 +576,22 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 41,
              "Duplicate targets in svn:externals property")
 
+  /** @since New in 1.15 */
+  SVN_ERRDEF(SVN_ERR_WC_INCOMPATIBLE_SETTINGS,
+             SVN_ERR_WC_CATEGORY_START + 42,
+             "Incompatible working copy settings")
+
+  /** @since New in 1.15 */
+  SVN_ERRDEF(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE,
+             SVN_ERR_WC_CATEGORY_START + 43,
+             "This client uses a deprecated API that does not support "
+             "working copies without local pristines")
+
+  /** @since New in 1.15 */
+  SVN_ERRDEF(SVN_ERR_WC_PRISTINE_DEHYDRATED,
+             SVN_ERR_WC_CATEGORY_START + 44,
+             "No local pristine contents for a file")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
@@ -1501,6 +1517,16 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_CANONICALIZATION_FAILED,
              SVN_ERR_MISC_CATEGORY_START + 47,
              "Could not canonicalize path or URI")
+
+  /** @since New in 1.16.  */
+  SVN_ERRDEF(SVN_ERR_BCRYPT,
+             SVN_ERR_MISC_CATEGORY_START + 48,
+             "BCrypt method failed.")
+
+  /** @since New in 1.16. */
+  SVN_ERRDEF(SVN_ERR_OPT_REVISION_PARSE_ERROR,
+             SVN_ERR_MISC_CATEGORY_START + 49,
+             "Error parsing revision argument")
 
   /* command-line client errors */
 

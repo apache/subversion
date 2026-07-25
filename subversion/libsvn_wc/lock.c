@@ -566,10 +566,12 @@ open_single(svn_wc_adm_access_t **adm_access,
     }
   SVN_ERR(err);
 
-  /* The format version must match exactly. Note that wc_db will perform
-     an auto-upgrade if allowed. If it does *not*, then it has decided a
-     manual upgrade is required and it should have raised an error.  */
-  SVN_ERR_ASSERT(wc_format == SVN_WC__VERSION);
+  /* The format version must be in the supported version range. Note
+     that wc_db will perform an auto-upgrade if allowed. If it does
+     *not*, then it has decided a manual upgrade is required and it
+     should have raised an error.  */
+  SVN_ERR_ASSERT(SVN_WC__SUPPORTED_VERSION <= wc_format
+                 && wc_format <= SVN_WC__VERSION);
 
   /* Need to create a new lock */
   SVN_ERR(adm_access_alloc(&lock, path, db, db_provided, write_lock,

@@ -3,7 +3,7 @@
 #  copy_repo.py: create multiple, interleaved copies of a set of repositories.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one

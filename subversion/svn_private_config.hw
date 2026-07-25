@@ -39,6 +39,10 @@
 #define SVN_BUILD_TARGET "ia64-microsoft-windows"
 #elif defined( _M_IX86)
 #define SVN_BUILD_TARGET "x86-microsoft-windows"
+#elif defined(_M_ARM64)
+#define SVN_BUILD_TARGET "arm64-microsoft-windows"
+#elif defined(_M_ARM)
+#define SVN_BUILD_TARGET "arm-microsoft-windows"
 #else
 #error Unsupported build target.
 #endif
@@ -68,6 +72,9 @@
 
 /* Defined to be the path to the installed binaries */
 #define SVN_BINDIR "/usr/local/bin"
+
+/* Defined if svn should use APR to compute checksums */
+#define SVN_CHECKSUM_BACKEND_APR 1
 
 
 

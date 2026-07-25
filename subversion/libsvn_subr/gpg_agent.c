@@ -224,7 +224,7 @@ bye_gpg_agent(int sd)
 {
   /* don't bother to check the result of the write, it either worked or it
    * didn't, but either way we're closing. */
-  write(sd, "BYE\n", 4);
+  (void)write(sd, "BYE\n", 4);
   close(sd);
 }
 
@@ -326,7 +326,7 @@ find_running_gpg_agent(int *new_sd, apr_pool_t *pool)
   char *buffer;
   const char *socket_name = find_gpg_agent_socket(pool, pool);
   const char *request = NULL;
-  const char *p = NULL;
+  char *p = NULL;
   char *ep = NULL;
   int sd;
 

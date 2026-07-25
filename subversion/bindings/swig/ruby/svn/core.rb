@@ -141,7 +141,7 @@ module Svn
         if len.nil?
           read_all
         else
-          buf = ""
+          buf = String.new
           while len > CHUNK_SIZE
             buf << _read(CHUNK_SIZE)
             len -= CHUNK_SIZE
@@ -165,7 +165,7 @@ module Svn
       end
 
       def read_all
-        buf = ""
+        buf = String.new
         while chunk = _read(CHUNK_SIZE)
           buf << chunk
         end
@@ -587,7 +587,7 @@ module Svn
 
       alias_method :_to_s, :to_s
       def to_s
-        result = ""
+        result = String.new
         each_section do |section|
           result << "[#{section}]\n"
           each_option(section) do |name, value|
@@ -812,7 +812,7 @@ module Svn
       def diff(to, consider_inheritance=false)
         result = Core.rangelist_diff(self, to, consider_inheritance)
         deleted = result.pop
-        added = result
+        added = result.pop
         [added, deleted].collect do |result|
           self.class.new(*result)
         end

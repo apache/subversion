@@ -57,6 +57,7 @@ AC_DEFUN(SVN_LZ4,
       AC_MSG_ERROR([Subversion requires LZ4 >= r129, or use --with-lz4=internal])
     fi
   fi
+  SVN_DOT_CLANGD([$SVN_LZ4_INCLUDES])
   AC_SUBST(SVN_LZ4_INCLUDES)
   AC_SUBST(SVN_LZ4_LIBS)
 ])

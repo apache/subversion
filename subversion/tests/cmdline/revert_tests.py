@@ -3,7 +3,7 @@
 #  revert_tests.py:  testing 'svn revert'.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -60,8 +60,8 @@ def run_and_verify_revert(targets, options=[],
   if reverted_paths is None:
     reverted_paths = targets
   expected_output = expected_output_revert(reverted_paths, skipped_paths)
-  svntest.actions.run_and_verify_svn(expected_output, [],
-                                     *(['revert'] + options + targets))
+  svntest.actions.run_and_verify_revert_output(expected_output,
+                                               *(options + targets))
 
 def revert_replacement_with_props(sbox, wc_copy):
   """Helper implementing the core of
@@ -260,6 +260,34 @@ def revert_reexpand_keyword(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+
+  # The test expects two different things to happen during revert, depending
+  # on whether an `svn cleanup` or any other command that repairs the
+  # timestamps was called in between:
+  #
+  # - In the first part, we expect a revert to change file contents and
+  #   re-expand its keywords, because a revert happens right after editing
+  #   the file.
+  #
+  # - In the second part, we expect a revert to skip the file with exactly
+  #   the same contents, because there's an in-between operation that has
+  #   recorded the new unmodified timestamp in the db.  (See r1101730 and
+  #   r1101817.)
+  #
+  # This is a problem, because we expect two different things to happen for
+  # two identical on-disk file states.  The only difference is whether any
+  # of the commands that perform the internal timestamp bookkeeping was
+  # called in between.  For example, calling `svn cleanup` after editing the
+  # file makes the first and the second parts of the test behave identically.
+  #
+  # This problem prevents us from properly testing the `--store-pristine=no`
+  # case, because when we walk the text-bases we use that opportunity to
+  # repair timestamps, but that also makes the first and the second reverts
+  # in this test behave identically.  Let's skip testing this case for now,
+  # until we resolve the described problem with opposite expectations.
+  if not svntest.actions.get_wc_store_pristine(wc_dir):
+    raise svntest.Skip()
+
   newfile_path = os.path.join(wc_dir, "newfile")
   unexpanded_contents = "This is newfile: $Rev$.\n"
 
@@ -281,8 +309,9 @@ def revert_reexpand_keyword(sbox):
     fp = open(path, 'r')
     lines = fp.readlines()
     fp.close()
-    if lines[0] != "This is newfile: $Rev: 3 $.\n":
-      raise svntest.Failure
+    expected = "This is newfile: $Rev: 3 $.\n"
+    if lines[0] != expected:
+      raise svntest.Failure({"actual": lines[0], "expected": expected})
 
   check_expanded(newfile_path)
 
@@ -290,7 +319,7 @@ def revert_reexpand_keyword(sbox):
   svntest.main.file_write(newfile_path, unexpanded_contents)
 
   # Revert the file.  The keyword should reexpand.
-  svntest.main.run_svn(None, 'revert', newfile_path)
+  run_and_verify_revert([newfile_path], [], [newfile_path])
 
   # Verify that the keyword got re-expanded.
   check_expanded(newfile_path)
@@ -323,7 +352,7 @@ def revert_reexpand_keyword(sbox):
                                         '-m', "Shouldn't be committed")
 
   # Revert the file.  The file is not reverted!
-  svntest.actions.run_and_verify_svn([], [], 'revert', newfile_path)
+  run_and_verify_revert([newfile_path], [], [])
 
 
 #----------------------------------------------------------------------
@@ -461,7 +490,7 @@ def revert_file_merge_replace_with_history(sbox):
   # Add the new file
   svntest.actions.run_and_verify_svn(None, [], 'add', rho_path)
 
-  # Commit revsion 3
+  # Commit revision 3
   expected_status.add({
     'A/D/G/rho' : Item(status='A ', wc_rev='0')
     })

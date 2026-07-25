@@ -39,7 +39,6 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_ra_svn.h"
-#include "svn_utf.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_opt.h"
@@ -66,6 +65,8 @@
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>   /* For getpid() */
+#elif WIN32
+#include <process.h>  /* For getpid() */
 #endif
 
 #include "server.h"
@@ -191,7 +192,7 @@ void winservice_notify_stop(void)
   if (winservice_svnserve_accept_socket != INVALID_SOCKET)
     closesocket(winservice_svnserve_accept_socket);
 }
-#endif /* _WIN32 */
+#endif /* WIN32 */
 
 
 /* Option codes and descriptions for svnserve.
@@ -492,6 +493,15 @@ static void sigchld_handler(int signo)
 }
 #endif
 
+#ifdef APR_HAVE_SIGACTION
+static volatile svn_atomic_t sigtermint_seen = 0;
+static void
+sigtermint_handler(int signo)
+{
+    svn_atomic_set(&sigtermint_seen, 1);
+}
+#endif /* APR_HAVE_SIGACTION */
+
 /* Redirect stdout to stderr.  ARG is the pool.
  *
  * In tunnel or inetd mode, we don't want hook scripts corrupting the
@@ -547,6 +557,10 @@ accept_connection(connection_t **connection,
 
       status = apr_socket_accept(&(*connection)->usock, sock,
                                  connection_pool);
+#if APR_HAVE_SIGACTION
+      if (svn_atomic_read(&sigtermint_seen))
+          break;
+#endif
       if (handling_mode == connection_mode_fork)
         {
           apr_proc_t proc;
@@ -561,9 +575,14 @@ accept_connection(connection_t **connection,
     || APR_STATUS_IS_ECONNABORTED(status)
     || APR_STATUS_IS_ECONNRESET(status));
 
-  return status
-       ? svn_error_wrap_apr(status, _("Can't accept client connection"))
-       : SVN_NO_ERROR;
+  if (!status)
+    return SVN_NO_ERROR;
+#if APR_HAVE_SIGACTION
+  else if (svn_atomic_read(&sigtermint_seen))
+    return SVN_NO_ERROR;
+#endif
+  else
+    return svn_error_wrap_apr(status, _("Can't accept client connection"));
 }
 
 /* Add a reference to CONNECTION, i.e. keep it and it's pool valid unless
@@ -703,7 +722,10 @@ check_lib_versions(void)
  * return SVN_NO_ERROR.
  */
 static svn_error_t *
-sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
+sub_main(int *exit_code,
+         int argc,
+         const svn_cmdline__argv_char_t *cmdline_argv[],
+         apr_pool_t *pool)
 {
   enum run_mode run_mode = run_mode_unspecified;
   svn_boolean_t foreground = FALSE;
@@ -742,12 +764,16 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_node_kind_t kind;
   apr_size_t min_thread_count = THREADPOOL_MIN_SIZE;
   apr_size_t max_thread_count = THREADPOOL_MAX_SIZE;
+  const char **argv;
+
 #ifdef SVN_HAVE_SASL
   SVN_ERR(cyrus_init(pool));
 #endif
 
   /* Check library versions */
   SVN_ERR(check_lib_versions());
+
+  SVN_ERR(svn_cmdline__get_utf8_argv(&argv, argc, cmdline_argv, pool));
 
   /* Initialize the FS library. */
   SVN_ERR(svn_fs_initialize(pool));
@@ -869,7 +895,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           break;
 
         case 'r':
-          SVN_ERR(svn_utf_cstring_to_utf8(&params.root, arg, pool));
+          params.root = arg;
 
           SVN_ERR(svn_io_check_resolved_path(params.root, &kind, pool));
           if (kind != svn_node_dir)
@@ -973,15 +999,13 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 #endif
 
         case SVNSERVE_OPT_CONFIG_FILE:
-          SVN_ERR(svn_utf_cstring_to_utf8(&config_filename, arg, pool));
-          config_filename = svn_dirent_internal_style(config_filename, pool);
+          config_filename = svn_dirent_internal_style(arg, pool);
           SVN_ERR(svn_dirent_get_absolute(&config_filename, config_filename,
                                           pool));
           break;
 
         case SVNSERVE_OPT_PID_FILE:
-          SVN_ERR(svn_utf_cstring_to_utf8(&pid_filename, arg, pool));
-          pid_filename = svn_dirent_internal_style(pid_filename, pool);
+          pid_filename = svn_dirent_internal_style(arg, pool);
           SVN_ERR(svn_dirent_get_absolute(&pid_filename, pid_filename, pool));
           break;
 
@@ -990,8 +1014,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
            break;
 
          case SVNSERVE_OPT_LOG_FILE:
-          SVN_ERR(svn_utf_cstring_to_utf8(&log_filename, arg, pool));
-          log_filename = svn_dirent_internal_style(log_filename, pool);
+          log_filename = svn_dirent_internal_style(arg, pool);
           SVN_ERR(svn_dirent_get_absolute(&log_filename, log_filename, pool));
           break;
 
@@ -1330,11 +1353,20 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     }
 #endif
 
+#if APR_HAVE_SIGACTION
+  apr_signal(SIGTERM, sigtermint_handler);
+  apr_signal(SIGINT, sigtermint_handler);
+#endif
+
   while (1)
     {
       connection_t *connection = NULL;
       SVN_ERR(accept_connection(&connection, sock, &params, handling_mode,
                                 pool));
+#if APR_HAVE_SIGACTION
+      if (svn_atomic_read(&sigtermint_seen))
+          break;
+#endif
       if (run_mode == run_mode_listen_once)
         {
           err = serve_socket(connection, connection->pool);
@@ -1391,11 +1423,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       close_connection(connection);
     }
 
-  /* NOTREACHED */
+  return SVN_NO_ERROR;
 }
 
 int
-main(int argc, const char *argv[])
+SVN_CMDLINE__MAIN(int argc, const svn_cmdline__argv_char_t *argv[])
 {
   apr_pool_t *pool;
   int exit_code = EXIT_SUCCESS;

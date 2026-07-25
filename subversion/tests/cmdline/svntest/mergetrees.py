@@ -3,7 +3,7 @@
 #  mergetrees.py:  routines that create merge scenarios
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -94,6 +94,8 @@ def expected_merge_output(rev_ranges, additional_lines=[], foreign=False,
 
   if (two_url):
     lines += ["--- Recording mergeinfo for merge between repository URLs .*\n"]
+
+  lines += ["Fetching text bases [.]+done\n"]
 
   # Address "The Backslash Plague"
   #

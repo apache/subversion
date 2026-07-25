@@ -81,6 +81,10 @@
 #include <mach-o/loader.h>
 #endif
 
+#ifdef SVN_HAVE_LIBMAGIC
+#include <magic.h>
+#endif
+
 #if HAVE_UNAME
 static const char *canonical_host_from_uname(apr_pool_t *pool);
 # ifndef SVN_HAVE_MACOS_PLIST
@@ -137,59 +141,93 @@ svn_sysinfo__release_name(apr_pool_t *pool)
 #endif
 }
 
+const char *
+svn_sysinfo__character_encoding(apr_pool_t *pool)
+{
+  return svn_utf__locale_encoding(pool);
+}
+
 const apr_array_header_t *
 svn_sysinfo__linked_libs(apr_pool_t *pool)
 {
-  svn_version_ext_linked_lib_t *lib;
-  apr_array_header_t *array = apr_array_make(pool, 7, sizeof(*lib));
-  int lz4_version = svn_lz4__runtime_version();
+  apr_array_header_t *array =
+      apr_array_make(pool, 7, sizeof(svn_version_ext_linked_lib_t));
 
-  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
-  lib->name = "APR";
-  lib->compiled_version = APR_VERSION_STRING;
-  lib->runtime_version = apr_pstrdup(pool, apr_version_string());
+  {
+    svn_version_ext_linked_lib_t *lib = apr_array_push(array);
+    lib->name = "APR";
+    lib->compiled_version = APR_VERSION_STRING;
+    lib->runtime_version = apr_pstrdup(pool, apr_version_string());
+  }
 
 /* Don't list APR-Util if it isn't linked in, which it may not be if
  * we're using APR 2.x+ which combined APR-Util into APR. */
 #ifdef APU_VERSION_STRING
-  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
-  lib->name = "APR-Util";
-  lib->compiled_version = APU_VERSION_STRING;
-  lib->runtime_version = apr_pstrdup(pool, apu_version_string());
+  {
+    svn_version_ext_linked_lib_t *lib = apr_array_push(array);
+    lib->name = "APR-Util";
+    lib->compiled_version = APU_VERSION_STRING;
+    lib->runtime_version = apr_pstrdup(pool, apu_version_string());
+  }
 #endif
 
-  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
-  lib->name = "Expat";
-  lib->compiled_version = apr_pstrdup(pool, svn_xml__compiled_version());
-  lib->runtime_version = apr_pstrdup(pool, svn_xml__runtime_version());
+  {
+    svn_version_ext_linked_lib_t *lib = apr_array_push(array);
+    lib->name = "Expat";
+    lib->compiled_version = apr_pstrdup(pool, svn_xml__compiled_version());
+    lib->runtime_version = apr_pstrdup(pool, svn_xml__runtime_version());
+  }
 
-  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
-  lib->name = "SQLite";
-  lib->compiled_version = apr_pstrdup(pool, svn_sqlite__compiled_version());
+#ifdef SVN_HAVE_LIBMAGIC
+  {
+    int libmagic_version = magic_version();
+    svn_version_ext_linked_lib_t *lib = apr_array_push(array);
+    lib->name = "Libmagic";
+    lib->compiled_version =
+        apr_psprintf(pool, "%d.%d", MAGIC_VERSION / 100, MAGIC_VERSION % 100);
+    lib->runtime_version = apr_psprintf(pool, "%d.%d", libmagic_version / 100,
+                                        libmagic_version % 100);
+  }
+#endif
+
+  {
+    svn_version_ext_linked_lib_t *lib = apr_array_push(array);
+    lib->name = "SQLite";
+    lib->compiled_version = apr_pstrdup(pool, svn_sqlite__compiled_version());
 #ifdef SVN_SQLITE_INLINE
-  lib->runtime_version = NULL;
+    lib->runtime_version = NULL;
 #else
-  lib->runtime_version = apr_pstrdup(pool, svn_sqlite__runtime_version());
+    lib->runtime_version = apr_pstrdup(pool, svn_sqlite__runtime_version());
 #endif
+  }
 
-  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
-  lib->name = "Utf8proc";
-  lib->compiled_version = apr_pstrdup(pool, svn_utf__utf8proc_compiled_version());
-  lib->runtime_version = apr_pstrdup(pool, svn_utf__utf8proc_runtime_version());
+  {
+    svn_version_ext_linked_lib_t *lib = apr_array_push(array);
+    lib->name = "Utf8proc";
+    lib->compiled_version =
+        apr_pstrdup(pool, svn_utf__utf8proc_compiled_version());
+    lib->runtime_version =
+        apr_pstrdup(pool, svn_utf__utf8proc_runtime_version());
+  }
 
-  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
-  lib->name = "ZLib";
-  lib->compiled_version = apr_pstrdup(pool, svn_zlib__compiled_version());
-  lib->runtime_version = apr_pstrdup(pool, svn_zlib__runtime_version());
+  {
+    svn_version_ext_linked_lib_t *lib = apr_array_push(array);
+    lib->name = "ZLib";
+    lib->compiled_version = apr_pstrdup(pool, svn_zlib__compiled_version());
+    lib->runtime_version = apr_pstrdup(pool, svn_zlib__runtime_version());
+  }
 
-  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
-  lib->name = "LZ4";
-  lib->compiled_version = apr_pstrdup(pool, svn_lz4__compiled_version());
+  {
+    svn_version_ext_linked_lib_t *lib = apr_array_push(array);
+    int lz4_version = svn_lz4__runtime_version();
+    lib->name = "LZ4";
+    lib->compiled_version = apr_pstrdup(pool, svn_lz4__compiled_version());
 
-  lib->runtime_version = apr_psprintf(pool, "%d.%d.%d",
-                                      lz4_version / 100 / 100,
-                                      (lz4_version / 100) % 100,
-                                      lz4_version % 100);
+    lib->runtime_version = apr_psprintf(pool, "%d.%d.%d",
+                                        lz4_version / 100 / 100,
+                                        (lz4_version / 100) % 100,
+                                        lz4_version % 100);
+  }
 
   return array;
 }
@@ -646,11 +684,16 @@ debian_release(apr_pool_t *pool)
 static const char *
 linux_release_name(apr_pool_t *pool)
 {
-  const char *uname_release = release_name_from_uname(pool);
+  const char *uname_release = NULL;
+  const char *release_name;
+
+#if HAVE_UNAME
+  uname_release = release_name_from_uname(pool);
+#endif
 
   /* Try anything that has /usr/bin/lsb_release.
      Covers, for example, Debian, Ubuntu and SuSE.  */
-  const char *release_name = lsb_release(pool);
+  release_name = lsb_release(pool);
 
   /* Try the systemd way (covers Arch). */
   if (!release_name)
@@ -690,8 +733,8 @@ parse_pointer_value(const char *start, const char *limit, char **end)
       || *end >= limit)         /* representation too long */
     return NULL;
 
-  ptr = (const unsigned char*)val;
-  if (val != (apr_uint64_t)ptr)  /* truncated value */
+  ptr = (const unsigned char*)(apr_uintptr_t)val;
+  if (val != (apr_uintptr_t)ptr)/* truncated value */
     return NULL;
 
   return ptr;
@@ -950,22 +993,24 @@ win32_canonical_host(apr_pool_t *pool)
 }
 
 /* Convert a Unicode string to UTF-8. */
-static char *
+static const char *
 wcs_to_utf8(const wchar_t *wcs, apr_pool_t *pool)
 {
-  const int bufsize = WideCharToMultiByte(CP_UTF8, 0, wcs, -1,
-                                          NULL, 0, NULL, NULL);
-  if (bufsize > 0)
+  svn_error_t *err;
+  const char *utf8;
+
+  err = svn_utf__win32_utf16_to_utf8(&utf8, wcs, NULL, pool);
+  if (err)
     {
-      char *const utf8 = apr_palloc(pool, bufsize + 1);
-      WideCharToMultiByte(CP_UTF8, 0, wcs, -1, utf8, bufsize, NULL, NULL);
-      return utf8;
+      svn_error_clear(err);
+      return NULL;
     }
-  return NULL;
+
+  return utf8;
 }
 
 /* Query the value called NAME of the registry key HKEY. */
-static char *
+static const char *
 registry_value(HKEY hkey, wchar_t *name, apr_pool_t *pool)
 {
   DWORD size;
@@ -1325,69 +1370,89 @@ value_from_dict(CFDictionaryRef plist, CFStringRef key, apr_pool_t *pool)
   return value;
 }
 
-/* Return the minor version the operating system, given the number in
-   a format that matches the regular expression /^10\.\d+(\..*)?$/ */
-static int
-macos_minor_version(const char *osver)
+/* Return the major and minor versions the operating system, given
+   the number in a format that matches the regular expression
+   /^\d+\.\d+(\..*)?$/ */
+static void
+macos_version_number(int *major, int *minor, const char *osver)
 {
   char *end = NULL;
   unsigned long num = strtoul(osver, &end, 10);
 
-  if (!end || *end != '.' || num != 10)
-    return -1;
+  if (!end || *end != '.' || num < 10)
+    return;
+
+  if (major)
+    *major = (int)num;
 
   osver = end + 1;
   end = NULL;
   num = strtoul(osver, &end, 10);
   if (!end || (*end && *end != '.'))
-    return -1;
+    return;
 
-  return (int)num;
+  if (minor)
+    *minor = (int)num;
 }
 
 /* Return the product name of the operating system. */
 static const char *
-product_name_from_minor_version(int minor, const char* product_name)
+product_name_from_version(int major, int minor, const char* product_name)
 {
   /* We can only do this if we know the official product name. */
   if (0 != strcmp(product_name, "Mac OS X"))
     return product_name;
 
-  if (minor <= 7)
-    return product_name;
+  if (major == 10)
+    {
+      if (minor <= 7)
+        return product_name;
 
-  if (minor <= 11)
-    return "OS X";
+      if (minor <= 11)
+        return "OS X";
+    }
 
   return "macOS";
 }
 
 /* Return the commercial name of the operating system. */
 static const char *
-release_name_from_minor_version(int minor, const char* product_name)
+release_name_from_version(int major, int minor, const char* product_name)
 {
   /* We can only do this if we know the official product name. */
-  if (0 == strcmp(product_name, "Mac OS X"))
+  if (0 == strcmp(product_name, "Mac OS X")
+      || 0 == strcmp(product_name, "OS X")
+      || 0 == strcmp(product_name, "macOS"))
     {
       /* See https://en.wikipedia.org/wiki/MacOS_version_history#Releases */
-      switch(minor)
+      switch(major)
         {
-        case  0: return "Cheetah";
-        case  1: return "Puma";
-        case  2: return "Jaguar";
-        case  3: return "Panther";
-        case  4: return "Tiger";
-        case  5: return "Leopard";
-        case  6: return "Snow Leopard";
-        case  7: return "Lion";
-        case  8: return "Mountain Lion";
-        case  9: return "Mavericks";
-        case 10: return "Yosemite";
-        case 11: return "El Capitan";
-        case 12: return "Sierra";
-        case 13: return "High Sierra";
-        case 14: return "Mojave";
-        case 15: return "Catalina";
+        case 10:
+          switch(minor)
+            {
+            case  0: return "Cheetah";
+            case  1: return "Puma";
+            case  2: return "Jaguar";
+            case  3: return "Panther";
+            case  4: return "Tiger";
+            case  5: return "Leopard";
+            case  6: return "Snow Leopard";
+            case  7: return "Lion";
+            case  8: return "Mountain Lion";
+            case  9: return "Mavericks";
+            case 10: return "Yosemite";
+            case 11: return "El Capitan";
+            case 12: return "Sierra";
+            case 13: return "High Sierra";
+            case 14: return "Mojave";
+            case 15: return "Catalina";
+            }
+          break;
+
+        case 11: return "Big Sur";
+        case 12: return "Monterey";
+        case 13: return "Ventura";
+        case 14: return "Sonoma";
         }
     }
   return NULL;
@@ -1412,13 +1477,14 @@ macos_release_name(apr_pool_t *pool)
                                           CFSTR("ProductBuildVersion"),
                                           pool);
       const char *release;
-      int minor_version;
+      int major_version = -1;
+      int minor_version = -1;
 
       if (!osver)
         osver = value_from_dict(plist, CFSTR("ProductVersion"), pool);
-      minor_version = macos_minor_version(osver);
-      release = release_name_from_minor_version(minor_version, osname);
-      osname = product_name_from_minor_version(minor_version, osname);
+      macos_version_number(&major_version, &minor_version, osver);
+      release = release_name_from_version(major_version, minor_version, osname);
+      osname = product_name_from_version(major_version, minor_version, osname);
 
       CFRelease(plist);
       return apr_psprintf(pool, "%s%s%s%s%s%s%s%s",

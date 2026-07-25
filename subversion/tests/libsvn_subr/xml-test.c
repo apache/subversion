@@ -22,6 +22,7 @@
 
 #include <apr.h>
 
+#include "private/svn_xml_private.h"
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_xml.h"
@@ -332,6 +333,70 @@ test_xml_doctype_declaration(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_xml_parse_stream(apr_pool_t *pool)
+{
+  const char *xml = "<root><tag1>value</tag1><tag2 a='v' /></root>";
+  xml_callbacks_baton_t b;
+  svn_stream_t *stream;
+
+  /* Test parsing XML in one chunk.*/
+  b.buf = svn_stringbuf_create_empty(pool);
+  b.parser = svn_xml_make_parser(&b, strbuf_start_elem, strbuf_end_elem,
+                                 strbuf_cdata, pool);
+  stream = svn_xml__make_parse_stream(b.parser, pool);
+
+  SVN_ERR(svn_stream_puts(stream, xml));
+  SVN_ERR(svn_stream_close(stream));
+
+  SVN_TEST_STRING_ASSERT(b.buf->data,
+                         "<root><tag1>value</tag1><tag2 a=v></tag2></root>");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_xml_parse_stream_invalid_xml(apr_pool_t *pool)
+{
+  const char *xml = "<root><tag1></tag1>";
+  xml_callbacks_baton_t b;
+  svn_stream_t *stream;
+  svn_error_t *err;
+
+  /* Test parsing XML in one chunk.*/
+  b.buf = svn_stringbuf_create_empty(pool);
+  b.parser = svn_xml_make_parser(&b, strbuf_start_elem, strbuf_end_elem,
+                                 strbuf_cdata, pool);
+  stream = svn_xml__make_parse_stream(b.parser, pool);
+
+  err = svn_error_compose_create(svn_stream_puts(stream, xml),
+                                 svn_stream_close(stream));
+
+  SVN_TEST_ASSERT_ANY_ERROR(err);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_xml_simple_cdata_escape(apr_pool_t *pool)
+{
+  svn_stringbuf_t *str = svn_stringbuf_create_empty(pool);
+  svn_xml_escape_cdata_cstring(&str, "safetext <nonsafe&amp;>", pool);
+  SVN_TEST_STRING_ASSERT(str->data, "safetext &lt;nonsafe&amp;amp;&gt;");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_xml_simple_attr_escape(apr_pool_t *pool)
+{
+  svn_stringbuf_t *str = svn_stringbuf_create_empty(pool);
+  svn_xml_escape_attr_cstring(&str, "safetext <nonsafe&amp;>", pool);
+  SVN_TEST_STRING_ASSERT(str->data, "safetext &lt;nonsafe&amp;amp;&gt;");
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 static int max_threads = 1;
 
@@ -354,6 +419,14 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test XML custom entity expansion"),
     SVN_TEST_PASS2(test_xml_doctype_declaration,
                    "test XML doctype declaration"),
+    SVN_TEST_PASS2(test_xml_parse_stream,
+                   "test XML's svn_stream_t wrapper"),
+    SVN_TEST_PASS2(test_xml_parse_stream_invalid_xml,
+                   "test XML's svn_stream_t wrapper for invalid XML"),
+    SVN_TEST_PASS2(test_xml_simple_cdata_escape,
+                   "simple XML cdata escaping test"),
+    SVN_TEST_PASS2(test_xml_simple_attr_escape,
+                   "simple XML attribute escaping test"),
     SVN_TEST_NULL
   };
 

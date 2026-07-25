@@ -130,6 +130,30 @@ static svn_object_pool__t *authz_pool = NULL;
 static svn_object_pool__t *filtered_pool = NULL;
 static svn_atomic_t authz_pool_initialized = FALSE;
 
+/*
+ * Ensure that we will initialize authz again if the pool which
+ * our authz caches depend on is cleared.
+ *
+ * HTTPD may run pre/post config hooks multiple times and clear
+ * its global configuration pool which our authz pools depend on.
+ * This happens in a non-threaded context during HTTPD's initialization
+ * and HTTPD's main loop, so it is safe to reset static variables here.
+ * (And any applications which cleared this pool while SVN threads
+ * were running would crash no matter what.)
+ *
+ * See issue #4880, "Use-after-free of object-pools in
+ * subversion/libsvn_repos/authz.c when used as httpd module"
+ */
+static apr_status_t
+deinit_authz(void *data)
+{
+  /* The two object pools run their own cleanup handlers. */
+  authz_pool = NULL;
+  filtered_pool = NULL;
+  authz_pool_initialized = FALSE;
+  return APR_SUCCESS;
+}
+
 /* Implements svn_atomic__err_init_func_t. */
 static svn_error_t *
 synchronized_authz_initialize(void *baton, apr_pool_t *pool)
@@ -143,6 +167,7 @@ synchronized_authz_initialize(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_object_pool__create(&authz_pool, multi_threaded, pool));
   SVN_ERR(svn_object_pool__create(&filtered_pool, multi_threaded, pool));
 
+  apr_pool_cleanup_register(pool, NULL, deinit_authz, apr_pool_cleanup_null);
   return SVN_NO_ERROR;
 }
 
@@ -889,9 +914,7 @@ create_user_authz(authz_full_t *authz,
   /* Use a separate sub-pool to keep memory usage tight. */
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
-  /* Find all ACLs for REPOSITORY.
-   * Note that repo-specific rules replace global rules,
-   * even if they don't apply to the current user. */
+  /* Find all ACLs for REPOSITORY. */
   apr_array_header_t *acls = apr_array_make(subpool, authz->acls->nelts,
                                             sizeof(authz_acl_t *));
   for (i = 0; i < authz->acls->nelts; ++i)
@@ -908,15 +931,36 @@ create_user_authz(authz_full_t *authz,
                 = APR_ARRAY_IDX(acls, acls->nelts - 1, const authz_acl_t *);
               if (svn_authz__compare_paths(&prev_acl->rule, &acl->rule) == 0)
                 {
+                  svn_boolean_t global_acl_applies;
+                  svn_boolean_t repos_acl_applies;
+
+                  /* Previous ACL is a global rule. */
                   SVN_ERR_ASSERT_NO_RETURN(!strcmp(prev_acl->rule.repos,
                                                    AUTHZ_ANY_REPOSITORY));
+                  /* Current ACL is a per-repository rule. */
                   SVN_ERR_ASSERT_NO_RETURN(strcmp(acl->rule.repos,
                                                   AUTHZ_ANY_REPOSITORY));
-                  apr_array_pop(acls);
-                }
-            }
 
-          APR_ARRAY_PUSH(acls, const authz_acl_t *) = acl;
+                  global_acl_applies =
+                    svn_authz__get_acl_access(NULL, prev_acl, user, repository);
+                  repos_acl_applies =
+                    svn_authz__get_acl_access(NULL, acl, user, repository);
+
+                  /* Prefer rules which apply to both this user and this path
+                   * over rules which apply only to the path. In cases where
+                   * both rules apply to user and path, always prefer the
+                   * repository-specific rule. */
+                  if (!global_acl_applies || repos_acl_applies)
+                    {
+                      apr_array_pop(acls);
+                      APR_ARRAY_PUSH(acls, const authz_acl_t *) = acl;
+                    }
+                }
+              else
+                APR_ARRAY_PUSH(acls, const authz_acl_t *) = acl;
+            }
+          else
+            APR_ARRAY_PUSH(acls, const authz_acl_t *) = acl;
         }
     }
 

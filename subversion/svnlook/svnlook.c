@@ -363,7 +363,7 @@ struct svnlook_opt_state
   const char *txn;
   svn_boolean_t version;          /* --version */
   svn_boolean_t show_ids;         /* --show-ids */
-  apr_size_t limit;               /* --limit */
+  int limit;                      /* --limit */
   svn_boolean_t help;             /* --help */
   svn_boolean_t no_diff_deleted;  /* --no-diff-deleted */
   svn_boolean_t no_diff_added;    /* --no-diff-added */
@@ -391,7 +391,7 @@ typedef struct svnlook_ctxt_t
   svn_fs_t *fs;
   svn_boolean_t is_revision;
   svn_boolean_t show_ids;
-  apr_size_t limit;
+  int limit;
   svn_boolean_t no_diff_deleted;
   svn_boolean_t no_diff_added;
   svn_boolean_t diff_copy_from;
@@ -998,9 +998,8 @@ print_diff_tree(svn_stream_t *out_stream,
                   diff_cmd_argv = apr_palloc(pool,
                                              diff_cmd_argc * sizeof(char *));
                   for (i = 0; i < diff_cmd_argc; i++)
-                    SVN_ERR(svn_utf_cstring_to_utf8(&diff_cmd_argv[i],
-                              APR_ARRAY_IDX(c->diff_options, i, const char *),
-                              pool));
+                    diff_cmd_argv[i] = apr_pstrdup(
+                        pool, APR_ARRAY_IDX(c->diff_options, i, const char *));
                 }
 
               /* Print diff header. */
@@ -1579,7 +1578,7 @@ struct print_history_baton
 {
   svn_fs_t *fs;
   svn_boolean_t show_ids;    /* whether to show node IDs */
-  apr_size_t limit;          /* max number of history items */
+  int limit;                 /* max number of history items */
   apr_size_t count;          /* number of history items processed */
 };
 
@@ -2466,7 +2465,10 @@ subcommand_uuid(apr_getopt_t *os, void *baton, apr_pool_t *pool)
  * return SVN_NO_ERROR.
  */
 static svn_error_t *
-sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
+sub_main(int *exit_code,
+         int argc,
+         const svn_cmdline__argv_char_t *cmdline_argv[],
+         apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t apr_err;
@@ -2477,11 +2479,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   int opt_id;
   apr_array_header_t *received_opts;
   int i;
+  const char **argv;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
   /* Check library versions */
   SVN_ERR(check_lib_versions());
+
+  SVN_ERR(svn_cmdline__get_utf8_argv(&argv, argc, cmdline_argv, pool));
 
   /* Initialize the FS library. */
   SVN_ERR(svn_fs_initialize(pool));
@@ -2504,10 +2509,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   os->interleave = 1;
   while (1)
     {
-      const char *opt_arg;
+      const char *utf8_opt_arg;
 
       /* Parse the next option. */
-      apr_err = apr_getopt_long(os, options_table, &opt_id, &opt_arg);
+      apr_err = apr_getopt_long(os, options_table, &opt_id, &utf8_opt_arg);
       if (APR_STATUS_IS_EOF(apr_err))
         break;
       else if (apr_err)
@@ -2523,25 +2528,17 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       switch (opt_id)
         {
         case 'r':
-          {
-            char *digits_end = NULL;
-            opt_state.rev = strtol(opt_arg, &digits_end, 10);
-            if ((! SVN_IS_VALID_REVNUM(opt_state.rev))
-                || (! digits_end)
-                || *digits_end)
-              return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                      _("Invalid revision number supplied"));
-          }
+          SVN_ERR(svn_opt_parse_revnum(&opt_state.rev, utf8_opt_arg));
           break;
 
         case 't':
-          opt_state.txn = opt_arg;
+          opt_state.txn = apr_pstrdup(pool, utf8_opt_arg);
           break;
 
         case 'M':
           {
             apr_uint64_t sz_val;
-            SVN_ERR(svn_cstring_atoui64(&sz_val, opt_arg));
+            SVN_ERR(svn_cstring_atoui64(&sz_val, utf8_opt_arg));
 
             opt_state.memory_cache_size = 0x100000 * sz_val;
           }
@@ -2582,11 +2579,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
         case 'l':
           {
-            char *end;
-            opt_state.limit = strtol(opt_arg, &end, 10);
-            if (end == opt_arg || *end != '\0')
+            err = svn_cstring_atoi(&opt_state.limit, utf8_opt_arg);
+            if (err)
               {
-                return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, err ,
                                         _("Non-numeric limit argument given"));
               }
             if (opt_state.limit <= 0)
@@ -2618,7 +2614,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           break;
 
         case 'x':
-          opt_state.extensions = opt_arg;
+          opt_state.extensions = apr_pstrdup(pool, utf8_opt_arg);
           break;
 
         case svnlook__ignore_properties:
@@ -2630,7 +2626,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           break;
 
         case svnlook__diff_cmd:
-          opt_state.diff_cmd = opt_arg;
+          SVN_ERR(svn_utf_cstring_from_utf8(&opt_state.diff_cmd, utf8_opt_arg,
+                                            pool));
           break;
 
         case svnlook__show_inherited_props:
@@ -2699,10 +2696,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         }
       else
         {
-          const char *first_arg;
+          const char *first_arg = os->argv[os->ind++];
 
-          SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
-                                          pool));
           subcommand = svn_opt_get_canonical_subcommand3(cmd_table, first_arg);
           if (subcommand == NULL)
             {
@@ -2739,12 +2734,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
       /* Get the repository. */
       if (os->ind < os->argc)
-        {
-          SVN_ERR(svn_utf_cstring_to_utf8(&repos_path,
-                                          os->argv[os->ind++],
-                                          pool));
-          repos_path = svn_dirent_internal_style(repos_path, pool);
-        }
+        repos_path = svn_dirent_internal_style(os->argv[os->ind++], pool);
 
       if (repos_path == NULL)
         {
@@ -2769,18 +2759,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
       /* Get next arg (arg1), if any. */
       if (os->ind < os->argc)
-        {
-          SVN_ERR(svn_utf_cstring_to_utf8(&arg1, os->argv[os->ind++], pool));
-          arg1 = svn_dirent_internal_style(arg1, pool);
-        }
+        arg1 = svn_dirent_internal_style(os->argv[os->ind++], pool);
+
       opt_state.arg1 = arg1;
 
       /* Get next arg (arg2), if any. */
       if (os->ind < os->argc)
-        {
-          SVN_ERR(svn_utf_cstring_to_utf8(&arg2, os->argv[os->ind++], pool));
-          arg2 = svn_dirent_internal_style(arg2, pool);
-        }
+        arg2 = svn_dirent_internal_style(os->argv[os->ind++], pool);
+
       opt_state.arg2 = arg2;
     }
 
@@ -2849,7 +2835,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 }
 
 int
-main(int argc, const char *argv[])
+SVN_CMDLINE__MAIN(int argc, const svn_cmdline__argv_char_t *argv[])
 {
   apr_pool_t *pool;
   int exit_code = EXIT_SUCCESS;

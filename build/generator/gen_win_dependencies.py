@@ -125,6 +125,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         'java_sdk',
         'openssl',
         'apr_memcache',
+        'checksum-libs',
 
         # So optional, we don't even have any code to detect them on Windows
         'magic',
@@ -168,6 +169,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self.disable_shared = None
     self.static_apr = None
     self.static_openssl = None
+    self.shared_serf = None
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
     self.sasl_path = None
@@ -225,27 +227,31 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         self.disable_shared = 1
       elif opt == '--with-static-apr':
         self.static_apr = 1
+        self.shared_serf = 0 # Can't mix apr versions
       elif opt == '--with-static-openssl':
         self.static_openssl = 1
+      elif opt == '--with-shared-serf':
+        if not self.static_apr:
+          self.shared_serf = 1
       elif opt == '-D':
         self.cpp_defines.append(val)
       elif opt == '--vsnet-version':
-        if val == '2002' or re.match('^7(\.\d+)?$', val):
+        if val == '2002' or re.match(r'^7(\.\d+)?$', val):
           self.vs_version = '2002'
           self.sln_version = '7.00'
           self.vcproj_version = '7.00'
           self.vcproj_extension = '.vcproj'
-        elif val == '2003' or re.match('^8(\.\d+)?$', val):
+        elif val == '2003' or re.match(r'^8(\.\d+)?$', val):
           self.vs_version = '2003'
           self.sln_version = '8.00'
           self.vcproj_version = '7.10'
           self.vcproj_extension = '.vcproj'
-        elif val == '2005' or re.match('^9(\.\d+)?$', val):
+        elif val == '2005' or re.match(r'^9(\.\d+)?$', val):
           self.vs_version = '2005'
           self.sln_version = '9.00'
           self.vcproj_version = '8.00'
           self.vcproj_extension = '.vcproj'
-        elif val == '2008' or re.match('^10(\.\d+)?$', val):
+        elif val == '2008' or re.match(r'^10(\.\d+)?$', val):
           self.vs_version = '2008'
           self.sln_version = '10.00'
           self.vcproj_version = '9.00'
@@ -280,14 +286,19 @@ class GenDependenciesBase(gen_base.GeneratorBase):
           self.sln_version = '12.00'
           self.vcproj_version = '14.2'
           self.vcproj_extension = '.vcxproj'
-        elif re.match('^20\d+$', val):
+        elif val == '2022' or val == '17':
+          self.vs_version = '2022'
+          self.sln_version = '12.00'
+          self.vcproj_version = '14.3'
+          self.vcproj_extension = '.vcxproj'
+        elif re.match(r'^20\d+$', val):
           print('WARNING: Unknown VS.NET version "%s",'
                 ' assuming VS2012. Your VS can probably upgrade')
           self.vs_version = '2012'
           self.sln_version = '12.00'
           self.vcproj_version = '11.0'
           self.vcproj_extension = '.vcxproj'
-        elif re.match('^1\d+$', val):
+        elif re.match(r'^1\d+$', val):
           self.vs_version = val
           self.sln_version = '12.00'
           self.vcproj_version = val + '.0'
@@ -345,7 +356,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
   def _find_apr(self):
     "Find the APR library and version"
 
-    minimal_apr_version = (1, 5, 0)
+    minimal_apr_version = (1, 4, 0)
 
     if not self.apr_path:
       sys.stderr.write("ERROR: Use '--with-apr' option to configure APR " + \
@@ -366,13 +377,16 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     version_file_path = os.path.join(inc_path, 'apr_version.h')
     txt = open(version_file_path).read()
 
-    vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+APR_MAJOR_VERSION\s+(\d+)',
+                         txt, re.M)
     major = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+APR_MINOR_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+APR_MINOR_VERSION\s+(\d+)',
+                         txt, re.M)
     minor = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+APR_PATCH_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+APR_PATCH_VERSION\s+(\d+)',
+                         txt, re.M)
     patch = int(vermatch.group(1))
 
     version = (major, minor, patch)
@@ -469,13 +483,16 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     version_file_path = os.path.join(inc_path, 'apu_version.h')
     txt = open(version_file_path).read()
 
-    vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+APU_MAJOR_VERSION\s+(\d+)',
+                         txt, re.M)
     major = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+APU_MINOR_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+APU_MINOR_VERSION\s+(\d+)',
+                         txt, re.M)
     minor = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+APU_PATCH_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+APU_PATCH_VERSION\s+(\d+)',
+                         txt, re.M)
     patch = int(vermatch.group(1))
 
     version = (major, minor, patch)
@@ -580,20 +597,28 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     txt = open(version_file_path).read()
 
-    vermatch = re.search(r'^\s*#define\s+XML_MAJOR_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+XML_MAJOR_VERSION\s+(\d+)',
+                         txt, re.M)
     major = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+XML_MINOR_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+XML_MINOR_VERSION\s+(\d+)',
+                         txt, re.M)
     minor = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+XML_MICRO_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+XML_MICRO_VERSION\s+(\d+)',
+                         txt, re.M)
     patch = int(vermatch.group(1))
 
     # apr-Util 0.9-1.4 compiled expat to 'xml.lib', but apr-util 1.5 switched
     # to the more common 'libexpat.lib'
-    libname = 'libexpat.lib'
-    if not os.path.exists(os.path.join(lib_dir, 'libexpat.lib')):
-      libname = 'xml.lib'
+    if os.path.exists(os.path.join(lib_dir, 'libexpat.lib')):
+      # Shared or completely static build
+      libname = 'libexpat.lib'
+    elif os.path.exists(os.path.join(lib_dir, 'libexpatMD.lib')):
+      # libexpat CMake build. static build against Multithreaded DLL CRT
+      libname = 'libexpatMD.lib'
+    else:
+        libname = 'xml.lib'
 
     version = (major, minor, patch)
     xml_version = '%d.%d.%d' % version
@@ -635,16 +660,16 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     version_file_path = os.path.join(inc_path, 'ap_release.h')
     txt = open(version_file_path).read()
 
-    vermatch = re.search(r'^\s*#define\s+AP_SERVER_MAJORVERSION_NUMBER\s+(\d+)',
-                         txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+AP_SERVER_MAJORVERSION_NUMBER'
+                         r'\s+(\d+)', txt, re.M)
     major = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+AP_SERVER_MINORVERSION_NUMBER\s+(\d+)',
-                         txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+AP_SERVER_MINORVERSION_NUMBER'
+                         r'\s+(\d+)', txt, re.M)
     minor = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+AP_SERVER_PATCHLEVEL_NUMBER\s+(\d+)',
-                         txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+AP_SERVER_PATCHLEVEL_NUMBER'
+                         r'\s+(\d+)', txt, re.M)
     patch = int(vermatch.group(1))
 
     version = (major, minor, patch)
@@ -728,16 +753,18 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       inc_path = os.path.join(self.zlib_path, 'include')
       lib_path = os.path.join(self.zlib_path, 'lib')
 
-      # Different build options produce different library names :(
-      if os.path.exists(os.path.join(lib_path, 'zlibstatic.lib')):
-        # CMake default: zlibstatic.lib (static) and zlib.lib (dll)
-        lib_name = 'zlibstatic.lib'
-      elif os.path.exists(os.path.join(lib_path, 'zlibstat.lib')):
-        # Visual Studio project file default: zlibstat.lib (static) and zlibwapi.lib (dll)
-        lib_name = 'zlibstat.lib'
+      # Different versions and build options produce different library names :(
+      for name in (
+        'z.lib',           # >= 1.3.2 (shared)
+        'zs.lib',          # >= 1.3.2 (static)
+        'zlibstatic.lib',  # < 1.3.2 (cmake default)
+        'zlibstat.lib',    # < 1.3.2 (Visual Studio default)
+      ):
+        if os.path.exists(os.path.join(lib_path, name)):
+          lib_name = name
+          break
       else:
-        # Standard makefile produces zlib.lib (static) and zdll.lib (dll)
-        lib_name = 'zlib.lib'
+        lib_name = 'zlib.lib'  # < 1.3.2 (Standard makefile; fallback)
       debug_lib_name = None
     else:
       # We have a source location
@@ -754,11 +781,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     txt = open(version_file_path).read()
     vermatch = re.search(
-                r'^\s*#define\s+ZLIB_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.\d)?"',
-                 txt, re.M)
+        r'^\s*#\s*define\s+ZLIB_VERSION\s+"(\d+(?:\.\d+){1,3})(?:-\w+)?"',
+        txt, re.M)
 
-    version = tuple(map(int, vermatch.groups()))
-    self.zlib_version = '%d.%d.%d' % version
+    version = tuple(map(int, vermatch.group(1).split('.')))
+    self.zlib_version = '.'.join(map(str, version))
 
     if version < minimal_zlib_version:
       sys.stderr.write("ERROR: ZLib %s or higher is required "
@@ -920,6 +947,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
   def _find_perl(self, show_warnings):
     "Find the right perl library name to link swig bindings with"
 
+    try:
+      subprocess.run(['perl', '-v'], capture_output=True)
+    except OSError:
+      return  # not found, permission error, ...
+
     fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
                   'print "$Config{libperl}\\n"; '
                   'print "$Config{PERL_REVISION}.$Config{PERL_VERSION}.'
@@ -958,6 +990,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
   def _find_ruby(self, show_warnings):
     "Find the right Ruby library name to link swig bindings with"
+
+    try:
+      subprocess.run(['ruby', '--version'], capture_output=True)
+    except OSError:
+      return  # not found, permission error, ...
 
     lib_dir = None
     inc_dirs = []
@@ -1004,7 +1041,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     else:
       defines = []
 
-    ver = ruby_version.split('.')
+    ver = ruby_version.split('+')[0].split('.')
     ver = tuple(map(int, ver))
     if ver >= (1, 8, 0):
       defines.extend(["HAVE_RB_ERRINFO"])
@@ -1030,12 +1067,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     "Find the appropriate options for creating SWIG-based Python modules"
 
     try:
-      from distutils import sysconfig
-
-      inc_dir = sysconfig.get_python_inc()
-      lib_dir = os.path.join(sysconfig.PREFIX, "libs")
+      import sysconfig
     except ImportError:
       return
+    config_vars = sysconfig.get_config_vars()
+    inc_dir = config_vars['INCLUDEPY']
+    base_dir = config_vars.get('installed_base') or config_vars.get('base')
+    lib_dir = os.path.join(base_dir, 'libs')
 
     if sys.version_info[0] >= 3:
       if self.swig_version < (3, 0, 10):
@@ -1044,8 +1082,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         return
       if self.swig_version < (4, 0, 0):
         opts = "-python -py3 -nofastunpack -modern"
-      else:
+      elif self.swig_version < (4, 1, 0):
         opts = "-python -py3 -nofastunpack"
+      else:
+        opts = "-python -nofastunpack"
+      if show_warnings and self.swig_version > (4, 0, 2):
+        print("WARNING: Subversion Python bindings may work,\n"
+              "but we didn't check with this SWIG version.")
     else:
       if not ((1, 3, 24) <= self.swig_version < (4, 0, 0)):
         if show_warnings:
@@ -1335,6 +1378,9 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     else:
       lib_name = 'serf.lib'
 
+    if self.shared_serf:
+      lib_name = 'lib' + lib_name
+
     defines = ['SVN_HAVE_SERF', 'SVN_LIBSVN_RA_LINKS_RA_SERF']
 
     self._libraries['serf'] = SVNCommonLibrary('serf', inc_dir, lib_dir,
@@ -1362,13 +1408,16 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     txt = open(version_file_path).read()
 
-    vermatch = re.search(r'^\s*#define\s+SASL_VERSION_MAJOR\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+SASL_VERSION_MAJOR\s+(\d+)',
+                         txt, re.M)
     major = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+SASL_VERSION_MINOR\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+SASL_VERSION_MINOR\s+(\d+)',
+                         txt, re.M)
     minor = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+SASL_VERSION_STEP\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+SASL_VERSION_STEP\s+(\d+)',
+                         txt, re.M)
     patch = int(vermatch.group(1))
 
     version = (major, minor, patch)
@@ -1378,7 +1427,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       if show_warnings:
         print('Found sasl %s, but >= %s is required. '
               'sals support will not be built.\n' %
-              (sasl_version, '.'.join(str(v) for v in minimal_serf_version)))
+              (sasl_version, '.'.join(str(v) for v in minimal_sasl_version)))
       return
 
     lib_dir = os.path.join(self.sasl_path, 'lib')
@@ -1436,8 +1485,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     version_file_path = os.path.join(inc_dir, 'libintl.h')
     txt = open(version_file_path).read()
 
-    match = re.search(r'^\s*#define\s+LIBINTL_VERSION\s+((0x)?[0-9A-Fa-f]+)',
-                      txt, re.M)
+    match = re.search(r'^\s*#\s*define\s+LIBINTL_VERSION\s+'
+                      r'((0x)?[0-9A-Fa-f]+)', txt, re.M)
 
     ver = int(match.group(1), 0)
     version = (ver >> 16, (ver >> 8) & 0xFF, ver & 0xFF)
@@ -1459,7 +1508,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
   def _find_sqlite(self, show_warnings):
     "Find the Sqlite library and version"
 
-    minimal_sqlite_version = (3, 8, 2)
+    minimal_sqlite_version = (3, 24, 0)
 
     # For SQLite we support 3 scenarios:
     # - Installed in standard directory layout
@@ -1509,7 +1558,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     txt = open(version_file_path).read()
 
-    match = re.search(r'^\s*#define\s+SQLITE_VERSION\s+'
+    match = re.search(r'^\s*#\s*define\s+SQLITE_VERSION\s+'
                       r'"(\d+)\.(\d+)\.(\d+)(?:\.(\d))?"', txt, re.M)
 
     version = match.groups()
@@ -1543,15 +1592,15 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                      'lz4', 'lz4internal.h')
     txt = open(version_file_path).read()
 
-    vermatch = re.search(r'^\s*#define\s+LZ4_VERSION_MAJOR\s+(\d+)',
+    vermatch = re.search(r'^\s*#\s*define\s+LZ4_VERSION_MAJOR\s+(\d+)',
                          txt, re.M)
     major = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+LZ4_VERSION_MINOR\s+(\d+)',
+    vermatch = re.search(r'^\s*#\s*define\s+LZ4_VERSION_MINOR\s+(\d+)',
                          txt, re.M)
     minor = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+LZ4_VERSION_RELEASE\s+(\d+)',
+    vermatch = re.search(r'^\s*#\s*define\s+LZ4_VERSION_RELEASE\s+(\d+)',
                          txt, re.M)
     rel = vermatch.group(1)
 
@@ -1568,15 +1617,15 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                      'utf8proc', 'utf8proc_internal.h')
     txt = open(version_file_path).read()
 
-    vermatch = re.search(r'^\s*#define\s+UTF8PROC_VERSION_MAJOR\s+(\d+)',
+    vermatch = re.search(r'^\s*#\s*define\s+UTF8PROC_VERSION_MAJOR\s+(\d+)',
                          txt, re.M)
     major = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+UTF8PROC_VERSION_MINOR\s+(\d+)',
+    vermatch = re.search(r'^\s*#\s*define\s+UTF8PROC_VERSION_MINOR\s+(\d+)',
                          txt, re.M)
     minor = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+UTF8PROC_VERSION_PATCH\s+(\d+)',
+    vermatch = re.search(r'^\s*#\s*define\s+UTF8PROC_VERSION_PATCH\s+(\d+)',
                          txt, re.M)
     patch = int(vermatch.group(1))
 

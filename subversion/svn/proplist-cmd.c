@@ -75,6 +75,8 @@ proplist_receiver_xml(void *baton,
           svn_prop_inherited_item_t *iprop =
             APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
 
+          svn_pool_clear(iterpool);
+
           sb = NULL;
 
           if (svn_path_is_url(iprop->path_or_url))
@@ -104,16 +106,16 @@ proplist_receiver_xml(void *baton,
   if (prop_hash)
     {
       /* "<target ...>" */
-        svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "target",
-                              "path", name_local, SVN_VA_NULL);
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "target",
+                            "path", name_local, SVN_VA_NULL);
 
-        SVN_ERR(svn_cmdline__print_xml_prop_hash(&sb, prop_hash,
-                                                 (! opt_state->verbose),
-                                                 FALSE, pool));
+      SVN_ERR(svn_cmdline__print_xml_prop_hash(&sb, prop_hash,
+                                                (! opt_state->verbose),
+                                                FALSE, pool));
 
-        /* "</target>" */
-        svn_xml_make_close_tag(&sb, pool, "target");
-        SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
+      /* "</target>" */
+      svn_xml_make_close_tag(&sb, pool, "target");
+      SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
     }
 
   return SVN_NO_ERROR;

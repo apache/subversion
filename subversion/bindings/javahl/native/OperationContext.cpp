@@ -492,6 +492,8 @@ public:
       request_out(NULL),
       response_in(NULL),
       response_out(NULL),
+      jrequest(NULL),
+      jresponse(NULL),
       jclosecb(NULL)
     {
       status = apr_file_pipe_create_ex(&request_in, &request_out,
@@ -512,6 +514,8 @@ public:
   apr_file_t *response_in;
   apr_file_t *response_out;
   apr_status_t status;
+  jobject jrequest;
+  jobject jresponse;
   jobject jclosecb;
 };
 
@@ -523,7 +527,10 @@ jobject create_Channel(const char *class_name, JNIEnv *env, apr_file_t *fd)
   jmethodID ctor = env->GetMethodID(cls, "<init>", "(J)V");
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
-  return env->NewObject(cls, ctor, reinterpret_cast<jlong>(fd));
+  jobject channel = env->NewObject(cls, ctor, reinterpret_cast<jlong>(fd));
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  return env->NewGlobalRef(channel);
 }
 
 jobject create_RequestChannel(JNIEnv *env, apr_file_t *fd)
@@ -533,6 +540,24 @@ jobject create_RequestChannel(JNIEnv *env, apr_file_t *fd)
 jobject create_ResponseChannel(JNIEnv *env, apr_file_t *fd)
 {
   return create_Channel(JAVAHL_CLASS("/util/ResponseChannel"), env, fd);
+}
+void close_TunnelChannel(JNIEnv* env, jobject channel)
+{
+  // Usually after this function, the memory will be freed behind
+  // 'TunnelChannel.nativeChannel'. Ask Java side to forget it. This is the
+  // only way to avoid a JVM crash when 'TunnelAgent' tries to read/write,
+  // not knowing that 'TunnelChannel' is already closed in native side.
+  static jmethodID mid = 0;
+  if (0 == mid)
+    {
+      jclass cls;
+      SVN_JNI_CATCH_VOID(
+        cls = env->FindClass(JAVAHL_CLASS("/util/TunnelChannel")));
+      SVN_JNI_CATCH_VOID(mid = env->GetMethodID(cls, "syncClose", "()V"));
+    }
+
+  SVN_JNI_CATCH_VOID(env->CallVoidMethod(channel, mid));
+  env->DeleteGlobalRef(channel);
 }
 } // anonymous namespace
 
@@ -590,10 +615,10 @@ OperationContext::openTunnel(svn_stream_t **request, svn_stream_t **response,
 
   JNIEnv *env = JNIUtil::getEnv();
 
-  jobject jrequest = create_RequestChannel(env, tc->request_in);
+  tc->jrequest = create_RequestChannel(env, tc->request_in);
   SVN_JNI_CATCH(, SVN_ERR_BASE);
 
-  jobject jresponse = create_ResponseChannel(env, tc->response_out);
+  tc->jresponse = create_ResponseChannel(env, tc->response_out);
   SVN_JNI_CATCH(, SVN_ERR_BASE);
 
   jstring jtunnel_name = JNIUtil::makeJString(tunnel_name);
@@ -623,29 +648,32 @@ OperationContext::openTunnel(svn_stream_t **request, svn_stream_t **response,
     }
 
   jobject jtunnelcb = jobject(tunnel_baton);
-  SVN_JNI_CATCH(
-      tc->jclosecb = env->CallObjectMethod(
-          jtunnelcb, mid, jrequest, jresponse,
-          jtunnel_name, juser, jhostname, jint(port)),
-      SVN_ERR_BASE);
+  tc->jclosecb = env->CallObjectMethod(
+    jtunnelcb, mid, tc->jrequest, tc->jresponse,
+    jtunnel_name, juser, jhostname, jint(port));
+  svn_error_t* openTunnelError = JNIUtil::checkJavaException(SVN_ERR_BASE);
+  if (SVN_NO_ERROR != openTunnelError)
+    {
+      // OperationContext::closeTunnel() will never be called, clean up here.
+      // This also prevents a JVM native crash, see comment in
+      // close_TunnelChannel().
+      *close_baton = 0;
+      tc->jclosecb = 0;
+      OperationContext::closeTunnel(tc, 0);
+      SVN_ERR(openTunnelError);
+    }
+
+  if (tc->jclosecb)
+    {
+      tc->jclosecb = env->NewGlobalRef(tc->jclosecb);
+      SVN_JNI_CATCH(, SVN_ERR_BASE);
+    }
 
   return SVN_NO_ERROR;
 }
 
-void
-OperationContext::closeTunnel(void *tunnel_context, void *)
+void callCloseTunnelCallback(JNIEnv* env, jobject jclosecb)
 {
-  TunnelContext* tc = static_cast<TunnelContext*>(tunnel_context);
-  jobject jclosecb = tc->jclosecb;
-  delete tc;
-
-  if (!jclosecb)
-    return;
-
-  JNIEnv *env = JNIUtil::getEnv();
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
-
   static jmethodID mid = 0;
   if (0 == mid)
     {
@@ -656,4 +684,41 @@ OperationContext::closeTunnel(void *tunnel_context, void *)
       SVN_JNI_CATCH_VOID(mid = env->GetMethodID(cls, "closeTunnel", "()V"));
     }
   SVN_JNI_CATCH_VOID(env->CallVoidMethod(jclosecb, mid));
+  env->DeleteGlobalRef(jclosecb);
+}
+
+void
+OperationContext::closeTunnel(void *tunnel_context, void *)
+{
+  TunnelContext* tc = static_cast<TunnelContext*>(tunnel_context);
+  jobject jrequest = tc->jrequest;
+  jobject jresponse = tc->jresponse;
+  jobject jclosecb = tc->jclosecb;
+
+  // Note that this closes other end of the pipe, which cancels and
+  // prevents further read/writes in 'TunnelAgent'
+  delete tc;
+
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Cleanup is important, otherwise TunnelAgent may crash when
+  // accessing freed native objects. For this reason, cleanup is done
+  // despite a pending exception. If more exceptions occur, they are
+  // stashed as well in order to complete all cleanup steps.
+  StashException ex(env);
+
+  if (jclosecb)
+    callCloseTunnelCallback(env, jclosecb);
+
+  if (jrequest)
+    {
+      ex.stashException();
+      close_TunnelChannel(env, jrequest);
+    }
+
+  if (jresponse)
+    {
+      ex.stashException();
+      close_TunnelChannel(env, jresponse);
+    }
 }

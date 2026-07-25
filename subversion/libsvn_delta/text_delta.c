@@ -736,6 +736,7 @@ apply_window(svn_txdelta_window_t *window, void *baton)
                    svn_checksum_size(md5_checksum));
         }
 
+      err = svn_error_compose_create(err, svn_stream_close(ab->source));
       err = svn_error_compose_create(err, svn_stream_close(ab->target));
       svn_pool_destroy(ab->pool);
 
@@ -804,13 +805,13 @@ apply_window(svn_txdelta_window_t *window, void *baton)
 
 
 void
-svn_txdelta_apply(svn_stream_t *source,
-                  svn_stream_t *target,
-                  unsigned char *result_digest,
-                  const char *error_info,
-                  apr_pool_t *pool,
-                  svn_txdelta_window_handler_t *handler,
-                  void **handler_baton)
+svn_txdelta_apply2(svn_stream_t *source,
+                   svn_stream_t *target,
+                   unsigned char *result_digest,
+                   const char *error_info,
+                   apr_pool_t *pool,
+                   svn_txdelta_window_handler_t *handler,
+                   void **handler_baton)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   struct apply_baton *ab;
@@ -837,6 +838,24 @@ svn_txdelta_apply(svn_stream_t *source,
 
   *handler = apply_window;
   *handler_baton = ab;
+}
+
+void
+svn_txdelta_apply(svn_stream_t *source,
+                  svn_stream_t *target,
+                  unsigned char *result_digest,
+                  const char *error_info,
+                  apr_pool_t *pool,
+                  svn_txdelta_window_handler_t *handler,
+                  void **handler_baton)
+{
+  svn_txdelta_apply2(svn_stream_disown(source, pool),
+                     target,
+                     result_digest,
+                     error_info,
+                     pool,
+                     handler,
+                     handler_baton);
 }
 
 

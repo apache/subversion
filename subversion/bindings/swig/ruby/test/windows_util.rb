@@ -38,30 +38,28 @@ module SvnTestUtil
         @svnserve_port = @svnserve_ports.last
         @repos_svnserve_uri = "svn://#{@svnserve_host}:#{@svnserve_port}"
 
-        @@service_created ||= begin
-          @@service_created = true
-
+        if ENV['SVN_TEST_SWIG_RUBY'] == 'ctest'
+          svnserve_path = "svnserve.exe"
+        else
           top_directory = File.join(File.dirname(__FILE__), "..", "..", "..", "..", "..")
           build_type = ENV["BUILD_TYPE"] || "Release"
           svnserve_path = File.join(top_directory, build_type, 'subversion', 'svnserve', 'svnserve.exe')
-          svnserve_path = Svnserve.escape_value(svnserve_path)
-
-          root = @full_repos_path.tr(File::SEPARATOR, File::ALT_SEPARATOR)
-          FileUtils.mkdir_p(root)
-
-          IO.popen("#{svnserve_path} -d -r #{Svnserve.escape_value(root)} --listen-host #{@svnserve_host} --listen-port #{@svnserve_port} --pid-file #{@svnserve_pid_file}")
-          user = ENV["USERNAME"] || Etc.getlogin
-
-          # Give svnserve a bit of time to start
-          sleep 1
         end
+        svnserve_path = Svnserve.escape_value(svnserve_path)
+        root = @full_repos_path.tr(File::SEPARATOR, File::ALT_SEPARATOR)
+        FileUtils.mkdir_p(root)
+
+        IO.popen("#{svnserve_path} -d -r #{Svnserve.escape_value(root)} --listen-host #{@svnserve_host} --listen-port #{@svnserve_port} --pid-file #{@svnserve_pid_file}")
+
+        # Give svnserve a bit of time to start
+        sleep 1
+
         true
       end
 
       def teardown_svnserve
-        # TODO:
-        #   Load @svnserve_pid_file
-        #   Kill process
+        pid = File.read(@svnserve_pid_file).to_i
+        Process.kill(:KILL, pid)
       end
 
       def add_pre_revprop_change_hook
@@ -115,7 +113,7 @@ exit 1
           lines = []
           gen_make_opts = File.join(@@top_dir, "gen-make.opts")
           lines =
-            File.read(gen_make_opts).lines.to_a if File.exists?(gen_make_opts)
+            File.read(gen_make_opts).lines.to_a if File.exist?(gen_make_opts)
           config = Hash.new do |hash, key|
             if /^--with-(.*)$/ =~ key
               hash[key] = File.join(@@top_dir, $1)

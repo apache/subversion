@@ -98,11 +98,18 @@ int svn_swig_py_convert_ptr(PyObject *input, void **obj, swig_type_info *type);
 
 /* Wrapper for SWIG_MustGetPtr */
 void *svn_swig_py_must_get_ptr(void *input, swig_type_info *type, int argnum);
+
 
 /*** Functions to expose a custom SubversionException ***/
 
-/* raise a subversion exception, created from a normal subversion
-   error.  consume the error.  */
+/* Get a SubversionException class object and its instance built from
+   error_chain, but do not raise it immediately.  Consume the
+   error_chain.  */
+void svn_swig_py_build_svn_exception(
+    PyObject **exc_class, PyObject **exc_ob, svn_error_t *error_chain);
+
+/* Raise a SubversionException, created from a normal subversion
+   error.  Consume the error.  */
 void svn_swig_py_svn_exception(svn_error_t *err);
 
 
@@ -268,14 +275,10 @@ svn_swig_py_unwrap_struct_ptr(PyObject *source,
 
 /* make an editor that "thunks" from C callbacks up to Python */
 void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
-                             void **edit_baton,
-                             PyObject *py_editor,
                              apr_pool_t *pool);
 
 /* make a parse vtable that "thunks" from C callbacks up to Python */
 void svn_swig_py_make_parse_fns3(const svn_repos_parse_fns3_t **parse_fns3,
-                                 void **parse_baton,
-                                 PyObject *py_parse_fns3,
                                  apr_pool_t *pool);
 
 apr_file_t *svn_swig_py_make_file(PyObject *py_file,

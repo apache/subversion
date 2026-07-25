@@ -50,7 +50,7 @@ class Processor(object):
 
   # a few SQL comments that act as directives for this transform system
   re_format = re.compile('-- *format: *([0-9]+)')
-  re_statement = re.compile('-- *STMT_([A-Z_0-9]+)( +\(([^\)]*)\))?')
+  re_statement = re.compile(r'-- *STMT_([A-Z_0-9]+)( +\(([^)]*)\))?')
   re_include = re.compile('-- *include: *([-a-z]+)')
   re_define = re.compile('-- *define: *([A-Z_0-9]+)')
 

@@ -394,7 +394,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
   if (NIL_P($input)) {
   } else if (TYPE($input) == T_FIXNUM) {
-    $1 = (char *)NUM2INT($input);
+    $1 = (char *)NUM2SWIG($input);
     if (!($1 == APR_LOCALE_CHARSET || $1 == APR_DEFAULT_CHARSET)) {
       $1 = NULL;
     }
@@ -435,8 +435,78 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
             svn_error_clear($1);
         SWIG_fail;
     }
-    Py_INCREF(Py_None);
-    $result = Py_None;
+    Py_XDECREF($result);
+    $result = PyList_New(0);
+}
+
+%typemap(out) svn_error_t * SVN_ERR_WITH_ATTRS (apr_status_t apr_err,
+                                                PyObject *exc_class,
+                                                PyObject *exc_ob) {
+    apr_err = 0;
+    exc_class = exc_ob = NULL;
+    if ($1 != NULL)
+      {
+        apr_err = $1->apr_err;
+        if (apr_err != SVN_ERR_SWIG_PY_EXCEPTION_SET)
+          {
+            svn_swig_py_build_svn_exception(&exc_class, &exc_ob, $1);
+            if (exc_ob == NULL)
+              {
+                /* We couldn't get an exception instance. */
+                if (exc_class != NULL)
+                  {
+                    /* Raise an exception without instance ... */
+                    PyErr_SetNone(exc_class);
+                    Py_DECREF(exc_class);
+                  }
+                SWIG_fail;
+              }
+            /* We have an exeception instance, but we don't raise it until
+               typemap(ret) block after typemap(argout) blocks. */
+          }
+        else
+          {
+            svn_error_clear($1);
+            SWIG_fail;
+          }
+      }
+    Py_XDECREF($result);
+    $result = PyList_New(0);
+}
+
+%typemap(ret) svn_error_t * {
+    if ($result == NULL) {
+      $result = Py_None;
+      Py_INCREF($result);
+    }
+    else {
+      switch (PyList_Size($result)) {
+        case 0:
+          $result = Py_None;
+          Py_INCREF($result);
+          break;
+        case 1:
+          {
+            PyObject *tmp = $result;
+            $result = PyList_GetItem(tmp, 0);
+            Py_INCREF($result);
+            Py_DECREF(tmp);
+          }
+          break;
+      }
+    }
+}
+
+%typemap(ret) svn_error_t * SVN_ERR_WITH_ATTRS {
+    if (exc_ob != NULL)
+      {
+        PyErr_SetObject(exc_class, exc_ob);
+        Py_DECREF(exc_class);
+        Py_DECREF(exc_ob);
+        Py_XDECREF($result);
+        SWIG_fail;
+      }
+    $typemap(ret, svn_error_t *);
 }
 #endif
 
@@ -462,14 +532,29 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #endif
 
 #ifdef SWIGRUBY
-%typemap(out) svn_error_t *
+%typemap(out) svn_error_t * (VALUE *svn_presult = NULL)
 {
   if ($1) {
     svn_swig_rb_destroy_pool(_global_svn_swig_rb_pool);
     svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
     svn_swig_rb_handle_svn_error($1);
   }
-  $result = Qnil;
+  $result = rb_ary_new();
+  svn_presult = &$result;
+}
+
+%typemap(ret) svn_error_t *
+{
+  if (TYPE(*svn_presult) == T_ARRAY) {
+    switch (RARRAY_LEN(*svn_presult)) {
+      case 0:
+        *svn_presult = Qnil;
+        break;
+      case 1:
+        *svn_presult = rb_ary_entry(*svn_presult, 0);
+        break;
+    }
+  }
 }
 #endif
 
@@ -480,11 +565,19 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGPYTHON
 %typemap(in) (const char *PTR, apr_size_t LEN) {
     Py_ssize_t pyStrLen;
-    if (!PyBytes_Check($input)) {
-        PyErr_SetString(PyExc_TypeError, "expecting a bytes");
-        SWIG_fail;
+    if (PyBytes_Check($input)) {
+        if (PyBytes_AsStringAndSize($input, (char **)&$1, &pyStrLen) == -1) {
+            SWIG_fail;
+        }
     }
-    if (PyBytes_AsStringAndSize($input, &$1, &pyStrLen) == -1) {
+    else if (PyUnicode_Check($input)) {
+        $1 = (char *)PyStr_AsUTF8AndSize($input, &pyStrLen);
+        if (PyErr_Occurred()) {
+            SWIG_fail;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_TypeError, "expecting a bytes or str");
         SWIG_fail;
     }
     $2 = pyStrLen;
@@ -563,7 +656,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %typemap(in, noblock=1) apr_pool_t * {
   /* Verify that the user supplied a valid pool */
   if ($input != Py_None && $input != _global_py_pool) {
-    SWIG_Python_TypeError(SWIG_TypePrettyName($descriptor), $input);
+    SWIG_Error(SWIG_TypeError,  "a '$type' is expected");
     SWIG_arg_fail($svn_argnum);
     SWIG_fail;
   }
@@ -1205,7 +1298,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
   if (NIL_P($input)) {
     $1 = NULL;
   } else if (RSTRING_LEN($input) != APR_MD5_DIGESTSIZE) {
-    rb_raise(rb_eArgError, "digest size (%d) must be %d",
+    rb_raise(rb_eArgError, "digest size (%" PRIuSIZE ") must be %d",
              RSTRING_LEN($input), APR_MD5_DIGESTSIZE);
   } else {
     $1 = ($1_ltype)StringValuePtr($input);

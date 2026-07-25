@@ -390,6 +390,14 @@ svn_repos__get_dump_editor(const svn_delta_editor_t **editor,
                            const char *update_anchor_relpath,
                            apr_pool_t *pool);
 
+/* Validate that the given PATH is a valid pathname that can be stored in
+ * a Subversion repository, according to the name constraints used by the
+ * svn_repos_* layer.
+ */
+svn_error_t *
+svn_repos__validate_new_path(const char *path,
+                             apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -3,7 +3,7 @@
 #  info_tests.py:  testing the svn info command
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -96,7 +96,7 @@ def match_xml_element(str, exprs):
   atttribute_re = re.compile(
                  r"\s+(?P<key>[\w-]+)\s*=\s*(['\"])(?P<val>[^'\"]*)\2", re.M)
   self_closing_re = re.compile(r"\s*/>", re.M)
-  content_re_str = "\\s*>(?P<content>.*?)</%s\s*>"
+  content_re_str = r"\s*>(?P<content>.*?)</%s\s*>"
 
   m = start_tag_re.match(str)
   if not m:
@@ -402,7 +402,7 @@ def info_repos_root_url(sbox):
         'Path'              : re.escape(os.path.basename(sbox.repo_dir)),
         'Repository Root'   : re.escape(sbox.repo_url),
         'URL'               : re.escape(sbox.repo_url),
-        'Relative URL'      : '\^/', # escape ^ -- this isn't a regexp
+        'Relative URL'      : r'\^/', # escape ^ -- this isn't a regexp
         'Revision'          : '1',
         'Node Kind'         : 'directory',
         'Last Changed Rev'  : '1',
@@ -412,7 +412,7 @@ def info_repos_root_url(sbox):
         'Name'              : 'iota',
         'Repository Root'   : re.escape(sbox.repo_url),
         'URL'               : re.escape(sbox.repo_url + '/iota'),
-        'Relative URL'      : '\^/iota', # escape ^ -- this isn't a regexp
+        'Relative URL'      : r'\^/iota', # escape ^ -- this isn't a regexp
         'Revision'          : '1',
         'Node Kind'         : 'file',
         'Last Changed Rev'  : '1',
@@ -686,7 +686,7 @@ def info_item_url(sbox):
     sbox.repo_url)
 
 
-def info_item_uncommmitted(sbox):
+def info_item_uncommitted(sbox):
   "show one info item on uncommitted targets"
 
   sbox.build()
@@ -843,6 +843,127 @@ def info_file_in_file_replaced_dir(sbox):
   svntest.actions.run_and_verify_info([expected],
                                       sbox.repo_url + '/dir/file@1')
 
+@Issue(4869)
+def info_tree_conflict_source(sbox):
+  "info --xml: verify source-left, source-right"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  lambda_path = os.path.join(B_path, 'lambda')
+  alpha_path = os.path.join(B_path, 'E', 'alpha')
+  F_path = os.path.join(B_path, 'F')
+
+  B2_url = sbox.repo_url + '/A/B2'
+  B2_path = os.path.join(wc_dir, 'A', 'B2')
+  lambda2_path = os.path.join(B2_path, 'lambda')
+
+  # Rev 2 copy B to B2
+  sbox.simple_repo_copy('A/B', 'A/B2')
+  sbox.simple_update()
+
+  # Rev 3:
+  # edit A/B/lambda to test text conflict case
+  # add property to A/B/E/alpha to test property conflict case
+  # rename A/B/F to A/B/Z to test tree conflict case
+
+  svntest.main.file_write(lambda_path, 'B/lambda side of conflict')
+  sbox.simple_propset('blue', 'azul', 'A/B/E/alpha')
+  sbox.simple_move('A/B/F', 'A/B/Z');
+  sbox.simple_commit()
+
+  # Rev 4:
+  # edit A/B2/lambda
+  # add property to A/B2/E/alpha
+  # rename A/B2/F to A/B2/Y
+
+  svntest.main.file_write(lambda2_path, 'B2/lambda side of conflict')
+  sbox.simple_propset('blue', 'bleue', 'A/B2/E/alpha')
+  sbox.simple_move('A/B2/F', 'A/B2/Y');
+  sbox.simple_commit()
+
+  # Now merge B2 into B to cause a text conflict, property conflict, and
+  # tree conflict
+  sbox.simple_update()
+
+  svntest.actions.run_and_verify_svn2(svntest.verify.AnyOutput, [],
+                                      0, 'merge', B2_url, B_path)
+
+  # Verify 'svn info --xml' on the text conflicted case
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                                                [], 'info',
+                                                                lambda_path,
+                                                                '--xml')
+
+  verify_xml_elements(output,
+                      [('version', {'revision'     : '1',
+                                    'side'         : 'source-left',
+                                    'kind'         : 'file',
+                                    'path-in-repos': 'A/B/lambda',
+                                    'repos-url'    : sbox.repo_url,
+                                   },
+                       )])
+
+  verify_xml_elements(output,
+                      [('version', {'revision'     : '4',
+                                    'side'         : 'source-right',
+                                    'kind'         : 'file',
+                                    'path-in-repos': 'A/B2/lambda',
+                                    'repos-url'    : sbox.repo_url,
+                                   },
+                       )])
+
+  # Verify 'svn info --xml' on the property conflicted case
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                                                [], 'info',
+                                                                alpha_path,
+                                                                '--xml')
+
+  verify_xml_elements(output,
+                      [('version', {'revision'     : '1',
+                                    'side'         : 'source-left',
+                                    'kind'         : 'file',
+                                    'path-in-repos': 'A/B/E/alpha',
+                                    'repos-url'    : sbox.repo_url,
+                                   },
+                       )])
+
+  verify_xml_elements(output,
+                      [('version', {'revision'     : '4',
+                                    'side'         : 'source-right',
+                                    'kind'         : 'file',
+                                    'path-in-repos': 'A/B2/E/alpha',
+                                    'repos-url'    : sbox.repo_url,
+                                   },
+                       )])
+
+  # Verify 'svn info --xml' on the tree conflicted case
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                                                [], 'info',
+                                                                F_path,
+                                                                '--xml')
+
+  verify_xml_elements(output,
+                      [('version', {'revision'     : '1',
+                                    'side'         : 'source-left',
+                                    'kind'         : 'dir',
+                                    'path-in-repos': 'A/B/F',
+                                    'repos-url'    : sbox.repo_url,
+                                   },
+                       )])
+
+  verify_xml_elements(output,
+                      [('version', {'revision'     : '4',
+                                    'side'         : 'source-right',
+                                    'kind'         : 'none',
+                                    'path-in-repos': 'A/B2/F',
+                                    'repos-url'    : sbox.repo_url,
+                                   },
+                       )])
 
 ########################################################################
 # Run the tests
@@ -863,12 +984,13 @@ test_list = [ None,
               info_item_simple,
               info_item_simple_multiple,
               info_item_url,
-              info_item_uncommmitted,
+              info_item_uncommitted,
               info_item_size_wc_recursive,
               info_item_size_repos,
               info_item_size_repos_recursive,
               info_item_failures,
               info_file_in_file_replaced_dir,
+              info_tree_conflict_source,
              ]
 
 if __name__ == '__main__':

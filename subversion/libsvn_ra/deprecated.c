@@ -34,7 +34,11 @@
 #include "svn_pools.h"
 
 #include "ra_loader.h"
-#include "deprecated.h"
+
+/* Declarations of the init functions for the available RA libraries. */
+#include "../libsvn_ra_local/ra_init.h"
+#include "../libsvn_ra_svn/ra_init.h"
+#include "../libsvn_ra_serf/ra_init.h"
 
 #include "svn_private_config.h"
 
@@ -497,26 +501,52 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
                                   path, revision, SVN_DIRENT_ALL, pool);
 }
 
+/* For each libsvn_ra_foo library, provide an implementation of deprecated
+   svn_ra_foo_init function that wraps svn_ra_foo__compat_init, or returns
+   a "not implemented" error if it was not linked. */
+
+#ifndef SVN_LIBSVN_RA_LINKS_RA_NEON
 svn_error_t *
-svn_ra_local__deprecated_init(int abi_version,
-                              apr_pool_t *pool,
-                              apr_hash_t *hash)
+svn_ra_dav_init(int abi_version,
+                apr_pool_t *pool,
+                apr_hash_t *hash)
 {
-  return svn_error_trace(svn_ra_local_init(abi_version, pool, hash));
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+}
+#endif /* ! SVN_LIBSVN_RA_LINKS_RA_NEON */
+
+svn_error_t *
+svn_ra_svn_init(int abi_version,
+                apr_pool_t *pool,
+                apr_hash_t *hash)
+{
+#ifdef SVN_LIBSVN_RA_LINKS_RA_SVN
+  return svn_error_trace(svn_ra_svn__compat_init(abi_version, pool, hash));
+#else
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+#endif /* ! SVN_LIBSVN_RA_LINKS_RA_SVN */
 }
 
 svn_error_t *
-svn_ra_svn__deprecated_init(int abi_version,
-                            apr_pool_t *pool,
-                            apr_hash_t *hash)
+svn_ra_local_init(int abi_version,
+                  apr_pool_t *pool,
+                  apr_hash_t *hash)
 {
-  return svn_error_trace(svn_ra_svn_init(abi_version, pool, hash));
+#ifdef SVN_LIBSVN_RA_LINKS_RA_LOCAL
+  return svn_error_trace(svn_ra_local__compat_init(abi_version, pool, hash));
+#else
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+#endif /* ! SVN_LIBSVN_RA_LINKS_RA_LOCAL */
 }
 
 svn_error_t *
-svn_ra_serf__deprecated_init(int abi_version,
-                             apr_pool_t *pool,
-                             apr_hash_t *hash)
+svn_ra_serf_init(int abi_version,
+                 apr_pool_t *pool,
+                 apr_hash_t *hash)
 {
-  return svn_error_trace(svn_ra_serf_init(abi_version, pool, hash));
+#ifdef SVN_LIBSVN_RA_LINKS_RA_SERF
+  return svn_error_trace(svn_ra_serf__compat_init(abi_version, pool, hash));
+#else
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+#endif /* ! SVN_LIBSVN_RA_LINKS_RA_SERF */
 }

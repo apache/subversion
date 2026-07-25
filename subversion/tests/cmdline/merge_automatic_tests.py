@@ -3,7 +3,7 @@
 #  merge_automatic_tests.py:  testing "automatic merge" scenarios
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -1361,9 +1361,9 @@ def merge_delete_crlf_file(sbox):
 
   # Let commit fix the eols
   sbox.simple_add_text('with\rCRLF\rhere!', 'A/crlf')
-  sbox.simple_add_text('with\rnative\r\eol', 'A/native')
-  sbox.simple_add_text('with\rCR\r\eol', 'A/cr')
-  sbox.simple_add_text('with\rLF\r\eol', 'A/lf')
+  sbox.simple_add_text('with\rnative\r\\eol', 'A/native')
+  sbox.simple_add_text('with\rCR\r\\eol', 'A/cr')
+  sbox.simple_add_text('with\rLF\r\\eol', 'A/lf')
 
   # And apply the magic property
   sbox.simple_propset('svn:eol-style', 'CRLF',   'A/crlf')

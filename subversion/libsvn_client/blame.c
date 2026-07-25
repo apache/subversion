@@ -499,8 +499,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
     SVN_ERR(svn_stream_open_readonly(&delta_baton->source_stream, frb->last_filename,
                                      frb->currpool, pool));
   else
-    /* Means empty stream below. */
-    delta_baton->source_stream = NULL;
+    delta_baton->source_stream = svn_stream_empty(pool);
   last_stream = svn_stream_disown(delta_baton->source_stream, pool);
 
   if (frb->include_merged_revisions && !merged_revision)
@@ -572,10 +571,12 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
     {
       /* Proper delta - get window handler for applying delta.
          svn_ra_get_file_revs2 will drive the delta editor. */
-      svn_txdelta_apply(last_stream, cur_stream, NULL, NULL,
-                        frb->currpool,
-                        &delta_baton->wrapped_handler,
-                        &delta_baton->wrapped_baton);
+      /* Keep historical behavior by disowning the stream; adjust if needed. */
+      svn_txdelta_apply2(svn_stream_disown(last_stream, frb->currpool),
+                         cur_stream, NULL, NULL,
+                         frb->currpool,
+                         &delta_baton->wrapped_handler,
+                         &delta_baton->wrapped_baton);
       *content_delta_handler = window_handler;
       *content_delta_baton = delta_baton;
     }

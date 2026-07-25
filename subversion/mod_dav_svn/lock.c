@@ -36,6 +36,7 @@
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "private/svn_log.h"
+#include "private/svn_repos_private.h"
 
 #include "dav_svn.h"
 
@@ -716,6 +717,12 @@ append_locks(dav_lockdb *lockdb,
                                   "turn on autoversioning first.");
 
       /* Commit a 0-byte file: */
+
+      if ((serr = svn_repos__validate_new_path(resource->info->repos_path,
+                                               resource->pool)))
+        return dav_svn__convert_err(serr, HTTP_BAD_REQUEST,
+                                    "Request specifies an invalid path.",
+                                    resource->pool);
 
       if ((serr = dav_svn__get_youngest_rev(&rev, repos, resource->pool)))
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

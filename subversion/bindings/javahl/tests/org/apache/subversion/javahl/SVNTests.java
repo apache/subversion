@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 package org.apache.subversion.javahl;
 
@@ -31,6 +29,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.FileStore;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.DosFileAttributeView;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.HashMap;
@@ -224,7 +226,7 @@ class SVNTests extends TestCase
                 rootUrl = rootUrl.replaceFirst("file:/", "file:///");
 
             // According to
-            // http://java.sun.com/j2se/1.5.0/docs/api/java/io/File.html#toURL()
+            // https://docs.oracle.com/javase/1.5.0/docs/api/java/io/File.html#toURL()
             // the URL from rootDir.toURI() may end with a trailing /
             // if rootDir exists and is a directory, so depending if
             // the test suite has been previously run and rootDir
@@ -287,7 +289,7 @@ class SVNTests extends TestCase
      * Create a directory for the sample (Greek) repository, config
      * files, repositories and working copies.
      */
-    private void createDirectories()
+    private void createDirectories() throws IOException
     {
         this.rootDir.mkdirs();
 
@@ -495,7 +497,7 @@ class SVNTests extends TestCase
      *
      * @param path The file or directory to be removed.
      */
-    static final void removeDirOrFile(File path)
+    static final void removeDirOrFile(File path) throws IOException
     {
         if (!path.exists())
         {
@@ -508,6 +510,18 @@ class SVNTests extends TestCase
             for (File file : path.listFiles())
             {
                 removeDirOrFile(file);
+            }
+        }
+
+        // Unset readonly flag of the file because deleting a file with
+        // readonly flag on Windows fails since Java 25.
+        Path nioPath = path.toPath();
+        FileStore store = Files.getFileStore(nioPath);
+        if (store.supportsFileAttributeView(DosFileAttributeView.class)) {
+            DosFileAttributeView view = Files.getFileAttributeView(
+                    nioPath, DosFileAttributeView.class);
+            if (view != null) {
+                view.setReadOnly(false);
             }
         }
 
@@ -662,12 +676,15 @@ class SVNTests extends TestCase
          * and initialize the expected working copy layout.
          * @param loadRepos Whether to load the sample repository, or
          * leave it with no initial revisions
+         * @param oldestVersion whether to create the working copy
+         * at the oldest instead of the default supported version.
          * @throws SubversionException If there is a problem
          * creating or loading the repository.
          * @throws IOException If there is a problem finding the
          * dump file.
          */
-        protected OneTest(boolean createWC, boolean loadRepos)
+        protected OneTest(boolean createWC, boolean loadRepos,
+                          boolean oldestVersion)
             throws SubversionException, IOException
         {
             this.testName = testBaseName + ++testCounter;
@@ -677,8 +694,27 @@ class SVNTests extends TestCase
 
             if (createWC)
             {
-                workingCopy = createInitialWorkingCopy(repository);
+                workingCopy = createInitialWorkingCopy(repository,
+                                                       oldestVersion);
             }
+        }
+
+        /**
+         * Build a new test setup with a new repository.  Create a
+         * corresponding working copy and expected working copy
+         * layout.
+         *
+         * @param createWC Whether to create the working copy on disk,
+         * and initialize the expected working copy layout.
+         * @param loadRepos Whether to load the sample repository, or
+         * leave it with no initial revisions
+         *
+         * @see #OneTest
+         */
+        protected OneTest(boolean createWC, boolean loadRepos)
+            throws SubversionException, IOException
+        {
+            this(createWC, loadRepos, false);
         }
 
         /**
@@ -694,7 +730,7 @@ class SVNTests extends TestCase
         protected OneTest(boolean createWC)
             throws SubversionException, IOException
         {
-            this(createWC,true);
+            this(createWC, true);
         }
         /**
          * Build a new test setup with a new repository.  Create a
@@ -736,7 +772,7 @@ class SVNTests extends TestCase
             repository = orig.getRepository();
             url = orig.getUrl();
             wc = orig.wc.copy();
-            workingCopy = createInitialWorkingCopy(repository);
+            workingCopy = createInitialWorkingCopy(repository, false);
         }
 
         /**
@@ -851,11 +887,12 @@ class SVNTests extends TestCase
          * Create the working copy for the beginning of the test.
          * Assumes that {@link #testName} has been set.
          *
-         * @param repos     the repository directory
+         * @param repos          the repository directory
+         * @param oldestVersion  create an oldest supported WC
          * @return the directory of the working copy
          * @throws Exception
          */
-        protected File createInitialWorkingCopy(File repos)
+        protected File createInitialWorkingCopy(File repos, boolean oldestVersion)
             throws SubversionException, IOException
         {
             // build a clean working directory
@@ -864,8 +901,11 @@ class SVNTests extends TestCase
             removeDirOrFile(workingCopy);
             trackDir(workingCopy);
             // checkout the repository
+            Version wcVersionFormat = oldestVersion
+                ? SVNClient.oldestWcVersion() : null;
             client.checkout(uri.toString(), workingCopy.getAbsolutePath(),
-                   null, null, Depth.infinity, false, false);
+                            null, null, Depth.infinity, false, false,
+                            wcVersionFormat, Tristate.Unknown);
             // sanity check the working with its expected status
             checkStatus();
             return workingCopy;

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # py:encoding=utf-8
 #
-#  backport_tests.py:  Test backport.pl or backport.py
+#  backport_tests.py:  Test backport.py
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -37,12 +37,6 @@
 # ### temporarily until we switch over to backport.py and remove backport.pl.
 # ###
 # ### See svntest.testcase.FunctionTestCase.get_sandbox_name().
-try:
-  run_backport, run_conflicter
-except NameError:
-  raise Exception("Failure: %s should not be run directly, or the wrapper "
-                  "does not define both run_backport() and run_conflicter()"
-                  % __file__)
 
 # General modules
 import contextlib
@@ -50,6 +44,29 @@ import functools
 import os
 import re
 import sys
+
+def run_backport(sbox, error_expected=False):
+  "Run the backport.py auto-merger."
+  args = [
+      '/usr/bin/env',
+      'SVN=' + svntest.main.svn_binary,
+      'python3', os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                              'merge-approved-backports.py')),
+  ]
+  with chdir(sbox.ospath('branch')):
+    return svntest.main.run_command(args[0], error_expected, False, *(args[1:]))
+
+def run_conflicter(sbox, error_expected=False):
+  "Run the backport.py conflicts detector."
+  args = [
+      '/usr/bin/env',
+      'SVN=' + svntest.main.svn_binary,
+      'python3',
+      os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                   'detect-conflicting-backports.py')),
+  ]
+  with chdir(sbox.ospath('branch')):
+    return svntest.main.run_command(args[0], error_expected, False, *(args[1:]))
 
 @contextlib.contextmanager
 def chdir(dir):
@@ -101,7 +118,7 @@ class BackportTest(object):
     # .wraps() propagates the wrappee's docstring to the wrapper.
     @functools.wraps(test_func)
     def wrapped_test_func(sbox):
-      expected_dump_file = './backport_tests_data/%s.dump' % (test_func.func_name,)
+      expected_dump_file = './backport_tests_data/%s.dump' % (test_func.__name__,)
 
       sbox.build()
 
@@ -223,15 +240,24 @@ def verify_backport(sbox, expected_dump_file, uuid):
     # There is no expected dump file.
     return
 
-  # Remove some SVNSync-specific housekeeping properties from the
-  # mirror repository in preparation for the comparison dump.
+  # Prepare for dump comparison
+  # We will run this over file://, let's set a known author: by default it
+  # would be the developer's OS username, since svn(1) as executed by this
+  # script doesn't use the _with_auth() codepath.
+  # We also need to ignore the date, since it will be based on the date the
+  # test is executed.
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
   for revnum in range(0, 1+int(sbox.youngest())):
     svntest.actions.run_and_verify_svnadmin([], [],
       "delrevprop", "-r", revnum, sbox.repo_dir, "svn:date")
+    # Assume r1:HEAD have svn:author set, and r0 hasn't
+    if revnum > 0:
+      svntest.actions.run_and_verify_svn([], [],
+        "propset", "--revprop", "-r", revnum, "-q", "svn:author", "jrandom",
+        sbox.wc_dir)
 
-  # Create a dump file from the mirror repository.
-  dest_dump = open(expected_dump_file).readlines()
+  # Create a dump file from the repository.
+  dest_dump = open(expected_dump_file, 'rb').readlines()
   svntest.actions.run_and_verify_svnadmin(None, [],
                                           'setuuid', '--', sbox.repo_dir, uuid)
   src_dump = svntest.actions.run_and_verify_dump(sbox.repo_dir)

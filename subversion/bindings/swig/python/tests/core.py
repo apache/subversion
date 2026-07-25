@@ -23,8 +23,6 @@ import os
 import tempfile
 import sys
 
-IS_PY3 = sys.version_info[0] >= 3
-
 import svn.core, svn.client
 import utils
 
@@ -179,9 +177,10 @@ class SubversionCoreTestCase(unittest.TestCase):
   def test_stream_from_stringbuf(self):
     stream = svn.core.svn_stream_from_stringbuf(b'')
     svn.core.svn_stream_close(stream)
-    with self.assertRaises(TypeError):
-        stream = svn.core.svn_stream_from_stringbuf(b''.decode())
-        svn.core.svn_stream_close(stream)
+    stream = svn.core.svn_stream_from_stringbuf(b''.decode())
+    svn.core.svn_stream_close(stream)
+    stream = svn.core.svn_stream_from_stringbuf(None)
+    svn.core.svn_stream_close(stream)
 
   def test_stream_read_full(self):
     in_str = (b'Python\x00'
@@ -222,6 +221,8 @@ class SubversionCoreTestCase(unittest.TestCase):
     self.assertEqual(svn.core.svn_stream_read2(stream, 4096), b'')
     svn.core.svn_stream_close(stream)
 
+  @unittest.skipIf(not utils.IS_PY3 and utils.is_defaultencoding_utf8(),
+                   "'utf-8' codecs of Python 2 accepts any unicode strings")
   def test_stream_write_exception(self):
     stream = svn.core.svn_stream_empty()
     with self.assertRaises(TypeError):
@@ -238,9 +239,10 @@ class SubversionCoreTestCase(unittest.TestCase):
   # As default codec of Python 2 is 'ascii', conversion from unicode to bytes
   # will be success only if all characters of target strings are in the range
   # of \u0000 ~ \u007f.
-  @unittest.skipUnless(IS_PY3, "test for Python 3 only")
+  @unittest.skipUnless(utils.IS_PY3 or utils.is_defaultencoding_utf8(),
+                       "test ony for Python 3 or Python 2 'utf-8' codecs")
   def test_stream_write_str(self):
-    o1_str = u'Python\x00\u3071\u3044\u305d\83093\r\n'
+    o1_str = u'Python\x00\u3071\u3044\u305d\u3093\r\n'
     o2_str = u'subVersioN\x00\u3055\u3076\u3070\u30fc\u3058\u3087\u3093'
     o3_str = u'swig\x00\u3059\u3046\u3043\u3050\rend'
     out_str = o1_str + o2_str + o3_str
@@ -331,6 +333,49 @@ class SubversionCoreTestCase(unittest.TestCase):
     self.assertEqual(svn.core.svn_stream_readline(stream, b'\r\n'),
                      [b'', 1])
     svn.core.svn_stream_close(stream)
+
+  @unittest.skipUnless(utils.IS_PY3 or utils.is_defaultencoding_utf8(),
+                       "test ony for Python 3 or Python 2 'utf-8' codecs")
+  def test_stream_from_stringbuf_unicode(self):
+    "Check svn_stream_from_stringbuf() handle str on Python 3 correctly."
+    # instr_inicode = '(checkmark)UNICODE'
+    in_str_unicode = (u'\u2705\U0001F1FA\U0001F1F3\U0001F1EE'
+                      u'\U0001F1E8\U0001F1F4\U0001F1E9\U0001F1EA')
+    stream = svn.core.svn_stream_from_stringbuf(in_str_unicode)
+    try:
+      self.assertEqual(svn.core.svn_stream_read_full(stream, 4096),
+                       in_str_unicode.encode('utf-8'))
+    finally:
+      svn.core.svn_stream_close(stream)
+
+  def test_svn_rangelist_diff(self):
+    """
+    SWIG incorrectly handles return values when the first %append_output() is
+    invoked with a list instance. svn.core.svn_rangelist_diff() is in the case.
+    We test whether the workaround for it is working.
+    """
+
+    def from_args(start, end, inheritable):
+      instance = svn.core.svn_merge_range_t()
+      instance.start = start
+      instance.end = end
+      instance.inheritable = inheritable
+      return instance
+
+    def to_args(instance):
+      return [instance.start, instance.end, instance.inheritable]
+
+    def map_list(f, iterator):
+      return list(map(f, iterator))
+
+    from_ = [from_args(4, 5, True), from_args(9, 13, True)]
+    to = [from_args(7, 11, True)]
+    rv = svn.core.svn_rangelist_diff(from_, to, True)
+    self.assertIsInstance(rv, (list, tuple))
+    deleted, added = rv
+    self.assertEqual([[7, 9, True]], map_list(to_args, added))
+    self.assertEqual([[4, 5, True], [11, 13, True]],
+                     map_list(to_args, deleted))
 
 
 def suite():

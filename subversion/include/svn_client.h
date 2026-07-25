@@ -326,7 +326,7 @@ svn_client_get_ssl_client_cert_pw_prompt_provider(
  * for local paths.
  *
  * For deeper insight, please see the
- * <a href="http://svnbook.red-bean.com/nightly/en/svn.advanced.pegrevs.html">
+ * <a href="https://svnbook.red-bean.com/nightly/en/svn.advanced.pegrevs.html">
  * Peg and Operative Revisions</a> section of the Subversion Book.
  */
 
@@ -1138,9 +1138,9 @@ svn_client_create_context(svn_client_ctx_t **ctx,
  */
 
 /**
- * Pull remaining target arguments from @a os into @a *targets_p,
- * converting them to UTF-8, followed by targets from @a known_targets
- * (which might come from, for example, the "--targets" command line option).
+ * Pull remaining target arguments from @a os into @a *targets_p, followed by
+ * targets from @a known_targets (which might come from, for example, the
+ * "--targets" command line option).
  *
  * Process each target in one of the following ways.  For a repository-
  * relative URL: resolve to a full URL, contacting the repository if
@@ -1170,8 +1170,25 @@ svn_client_create_context(svn_client_ctx_t **ctx,
  * literal path "@abc" with no peg revision, or the form ".@abc" to refer to
  * the empty path with peg revision "abc".
  *
- * @since New in 1.7
+ * @since New in 1.16
  */
+svn_error_t *
+svn_client_args_to_target_array3(apr_array_header_t **targets_p,
+                                 apr_getopt_t *os,
+                                 const apr_array_header_t *known_targets,
+                                 svn_client_ctx_t *ctx,
+                                 svn_boolean_t keep_last_origpath_on_truepath_collision,
+                                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_args_to_target_array3() but also converts the
+ * targets to UTF-8.
+ *
+ * @since New in 1.7
+ *
+ * @deprecated Provided for backward compatibility with the 1.15 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_args_to_target_array2(apr_array_header_t **targets_p,
                                  apr_getopt_t *os,
@@ -1240,6 +1257,16 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
  *              set equal to the base properties. <br>
  *              If @c FALSE, then abort if there are any unversioned
  *              obstructing items.
+ * @param[in] wc_format_version is the version number of the oldest Subversion
+ *              client with which the created working copy should be compatible;
+ *              @c NULL means the default version.
+ *              See svn_client_default_wc_version(),
+ *              svn_client_get_wc_formats_supported().
+ * @param[in] store_pristine  If #svn_tristate_true, the pristine contents of
+ *              all files in the working copy will be stored on disk. <br>
+ *              If #svn_tristate_false, the pristine contents will be fetched
+ *              on-demand when required by the operation. <br>
+ *              If #svn_tristate_unknown, the default setting will be used.
  * @param[in] ctx   The standard client context, used for authentication and
  *              notification.
  * @param[in] pool  Used for any temporary allocation.
@@ -1254,11 +1281,33 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
  *         #svn_opt_revision_date. <br>
  *         If no error occurred, return #SVN_NO_ERROR.
  *
- * @since New in 1.5.
+ * @since New in 1.15.
  *
  * @see #svn_depth_t <br> #svn_client_ctx_t <br> @ref clnt_revisions for
  *      a discussion of operative and peg revisions.
  */
+svn_error_t *
+svn_client_checkout4(svn_revnum_t *result_rev,
+                     const char *URL,
+                     const char *path,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_depth_t depth,
+                     svn_boolean_t ignore_externals,
+                     svn_boolean_t allow_unver_obstructions,
+                     const svn_version_t *wc_format_version,
+                     svn_tristate_t store_pristine,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_checkout4() but with @a wc_format_version set
+ * to @c NULL and @a store_pristine set to #svn_tristate_unknown.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.10 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_checkout3(svn_revnum_t *result_rev,
                      const char *URL,
@@ -1270,7 +1319,6 @@ svn_client_checkout3(svn_revnum_t *result_rev,
                      svn_boolean_t allow_unver_obstructions,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
-
 
 /**
  * Similar to svn_client_checkout3() but with @a allow_unver_obstructions
@@ -4389,18 +4437,109 @@ svn_client_cleanup(const char *dir,
  * @{
  */
 
-/** Recursively upgrade a working copy from any older format to the current
- * WC metadata storage format.  @a wcroot_dir is the path to the WC root.
+/**
+ * Recursively upgrade a working copy and nested externals working
+ * copies from any older format to a WC metadata storage
+ * format supported by Subversion @a target_format_version.
+ *
+ * If @a target_format_version is @c NULL, the default version is used.
+ *
+ * If the working copy already has a supported format newer than
+ * @a target_format_version, the behavior is as follows:
+ *
+ * - If @a target_format_version is @c NULL, meaning the default version
+ *   should be used, the upgrade is no-op and the working copy is left
+ *   at its current format.
+ *
+ * - If @a target_format_version is not @c NULL, meaning that a specific
+ *   format version should be used, the upgrade results in an error.
+ *
+ * @a wcroot_dir is the path to the WC root.
+ *
+ * If @a result_format_version_p is not @c NULL, it will be set to the
+ * resulting format version of the upgraded working copy, allocated from
+ * @a result_pool.  If this information is not required, @a result_pool
+ * may be passed as @c NULL.
+ *
+ * @see svn_client_default_wc_version(),
+ * svn_client_get_wc_formats_supported().
  *
  * Use @a scratch_pool for any temporary allocations.
  *
- * @since New in 1.7.
+ * @since New in 1.15.
  */
+svn_error_t *
+svn_client_upgrade2(const svn_version_t **result_format_version_p,
+                    const char *wcroot_dir,
+                    const svn_version_t *target_format_version,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_client_upgrade2(), but with @a result_format_version_p,
+ * @a target_format_version and @a result_pool set to @c NULL.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.14 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_upgrade(const char *wcroot_dir,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *scratch_pool);
 
+/**
+ * Returns the first version that supported the library's oldest
+ * working copy metadata format.
+ *
+ * @since New in 1.15.
+ */
+const svn_version_t *
+svn_client_oldest_wc_version(apr_pool_t *result_pool);
+
+/**
+ * Set @a *version_p to the version of a working copy format that should
+ * be used by default for @a ctx, according to its configuration.
+ * Allocate the result in @a result_pool.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_client_default_wc_version(const svn_version_t **version_p,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+/**
+ * Returns the first version that supported the library's latest
+ * working copy metadata format.
+ *
+ * @since New in 1.15.
+ */
+const svn_version_t *
+svn_client_latest_wc_version(apr_pool_t *result_pool);
+
+/**
+ * Returns a list of the WC formats supported by the client library.
+ *
+ * The list is sorted from oldest to newest, and terminated by a zero entry.
+ *
+ * The result is allocated in @a result_pool and/or statically.
+ *
+ * @since New in 1.15.
+ */
+const int *
+svn_client_get_wc_formats_supported(apr_pool_t *result_pool);
+
+/** Return the version of the Subversion library that first supported
+ * the given WC format, @a wc_format.
+ *
+ * @since New in 1.15.
+ */
+const svn_version_t *
+svn_client_wc_version_from_format(int wc_format,
+                                  apr_pool_t *result_pool);
 
 /** @} */
 
@@ -7668,6 +7807,28 @@ svn_client_patch(const char *patch_abspath,
                  void *patch_baton,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_client_patch(), but the patch is read from a file handle,
+ * described in @a patch_file.
+ *
+ * In future versions, this function may be used to apply a patch directly
+ * from an svn_stream_t.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_client_patch_stream(apr_file_t *patch_file,
+                        const char *wc_dir_abspath,
+                        svn_boolean_t dry_run,
+                        int strip_count,
+                        svn_boolean_t reverse,
+                        svn_boolean_t ignore_whitespace,
+                        svn_boolean_t remove_tempfiles,
+                        svn_client_patch_func_t patch_func,
+                        void *patch_baton,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *scratch_pool);
 
 /** @} */
 

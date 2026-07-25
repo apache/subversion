@@ -144,6 +144,14 @@
 #ifdef WIN32
 
 #if _WIN32_WINNT < 0x600 /* Does the SDK assume Windows Vista+? */
+typedef struct _FILE_BASIC_INFO {
+  LARGE_INTEGER CreationTime;
+  LARGE_INTEGER LastAccessTime;
+  LARGE_INTEGER LastWriteTime;
+  LARGE_INTEGER ChangeTime;
+  DWORD FileAttributes;
+} FILE_BASIC_INFO, *PFILE_BASIC_INFO;
+
 typedef struct _FILE_RENAME_INFO {
   BOOL   ReplaceIfExists;
   HANDLE RootDirectory;
@@ -160,6 +168,7 @@ typedef struct _FILE_ATTRIBUTE_TAG_INFO {
   DWORD ReparseTag;
 } FILE_ATTRIBUTE_TAG_INFO, *PFILE_ATTRIBUTE_TAG_INFO;
 
+#define FileBasicInfo 0
 #define FileRenameInfo 3
 #define FileDispositionInfo 4
 #define FileAttributeTagInfo 9
@@ -1890,7 +1899,7 @@ svn_io__utf8_to_unicode_longpath(const WCHAR **result,
         }
     }
 
-    SVN_ERR(svn_utf__win32_utf8_to_utf16(&(const WCHAR*)buffer, source,
+    SVN_ERR(svn_utf__win32_utf8_to_utf16(&buffer, source,
                                          prefix, result_pool));
 
     /* Convert slashes to backslashes because the \\?\ path format
@@ -2321,6 +2330,83 @@ svn_io__win_rename_open_file(apr_file_t *file,
   return SVN_NO_ERROR;
 }
 
+/* Number of micro-seconds between the beginning of the Windows epoch
+ * (Jan. 1, 1601) and the Unix epoch (Jan. 1, 1970)
+ */
+#ifndef APR_DELTA_EPOCH_IN_USEC
+#define APR_DELTA_EPOCH_IN_USEC   APR_TIME_C(11644473600000000)
+#endif
+
+svn_error_t *
+svn_io__win_set_file_basic_info(apr_file_t *file,
+                                const char *path,
+                                apr_time_t set_mtime,
+                                svn_boolean_t set_read_only,
+                                apr_pool_t *pool)
+{
+  FILE_BASIC_INFO info;
+  HANDLE hFile;
+  apr_status_t status;
+
+  apr_os_file_get(&hFile, file);
+
+  if (set_read_only)
+    {
+      status = win32_get_file_information_by_handle(hFile, FileBasicInfo,
+                                                    &info, sizeof(info));
+      if (status)
+        {
+          return svn_error_wrap_apr(status, _("Can't get attributes of '%s'"),
+                                    svn_dirent_local_style(path, pool));
+        }
+    }
+
+  info.CreationTime.QuadPart = 0;
+  info.LastAccessTime.QuadPart = 0;
+  info.ChangeTime.QuadPart = 0;
+
+  if (set_mtime == SVN_IO__WIN_TIME_UNCHANGED)
+    {
+      /* If you specify a value of zero for any of the XxxTime members of the
+         FILE_BASIC_INFORMATION structure, the ZwSetInformationFile function
+         keeps a file's current setting for that time.
+         https://docs.microsoft.com/windows-hardware/drivers/ddi/wdm/ns-wdm-_file_basic_information#remarks
+       */
+      info.LastWriteTime.QuadPart = 0;
+    }
+  else if (set_mtime == SVN_IO__WIN_TIME_SUSPEND_UPDATE)
+    {
+      /* File system updates the values of the LastAccessTime, LastWriteTime,
+         and ChangeTime members as appropriate after an I/O operation is
+         performed on a file. A driver or application can request that the
+         file system not update one or more of these members for I/O operations
+         that are performed on the caller's file handle by setting the
+         appropriate members to -1.
+         https://docs.microsoft.com/windows-hardware/drivers/ddi/wdm/ns-wdm-_file_basic_information#remarks
+       */
+      info.LastWriteTime.QuadPart = -1;
+    }
+  else
+    {
+      info.LastWriteTime.QuadPart = (set_mtime + APR_DELTA_EPOCH_IN_USEC) * 10;
+    }
+
+  if (set_read_only)
+    info.FileAttributes |= FILE_ATTRIBUTE_READONLY;
+  else
+    info.FileAttributes = 0;
+
+  status = win32_set_file_information_by_handle(hFile, FileBasicInfo,
+                                                &info, sizeof(info));
+  if (status)
+    {
+      return svn_error_wrap_apr(status, _("Can't set attributes of '%s'"),
+                                svn_dirent_local_style(path, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 #endif /* WIN32 */
 
 svn_error_t *
@@ -2703,7 +2789,6 @@ svn_io__file_lock_autocreate(const char *lock_file,
 svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
                                        apr_pool_t *pool)
 {
-  apr_os_file_t filehand;
   const char *fname;
   apr_status_t apr_err;
 
@@ -2713,49 +2798,21 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't get file name"));
 
-  /* ### In apr 1.4+ we could delegate most of this function to
-         apr_file_sync(). The only major difference is that this doesn't
-         contain the retry loop for EINTR on linux. */
+  do {
+    apr_err = apr_file_datasync(file);
+  } while(APR_STATUS_IS_EINTR(apr_err));
 
-  /* First make sure that any user-space buffered data is flushed. */
-  SVN_ERR(svn_io_file_flush(file, pool));
+  /* If the file is in a memory filesystem, fsync() may return
+     EINVAL.  Presumably the user knows the risks, and we can just
+     ignore the error. */
+  if (APR_STATUS_IS_EINVAL(apr_err))
+    return SVN_NO_ERROR;
 
-  apr_os_file_get(&filehand, file);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err,
+                              _("Can't flush file '%s' to disk"),
+                              try_utf8_from_internal_style(fname, pool));
 
-  /* Call the operating system specific function to actually force the
-     data to disk. */
-  {
-#ifdef WIN32
-
-    if (! FlushFileBuffers(filehand))
-        return svn_error_wrap_apr(apr_get_os_error(),
-                                  _("Can't flush file '%s' to disk"),
-                                  try_utf8_from_internal_style(fname, pool));
-
-#else
-      int rv;
-
-      do {
-#ifdef F_FULLFSYNC
-        rv = fcntl(filehand, F_FULLFSYNC, 0);
-#else
-        rv = fsync(filehand);
-#endif
-      } while (rv == -1 && APR_STATUS_IS_EINTR(apr_get_os_error()));
-
-      /* If the file is in a memory filesystem, fsync() may return
-         EINVAL.  Presumably the user knows the risks, and we can just
-         ignore the error. */
-      if (rv == -1 && APR_STATUS_IS_EINVAL(apr_get_os_error()))
-        return SVN_NO_ERROR;
-
-      if (rv == -1)
-        return svn_error_wrap_apr(apr_get_os_error(),
-                                  _("Can't flush file '%s' to disk"),
-                                  try_utf8_from_internal_style(fname, pool));
-
-#endif
-  }
   return SVN_NO_ERROR;
 }
 

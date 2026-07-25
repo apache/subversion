@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Licensed under the same terms as Subversion.
 
@@ -65,14 +65,14 @@ from svn import repos, fs
 locale.setlocale(locale.LC_ALL, 'en_GB')
 
 def canonicalize(path):
-  return path.decode('utf-8').lower().encode('utf-8')
+  return path.lower()
 
 def get_new_paths(txn_root):
   new_paths = []
-  for path, change in fs.paths_changed(txn_root).iteritems():
+  for path, change in fs.paths_changed(txn_root).items():
     if (change.change_kind == fs.path_change_add
         or change.change_kind == fs.path_change_replace):
-      new_paths.append(path)
+      new_paths.append(path.decode('utf-8'))
   return new_paths
 
 def split_path(path):
@@ -87,9 +87,10 @@ def join_path(dir, name):
   return dir + '/' + name
 
 def ensure_names(path, names, txn_root):
-  if (not names.has_key(path)):
+  if (path not in names):
      names[path] = []
-     for name, dirent in fs.dir_entries(txn_root, path).iteritems():
+     for name, dirent in fs.dir_entries(txn_root, path).items():
+       name = name.decode('utf-8')
        names[path].append([canonicalize(name), name])
 
 names = {}   # map of: key - path, value - list of two element lists of names
@@ -97,9 +98,9 @@ clashes = {} # map of: key - path, value - map of: key - path, value - dummy
 
 native = locale.getlocale()[1]
 if not native: native = 'ascii'
-repos_handle = repos.open(sys.argv[1].decode(native).encode('utf-8'))
+repos_handle = repos.open(sys.argv[1].encode('utf-8'))
 fs_handle = repos.fs(repos_handle)
-txn_handle = fs.open_txn(fs_handle, sys.argv[2].decode(native).encode('utf-8'))
+txn_handle = fs.open_txn(fs_handle, sys.argv[2].encode('utf-8'))
 txn_root = fs.txn_root(txn_handle)
 
 new_paths = get_new_paths(txn_root)
@@ -110,18 +111,16 @@ for path in new_paths:
   for name_pair in names[dir]:
     if (name_pair[0] == canonical and name_pair[1] != name):
       canonical_path = join_path(dir, canonical)
-      if (not clashes.has_key(canonical_path)):
+      if (canonical_path not in clashes):
         clashes[canonical_path] = {}
       clashes[canonical_path][join_path(dir, name)] = True
       clashes[canonical_path][join_path(dir, name_pair[1])] = True
 
 if (clashes):
   # native = 'ascii' # Force ASCII output for Apache
-  for canonical_path in clashes.iterkeys():
-    sys.stderr.write(u'Clash:'.encode(native))
-    for path in clashes[canonical_path].iterkeys():
-      sys.stderr.write(u' \''.encode(native) +
-                       str(path).decode('utf-8').encode(native, 'replace') +
-                       u'\''.encode(native))
-    sys.stderr.write(u'\n'.encode(native))
+  for canonical_path in clashes.keys():
+    sys.stderr.write('Clash:')
+    for path in clashes[canonical_path].keys():
+      sys.stderr.write(' \'' + path + '\'')
+    sys.stderr.write('\n')
   sys.exit(1)

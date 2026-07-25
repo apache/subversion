@@ -342,11 +342,11 @@ class SvnWcTest < Test::Unit::TestCase
 
   def test_adm_ensure
     adm_dir = Dir.glob(File.join(@wc_path, "{.,_}svn")).first
-    assert(File.exists?(adm_dir))
+    assert(File.exist?(adm_dir))
     FileUtils.rm_rf(adm_dir)
-    assert(!File.exists?(adm_dir))
+    assert(!File.exist?(adm_dir))
     Svn::Wc.ensure_adm(@wc_path, @fs.uuid, @repos_uri, @repos_uri, 0)
-    assert(File.exists?(adm_dir))
+    assert(File.exist?(adm_dir))
   end
 
   def test_merge
@@ -474,19 +474,19 @@ EOE
       ctx.add(path)
       ctx.ci(@wc_path).revision
 
-      assert(File.exists?(path))
+      assert(File.exist?(path))
       Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
         access.delete(path)
       end
-      assert(!File.exists?(path))
+      assert(!File.exist?(path))
 
       ctx.revert(path)
 
-      assert(File.exists?(path))
+      assert(File.exist?(path))
       Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
         access.delete(path, nil, nil, true)
       end
-      assert(File.exists?(path))
+      assert(File.exist?(path))
     end
   end
 
@@ -808,9 +808,9 @@ EOE
         ctx.add(path2)
         rev2 = ctx.commit(@wc_path).revision
 
-        assert(File.exists?(path2))
+        assert(File.exist?(path2))
         assert_equal(0, ctx.up(@wc_path, 0))
-        assert(!File.exists?(path2))
+        assert(!File.exist?(path2))
         Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
           editor = access.update_editor('', 0)
           assert_equal(0, editor.target_revision)
@@ -848,9 +848,9 @@ EOE
         ctx.add(path2)
         rev2 = ctx.commit(@wc_path).revision
 
-        assert(File.exists?(path2))
+        assert(File.exist?(path2))
         assert_equal(0, ctx.up(@wc_path, 0))
-        assert(!File.exists?(path2))
+        assert(!File.exist?(path2))
         notification_count = 0
         Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
           notify_func = Proc.new {|n| notification_count += 1}
@@ -946,9 +946,9 @@ EOE
         ctx.add(dir2_path)
         rev2 = ctx.commit(@wc_path).revision
 
-        assert(File.exists?(path1))
+        assert(File.exist?(path1))
         assert_equal(rev2, ctx.switch(@wc_path, dir2_uri))
-        assert(File.exists?(File.join(@wc_path, file2)))
+        assert(File.exist?(File.join(@wc_path, file2)))
         Svn::Wc::AdmAccess.open_anchor(@wc_path) do |access, dir_access, target|
           editor = dir_access.switch_editor('', dir1_uri, rev2)
           assert_equal(rev2, editor.target_revision)

@@ -471,6 +471,9 @@ update_internal(svn_revnum_t *result_rev,
                            anchor_abspath, ctx, result_pool, scratch_pool));
   ra_session = *ra_session_p;
 
+  SVN_ERR(svn_client__textbase_sync(NULL, local_abspath, TRUE, TRUE, ctx,
+                                    ra_session, scratch_pool, scratch_pool));
+
   /* If we got a corrected URL from the RA subsystem, we'll need to
      relocate our working copy first. */
   if (corrected_url)
@@ -557,7 +560,7 @@ update_internal(svn_revnum_t *result_rev,
   /* Drive the reporter structure, describing the revisions within
      LOCAL_ABSPATH.  When this calls reporter->finish_report, the
      reporter will drive the update_editor. */
-  SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
+  SVN_ERR(svn_wc_crawl_revisions6(ctx->wc_ctx, local_abspath, reporter,
                                   report_baton, TRUE,
                                   depth, (! depth_is_sticky),
                                   (! server_supports_depth),
@@ -575,6 +578,9 @@ update_internal(svn_revnum_t *result_rev,
       SVN_ERR(handle_externals(timestamp_sleep, local_abspath, depth,
                                repos_root_url, ra_session, ctx, scratch_pool));
     }
+
+  SVN_ERR(svn_client__textbase_sync(NULL, local_abspath, FALSE, TRUE, ctx,
+                                    NULL, scratch_pool, scratch_pool));
 
   /* Let everyone know we're finished here (unless we're asked not to). */
   if (ctx->notify_func2 && notify_summary)

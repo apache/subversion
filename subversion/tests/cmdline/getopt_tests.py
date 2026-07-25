@@ -3,7 +3,7 @@
 #  getopt_tests.py:  testing the svn command line processing
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -60,7 +60,7 @@ def load_expected_output(basename):
   return exp_stdout, exp_stderr
 
 # With plaintext password storage enabled, `svn --version' emits a warning:
-warn_line_re = re.compile("WARNING: Plaintext password storage")
+warn_line_re = re.compile("^WARNING: Plaintext password storage")
 
 # This is a list of lines to delete.
 del_lines_res = [
@@ -81,7 +81,7 @@ del_lines_res = [
                  re.compile(r"\* Plaintext cache.*"),
                  re.compile(r"\* Gnome Keyring"),
                  re.compile(r"\* GPG-Agent"),
-                 re.compile(r"\* Mac OS X Keychain"),
+                 re.compile(r"\* macOS Keychain"),
                  re.compile(r"\* KWallet \(KDE\)"),
                 ]
 
@@ -94,7 +94,7 @@ rep_lines_res = [
                   'version X.Y.Z '),
                  # The copyright end date keeps changing; fix forever.
                  (re.compile(r'Copyright \(C\) 20\d\d The Apache '
-                              'Software Foundation\.'),
+                             r'Software Foundation\.'),
                   'Copyright (C) YYYY The Apache Software Foundation'),
                  # In 'svn --version --quiet', we print only the version
                  # number in a single line.
@@ -120,7 +120,7 @@ switched_del_lines_res = [
 # seen switch_res_line.
 switched_rep_lines_res = [
                           # We don't care about the actual canonical host
-                          (re.compile('^\* running on.*$'), '* running on'),
+                          (re.compile(r'^\* running on.*$'), '* running on'),
                          ]
 
 def process_lines(lines):

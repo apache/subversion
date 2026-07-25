@@ -40,11 +40,14 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_time.h"
+#include "svn_version.h"
 #include "svn_xml.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
 #include "cl-conflicts.h"
+
+#include "private/svn_string_private.h"
 
 
 /*** Code. ***/
@@ -366,7 +369,10 @@ typedef enum
   info_item_wc_root,
   info_item_schedule,
   info_item_depth,
-  info_item_changelist
+  info_item_changelist,
+  info_item_wc_format,
+  info_item_wc_compatible_version,
+  info_item_store_pristine,
 } info_item_t;
 
 /* Mapping between option keywords and info_item_t. */
@@ -376,26 +382,28 @@ typedef struct info_item_map_t
   const info_item_t print_what;
 } info_item_map_t;
 
-#define MAKE_STRING(x) { x, sizeof(x) - 1 }
 static const info_item_map_t info_item_map[] =
   {
-    { MAKE_STRING("kind"),                info_item_kind },
-    { MAKE_STRING("url"),                 info_item_url },
-    { MAKE_STRING("relative-url"),        info_item_relative_url },
-    { MAKE_STRING("repos-root-url"),      info_item_repos_root_url },
-    { MAKE_STRING("repos-uuid"),          info_item_repos_uuid },
-    { MAKE_STRING("repos-size"),          info_item_repos_size },
-    { MAKE_STRING("revision"),            info_item_revision },
-    { MAKE_STRING("last-changed-revision"),
-                                          info_item_last_changed_rev },
-    { MAKE_STRING("last-changed-date"),   info_item_last_changed_date },
-    { MAKE_STRING("last-changed-author"), info_item_last_changed_author },
-    { MAKE_STRING("wc-root"),             info_item_wc_root },
-    { MAKE_STRING("schedule"),            info_item_schedule },
-    { MAKE_STRING("depth"),               info_item_depth },
-    { MAKE_STRING("changelist"),          info_item_changelist },
+    { SVN__STATIC_STRING("kind"),                info_item_kind },
+    { SVN__STATIC_STRING("url"),                 info_item_url },
+    { SVN__STATIC_STRING("relative-url"),        info_item_relative_url },
+    { SVN__STATIC_STRING("repos-root-url"),      info_item_repos_root_url },
+    { SVN__STATIC_STRING("repos-uuid"),          info_item_repos_uuid },
+    { SVN__STATIC_STRING("repos-size"),          info_item_repos_size },
+    { SVN__STATIC_STRING("revision"),            info_item_revision },
+    { SVN__STATIC_STRING("last-changed-revision"),
+                                                 info_item_last_changed_rev },
+    { SVN__STATIC_STRING("last-changed-date"),   info_item_last_changed_date },
+    { SVN__STATIC_STRING("last-changed-author"), info_item_last_changed_author },
+    { SVN__STATIC_STRING("wc-root"),             info_item_wc_root },
+    { SVN__STATIC_STRING("schedule"),            info_item_schedule },
+    { SVN__STATIC_STRING("depth"),               info_item_depth },
+    { SVN__STATIC_STRING("changelist"),          info_item_changelist },
+    { SVN__STATIC_STRING("wc-format"),           info_item_wc_format },
+    { SVN__STATIC_STRING("wc-compatible-version"),
+                                                 info_item_wc_compatible_version },
+    { SVN__STATIC_STRING("store-pristine"),      info_item_store_pristine },
   };
-#undef MAKE_STRING
 
 static const apr_size_t info_item_map_len =
   (sizeof(info_item_map) / sizeof(info_item_map[0]));
@@ -586,6 +594,25 @@ print_info_xml(void *baton,
         svn_cl__xml_tagged_cdata(&sb, pool, "wcroot-abspath",
                                  info->wc_info->wcroot_abspath);
 
+      /* "<wc-compatible-version> xx </wc-compatible-version>" */
+      /* "<wc-format> xx </wc-format>" */
+      if (info->wc_info->wc_format > 0)
+        {
+          const svn_version_t *wc_ver
+            = svn_client_wc_version_from_format(info->wc_info->wc_format, pool);
+
+          svn_cl__xml_tagged_cdata(&sb, pool, "wc-compatible-version",
+                                   apr_psprintf(pool, "%d.%d", wc_ver->major,
+                                                wc_ver->minor));
+          svn_cl__xml_tagged_cdata(&sb, pool, "wc-format",
+                                   apr_psprintf(pool, "%d",
+                                                info->wc_info->wc_format));
+        }
+
+      /* "<store-pristine> xx </store-pristine>" */
+      svn_cl__xml_tagged_cdata(&sb, pool, "store-pristine",
+                               info->wc_info->store_pristine ? "yes" : "no");
+
       /* "<schedule> xx </schedule>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "schedule",
                                schedule_str(info->wc_info->schedule));
@@ -730,6 +757,27 @@ print_info(void *baton,
                                svn_dirent_local_style(
                                             info->wc_info->wcroot_abspath,
                                             pool)));
+
+  if (info->wc_info && info->wc_info->wc_format > 0)
+    {
+      const svn_version_t *wc_ver
+        = svn_client_wc_version_from_format(info->wc_info->wc_format, pool);
+
+      SVN_ERR(svn_cmdline_printf(pool, _("Working Copy Compatible With Version: %d.%d\n"),
+                                 wc_ver->major, wc_ver->minor));
+      SVN_ERR(svn_cmdline_printf(pool, _("Working Copy Format: %d\n"),
+                                 info->wc_info->wc_format));
+    }
+
+  if (info->wc_info)
+    {
+      if (info->wc_info->store_pristine)
+        SVN_ERR(svn_cmdline_fputs(_("Working Copy Store Pristine: yes\n"),
+                                  stdout, pool));
+      else
+        SVN_ERR(svn_cmdline_fputs(_("Working Copy Store Pristine: no\n"),
+                                  stdout, pool));
+    }
 
   if (info->URL)
     SVN_ERR(svn_cmdline_printf(pool, _("URL: %s\n"), info->URL));
@@ -1072,6 +1120,20 @@ print_info(void *baton,
 }
 
 
+/* Helper for print_info_item(): Print the value NUMBER for TARGET_PATH,
+   which may be NULL. Use POOL for temporary allocation. */
+static svn_error_t *
+print_info_item_int(int number, const char *target_path,
+                    apr_pool_t *pool)
+{
+  if (target_path)
+    SVN_ERR(svn_cmdline_printf(pool, "%-10d %s", number, target_path));
+  else
+    SVN_ERR(svn_cmdline_printf(pool, "%d", number));
+
+  return SVN_NO_ERROR;
+}
+
 /* Helper for print_info_item(): Print the value TEXT for TARGET_PATH,
    either of which may be NULL. Use POOL for temporary allocation. */
 static svn_error_t *
@@ -1205,10 +1267,16 @@ print_info_item(void *baton,
       break;
 
     case info_item_wc_root:
-      SVN_ERR(print_info_item_string(
-                  (info->wc_info && info->wc_info->wcroot_abspath
-                   ? info->wc_info->wcroot_abspath : NULL),
-                  target_path, pool));
+      {
+        const char *wc_root;
+
+        if (info->wc_info && info->wc_info->wcroot_abspath)
+          wc_root = svn_dirent_local_style(info->wc_info->wcroot_abspath, pool);
+        else
+          wc_root = NULL;
+
+        SVN_ERR(print_info_item_string(wc_root, target_path, pool));
+      }
       break;
 
     case info_item_schedule:
@@ -1225,11 +1293,41 @@ print_info_item(void *baton,
                   target_path, pool));
       break;
 
+    case info_item_wc_format:
+      SVN_ERR(print_info_item_int((info->wc_info
+                                   ? info->wc_info->wc_format : -1),
+                                  target_path, pool));
+      break;
+
+    case info_item_wc_compatible_version:
+      {
+        const svn_version_t *wc_ver
+          = svn_client_wc_version_from_format(info->wc_info->wc_format, pool);
+        const char *s = apr_psprintf(pool, "%d.%d",
+                                     wc_ver->major,
+                                     wc_ver->minor);
+        SVN_ERR(print_info_item_string(s, target_path, pool));
+      }
+      break;
+
     case info_item_changelist:
       SVN_ERR(print_info_item_string(
                   ((info->wc_info && info->wc_info->changelist)
                    ? info->wc_info->changelist : NULL),
                   target_path, pool));
+      break;
+
+    case info_item_store_pristine:
+      {
+        const char *text;
+
+        if (info->wc_info)
+          text = info->wc_info->store_pristine ? "yes" : "no";
+        else
+          text = NULL;
+
+        SVN_ERR(print_info_item_string(text, target_path, pool));
+      }
       break;
 
     default:
