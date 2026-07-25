@@ -25,26 +25,55 @@
 
 #include <apr_fnmatch.h>
 
+#include "svn_utf.h"
 #include "private/svn_string_private.h"
 #include "private/svn_utf_private.h"
 #include "svn_private_config.h"
-#define UNUSED(x) ((void)(x))
 
-#define UTF8PROC_INLINE
+#if SVN_INTERNAL_UTF8PROC
+#define UTF8PROC_STATIC
+#define UTF8PROC_DLLEXPORT static
 /* Somehow utf8proc thinks it is nice to use strlen as an argument name,
    while this function is already defined via apr.h */
 #define strlen svn__strlen_var
 #include "utf8proc/utf8proc.c"
 #undef strlen
+#else
+#include <utf8proc.h>
+#endif
 
 
-const char *svn_utf__utf8proc_version(void)
+
+const char *
+svn_utf__utf8proc_compiled_version(void)
 {
+  static const char utf8proc_version[] =
+                                  APR_STRINGIFY(UTF8PROC_VERSION_MAJOR) "."
+                                  APR_STRINGIFY(UTF8PROC_VERSION_MINOR) "."
+                                  APR_STRINGIFY(UTF8PROC_VERSION_PATCH);
+  return utf8proc_version;
+}
+
+const char *
+svn_utf__utf8proc_runtime_version(void)
+{
+#ifdef UTF8PROC_STATIC
   /* Unused static function warning removal hack. */
-  UNUSED(utf8proc_NFD);
-  UNUSED(utf8proc_NFC);
-  UNUSED(utf8proc_NFKD);
-  UNUSED(utf8proc_NFKC);
+  SVN_UNUSED(utf8proc_category_string);
+  SVN_UNUSED(utf8proc_charwidth_ambiguous);
+  SVN_UNUSED(utf8proc_grapheme_break);
+  SVN_UNUSED(utf8proc_islower);
+  SVN_UNUSED(utf8proc_isupper);
+  SVN_UNUSED(utf8proc_tolower);
+  SVN_UNUSED(utf8proc_totitle);
+  SVN_UNUSED(utf8proc_toupper);
+  SVN_UNUSED(utf8proc_unicode_version);
+  SVN_UNUSED(utf8proc_NFC);
+  SVN_UNUSED(utf8proc_NFD);
+  SVN_UNUSED(utf8proc_NFKC);
+  SVN_UNUSED(utf8proc_NFKC_Casefold);
+  SVN_UNUSED(utf8proc_NFKD);
+#endif
 
   return utf8proc_version();
 }
@@ -62,7 +91,7 @@ const char *svn_utf__utf8proc_version(void)
  * that STRING contains invalid UTF-8 or was so long that an overflow
  * occurred.
  */
-static ssize_t
+static apr_ssize_t
 unicode_decomposition(int transform_flags,
                       const char *string, apr_size_t length,
                       svn_membuf_t *buffer)
@@ -73,8 +102,8 @@ unicode_decomposition(int transform_flags,
   for (;;)
     {
       apr_int32_t *const ucs4buf = buffer->data;
-      const ssize_t ucs4len = buffer->size / sizeof(*ucs4buf);
-      const ssize_t result =
+      const apr_ssize_t ucs4len = buffer->size / sizeof(*ucs4buf);
+      const apr_ssize_t result =
         utf8proc_decompose((const void*) string, length, ucs4buf, ucs4len,
                            UTF8PROC_DECOMPOSE | UTF8PROC_STABLE
                            | transform_flags | nullterm);
@@ -101,7 +130,7 @@ decompose_normalized(apr_size_t *result_length,
                      const char *string, apr_size_t length,
                      svn_membuf_t *buffer)
 {
-  ssize_t result = unicode_decomposition(0, string, length, buffer);
+  apr_ssize_t result = unicode_decomposition(0, string, length, buffer);
   if (result < 0)
     return svn_error_create(SVN_ERR_UTF8PROC_ERROR, NULL,
                             gettext(utf8proc_errmsg(result)));
@@ -115,15 +144,30 @@ decompose_normalized(apr_size_t *result_length,
  * STRING. Upon return, BUFFER->data points at a NUL-terminated string
  * of UTF-8 characters.
  *
+ * If CASEFOLD is non-zero, perform Unicode case folding, e.g., for
+ * case-insensitive string comparison. If STRIPMARK is non-zero, strip
+ * all diacritical marks (e.g., accents) from the string.
+ *
  * A returned error may indicate that STRING contains invalid UTF-8 or
  * invalid Unicode codepoints. Any error message comes from utf8proc.
  */
 static svn_error_t *
 normalize_cstring(apr_size_t *result_length,
                   const char *string, apr_size_t length,
+                  svn_boolean_t casefold,
+                  svn_boolean_t stripmark,
                   svn_membuf_t *buffer)
 {
-  ssize_t result = unicode_decomposition(0, string, length, buffer);
+  int flags = 0;
+  apr_ssize_t result;
+
+  if (casefold)
+    flags |= UTF8PROC_CASEFOLD;
+
+  if (stripmark)
+    flags |= UTF8PROC_STRIPMARK;
+
+  result = unicode_decomposition(flags, string, length, buffer);
   if (result >= 0)
     {
       svn_membuf__resize(buffer, result * sizeof(apr_int32_t) + 1);
@@ -191,9 +235,53 @@ svn_utf__normalize(const char **result,
                    svn_membuf_t *buf)
 {
   apr_size_t result_length;
-  SVN_ERR(normalize_cstring(&result_length, str, len, buf));
+  SVN_ERR(normalize_cstring(&result_length, str, len, FALSE, FALSE, buf));
   *result = (const char*)(buf->data);
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_utf__xfrm(const char **result,
+              const char *str, apr_size_t len,
+              svn_boolean_t case_insensitive,
+              svn_boolean_t accent_insensitive,
+              svn_membuf_t *buf)
+{
+  apr_size_t result_length;
+  SVN_ERR(normalize_cstring(&result_length, str, len,
+                            case_insensitive, accent_insensitive, buf));
+  *result = (const char*)(buf->data);
+  return SVN_NO_ERROR;
+}
+
+svn_boolean_t
+svn_utf__fuzzy_glob_match(const char *str,
+                          const apr_array_header_t *patterns,
+                          svn_membuf_t *buf)
+{
+  const char *normalized;
+  svn_error_t *err;
+  int i;
+
+  /* Try to normalize case and accents in STR.
+   *
+   * If that should fail for some reason, consider STR a mismatch. */
+  err = svn_utf__xfrm(&normalized, str, strlen(str), TRUE, TRUE, buf);
+  if (err)
+    {
+      svn_error_clear(err);
+      return FALSE;
+    }
+
+  /* Now see whether it matches any/all of the patterns. */
+  for (i = 0; i < patterns->nelts; ++i)
+    {
+      const char *pattern = APR_ARRAY_IDX(patterns, i, const char *);
+      if (apr_fnmatch(pattern, normalized, 0) == APR_SUCCESS)
+        return TRUE;
+    }
+
+  return FALSE;
 }
 
 /* Decode a single UCS-4 code point to UTF-8, appending the result to BUFFER.
@@ -210,7 +298,7 @@ encode_ucs4(svn_membuf_t *buffer, apr_int32_t ucs4chr, apr_size_t *length)
   if (buffer->size - *length < 4)
     svn_membuf__resize(buffer, buffer->size + 4);
 
-  utf8len = utf8proc_encode_char(ucs4chr, ((uint8_t*)buffer->data + *length));
+  utf8len = utf8proc_encode_char(ucs4chr, ((apr_byte_t*)buffer->data + *length));
   if (!utf8len)
     return svn_error_createf(SVN_ERR_UTF8PROC_ERROR, NULL,
                              _("Invalid Unicode character U+%04lX"),
@@ -219,20 +307,14 @@ encode_ucs4(svn_membuf_t *buffer, apr_int32_t ucs4chr, apr_size_t *length)
   return SVN_NO_ERROR;
 }
 
-/* Decode an UCS-4 string to UTF-8, placing the result into BUFFER.
- * While utf8proc does have a similar function, it does more checking
- * and processing than we want here. Return the length of the result
- * (excluding the NUL terminator) in *result_length.
- *
- * A returned error indicates that the codepoint is invalid.
- */
-static svn_error_t *
-encode_ucs4_string(svn_membuf_t *buffer,
-                   apr_int32_t *ucs4str, apr_size_t len,
-                   apr_size_t *result_length)
+svn_error_t *
+svn_utf__encode_ucs4_string(svn_membuf_t *buffer,
+                            const apr_int32_t *ucs4str,
+                            apr_size_t length,
+                            apr_size_t *result_length)
 {
   *result_length = 0;
-  while (len-- > 0)
+  while (length-- > 0)
     SVN_ERR(encode_ucs4(buffer, *ucs4str++, result_length));
   svn_membuf__resize(buffer, *result_length + 1);
   ((char*)buffer->data)[*result_length] = '\0';
@@ -259,12 +341,12 @@ svn_utf__glob(svn_boolean_t *match,
                             _("Cannot use a custom escape token"
                               " in glob matching mode"));
 
-  /* Convert the patern to NFD UTF-8. We can't use the UCS-4 result
+  /* Convert the pattern to NFD UTF-8. We can't use the UCS-4 result
      because apr_fnmatch can't handle it.*/
   SVN_ERR(decompose_normalized(&tempbuf_len, pattern, pattern_len, temp_buf));
   if (!sql_like)
-    SVN_ERR(encode_ucs4_string(pattern_buf, temp_buf->data, tempbuf_len,
-                               &patternbuf_len));
+    SVN_ERR(svn_utf__encode_ucs4_string(pattern_buf, temp_buf->data,
+                                        tempbuf_len, &patternbuf_len));
   else
     {
       /* Convert a LIKE pattern to a GLOB pattern that apr_fnmatch can use. */
@@ -279,7 +361,7 @@ svn_utf__glob(svn_boolean_t *match,
         {
           const int nullterm = (escape_len == SVN_UTF__UNKNOWN_LENGTH
                                 ? UTF8PROC_NULLTERM : 0);
-          ssize_t result =
+          apr_ssize_t result =
             utf8proc_decompose((const void*) escape, escape_len, &ucs4esc, 1,
                                UTF8PROC_DECOMPOSE | UTF8PROC_STABLE | nullterm);
           if (result < 0)
@@ -339,8 +421,8 @@ svn_utf__glob(svn_boolean_t *match,
 
   /* Now normalize the string */
   SVN_ERR(decompose_normalized(&tempbuf_len, string, string_len, temp_buf));
-  SVN_ERR(encode_ucs4_string(string_buf, temp_buf->data,
-                             tempbuf_len, &tempbuf_len));
+  SVN_ERR(svn_utf__encode_ucs4_string(string_buf, temp_buf->data,
+                                      tempbuf_len, &tempbuf_len));
 
   *match = !apr_fnmatch(pattern_buf->data, string_buf->data, 0);
   return SVN_NO_ERROR;
@@ -354,7 +436,8 @@ svn_utf__is_normalized(const char *string, apr_pool_t *scratch_pool)
   apr_size_t result_length;
   const apr_size_t length = strlen(string);
   svn_membuf__create(&buffer, length * sizeof(apr_int32_t), scratch_pool);
-  err = normalize_cstring(&result_length, string, length, &buffer);
+  err = normalize_cstring(&result_length, string, length,
+                          FALSE, FALSE, &buffer);
   if (err)
     {
       svn_error_clear(err);
@@ -376,8 +459,8 @@ svn_utf__fuzzy_escape(const char *src, apr_size_t length, apr_pool_t *pool)
 
   svn_stringbuf_t *result;
   svn_membuf_t buffer;
-  ssize_t decomp_length;
-  ssize_t len;
+  apr_ssize_t decomp_length;
+  apr_ssize_t len;
 
   /* Decompose to a non-reversible compatibility format. */
   svn_membuf__create(&buffer, length * sizeof(apr_int32_t), pool);
@@ -406,7 +489,8 @@ svn_utf__fuzzy_escape(const char *src, apr_size_t length, apr_pool_t *pool)
 
           while (done < length)
             {
-              len = utf8proc_iterate((uint8_t*)src + done, length - done, &uc);
+              len = utf8proc_iterate((const utf8proc_uint8_t *)src + done,
+                                     length - done, &uc);
               if (len < 0)
                 break;
               done += len;
@@ -434,7 +518,7 @@ svn_utf__fuzzy_escape(const char *src, apr_size_t length, apr_pool_t *pool)
 
               /* Determine the length of the UTF-8 sequence */
               const char *const p = src + done;
-              len = utf8proc_utf8class[(uint8_t)*p];
+              len = utf8proc_utf8class[(apr_byte_t)*p];
 
               /* Check if the multi-byte sequence is valid UTF-8. */
               if (len > 1 && len <= (apr_ssize_t)(length - done))
@@ -522,4 +606,175 @@ svn_utf__fuzzy_escape(const char *src, apr_size_t length, apr_pool_t *pool)
     }
 
   return result->data;
+}
+
+apr_ssize_t
+svn_utf__cstring_width(apr_size_t *length, const char *cstr)
+{
+  const char *const start = cstr;
+  apr_ssize_t width = 0;
+
+  if (*cstr == '\0')
+    {
+      if (length)
+        *length = 0;
+      return 0;
+    }
+
+  /* Convert the UTF-8 string to UTF-32 (UCS4) which is the format
+   * utf8proc_charwidth() expects, and get the width of each character.
+   * utf8proc_iterate() does all the error checking we might ever need. */
+  while (*cstr)
+    {
+      utf8proc_int32_t ucs;
+      const utf8proc_ssize_t nbytes =
+        utf8proc_iterate((const utf8proc_uint8_t *)cstr, -1, &ucs);
+
+      if (nbytes < 0)
+        return -1;
+
+      cstr += nbytes;
+
+      /* Determine the width of this character and add it to the total. */
+      width += utf8proc_charwidth(ucs);
+    }
+
+  if (length)
+    *length = cstr - start;
+  return width;
+}
+
+/*
+ * Skip graphemes from the beginning of CSTR until their total width
+ * is MAX_WIDTH or less if CSTR ends earlier. If the sum of the skipped
+ * grapheme width is not exactly MAX_WIDTH, then:
+ *   if TRIM_RIGHT is TRUE, stop just _before_ MAX_WIDTH;
+ *   otherwise, stop just _after_ MAX_WIDTH.
+ * Return the total width of the skipped graphemes and set *ENDP to the
+ * start of the first grapheme in CSTR that was not skipped.
+ *
+ * CSTR may not be empty and MAX_WIDTH may not be 0.
+ * Return -1 if the examined part of CSTR is not valid UTF-8.
+ */
+static apr_ssize_t
+skip_graphemes(const char **endp,
+               const char *cstr,
+               apr_size_t max_width,
+               svn_boolean_t trim_right)
+{
+  apr_ssize_t current_width = 0;
+  apr_ssize_t next_width = 0;
+  utf8proc_int32_t state = 0;
+  utf8proc_int32_t codepoint1;
+  utf8proc_int32_t codepoint2;
+
+  const char *grapheme_end = cstr;
+  int grapheme_width = 0;
+
+  const utf8proc_uint8_t *utf8 = (const utf8proc_uint8_t *)grapheme_end;
+  utf8proc_ssize_t nbytes = utf8proc_iterate(utf8, -1, &codepoint1);
+
+  if (nbytes < 0)
+    return -1;
+
+  grapheme_width += utf8proc_charwidth(codepoint1);
+  utf8 += nbytes;
+
+  while(*utf8 && current_width < max_width)
+    {
+      nbytes = utf8proc_iterate(utf8, -1, &codepoint2);
+      if (nbytes < 0)
+        return -1;
+
+      if (utf8proc_grapheme_break_stateful(codepoint1, codepoint2, &state))
+        {
+          next_width = current_width + grapheme_width;
+          if (next_width > max_width)
+            /* Note: current_width < next_width */
+            break;
+
+          current_width = next_width;
+          grapheme_end = (const char *)utf8;
+          grapheme_width = 0;
+        }
+
+      codepoint1 = codepoint2;
+      grapheme_width += utf8proc_charwidth(codepoint1);
+      utf8 += nbytes;
+    }
+
+  /* Account for the width of the trailing part of the string. */
+  if (next_width == current_width)
+      next_width = current_width + grapheme_width;
+
+  if (current_width == max_width)
+    {
+      *endp = grapheme_end;
+      return current_width;
+    }
+  else
+    {
+      if (next_width <= max_width)
+        {
+          *endp = (const char *)utf8;
+          return next_width;
+        }
+      else
+        {
+          if (trim_right)
+            {
+              *endp = grapheme_end;
+              return current_width;
+            }
+          else
+            {
+              *endp = (const char *)utf8;
+              return next_width;
+            }
+        }
+    }
+}
+
+apr_ssize_t
+svn_utf__cstring_trim_right(const char **startp,
+                            const char **endp,
+                            const char *cstr,
+                            apr_size_t max_width)
+{
+  *startp = cstr;
+  if (!*cstr || max_width == 0)
+    {
+      *endp = cstr;
+      return 0;
+    }
+  return skip_graphemes(endp, cstr, max_width, TRUE);
+}
+
+apr_ssize_t
+svn_utf__cstring_trim_left(const char **startp,
+                           const char **endp,
+                           const char *cstr,
+                           apr_size_t max_width)
+{
+  apr_ssize_t width;
+  apr_size_t length;
+  apr_ssize_t skipped;
+
+  if (!*cstr || max_width == 0)
+    {
+      *startp = *endp = cstr;
+      return 0;
+    }
+
+  width = svn_utf__cstring_width(&length, cstr);
+  *endp = cstr + length;
+  if (width <= max_width)
+    {
+      *startp = cstr;
+      return width;
+    }
+  skipped = skip_graphemes(startp, cstr, width - max_width, FALSE);
+  if (skipped < 0)
+    return -1;
+  return width - skipped;
 }

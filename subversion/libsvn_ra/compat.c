@@ -922,9 +922,9 @@ svn_ra__get_inherited_props_walk(svn_ra_session_t *session,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *name = svn__apr_hash_index_key(hi);
-          apr_ssize_t klen = svn__apr_hash_index_klen(hi);
-          svn_string_t *value = svn__apr_hash_index_val(hi);
+          const char *name = apr_hash_this_key(hi);
+          apr_ssize_t klen = apr_hash_this_key_len(hi);
+          svn_string_t *value = apr_hash_this_val(hi);
 
           if (svn_property_kind2(name) == svn_prop_regular_kind)
             {
@@ -942,7 +942,7 @@ svn_ra__get_inherited_props_walk(svn_ra_session_t *session,
                                                          parent_url,
                                                          result_pool);
           new_iprop->prop_hash = final_hash;
-          svn_sort__array_insert(*inherited_props, &new_iprop, 0);
+          SVN_ERR(svn_sort__array_insert2(*inherited_props, &new_iprop, 0));
         }
     }
 

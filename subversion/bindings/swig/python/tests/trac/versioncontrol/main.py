@@ -154,12 +154,12 @@ class Node(object):
     Represents a directory or file in the repository.
     """
 
-    DIRECTORY = "dir"
-    FILE = "file"
+    DIRECTORY = b"dir"
+    FILE = b"file"
 
     def __init__(self, path, rev, kind):
         assert kind in (Node.DIRECTORY, Node.FILE), "Unknown node kind %s" % kind
-        self.path = str(path)
+        self.path = path
         self.rev = rev
         self.kind = kind
 
@@ -217,7 +217,7 @@ class Node(object):
     content_type = property(lambda x: x.get_content_type())
 
     def get_name(self):
-        return self.path.split('/')[-1]
+        return self.path.split(b'/')[-1]
     name = property(lambda x: x.get_name())
 
     def get_last_modified(self):
@@ -233,11 +233,11 @@ class Changeset(object):
     Represents a set of changes of a repository.
     """
 
-    ADD = 'add'
-    COPY = 'copy'
-    DELETE = 'delete'
-    EDIT = 'edit'
-    MOVE = 'move'
+    ADD = b'add'
+    COPY = b'copy'
+    DELETE = b'delete'
+    EDIT = b'edit'
+    MOVE = b'move'
 
     def __init__(self, rev, message, author, date):
         self.rev = rev

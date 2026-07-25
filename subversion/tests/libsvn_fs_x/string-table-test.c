@@ -124,19 +124,19 @@ short_string_table_body(svn_boolean_t do_load_store,
                         apr_pool_t *pool)
 {
   apr_size_t indexes[STRING_COUNT] = { 0 };
-    
+
   string_table_builder_t *builder;
   string_table_t *table;
   int i;
-  
+
   builder = svn_fs_x__string_table_builder_create(pool);
   for (i = 0; i < STRING_COUNT; ++i)
     indexes[i] = svn_fs_x__string_table_builder_add(builder, basic_strings[i], 0);
-  
+
   table = svn_fs_x__string_table_create(builder, pool);
   if (do_load_store)
     SVN_ERR(store_and_load_table(&table, pool));
-  
+
   SVN_TEST_ASSERT(indexes[2] == indexes[6]);
   for (i = 0; i < STRING_COUNT; ++i)
     {

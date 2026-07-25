@@ -89,6 +89,7 @@ AC_DEFUN(SVN_LIB_SERF,
 
   svn_lib_serf=$serf_found
 
+  SVN_DOT_CLANGD([$SVN_SERF_INCLUDES])
   AC_SUBST(SVN_SERF_INCLUDES)
   AC_SUBST(SVN_SERF_LIBS)
 ])
@@ -107,16 +108,29 @@ AC_DEFUN(SVN_SERF_PREFIX_CONFIG,
       save_ldflags="$LDFLAGS"
       LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS(-L$serf_prefix/lib)`"
       AC_CHECK_LIB($serf_major, serf_context_create,[
-        AC_TRY_COMPILE([
+        AC_MSG_CHECKING([serf library version])
+        serf_h="$serf_prefix/include/$serf_major/serf.h"
+        serf_M=`$SED -n '/define *SERF_MAJOR_VERSION/p' "$serf_h" | $SED 's/[[^0-9]]*//'`
+        serf_m=`$SED -n '/define *SERF_MINOR_VERSION/p' "$serf_h" | $SED 's/[[^0-9]]*//'`
+        serf_p=`$SED -n '/define *SERF_PATCH_VERSION/p' "$serf_h" | $SED 's/[[^0-9]]*//'`
+        SERF_VERSION=$serf_M.$serf_m.$serf_p
+        AC_MSG_RESULT([$SERF_VERSION])
+        AC_MSG_CHECKING([serf version is suitable])
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
 #include <stdlib.h>
 #include "serf.h"
-],[
 #if ! SERF_VERSION_AT_LEAST($serf_check_major, $serf_check_minor, $serf_check_patch)
 #error Serf version too old: need $serf_check_version
 #endif
-], [serf_found=yes], [AC_MSG_WARN([Serf version too old: need $serf_check_version])
-      serf_found=no])], ,
-    $SVN_APRUTIL_LIBS $SVN_APR_LIBS -lz)
+]])],[
+AC_MSG_RESULT([yes])
+serf_found=yes
+],[
+AC_MSG_RESULT([no])
+AC_MSG_WARN([Serf version too old: need $serf_check_version])
+serf_found=no
+])], ,
+    $SVN_APRUTIL_LIBS $SVN_APR_LIBS)
     LDFLAGS="$save_ldflags"])
     CPPFLAGS="$save_cppflags"
     test $serf_found = yes && break
@@ -147,7 +161,7 @@ AC_DEFUN(SVN_SERF_PKG_CONFIG,
         dnl we want to make sure that we get the library in the prefix
         dnl the user specifies and we want to allow the prefix path to
         dnl point at the path for the pc file is in (if it's in some
-        dnl other path than $serf_prefx/lib/pkgconfig).
+        dnl other path than $serf_prefix/lib/pkgconfig).
         if test -e "$serf_prefix/$serf_major.pc" ; then
           serf_pc_arg="$serf_prefix/$serf_major.pc"
         elif test -e "$serf_prefix/lib/pkgconfig/$serf_major.pc" ; then
@@ -168,8 +182,8 @@ AC_DEFUN(SVN_SERF_PKG_CONFIG,
         if $PKG_CONFIG $serf_pc_arg --atleast-version=$serf_check_version; then
           AC_MSG_RESULT([yes])
           serf_found=yes
-          SVN_SERF_INCLUDES=[`$PKG_CONFIG $serf_pc_arg --cflags | $SED -e 's/-D[^ ]*//g'`]
-          SVN_SERF_LIBS=`$PKG_CONFIG $serf_pc_arg --libs-only-l` 
+          SVN_SERF_INCLUDES=[`$PKG_CONFIG $serf_pc_arg --cflags-only-I`]
+          SVN_SERF_LIBS=[`$PKG_CONFIG $serf_pc_arg --libs-only-l`]
           dnl don't use --libs-only-L because then we might miss some options
           LDFLAGS=["$LDFLAGS `$PKG_CONFIG $serf_pc_arg --libs | $SED -e 's/-l[^ ]*//g'`"]
           break

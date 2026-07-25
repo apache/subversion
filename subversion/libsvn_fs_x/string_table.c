@@ -121,14 +121,14 @@ add_table(string_table_builder_t *builder)
 }
 
 string_table_builder_t *
-svn_fs_x__string_table_builder_create(apr_pool_t *pool)
+svn_fs_x__string_table_builder_create(apr_pool_t *result_pool)
 {
-  string_table_builder_t *result = apr_palloc(pool, sizeof(*result));
-  result->pool = pool;
-  result->tables = apr_array_make(pool, 1, sizeof(builder_table_t *));
+  string_table_builder_t *result = apr_palloc(result_pool, sizeof(*result));
+  result->pool = result_pool;
+  result->tables = apr_array_make(result_pool, 1, sizeof(builder_table_t *));
 
   add_table(result);
-  
+
   return result;
 }
 
@@ -146,7 +146,7 @@ balance(builder_table_t *table,
       node->left->right = node;
       *parent = node->left;
       node->left = temp;
-      
+
       --left_height;
     }
   else if (left_height + 1 < right_height)
@@ -284,12 +284,13 @@ svn_fs_x__string_table_builder_add(string_table_builder_t *builder,
   string = apr_pstrmemdup(builder->pool, string, len);
   if (len > MAX_SHORT_STRING_LEN)
     {
+      void *idx_void;
       svn_string_t item;
       item.data = string;
       item.len = len;
-      
-      result
-        = (apr_uintptr_t)apr_hash_get(table->long_string_dict, string, len);
+
+      idx_void = apr_hash_get(table->long_string_dict, string, len);
+      result = (apr_uintptr_t)idx_void;
       if (result)
         return result - 1
              + LONG_STRING_MASK
@@ -369,13 +370,13 @@ svn_fs_x__string_table_builder_estimate_size(string_table_builder_t *builder)
   /* ZIP compression should give us a 50% reduction.
    * add some static overhead */
   return 200 + total / 2;
- 
+
 }
 
 static void
 create_table(string_sub_table_t *target,
              builder_table_t *source,
-             apr_pool_t *pool,
+             apr_pool_t *result_pool,
              apr_pool_t *scratch_pool)
 {
   int i = 0;
@@ -386,7 +387,8 @@ create_table(string_sub_table_t *target,
 
   /* pack sub-strings */
   target->short_string_count = (apr_size_t)source->short_strings->nelts;
-  target->short_strings = apr_palloc(pool, sizeof(*target->short_strings) *
+  target->short_strings = apr_palloc(result_pool,
+                                     sizeof(*target->short_strings) *
                                            target->short_string_count);
   for (i = 0; i < source->short_strings->nelts; ++i)
     {
@@ -432,13 +434,14 @@ create_table(string_sub_table_t *target,
 
   /* pack long strings */
   target->long_string_count = (apr_size_t)source->long_strings->nelts;
-  target->long_strings = apr_palloc(pool, sizeof(*target->long_strings) *
+  target->long_strings = apr_palloc(result_pool,
+                                    sizeof(*target->long_strings) *
                                           target->long_string_count);
   for (i = 0; i < source->long_strings->nelts; ++i)
     {
       svn_string_t *string = &target->long_strings[i];
       *string = APR_ARRAY_IDX(source->long_strings, i, svn_string_t);
-      string->data = apr_pstrmemdup(pool, string->data, string->len);
+      string->data = apr_pstrmemdup(result_pool, string->data, string->len);
     }
 
   data->len += PADDING; /* add a few extra bytes at the end of the buffer
@@ -446,44 +449,29 @@ create_table(string_sub_table_t *target,
   assert(data->len < data->blocksize);
   memset(data->data + data->len - PADDING, 0, PADDING);
 
-  target->data = apr_pmemdup(pool, data->data, data->len);
+  target->data = apr_pmemdup(result_pool, data->data, data->len);
   target->data_size = data->len;
 }
 
 string_table_t *
 svn_fs_x__string_table_create(const string_table_builder_t *builder,
-                              apr_pool_t *pool)
+                              apr_pool_t *result_pool)
 {
   apr_size_t i;
-  
-  string_table_t *result = apr_pcalloc(pool, sizeof(*result));
+
+  string_table_t *result = apr_pcalloc(result_pool, sizeof(*result));
   result->size = (apr_size_t)builder->tables->nelts;
   result->sub_tables
-    = apr_pcalloc(pool, result->size * sizeof(*result->sub_tables));
+    = apr_pcalloc(result_pool, result->size * sizeof(*result->sub_tables));
 
   for (i = 0; i < result->size; ++i)
     create_table(&result->sub_tables[i],
                  APR_ARRAY_IDX(builder->tables, i, builder_table_t*),
-                 pool,
+                 result_pool,
                  builder->pool);
 
   return result;
 }
-
-/* Masks used by table_copy_string.  copy_mask[I] is used if the target
-   content to be preserved starts at byte I within the current chunk.
-   This is used to work around alignment issues.
- */
-#if SVN_UNALIGNED_ACCESS_IS_OK
-static const char *copy_masks[8] = { "\xff\xff\xff\xff\xff\xff\xff\xff",
-                                     "\x00\xff\xff\xff\xff\xff\xff\xff",
-                                     "\x00\x00\xff\xff\xff\xff\xff\xff",
-                                     "\x00\x00\x00\xff\xff\xff\xff\xff",
-                                     "\x00\x00\x00\x00\xff\xff\xff\xff",
-                                     "\x00\x00\x00\x00\x00\xff\xff\xff",
-                                     "\x00\x00\x00\x00\x00\x00\xff\xff",
-                                     "\x00\x00\x00\x00\x00\x00\x00\xff" };
-#endif
 
 static void
 table_copy_string(char *buffer,
@@ -496,40 +484,10 @@ table_copy_string(char *buffer,
     {
       assert(header->head_length <= len);
         {
-#if SVN_UNALIGNED_ACCESS_IS_OK
-          /* the sections that we copy tend to be short but we can copy
-             *all* of it chunky because we made sure that source and target
-             buffer have some extra padding to prevent segfaults. */
-          apr_uint64_t mask;
-          apr_size_t to_copy = len - header->head_length;
-          apr_size_t copied = 0;
-
-          const char *source = table->data + header->tail_start;
-          char *target = buffer + header->head_length;
-          len = header->head_length;
-
-          /* copy whole chunks */
-          while (to_copy >= copied + sizeof(apr_uint64_t))
-            {
-              *(apr_uint64_t *)(target + copied)
-                = *(const apr_uint64_t *)(source + copied);
-              copied += sizeof(apr_uint64_t);
-            }
-
-          /* copy the remainder assuming that we have up to 8 extra bytes
-             of addressable buffer on the source and target sides.
-             Now, we simply copy 8 bytes and use a mask to filter & merge
-             old with new data. */
-          mask = *(const apr_uint64_t *)copy_masks[to_copy - copied];
-          *(apr_uint64_t *)(target + copied)
-            = (*(apr_uint64_t *)(target + copied) & mask)
-            | (*(const apr_uint64_t *)(source + copied) & ~mask);
-#else
           memcpy(buffer + header->head_length,
                  table->data + header->tail_start,
                  len - header->head_length);
           len = header->head_length;
-#endif
         }
 
       header = &table->short_strings[header->head_string];
@@ -541,7 +499,7 @@ const char*
 svn_fs_x__string_table_get(const string_table_t *table,
                            apr_size_t idx,
                            apr_size_t *length,
-                           apr_pool_t *pool)
+                           apr_pool_t *result_pool)
 {
   apr_size_t table_number = idx >> TABLE_SHIFT;
   apr_size_t sub_index = idx & STRING_INDEX_MASK;
@@ -556,7 +514,7 @@ svn_fs_x__string_table_get(const string_table_t *table,
               if (length)
                 *length = sub_table->long_strings[sub_index].len;
 
-              return apr_pstrmemdup(pool,
+              return apr_pstrmemdup(result_pool,
                                     sub_table->long_strings[sub_index].data,
                                     sub_table->long_strings[sub_index].len);
             }
@@ -567,7 +525,7 @@ svn_fs_x__string_table_get(const string_table_t *table,
             {
               string_header_t *header = sub_table->short_strings + sub_index;
               apr_size_t len = header->head_length + header->tail_length;
-              char *result = apr_palloc(pool, len + PADDING);
+              char *result = apr_palloc(result_pool, len + PADDING);
 
               if (length)
                 *length = len;
@@ -578,17 +536,17 @@ svn_fs_x__string_table_get(const string_table_t *table,
         }
     }
 
-  return apr_pstrmemdup(pool, "", 0);
+  return apr_pstrmemdup(result_pool, "", 0);
 }
 
 svn_error_t *
 svn_fs_x__write_string_table(svn_stream_t *stream,
                              const string_table_t *table,
-                             apr_pool_t *pool)
+                             apr_pool_t *scratch_pool)
 {
   apr_size_t i, k;
 
-  svn_packed__data_root_t *root = svn_packed__data_create_root(pool);
+  svn_packed__data_root_t *root = svn_packed__data_create_root(scratch_pool);
 
   svn_packed__int_stream_t *table_sizes
     = svn_packed__create_int_stream(root, FALSE, FALSE);
@@ -609,7 +567,7 @@ svn_fs_x__write_string_table(svn_stream_t *stream,
   svn_packed__add_uint(table_sizes, table->size);
 
   /* all short-string char data sizes */
-  
+
   for (i = 0; i < table->size; ++i)
     svn_packed__add_uint(table_sizes,
                          table->sub_tables[i].short_string_count);
@@ -645,7 +603,7 @@ svn_fs_x__write_string_table(svn_stream_t *stream,
 
   /* write to target stream */
 
-  SVN_ERR(svn_packed__data_write(stream, root, pool));
+  SVN_ERR(svn_packed__data_write(stream, root, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -659,7 +617,7 @@ svn_fs_x__read_string_table(string_table_t **table_p,
   apr_size_t i, k;
 
   string_table_t *table = apr_palloc(result_pool, sizeof(*table));
- 
+
   svn_packed__data_root_t *root;
   svn_packed__int_stream_t *table_sizes;
   svn_packed__byte_stream_t *large_strings;
@@ -786,7 +744,7 @@ svn_fs_x__serialize_string_table(svn_temp_serializer__context_t *context,
                                         (const void * const *)&string->data,
                                         string->len + 1);
         }
-        
+
       svn_temp_serializer__pop(context);
     }
 
@@ -801,7 +759,7 @@ svn_fs_x__deserialize_string_table(void *buffer,
 {
   apr_size_t i, k;
   string_sub_table_t *sub_tables;
-  
+
   svn_temp_deserializer__resolve(buffer, (void **)table);
   if (*table == NULL)
     return;
@@ -829,7 +787,7 @@ const char*
 svn_fs_x__string_table_get_func(const string_table_t *table,
                                 apr_size_t idx,
                                 apr_size_t *length,
-                                apr_pool_t *pool)
+                                apr_pool_t *result_pool)
 {
   apr_size_t table_number = idx >> TABLE_SHIFT;
   apr_size_t sub_index = idx & STRING_INDEX_MASK;
@@ -860,7 +818,7 @@ svn_fs_x__string_table_get_func(const string_table_t *table,
               if (length)
                 *length = long_strings[sub_index].len;
 
-              return apr_pstrmemdup(pool,
+              return apr_pstrmemdup(result_pool,
                                     str_data,
                                     long_strings[sub_index].len);
             }
@@ -888,7 +846,7 @@ svn_fs_x__string_table_get_func(const string_table_t *table,
               /* reconstruct the char data and return it */
               header = table_copy.short_strings + sub_index;
               len = header->head_length + header->tail_length;
-              result = apr_palloc(pool, len + PADDING);
+              result = apr_palloc(result_pool, len + PADDING);
               if (length)
                 *length = len;
 

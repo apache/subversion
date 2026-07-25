@@ -246,10 +246,10 @@ Status: incomplete
 
   * Mark as resolved, by command: the basic "svn resolved PARENT" works to some
     extent, but needs attention.
-    Issue #3145 <http://subversion.tigris.org/issues/show_bug.cgi?id=3145>
+    Issue #3145 <https://issues.apache.org/jira/browse/SVN-3145>
 
   * Mark as resolved, interactively: not started.
-    Issue #3144 <http://subversion.tigris.org/issues/show_bug.cgi?id=3144>
+    Issue #3144 <https://issues.apache.org/jira/browse/SVN-3144>
 
 To do:
 

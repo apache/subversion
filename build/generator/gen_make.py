@@ -48,10 +48,17 @@ import gen_base
 import generator.swig.header_wrappers
 import generator.swig.checkout_swig_header
 import generator.swig.external_runtime
+from gen_pkgconfig import write_pkg_config_dot_in_files 
 
 from gen_base import build_path_join, build_path_strip, build_path_splitfile, \
       build_path_basename, build_path_dirname, build_path_retreat, unique
 
+
+def _normstr(x):
+  if os.sep == '/':
+    return os.path.normpath(str(x))
+  else:
+    return os.path.normpath(str(x).replace('/', os.sep)).replace(os.sep, '/')
 
 class Generator(gen_base.GeneratorBase):
 
@@ -202,7 +209,9 @@ class Generator(gen_base.GeneratorBase):
       swig_lang_deps[objname.lang].append(str(objname))
 
     for lang in self.swig.langs:
-      data.swig_langs.append(_eztdata(short=self.swig.short[lang],
+      data.swig_langs.append(_eztdata(name=lang,
+                                      short=self.swig.short[lang],
+                                      short_upper=self.swig.short[lang].upper(),
                                       deps=swig_lang_deps[lang]))
 
     ########################################
@@ -232,6 +241,7 @@ class Generator(gen_base.GeneratorBase):
 
       # get the source items (.o and .la) for the link unit
       objects = [ ]
+      objdeps = [ ]
       object_srcs = [ ]
       headers = [ ]
       header_classes = [ ]
@@ -263,6 +273,7 @@ class Generator(gen_base.GeneratorBase):
         elif isinstance(link_dep, gen_base.ObjectFile):
           # link in the object file
           objects.append(link_dep.filename)
+          objdeps.append(_normstr(link_dep.filename))
           for dep in self.graph.get_sources(gen_base.DT_OBJECT, link_dep, gen_base.SourceFile):
             object_srcs.append(
               build_path_join('$(abs_srcdir)', dep.filename))
@@ -291,6 +302,7 @@ class Generator(gen_base.GeneratorBase):
                             install=None,
                             add_deps=add_deps,
                             objects=objects,
+                            objdeps=objdeps,
                             deps=deps,
                             when=target_ob.when,
                             )
@@ -300,6 +312,8 @@ class Generator(gen_base.GeneratorBase):
         ezt_target.link_cmd = target_ob.link_cmd
       if hasattr(target_ob, 'output_dir'):
         ezt_target.output_dir = target_ob.output_dir
+      if hasattr(target_ob, 'headers_dir'):
+        ezt_target.headers_dir = target_ob.headers_dir
 
       # Add additional install dependencies if necessary
       if target_ob.add_install_deps:
@@ -434,7 +448,7 @@ class Generator(gen_base.GeneratorBase):
         ### we should turn AREA into an object, then test it instead of this
         if area[:5] == 'swig-' and area[-4:] != '-lib' \
            or area[:7] == 'javahl-' \
-           or area[:6] == 'cxxhl-' \
+           or area[:6] == 'svnxx-' \
            or area == 'tools':
           ezt_area.extra_install = 'yes'
 
@@ -467,11 +481,11 @@ class Generator(gen_base.GeneratorBase):
                       key=lambda t: t[0].filename)
 
     for objname, sources in obj_deps:
-      dep = _eztdata(name=str(objname),
+      dep = _eztdata(name=_normstr(objname),
                      when=objname.when,
-                     deps=list(map(str, sources)),
+                     deps=list(map(_normstr, sources)),
                      cmd=objname.compile_cmd,
-                     source=str(sources[0]))
+                     source=_normstr(sources[0]))
       data.deps.append(dep)
       dep.generated = ezt.boolean(getattr(objname, 'source_generated', 0))
 
@@ -484,7 +498,7 @@ class Generator(gen_base.GeneratorBase):
 
     self.write_transform_libtool_scripts(install_sources)
 
-    self.write_pkg_config_dot_in_files(install_sources)
+    write_pkg_config_dot_in_files(self.version, self.sections, install_sources)
 
   def write_standalone(self):
     """Write autogen-standalone.mk"""
@@ -498,7 +512,10 @@ class Generator(gen_base.GeneratorBase):
     standalone.write('top_srcdir = .\n')
     standalone.write('top_builddir = .\n')
     standalone.write('SWIG = swig\n')
-    standalone.write('PYTHON = python\n')
+    swig_py_opts = os.environ.get('SWIG_PY_OPTS',
+                                  '-python -py3 -nofastunpack -modern')
+    standalone.write('SWIG_PY_OPTS = %s\n' % (swig_py_opts))
+    standalone.write('PYTHON = ' + sys.executable + '\n')
     standalone.write('\n')
     standalone.write(open("build-outputs.mk","r").read())
     standalone.close()
@@ -596,62 +613,6 @@ DIR=`pwd`
         libs.update(('libsvn_auth_gnome_keyring', 'libsvn_auth_kwallet'))
       libdep_cache[target_name] = sorted(libs)
     return libdep_cache[target_name]
-
-  def write_pkg_config_dot_in_files(self, install_sources):
-    """Write pkg-config .pc.in files for Subversion libraries."""
-    for target_ob in install_sources:
-      if not (isinstance(target_ob, gen_base.TargetLib) and
-              target_ob.path.startswith('subversion/libsvn_')):
-        continue
-
-      lib_name = target_ob.name
-      lib_path = self.sections[lib_name].options.get('path')
-      lib_deps = self.sections[lib_name].options.get('libs')
-      lib_desc = self.sections[lib_name].options.get('description')
-      output_path = build_path_join(lib_path, lib_name + '.pc.in')
-      template = ezt.Template(os.path.join('build', 'generator', 'templates',
-                                           'pkg-config.in.ezt'),
-                              compress_whitespace=False)
-      class _eztdata(object):
-        def __init__(self, **kw):
-          vars(self).update(kw)
-
-      data = _eztdata(
-        lib_name=lib_name,
-        lib_desc=lib_desc,
-        lib_deps=[],
-        lib_required=[],
-        lib_required_private=[],
-        )
-      # libsvn_foo -> -lsvn_foo
-      data.lib_deps.append('-l%s' % lib_name.replace('lib', '', 1))
-      for lib_dep in lib_deps.split():
-        if lib_dep == 'apriconv':
-          # apriconv is part of apr-util, skip it
-          continue
-        external_lib = self.sections[lib_dep].options.get('external-lib')
-        if external_lib:
-          ### Some of Subversion's internal libraries can appear as external
-          ### libs to handle conditional compilation. Skip these for now.
-          if external_lib in ['$(SVN_RA_LIB_LINK)', '$(SVN_FS_LIB_LINK)']:
-            continue
-          # If the external library is known to support pkg-config,
-          # add it to the Required: or Required.private: section.
-          # Otherwise, add the external library to linker flags.
-          pkg_config = self.sections[lib_dep].options.get('pkg-config')
-          if pkg_config:
-            private = self.sections[lib_dep].options.get('pkg-config-private')
-            if private:
-              data.lib_required_private.append(pkg_config)
-            else:
-              data.lib_required.append(pkg_config)
-          else:
-            # $(EXTERNAL_LIB) -> @EXTERNAL_LIB@
-            data.lib_deps.append('@%s@' % external_lib[2:-1])
-        else:
-          data.lib_required_private.append(lib_dep)
-
-      template.generate(open(output_path, 'w'), data)
 
 class UnknownDependency(Exception):
   "We don't know how to deal with the dependent to link it in."

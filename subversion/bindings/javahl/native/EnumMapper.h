@@ -55,7 +55,6 @@ class EnumMapper
     toMergeinfoInheritance(jobject jInheritance);
 
   /* Converting from C enum's */
-  static jint mapCommitMessageStateFlags(apr_byte_t flags);
   static jobject mapChangePathAction(const char action);
   static jobject mapNotifyState(svn_wc_notify_state_t state);
   static jobject mapNotifyAction(svn_wc_notify_action_t action);

@@ -35,6 +35,8 @@ jobject init_iterator(jobject jiterable, bool persistent)
     return NULL;
 
   JNIEnv* env = JNIUtil::getEnv();
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
   static jmethodID iterator_mid = 0;
   if (0 == iterator_mid)
@@ -99,6 +101,8 @@ jobject Iterator::next() const
     return NULL;
 
   JNIEnv* env = JNIUtil::getEnv();
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
   static jmethodID next_mid = 0;
   if (0 == next_mid)

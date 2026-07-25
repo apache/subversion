@@ -63,6 +63,7 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
  * Expects a @c svn_cmdline_prompt_baton2_t to be passed as @a baton.
  *
  * @since New in 1.6.
+ * @deprecated Only used by old libgome-keyring implementation.
  */
 svn_error_t *
 svn_cmdline__auth_gnome_keyring_unlock_prompt(char **keyring_password,
@@ -88,11 +89,15 @@ typedef struct svn_cmdline__config_argument_t
  * containing svn_cmdline__config_argument_t* elements, allocating the option
  * data in @a pool
  *
+ * [Since 1.9:] If the file, section, or option value is not recognized,
+ * warn to @c stderr, using @a prefix as in svn_handle_warning2().
+ *
  * @since New in 1.7.
  */
 svn_error_t *
 svn_cmdline__parse_config_option(apr_array_header_t *config_options,
                                  const char *opt_arg,
+                                 const char *prefix,
                                  apr_pool_t *pool);
 
 /** Sets the config options in @a config_options, an apr array containing
@@ -209,17 +214,114 @@ svn_cmdline__getopt_init(apr_getopt_t **os,
                          const char *argv[],
                          apr_pool_t *pool);
 
-/* Determine whether interactive mode should be enabled, based on whether
- * the user passed the --non-interactive or --force-interactive options.
- * If neither option was passed, interactivity is enabled if standard
- * input is connected to a terminal device.
+/*  */
+svn_boolean_t
+svn_cmdline__stdin_is_a_terminal(void);
+
+/*  */
+svn_boolean_t
+svn_cmdline__stdout_is_a_terminal(void);
+
+/*  */
+svn_boolean_t
+svn_cmdline__stderr_is_a_terminal(void);
+
+/* Adjusts boolean described by @a non_interactive to whether interactive
+ * mode should be disabled, based on whether the user passed the
+ * --non-interactive or --force-interactive options. If neither option
+ * was passed, interactivity is enabled if standard input is connected to a terminal device.
+ *
+ * If both, @a non_interactive and @a force_interactive are @c TRUE, an
+ * @c SVN_ERR_CL_ARG_PARSING_ERROR error will be returned.
  *
  * @since New in 1.8.
  */
-svn_boolean_t
-svn_cmdline__be_interactive(svn_boolean_t non_interactive,
+svn_error_t *
+svn_cmdline__be_interactive(svn_boolean_t *non_interactive,
                             svn_boolean_t force_interactive);
 
+/* Parses the argument value of '--trust-server-cert-failures' OPT_ARG into
+ * the expected booleans for passing to svn_cmdline_create_auth_baton2()
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_cmdline__parse_trust_options(
+                        svn_boolean_t *trust_server_cert_unknown_ca,
+                        svn_boolean_t *trust_server_cert_cn_mismatch,
+                        svn_boolean_t *trust_server_cert_expired,
+                        svn_boolean_t *trust_server_cert_not_yet_valid,
+                        svn_boolean_t *trust_server_cert_other_failure,
+                        const char *opt_arg,
+                        apr_pool_t *scratch_pool);
+
+/* Setup signal handlers for signals such as SIGINT and return a
+   cancellation handler function.  This also sets some other signals
+   to be ignored. */
+svn_cancel_func_t
+svn_cmdline__setup_cancellation_handler(void);
+
+/* Set the handlers for signals such as SIGINT back to default. */
+void
+svn_cmdline__disable_cancellation_handler(void);
+
+/* Exit this process with a status that indicates the cancellation
+   signal, or return without exiting if there is no signal.  This
+   allows the shell to use WIFSIGNALED and WTERMSIG to detect the
+   signal.  See http://www.cons.org/cracauer/sigint.html */
+void
+svn_cmdline__cancellation_exit(void);
+
+/** Reads a string from stdin until a newline or EOF is found
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_cmdline__stdin_readline(const char **result,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+#if defined(WIN32)
+/* Normalizes Windows-specific command line arguments, such as those passed
+   to wmain(), to the environment-specific code page. */
+svn_error_t *
+svn_cmdline__win32_get_cstring_argv(const char **cstring_argv_p[],
+                                    int argc,
+                                    const wchar_t *argv[],
+                                    apr_pool_t *result_pool);
+
+svn_error_t *
+svn_cmdline__win32_get_utf8_argv(const char **utf8_argv_p[],
+                                 int argc,
+                                 const wchar_t *argv[],
+                                 apr_pool_t *result_pool);
+#endif
+
+/* Default platform-agnostic handler that normalizes command line arguments
+   to the environment-specific code page. */
+svn_error_t *
+svn_cmdline__default_get_cstring_argv(const char **cstring_argv_p[],
+                                      int argc,
+                                      const char *argv[],
+                                      apr_pool_t *result_pool);
+
+svn_error_t *
+svn_cmdline__default_get_utf8_argv(const char **utf8_argv_p[],
+                                   int argc,
+                                   const char *argv[],
+                                   apr_pool_t *result_pool);
+
+#if defined(WIN32) && defined(_MSC_VER)
+typedef wchar_t svn_cmdline__argv_char_t;
+#define SVN_CMDLINE__MAIN wmain
+#define svn_cmdline__get_cstring_argv svn_cmdline__win32_get_cstring_argv
+#define svn_cmdline__get_utf8_argv svn_cmdline__win32_get_utf8_argv
+#else
+typedef char svn_cmdline__argv_char_t;
+#define SVN_CMDLINE__MAIN main
+#define svn_cmdline__get_cstring_argv svn_cmdline__default_get_cstring_argv
+#define svn_cmdline__get_utf8_argv svn_cmdline__default_get_utf8_argv
+#endif
 
 #ifdef __cplusplus
 }

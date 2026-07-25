@@ -2,7 +2,7 @@
 # core.py: public Python interface for core components
 #
 # Subversion is a tool for revision control.
-# See http://subversion.apache.org for more information.
+# See https://subversion.apache.org for more information.
 #
 ######################################################################
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -27,18 +27,10 @@ from libsvn.core import *
 import libsvn.core as _libsvncore
 import atexit as _atexit
 import sys
+
 # __all__ is defined later, since some svn_* functions are implemented below.
 
-
 class SubversionException(Exception):
-
-  # Python 2.6 deprecated BaseException.message, which we inadvertently use.
-  # We override it here, so the users of this class are spared from
-  # DeprecationWarnings.
-  # Note that BaseException.message is not deprecated in Python 2.5, and
-  # isn't present in all other versions.
-  if sys.version_info[0:2] == (2, 6):
-    message = None
 
   def __init__(self, message=None, apr_err=None, child=None,
                file=None, line=None):
@@ -97,6 +89,20 @@ class SubversionException(Exception):
       child = cls(message, apr_err, child, file, line)
     return child
 
+# This function is useful for common Python 2/3 code. It prevents the double
+# memory hit of simply wrapping values/keys/items calls on dictionaries on
+# python 2, but ensuring an independent list is returned in Python 3.
+def _as_list(seq):
+  """Returns the given sequence or iterator as a list.
+
+  If already a list, simply returns the list, otherwise a list is constructed
+  using the given object.
+  """
+  if isinstance(seq, list):
+    return seq
+
+  return list(seq)
+
 def _cleanup_application_pool():
   """Cleanup the application pool before exiting"""
   if application_pool and application_pool.valid():
@@ -104,7 +110,7 @@ def _cleanup_application_pool():
 _atexit.register(_cleanup_application_pool)
 
 def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
-  for name, value in symbol_dict.items():
+  for name, value in _as_list(symbol_dict.items()):
     if name.startswith(from_prefix):
       symbol_dict[to_prefix + name[len(from_prefix):]] = value
 
@@ -149,7 +155,7 @@ def svn_path_compare_paths(path1, path2):
 
   # Common prefix was skipped above, next character is compared to
   # determine order
-  return cmp(char1, char2)
+  return (char1 > char2) - (char1 < char2)
 
 def svn_mergeinfo_merge(mergeinfo, changes):
   return _libsvncore.svn_swig_mergeinfo_merge(mergeinfo, changes)
@@ -169,6 +175,8 @@ class Stream:
     self._stream = stream
 
   def read(self, amt=None):
+    if self._stream is None:
+      raise ValueError
     if amt is None:
       # read the rest of the stream
       chunks = [ ]
@@ -177,14 +185,21 @@ class Stream:
         if not data:
           break
         chunks.append(data)
-      return ''.join(chunks)
+      return b''.join(chunks)
 
     # read the amount specified
     return svn_stream_read(self._stream, int(amt))
 
   def write(self, buf):
+    if self._stream is None:
+      raise ValueError
     ### what to do with the amount written? (the result value)
     svn_stream_write(self._stream, buf)
+
+  def close(self):
+    if self._stream is not None:
+      svn_stream_close(self._stream)
+      self._stream = None
 
 def secs_from_timestr(svn_datetime, pool=None):
   """Convert a Subversion datetime string into seconds since the Epoch."""
@@ -193,7 +208,7 @@ def secs_from_timestr(svn_datetime, pool=None):
   # ### convert to a time_t; this requires intimate knowledge of
   # ### the apr_time_t type
   # ### aprtime is microseconds; turn it into seconds
-  return aprtime / 1000000
+  return aprtime // 1000000
 
 
 # ============================================================================
@@ -316,13 +331,12 @@ def run_app(func, *args, **kw):
 # 'apr_pool_clear' 'apr_pool_destroy' 'apr_pool_t'
 # 'apr_time_ansi_put'
 # 'run_app'
-# 'svn__apr_hash_index_key' 'svn__apr_hash_index_klen' 'svn__apr_hash_index_val'
-# 'svn_relpath__internal_style' 'svn_uri__is_ancestor'
+# 'svn_uri__is_ancestor'
 # 'svn_tristate__from_word' 'svn_tristate__to_word'
-__all__ = filter(lambda s: (s.startswith('svn_')
-                            or s.startswith('SVN_')
-                            or s.startswith('SVNSYNC_')
-                            or s in ('Pool', 'SubversionException'))
-                           and '__' not in s,
-                 locals())
+__all__ = [s for s in _as_list(locals())
+           if (s.startswith('svn_')
+               or s.startswith('SVN_')
+               or s.startswith('SVNSYNC_')
+               or s in ('Pool', 'SubversionException'))
+           and '__' not in s]
 

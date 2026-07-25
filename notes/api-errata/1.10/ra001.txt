@@ -1,0 +1,32 @@
+API ERRATA -- $Id$
+
+Root Cause of Errata: implementation/docstring mismatch
+ Library(s) Affected: libsvn_ra_local, libsvn_client
+Function(s) Affected: svn_ra_get_dir2, svn_client_list4, svn_client_info4
+     New Behavior in: 1.10
+      Related Issues: n/a
+
+
+== Details ==
+
+The docstring for svn_dirent_t.size stated that the value would be 0
+for directories. However, the ra_svn and ra_serf layers would use -1
+(SVN_INVALID_FILESIZE). This is also the default value set by
+svn_dirent_create. Ra_local was the only implementation that complied
+to the original docstring.
+
+For the 1.10 release, the docstring has been updated to match the
+majority implementation: set svn_dirent_t.size to SVN_INVALID_FILESIZE
+for directories. The ra_local code has been updated to comply to the
+new docstring.
+
+
+== Impact on API Users ==
+
+Because the size of directories does not carry meaningful information
+and was set differently by different RA implementations, the range of
+affected users will be limited.
+
+API users that only tested against the file:// protocol should review
+their use of the svn_dirent_t.size for non-file nodes (.kind element).
+

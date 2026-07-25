@@ -27,8 +27,6 @@
 #ifndef SVN_MUTEX_H
 #define SVN_MUTEX_H
 
-#include <apr_thread_mutex.h>
-
 #include "svn_error.h"
 
 #ifdef __cplusplus
@@ -54,16 +52,13 @@ typedef struct svn_mutex__t svn_mutex__t;
  * We don't support recursive locks, i.e. a thread may not acquire the same
  * mutex twice without releasing it in between.  Attempts to lock a mutex
  * recursively will cause lock ups and other undefined behavior on some
- * systems.  If @a checked is set, svn_mutex__lock() will try to detect that
- * situation and return an error.  However, this comes with some system
- * dependent overhead and may not detect all violations.
+ * systems.
  *
  * If threading is not supported by APR, this function is a no-op.
  */
 svn_error_t *
 svn_mutex__init(svn_mutex__t **mutex,
                 svn_boolean_t mutex_required,
-                svn_boolean_t checked,
                 apr_pool_t *result_pool);
 
 /** Acquire the @a mutex, if that has been enabled in svn_mutex__init().
@@ -108,6 +103,17 @@ do {                                                    \
   SVN_ERR(svn_mutex__lock(svn_mutex__m));               \
   SVN_ERR(svn_mutex__unlock(svn_mutex__m, (expr)));     \
 } while (0)
+
+#if APR_HAS_THREADS
+
+/** Return the APR mutex encapsulated in @a mutex.
+ *
+ * @note This function should only be called by APR wrapper code.
+ */
+apr_thread_mutex_t *
+svn_mutex__get(svn_mutex__t *mutex);
+
+#endif
 
 #ifdef __cplusplus
 }

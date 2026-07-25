@@ -21,15 +21,16 @@
  * svn_repos.i: SWIG interface file for svn_repos.h
  */
 
+%include svn_global.swg
+
 #if defined(SWIGPYTHON)
-%module(package="libsvn") repos
+%module(package="libsvn", moduleimport=SVN_PYTHON_MODULEIMPORT) repos
 #elif defined(SWIGPERL)
 %module "SVN::_Repos"
 #elif defined(SWIGRUBY)
 %module "svn::ext::repos"
 #endif
 
-%include svn_global.swg
 %import core.i
 %import svn_delta.i
 %import svn_fs.i
@@ -109,6 +110,16 @@
 #endif
 
 /* -----------------------------------------------------------------------
+   Tweak a SubversionException instance (See svn_fs.i for detail).
+*/
+
+#ifdef SWIGPYTHON
+%apply svn_error_t *SVN_ERR_WITH_ATTRS  {
+    svn_error_t * svn_repos_fs_commit_txn
+};
+#endif
+
+/* -----------------------------------------------------------------------
    handle svn_repos_get_committed_info().
 */
 #ifdef SWIGRUBY
@@ -147,8 +158,16 @@ svn_error_t *svn_repos_dump_fs2(svn_repos_t *repos,
 %ignore svn_repos_dump_fs2;
 #endif
 
+/* ----------------------------------------------------------------------- */
+#ifdef SWIGPYTHON
+/* Make swig wrap this function for us, to allow making a vtable in python */
+void svn_swig_py_make_parse_fns3(const svn_repos_parse_fns3_t **parse_fns3,
+                                 apr_pool_t *pool);
+#endif
+
 %include svn_repos_h.swg
 
 #ifdef SWIGRUBY
 %define_close_related_methods(repos)
 #endif
+

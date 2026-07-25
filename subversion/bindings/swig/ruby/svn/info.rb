@@ -327,7 +327,7 @@ module Svn
         @type = type
         @added_line = 0
         @deleted_line = 0
-        @body = ""
+        @body = String.new
       end
 
       def count_up_added_line!

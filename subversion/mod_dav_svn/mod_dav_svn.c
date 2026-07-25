@@ -105,6 +105,7 @@ typedef struct dir_conf_t {
   enum conf_flag txdelta_cache;      /* whether to enable txdelta caching */
   enum conf_flag fulltext_cache;     /* whether to enable fulltext caching */
   enum conf_flag revprop_cache;      /* whether to enable revprop caching */
+  enum conf_flag nodeprop_cache;     /* whether to enable nodeprop caching */
   enum conf_flag block_read;         /* whether to enable block read mode */
   const char *hooks_env;             /* path to hook script env config file */
 } dir_conf_t;
@@ -136,11 +137,39 @@ init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
       return HTTP_INTERNAL_SERVER_ERROR;
     }
 
+  serr = svn_repos_authz_initialize(p);
+  if (serr)
+    {
+      ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err, p,
+               "mod_dav_svn: error calling svn_repos_authz_initialize: '%s'",
+                    serr->message ? serr->message : "(no more info)");
+      return HTTP_INTERNAL_SERVER_ERROR;
+    }
+
   /* This returns void, so we can't check for error. */
   conf = ap_get_module_config(s->module_config, &dav_svn_module);
   svn_utf_initialize2(conf->use_utf8, p);
 
   return OK;
+}
+
+static svn_error_t *
+malfunction_handler(svn_boolean_t can_return,
+                    const char *file, int line,
+                    const char *expr)
+{
+  if (expr)
+    ap_log_error(APLOG_MARK, APLOG_CRIT, 0, NULL,
+                 "mod_dav_svn: file '%s', line %d, assertion \"%s\" failed",
+                 file, line, expr);
+  else
+    ap_log_error(APLOG_MARK, APLOG_CRIT, 0, NULL,
+                 "mod_dav_svn: file '%s', line %d, internal malfunction",
+                 file, line);
+  abort();
+
+  /* Should not be reached. */
+  return SVN_NO_ERROR;
 }
 
 static int
@@ -161,6 +190,8 @@ init_dso(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp)
       svn_error_clear(serr);
       return HTTP_INTERNAL_SERVER_ERROR;
     }
+
+  svn_error_set_malfunction_handler(malfunction_handler);
 
   return OK;
 }
@@ -200,6 +231,9 @@ merge_server_config(apr_pool_t *p, void *base, void *overrides)
       newconf->compression_level = child->compression_level;
     }
 
+  newconf->use_utf8 = INHERIT_VALUE(parent, child, use_utf8);
+  svn_utf_initialize2(newconf->use_utf8, p);
+
   return newconf;
 }
 
@@ -219,6 +253,7 @@ create_dir_config(apr_pool_t *p, char *dir)
   conf->v2_protocol = CONF_FLAG_DEFAULT;
   conf->hooks_env = NULL;
   conf->txdelta_cache = CONF_FLAG_DEFAULT;
+  conf->nodeprop_cache = CONF_FLAG_DEFAULT;
 
   return conf;
 }
@@ -249,17 +284,22 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->txdelta_cache = INHERIT_VALUE(parent, child, txdelta_cache);
   newconf->fulltext_cache = INHERIT_VALUE(parent, child, fulltext_cache);
   newconf->revprop_cache = INHERIT_VALUE(parent, child, revprop_cache);
-  newconf->block_read = INHERIT_VALUE(parent, child, block_read);  
+  newconf->nodeprop_cache = INHERIT_VALUE(parent, child, nodeprop_cache);
+  newconf->block_read = INHERIT_VALUE(parent, child, block_read);
   newconf->root_dir = INHERIT_VALUE(parent, child, root_dir);
   newconf->hooks_env = INHERIT_VALUE(parent, child, hooks_env);
 
   if (parent->fs_path)
     ap_log_error(APLOG_MARK, APLOG_WARNING, 0, NULL,
-                 "mod_dav_svn: nested Location '%s' hinders access to '%s' "
-                 "in SVNPath Location '%s'",
+                 "mod_dav_svn: Location '%s' hinders access to '%s' "
+                 "in parent SVNPath Location '%s'%s",
                  child->root_dir,
                  svn_urlpath__skip_ancestor(parent->root_dir, child->root_dir),
-                 parent->root_dir);
+                 parent->root_dir,
+                 (strcmp(child->root_dir, parent->root_dir) == 0)
+                   ? " (or the subversion-specific configuration"
+                     " is included twice into httpd.conf)"
+                   : "");
 
   return newconf;
 }
@@ -546,6 +586,19 @@ SVNCacheRevProps_cmd(cmd_parms *cmd, void *config, int arg)
 }
 
 static const char *
+SVNCacheNodeProps_cmd(cmd_parms *cmd, void *config, int arg)
+{
+  dir_conf_t *conf = config;
+
+  if (arg)
+    conf->nodeprop_cache = CONF_FLAG_ON;
+  else
+    conf->nodeprop_cache = CONF_FLAG_OFF;
+
+  return NULL;
+}
+
+static const char *
 SVNBlockRead_cmd(cmd_parms *cmd, void *config, int arg)
 {
   dir_conf_t *conf = config;
@@ -662,9 +715,10 @@ dav_svn__get_fs_parent_path(request_rec *r)
 
 
 AP_MODULE_DECLARE(dav_error *)
-dav_svn_get_repos_path(request_rec *r,
-                       const char *root_path,
-                       const char **repos_path)
+dav_svn_get_repos_path2(request_rec *r,
+                        const char *root_path,
+                        const char **repos_path,
+                        apr_pool_t *pool)
 {
 
   const char *fs_path;
@@ -692,19 +746,26 @@ dav_svn_get_repos_path(request_rec *r,
 
   /* Split the svn URI to get the name of the repository below
      the parent path. */
-  derr = dav_svn_split_uri(r, r->uri, root_path,
-                           &ignored_cleaned_uri, &ignored_had_slash,
-                           &repos_name,
-                           &ignored_relative, &ignored_path_in_repos);
+  derr = dav_svn_split_uri2(r, r->uri, root_path,
+                            &ignored_cleaned_uri, &ignored_had_slash,
+                            &repos_name,
+                            &ignored_relative, &ignored_path_in_repos, pool);
   if (derr)
     return derr;
 
   /* Construct the full path from the parent path base directory
      and the repository name. */
-  *repos_path = svn_dirent_join(fs_parent_path, repos_name, r->pool);
+  *repos_path = svn_dirent_join(fs_parent_path, repos_name, pool);
   return NULL;
 }
 
+AP_MODULE_DECLARE(dav_error *)
+dav_svn_get_repos_path(request_rec *r,
+                       const char *root_path,
+                       const char **repos_path)
+{
+  return dav_svn_get_repos_path2(r, root_path, repos_path, r->pool);
+}
 
 const char *
 dav_svn__get_repo_name(request_rec *r)
@@ -720,6 +781,15 @@ const char *
 dav_svn__get_root_dir(request_rec *r)
 {
   dir_conf_t *conf;
+#if AP_MODULE_MAGIC_AT_LEAST(20120211, 139)
+  const char *base;
+
+  /* Inherit the root path from mod_dav's DavBasePath iff configured
+     where e.g. LocationMatch is used for the repos. */
+  base = dav_get_base_path(r);
+  if (base)
+    return base;
+#endif
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
   return conf->root_dir;
@@ -869,21 +939,6 @@ dav_svn__check_httpv2_support(request_rec *r)
 }
 
 
-svn_boolean_t
-dav_svn__check_ephemeral_txnprops_support(request_rec *r)
-{
-  svn_version_t *version = dav_svn__get_master_version(r);
-
-  /* We know this server supports ephemeral txnprops.  But if we're
-     proxying requests to a master server, we need to see if it
-     supports them, too.  */
-  if (version && (! svn_version__at_least(version, 1, 8, 0)))
-    return FALSE;
-
-  return TRUE;
-}
-
-
 /* FALSE if path authorization should be skipped.
  * TRUE if either the bypass or the apache subrequest methods should be used.
  */
@@ -949,7 +1004,9 @@ dav_svn__get_fulltext_cache_flag(request_rec *r)
   dir_conf_t *conf;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->fulltext_cache == CONF_FLAG_ON;
+
+  /* fulltext caching is enabled by default. */
+  return get_conf_flag(conf->fulltext_cache, TRUE);
 }
 
 
@@ -959,9 +1016,21 @@ dav_svn__get_revprop_cache_flag(request_rec *r)
   dir_conf_t *conf;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->revprop_cache == CONF_FLAG_ON;
+
+  /* revprop caching is enabled by default. */
+  return get_conf_flag(conf->revprop_cache, TRUE);
 }
 
+svn_boolean_t
+dav_svn__get_nodeprop_cache_flag(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+
+  /* node properties caching is enabled by default. */
+  return get_conf_flag(conf->nodeprop_cache, TRUE);
+}
 
 svn_boolean_t
 dav_svn__get_block_read_flag(request_rec *r)
@@ -969,7 +1038,9 @@ dav_svn__get_block_read_flag(request_rec *r)
   dir_conf_t *conf;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->block_read == CONF_FLAG_ON;
+
+  /* the block-read feature is disabled by default. */
+  return get_conf_flag(conf->block_read, FALSE);
 }
 
 int
@@ -1163,7 +1234,7 @@ static int dav_svn__translate_name(request_rec *r)
   else
     {
       /* Retrieve path to repo and within repo for the request */
-      dav_error *err = dav_svn_split_uri(r, r->uri, conf->root_dir,
+      dav_error *err = dav_svn_split_uri(r, r->uri, dav_svn__get_root_dir(r),
                                          &ignore_cleaned_uri,
                                          &ignore_had_slash, &repos_basename,
                                          &ignore_relative_path, &repos_path);
@@ -1200,7 +1271,7 @@ static int dav_svn__translate_name(request_rec *r)
 
   /* Leave a note to ourselves so that we know not to decline in the
    * map_to_storage hook. */
-  apr_table_setn(r->notes, NO_MAP_TO_STORAGE_NOTE, (const char*)1);
+  apr_table_setn(r->notes, NO_MAP_TO_STORAGE_NOTE, "1");
   return OK;
 }
 
@@ -1314,6 +1385,13 @@ static const command_rec cmds[] =
                "(default is Off)."),
 
   /* per directory/location */
+  AP_INIT_FLAG("SVNCacheNodeProps", SVNCacheNodeProps_cmd, NULL,
+               ACCESS_CONF|RSRC_CONF,
+               "speeds up data access by caching node properties "
+               "if sufficient in-memory cache is available"
+               "(default is On)."),
+
+  /* per directory/location */
   AP_INIT_FLAG("SVNBlockRead", SVNBlockRead_cmd, NULL,
                ACCESS_CONF|RSRC_CONF,
                "speeds up operations of FSFS 1.9+ repositories if large"
@@ -1324,8 +1402,8 @@ static const command_rec cmds[] =
   AP_INIT_TAKE1("SVNInMemoryCacheSize", SVNInMemoryCacheSize_cmd, NULL,
                 RSRC_CONF,
                 "specifies the maximum size in kB per process of Subversion's "
-                "in-memory object cache (default value is 16384; 0 deactivates "
-                "the cache)."),
+                "in-memory object cache (default value is 16384; 0 switches "
+                "to dynamically sized caches)."),
   /* per server */
   AP_INIT_TAKE1("SVNCompressionLevel", SVNCompressionLevel_cmd, NULL,
                 RSRC_CONF,
@@ -1402,7 +1480,7 @@ register_hooks(apr_pool_t *pconf)
   /* translate_name hook is LAST so that it doesn't interfere with modules
    * like mod_alias that are MIDDLE. */
   ap_hook_translate_name(dav_svn__translate_name, NULL, NULL, APR_HOOK_LAST);
-  /* map_to_storage hook is LAST to avoid interferring with mod_http's
+  /* map_to_storage hook is LAST to avoid interfering with mod_http's
    * handling of OPTIONS and TRACE. */
   ap_hook_map_to_storage(dav_svn__map_to_storage, NULL, NULL, APR_HOOK_LAST);
 }

@@ -36,7 +36,7 @@ import re
 
 try:
   from svn import core
-except ImportError, e:
+except ImportError as e:
   sys.stderr.write("ERROR: Unable to import Subversion's Python bindings: '%s'\n" \
                    "Hint: Set your PYTHONPATH environment variable, or adjust your " \
                    "PYTHONSTARTUP\nfile to point to your Subversion install " \
@@ -95,6 +95,8 @@ def print_error(code):
   except KeyError:
     if code == -41:
       print("Sit by a lake.")
+    elif code >= 120100 and code < 121000:
+      print('%08d  <error code from libserf; see serf.h>' % (code))
     else:
       print('%08d  *** UNKNOWN ERROR CODE ***' % (code))
 

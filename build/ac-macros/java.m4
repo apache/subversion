@@ -62,10 +62,13 @@ AC_DEFUN(SVN_FIND_JDK,
   JDK_SUITABLE=no
   AC_MSG_CHECKING([for JDK])
   if test $where = check; then
-    dnl Prefer /Library/Java/Home first to try to be nice on Darwin.
-    dnl We'll correct later if we get caught in the tangled web of JAVA_HOME.
+    dnl Prefer /usr/libexec/java_home, then /Library/Java/Home first
+    dnl to try to be nice on Darwin.  We'll correct later if we get
+    dnl caught in the tangled web of JAVA_HOME.
     if test -x "$JAVA_HOME/bin/java"; then
       JDK="$JAVA_HOME"
+    elif test -x "/usr/libexec/java_home"; then
+      JDK=`/usr/libexec/java_home`
     elif test -x "/Library/Java/Home/bin/java"; then
       JDK="/Library/Java/Home"
     elif test -x "/usr/bin/java"; then
@@ -148,54 +151,58 @@ AC_DEFUN(SVN_FIND_JDK,
     JAVADOC="$JAVA_BIN/javadoc"
     JAR="$JAVA_BIN/jar"
 
-    dnl Prefer Jikes (for speed) if available.
-    jikes_options="/usr/local/bin/jikes /usr/bin/jikes"
+    dnl Once upon a time we preferred Jikes for speed.
+    dnl Jikes is dead, long live Jikes!
     AC_ARG_WITH(jikes,
                 AS_HELP_STRING([--with-jikes=PATH],
-                               [Specify the path to a jikes binary to use
-                                it as your Java compiler.  The default is to
-                                look for jikes (PATH optional).  This behavior
-                                can be switched off by supplying 'no'.]),
+                   [Deprecated. Provided for backward compatibility.]),
     [
-        if test "$withval" != "no" && test "$withval" != "yes"; then
-          dnl Assume a path was provided.
-          jikes_options="$withval $jikes_options"
-        fi
-        requested_jikes="$withval"  # will be 'yes' if path unspecified
-    ])
-    if test "$requested_jikes" != "no"; then
-      dnl Look for a usable jikes binary.
-      for jikes in $jikes_options; do
-        if test -z "$jikes_found" && test -x "$jikes"; then
-          jikes_found="yes"
-          JAVAC="$jikes"
-          JAVA_CLASSPATH="$JRE_LIB_DIR"
-          for jar in $JRE_LIB_DIR/*.jar; do
-            JAVA_CLASSPATH="$JAVA_CLASSPATH:$jar"
-          done
-        fi
-      done
-    fi
-    if test -n "$requested_jikes" && test "$requested_jikes" != "no"; then
-      dnl Jikes was explicitly requested.  Verify that it was provided.
-      if test -z "$jikes_found"; then
-        AC_MSG_ERROR([Could not find a usable version of Jikes])
-      elif test -n "$jikes_found" && test "$requested_jikes" != "yes" &&
-           test "$JAVAC" != "$requested_jikes"; then
-        AC_MSG_WARN([--with-jikes PATH was invalid, substitute found])
+      if test "$withval" != "no"; then
+        AC_MSG_WARN([The --with-jikes option was ignored])
       fi
+    ])
+
+    dnl Get the Java release version
+    java_version=[`"$JDK/bin/java" -version 2>&1 | $HEAD -1 | $SED -e 's/^[^0-9]*//' -e 's/\.[^.]*$//'`]
+    java_major=[`echo $java_version | $SED -e 's/\.[^.]*$//'`]
+    java_minor=[`echo $java_version | $SED -e 's/^[^.]*\.//'`]
+    dnl versions older than 11 report '1.V.x' instead of 'V.x.y'
+    if test "$java_major" -eq 1; then
+      java_release="$java_minor"
+    else
+      java_release="$java_major"
+      java_version="$java_release"
+    fi
+    AC_MSG_NOTICE([Compiling with Java $java_version for target Java $JAVA_OLDEST_WORKING_VER])
+
+    dnl Java 24 and above restrict native access.
+    dnl See: https://inside.java/2024/12/09/quality-heads-up/
+    if test "$java_release" -ge 24; then
+      JAVAHL_CHECK_FLAGS='--module-path "$(abs_builddir)/$(JAVAHL_JAR)"'
+      JAVAHL_CHECK_FLAGS="$JAVAHL_CHECK_FLAGS --add-modules org.apache.subversion.javahl"
+      JAVAHL_CHECK_FLAGS="$JAVAHL_CHECK_FLAGS --enable-native-access=org.apache.subversion.javahl"
+      JAVAHL_CHECK_FLAGS="$JAVAHL_CHECK_FLAGS --illegal-native-access=deny"
     fi
 
     dnl Add javac flags.
-    # The release for "-source" could actually be greater than that
-    # of "-target", if we want to cross-compile for lesser JVMs.
     if test -z "$JAVAC_FLAGS"; then
-      JAVAC_FLAGS="-target $JAVA_OLDEST_WORKING_VER -source 1.5"
+      dnl The release for "-source" could actually be greater than that
+      dnl of "-target", if we want to cross-compile for lesser JVMs.
+      if test "$java_release" -lt 9; then
+        JAVAC_FLAGS="-target $JAVA_OLDEST_WORKING_VER -source 1.8"
+      else
+        java_oldest_release=[`echo $JAVA_OLDEST_WORKING_VER | $SED -e 's/^1\.//'`]
+        JAVAC_FLAGS="--release $java_oldest_release"
+      fi
+
       if test "$enable_debugging" = "yes"; then
         JAVAC_FLAGS="-g -Xlint -Xlint:unchecked -Xlint:serial -Xlint:path $JAVAC_FLAGS"
-        if test -z "$JAVAC_COMPAT_FLAGS"; then
-          JAVAC_COMPAT_FLAGS="$JAVAC_FLAGS -Xlint:-unchecked -Xlint:-deprecation -Xlint:-dep-ann -Xlint:-rawtypes"
-        fi
+      else
+        dnl Ignore warnings about deprecated version 8 (from --release 8)
+        JAVAC_FLAGS="-Xlint:-options $JAVAC_FLAGS"
+      fi
+      if test -z "$JAVAC_COMPAT_FLAGS"; then
+        JAVAC_COMPAT_FLAGS="$JAVAC_FLAGS -Xlint:-unchecked -Xlint:-deprecation -Xlint:-dep-ann -Xlint:-rawtypes"
       fi
     fi
 
@@ -204,6 +211,7 @@ AC_DEFUN(SVN_FIND_JDK,
     for dir in $list; do
       JNI_INCLUDES="$JNI_INCLUDES -I$dir"
     done
+    SVN_DOT_CLANGD([$JNI_INCLUDES])
   fi
 
   dnl We use JDK in the Makefile
@@ -216,4 +224,5 @@ AC_DEFUN(SVN_FIND_JDK,
   AC_SUBST(JAVAH)
   AC_SUBST(JAR)
   AC_SUBST(JNI_INCLUDES)
+  AC_SUBST(JAVAHL_CHECK_FLAGS)
 ])

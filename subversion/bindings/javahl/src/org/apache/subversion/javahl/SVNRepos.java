@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl;
@@ -29,6 +27,7 @@ import java.io.InputStream;
 import java.io.File;
 
 import org.apache.subversion.javahl.callback.ReposNotifyCallback;
+import org.apache.subversion.javahl.callback.ReposVerifyCallback;
 import org.apache.subversion.javahl.callback.ReposFreezeAction;
 import org.apache.subversion.javahl.types.*;
 
@@ -64,7 +63,7 @@ public class SVNRepos implements ISVNRepos
 
     /**
      * Build the native peer
-     * @return the adress of the peer
+     * @return the address of the peer
      */
     private native long ctNative();
 
@@ -80,7 +79,7 @@ public class SVNRepos implements ISVNRepos
     public native void finalize();
 
     /**
-     * slot for the adress of the native peer. The JNI code is the only user
+     * slot for the address of the native peer. The JNI code is the only user
      * of this member
      */
     protected long cppAddr;
@@ -122,22 +121,22 @@ public class SVNRepos implements ISVNRepos
                             boolean useDeltas, ReposNotifyCallback callback)
             throws ClientException;
 
-    /**
-     * make a hot copy of the repository
-     * @param path              the path to the source repository
-     * @param targetPath        the path to the target repository
-     * @param cleanLogs         clean the unused log files in the source
-     *                          repository
-     * @throws ClientException  throw in case of problem
-     */
     public native void hotcopy(File path, File targetPath,
-                               boolean cleanLogs, boolean incremental)
+                               boolean cleanLogs, boolean incremental,
+                               ReposNotifyCallback callback)
             throws ClientException;
+
+    public void hotcopy(File path, File targetPath,
+                        boolean cleanLogs, boolean incremental)
+            throws ClientException
+    {
+        hotcopy(path, targetPath, cleanLogs, incremental, null);
+    }
 
     public void hotcopy(File path, File targetPath,
                         boolean cleanLogs) throws ClientException
     {
-        hotcopy(path, targetPath, cleanLogs, false);
+        hotcopy(path, targetPath, cleanLogs, false, null);
     }
 
     /**
@@ -159,6 +158,17 @@ public class SVNRepos implements ISVNRepos
             throws ClientException;
 
     public void load(File path, InputStream dataInput,
+                     boolean ignoreUUID, boolean forceUUID,
+                     boolean usePreCommitHook, boolean usePostCommitHook,
+                     String relativePath, ReposNotifyCallback callback)
+        throws ClientException
+    {
+        load(path, dataInput, Revision.START, Revision.HEAD,
+             ignoreUUID, forceUUID, usePreCommitHook, usePostCommitHook,
+             false, false, false, relativePath, callback);
+    }
+
+    public void load(File path, InputStream dataInput,
                      Revision start, Revision end,
                      boolean ignoreUUID, boolean forceUUID,
                      boolean usePreCommitHook, boolean usePostCommitHook,
@@ -167,18 +177,20 @@ public class SVNRepos implements ISVNRepos
     {
         load(path, dataInput, start, end,
              ignoreUUID, forceUUID, usePreCommitHook, usePostCommitHook,
-             false, false, relativePath, callback);
+             false, false, false, relativePath, callback);
     }
 
     public void load(File path, InputStream dataInput,
+                     Revision start, Revision end,
                      boolean ignoreUUID, boolean forceUUID,
                      boolean usePreCommitHook, boolean usePostCommitHook,
+                     boolean validateProps, boolean ignoreDates,
                      String relativePath, ReposNotifyCallback callback)
-            throws ClientException
+        throws ClientException
     {
-        load(path, dataInput, Revision.START, Revision.HEAD,
+        load(path, dataInput, start, end,
              ignoreUUID, forceUUID, usePreCommitHook, usePostCommitHook,
-             false, false, relativePath, callback);
+             validateProps, ignoreDates, false, relativePath, callback);
     }
 
     public native void load(File path, InputStream dataInput,
@@ -186,6 +198,7 @@ public class SVNRepos implements ISVNRepos
                             boolean ignoreUUID, boolean forceUUID,
                             boolean usePreCommitHook, boolean usePostCommitHook,
                             boolean validateProps, boolean ignoreDates,
+                            boolean normalizeProps,
                             String relativePath, ReposNotifyCallback callback)
             throws ClientException;
 
@@ -238,13 +251,14 @@ public class SVNRepos implements ISVNRepos
                        ReposNotifyCallback callback)
             throws ClientException
     {
-        verify(path, start, end, false, false, false, callback);
+        verify(path, start, end, false, false, callback, null);
     }
 
     public native void verify(File path, Revision start, Revision end,
-                              boolean keepGoing, boolean checkNormalization,
-                              boolean metadataOnly,
-                              ReposNotifyCallback callback)
+                       boolean checkNormalization,
+                       boolean metadataOnly,
+                       ReposNotifyCallback notifyCallback,
+                       ReposVerifyCallback verifyCallback)
             throws ClientException;
 
     /**

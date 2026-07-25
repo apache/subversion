@@ -31,6 +31,7 @@
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_cmdline.h"
+#include "svn_sorts.h"
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "cl.h"
@@ -42,6 +43,9 @@ typedef struct blame_baton_t
   svn_cl__opt_state_t *opt_state;
   svn_stream_t *out;
   svn_stringbuf_t *sbuf;
+
+  svn_revnum_t start_revnum, end_revnum;
+  int rev_maxlength;
 } blame_baton_t;
 
 
@@ -51,21 +55,19 @@ typedef struct blame_baton_t
    XML to stdout. */
 static svn_error_t *
 blame_receiver_xml(void *baton,
-                   svn_revnum_t start_revnum,
-                   svn_revnum_t end_revnum,
                    apr_int64_t line_no,
                    svn_revnum_t revision,
                    apr_hash_t *rev_props,
                    svn_revnum_t merged_revision,
                    apr_hash_t *merged_rev_props,
                    const char *merged_path,
-                   const char *line,
+                   const svn_string_t *line,
                    svn_boolean_t local_change,
                    apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state =
-    ((blame_baton_t *) baton)->opt_state;
-  svn_stringbuf_t *sb = ((blame_baton_t *) baton)->sbuf;
+  blame_baton_t *bb = baton;
+  svn_cl__opt_state_t *opt_state = bb->opt_state;
+  svn_stringbuf_t *sb = bb->sbuf;
 
   /* "<entry ...>" */
   /* line_no is 0-based, but the rest of the world is probably Pascal
@@ -119,23 +121,13 @@ print_line_info(svn_stream_t *out,
                 const char *date,
                 const char *path,
                 svn_boolean_t verbose,
-                svn_revnum_t end_revnum,
+                int rev_maxlength,
                 apr_pool_t *pool)
 {
   const char *time_utf8;
   const char *time_stdout;
   const char *rev_str;
-  int rev_maxlength;
 
-  /* The standard column width for the revision number is 6 characters.
-     If the revision number can potentially be larger (i.e. if the end_revnum
-     is larger than 1000000), we increase the column width as needed. */
-  rev_maxlength = 6;
-  while (end_revnum >= 1000000)
-    {
-      rev_maxlength++;
-      end_revnum = end_revnum / 10;
-    }
   rev_str = SVN_IS_VALID_REVNUM(revision)
     ? apr_psprintf(pool, "%*ld", rev_maxlength, revision)
     : apr_psprintf(pool, "%*s", rev_maxlength, "-");
@@ -177,22 +169,35 @@ print_line_info(svn_stream_t *out,
 /* This implements the svn_client_blame_receiver3_t interface. */
 static svn_error_t *
 blame_receiver(void *baton,
-               svn_revnum_t start_revnum,
-               svn_revnum_t end_revnum,
                apr_int64_t line_no,
                svn_revnum_t revision,
                apr_hash_t *rev_props,
                svn_revnum_t merged_revision,
                apr_hash_t *merged_rev_props,
                const char *merged_path,
-               const char *line,
+               const svn_string_t *line,
                svn_boolean_t local_change,
                apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state =
-    ((blame_baton_t *) baton)->opt_state;
-  svn_stream_t *out = ((blame_baton_t *)baton)->out;
+  blame_baton_t *bb = baton;
+  svn_cl__opt_state_t *opt_state = bb->opt_state;
+  svn_stream_t *out = bb->out;
   svn_boolean_t use_merged = FALSE;
+
+  if (!bb->rev_maxlength)
+  {
+    svn_revnum_t max_revnum = MAX(bb->start_revnum, bb->end_revnum);
+    /* The standard column width for the revision number is 6 characters.
+       If the revision number can potentially be larger (i.e. if the end_revnum
+        is larger than 1000000), we increase the column width as needed. */
+
+    bb->rev_maxlength = 6;
+    while (max_revnum >= 1000000)
+      {
+        bb->rev_maxlength++;
+        max_revnum = max_revnum / 10;
+      }
+  }
 
   if (opt_state->use_merge_history)
     {
@@ -216,7 +221,8 @@ blame_receiver(void *baton,
                                                SVN_PROP_REVISION_AUTHOR),
                             svn_prop_get_value(merged_rev_props,
                                                SVN_PROP_REVISION_DATE),
-                            merged_path, opt_state->verbose, end_revnum,
+                            merged_path, opt_state->verbose,
+                            bb->rev_maxlength,
                             pool));
   else
     SVN_ERR(print_line_info(out, revision,
@@ -224,10 +230,11 @@ blame_receiver(void *baton,
                                                SVN_PROP_REVISION_AUTHOR),
                             svn_prop_get_value(rev_props,
                                                SVN_PROP_REVISION_DATE),
-                            NULL, opt_state->verbose, end_revnum,
+                            NULL, opt_state->verbose,
+                            bb->rev_maxlength,
                             pool));
 
-  return svn_stream_printf(out, pool, "%s%s", line, APR_EOL_STR);
+  return svn_stream_printf(out, pool, "%s%s", line->data, APR_EOL_STR);
 }
 
 
@@ -286,6 +293,7 @@ svn_cl__blame(apr_getopt_t *os,
     bl.sbuf = svn_stringbuf_create_empty(pool);
 
   bl.opt_state = opt_state;
+  bl.rev_maxlength = 0;
 
   subpool = svn_pool_create(pool);
 
@@ -322,7 +330,7 @@ svn_cl__blame(apr_getopt_t *os,
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       const char *truepath;
       svn_opt_revision_t peg_revision;
-      svn_client_blame_receiver3_t receiver;
+      svn_client_blame_receiver4_t receiver;
 
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
@@ -357,7 +365,8 @@ svn_cl__blame(apr_getopt_t *os,
       else
         receiver = blame_receiver;
 
-      err = svn_client_blame5(truepath,
+      err = svn_client_blame6(&bl.start_revnum, &bl.end_revnum,
+                              truepath,
                               &peg_revision,
                               &opt_state->start_revision,
                               &opt_state->end_revision,

@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl;
@@ -33,10 +31,15 @@ public abstract class JNIObject
      * slot for the address of the native peer. The JNI code controls this
      * field. If it is set to 0 then underlying JNI object has been freed
      */
-    protected final long cppAddr;
+    private long cppAddr = 0;
 
     protected JNIObject(long cppAddr)
     {
         this.cppAddr = cppAddr;
+    }
+
+    protected long getCppAddr()
+    {
+        return cppAddr;
     }
 }

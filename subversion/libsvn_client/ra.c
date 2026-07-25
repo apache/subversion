@@ -299,17 +299,20 @@ progress_func(apr_off_t progress,
               apr_pool_t *pool)
 {
   callback_baton_t *b = baton;
-  svn_client_ctx_t *ctx = b->ctx;
+  svn_client_ctx_t *public_ctx = b->ctx;
+  svn_client__private_ctx_t *private_ctx =
+    svn_client__get_private_ctx(public_ctx);
 
-  ctx->progress += (progress - b->last_progress);
+  private_ctx->total_progress += (progress - b->last_progress);
   b->last_progress = progress;
 
-  if (ctx->progress_func)
+  if (public_ctx->progress_func)
     {
       /* All RA implementations currently provide -1 for total. So it doesn't
          make sense to develop some complex logic to combine total across all
          RA sessions. */
-      ctx->progress_func(ctx->progress, -1, ctx->progress_baton, pool);
+      public_ctx->progress_func(private_ctx->total_progress, -1,
+                                public_ctx->progress_baton, pool);
     }
 }
 
@@ -399,8 +402,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
         }
     }
 
-  /* If the caller allows for auto-following redirections, and the
-     RA->open() call above reveals a CORRECTED_URL, try the new URL.
+  /* If the caller allows for auto-following redirections, try the new URL.
      We'll do this in a loop up to some maximum number follow-and-retry
      attempts.  */
   if (corrected_url)
@@ -411,12 +413,14 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
       *corrected_url = NULL;
       while (attempts_left--)
         {
-          const char *corrected = NULL;
+          const char *corrected = NULL; /* canonicalized version */
+          const char *redirect_url = NULL; /* non-canonicalized version */
 
           /* Try to open the RA session.  If this is our last attempt,
              don't accept corrected URLs from the RA provider. */
-          SVN_ERR(svn_ra_open4(ra_session,
+          SVN_ERR(svn_ra_open5(ra_session,
                                attempts_left == 0 ? NULL : &corrected,
+                               attempts_left == 0 ? NULL : &redirect_url,
                                base_url, uuid, cbtable, cb, ctx->config,
                                result_pool));
 
@@ -431,26 +435,35 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                 svn_wc_create_notify_url(corrected,
                                          svn_wc_notify_url_redirect,
                                          scratch_pool);
-              (*ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+              ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
             }
 
           /* Our caller will want to know what our final corrected URL was. */
           *corrected_url = corrected;
 
           /* Make sure we've not attempted this URL before. */
-          if (svn_hash_gets(attempted, corrected))
+          if (svn_hash_gets(attempted, redirect_url))
             return svn_error_createf(SVN_ERR_CLIENT_CYCLE_DETECTED, NULL,
                                      _("Redirect cycle detected for URL '%s'"),
-                                     corrected);
+                                     redirect_url);
 
-          /* Remember this CORRECTED_URL so we don't wind up in a loop. */
-          svn_hash_sets(attempted, corrected, (void *)1);
+          /*
+           * Remember this redirect URL so we don't wind up in a loop.
+           *
+           * Store the non-canonicalized version of the URL. The canonicalized
+           * version is insufficient for loop detection because we might not get
+           * an exact match against URLs used by the RA protocol-layer (the URL
+           * used by the protocol may contain trailing slashes, for example,
+           * which are stripped during canonicalization).
+           */
+          svn_hash_sets(attempted, redirect_url, (void *)1);
+
           base_url = corrected;
         }
     }
   else
     {
-      SVN_ERR(svn_ra_open4(ra_session, NULL, base_url,
+      SVN_ERR(svn_ra_open5(ra_session, NULL, NULL, base_url,
                            uuid, cbtable, cb, ctx->config, result_pool));
     }
 
@@ -703,7 +716,7 @@ repos_locations(const char **start_url,
           || (SVN_IS_VALID_REVNUM(end_revnum) && (end_revnum > youngest_rev)))
         return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                                  _("No such revision %ld"),
-                                 (start_revnum > youngest_rev) 
+                                 (start_revnum > youngest_rev)
                                         ? start_revnum : end_revnum);
 
       if (start_url)
@@ -724,7 +737,7 @@ repos_locations(const char **start_url,
   /* We'd better have all the paths we were looking for! */
   if (start_url)
     {
-      start_path = apr_hash_get(rev_locs, &start_revnum, sizeof(svn_revnum_t));
+      start_path = apr_hash_get(rev_locs, &start_revnum, sizeof(start_revnum));
       if (! start_path)
         return svn_error_createf
           (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
@@ -736,7 +749,7 @@ repos_locations(const char **start_url,
 
   if (end_url)
     {
-      end_path = apr_hash_get(rev_locs, &end_revnum, sizeof(svn_revnum_t));
+      end_path = apr_hash_get(rev_locs, &end_revnum, sizeof(end_revnum));
       if (! end_path)
         return svn_error_createf
           (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
@@ -940,9 +953,9 @@ svn_client__calc_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
      remembering the youngest matching location. */
   for (hi = apr_hash_first(scratch_pool, history1); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      apr_ssize_t path_len = svn__apr_hash_index_klen(hi);
-      svn_rangelist_t *ranges1 = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      apr_ssize_t path_len = apr_hash_this_key_len(hi);
+      svn_rangelist_t *ranges1 = apr_hash_this_val(hi);
       svn_rangelist_t *ranges2, *common;
 
       ranges2 = apr_hash_get(history2, path, path_len);
@@ -1073,7 +1086,7 @@ svn_client__ra_provide_base(svn_stream_t **contents,
       return SVN_NO_ERROR;
     }
 
-  err = svn_wc_get_pristine_contents2(contents, reb->wc_ctx, local_abspath,
+  err = svn_wc_get_pristine_contents3(contents, reb->wc_ctx, local_abspath,
                                       result_pool, scratch_pool);
   if (err)
     {

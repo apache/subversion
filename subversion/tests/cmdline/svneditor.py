@@ -1,9 +1,8 @@
-#!/usr/bin/env python
 #
 #  svneditor.py: a mock $SVN_EDITOR for the Subversion test suite
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -70,6 +69,9 @@ def foo_to_bar(m):
 
 def append_foo(m):
     return m + 'foo\n'
+
+def prepend_foo(m):
+    return 'foo\n' + m
 
 def identity(m):
     return m

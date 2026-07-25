@@ -52,7 +52,7 @@ void get_range_info(jobject jrange,
 {
   JNIEnv *env = JNIUtil::getEnv();
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/RevisionRange");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/RevisionRange"));
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -63,7 +63,7 @@ void get_range_info(jobject jrange,
       if (fmid == 0)
         {
           fmid = env->GetMethodID(clazz, "getFromRevision",
-                                  "()L"JAVA_PACKAGE"/types/Revision;");
+                                  "()" JAVAHL_ARG("/types/Revision;"));
           if (JNIUtil::isJavaExceptionThrown())
             return;
         }
@@ -87,7 +87,7 @@ void get_range_info(jobject jrange,
       if (tmid == 0)
         {
           tmid = env->GetMethodID(clazz, "getToRevision",
-                                  "()L"JAVA_PACKAGE"/types/Revision;");
+                                  "()" JAVAHL_ARG("/types/Revision;"));
           if (JNIUtil::isJavaExceptionThrown())
             return;
         }
@@ -163,7 +163,7 @@ RevisionRange::makeJRevisionRange(svn_merge_range_t *range)
 {
     JNIEnv *env = JNIUtil::getEnv();
 
-    jclass rangeClazz = env->FindClass(JAVA_PACKAGE "/types/RevisionRange");
+    jclass rangeClazz = env->FindClass(JAVAHL_CLASS("/types/RevisionRange"));
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
     static jmethodID rangeCtor = 0;

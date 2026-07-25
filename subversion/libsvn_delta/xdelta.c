@@ -111,10 +111,10 @@ struct block
   apr_uint32_t adlersum;
 
 /* Even in 64 bit systems, store only 32 bit offsets in our hash table
-   (our delta window size much much smaller then 4GB).
+   (our delta window size much much smaller than 4GB).
    That reduces the hash table size by 50% from 32to 16KB
    and makes it easier to fit into the CPU's L1 cache. */
-  apr_uint32_t pos;			/* NO_POSITION -> block is not used */
+  apr_uint32_t pos;    /* NO_POSITION -> block is not used */
 };
 
 /* A hash table, using open addressing, of the blocks of the source. */
@@ -124,7 +124,7 @@ struct blocks
      This value has an upper bound proportionate to the text delta
      window size, so unless we dramatically increase the window size,
      it's safe to make this a 32-bit value.  In any case, it has to be
-     hte same width as the block position index, (struct
+     the same width as the block position index, (struct
      block).pos. */
   apr_uint32_t max;
 

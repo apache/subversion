@@ -80,6 +80,15 @@ static const apr_size_t digest_sizes[] = {
   sizeof(apr_uint32_t)
 };
 
+/* Checksum type prefixes used in serialized checksums. */
+static const char *ckind_str[] = {
+  "$md5 $",
+  "$sha1$",
+  "$fnv1$",
+  "$fnvm$",
+  /* ### svn_checksum_deserialize() assumes all these have the same strlen() */
+};
+
 /* Returns the digest size of it's argument. */
 #define DIGESTSIZE(k) \
   (((k) < svn_checksum_md5 || (k) > svn_checksum_fnv1a_32x4) ? 0 : digest_sizes[k])
@@ -165,12 +174,15 @@ checksum_create_without_digest(svn_checksum_kind_t kind,
   return checksum;
 }
 
+/* Return a checksum object, allocated in POOL.  The checksum will be of
+ * type KIND and contain the given DIGEST.
+ */
 static svn_checksum_t *
 checksum_create(svn_checksum_kind_t kind,
-                apr_size_t digest_size,
                 const unsigned char *digest,
                 apr_pool_t *pool)
 {
+  apr_size_t digest_size = DIGESTSIZE(kind);
   svn_checksum_t *checksum = checksum_create_without_digest(kind, digest_size,
                                                             pool);
   memcpy((unsigned char *)checksum->digest, digest, digest_size);
@@ -206,32 +218,28 @@ svn_checksum_t *
 svn_checksum__from_digest_md5(const unsigned char *digest,
                               apr_pool_t *result_pool)
 {
-  return checksum_create(svn_checksum_md5, APR_MD5_DIGESTSIZE, digest,
-                         result_pool);
+  return checksum_create(svn_checksum_md5, digest, result_pool);
 }
 
 svn_checksum_t *
 svn_checksum__from_digest_sha1(const unsigned char *digest,
                                apr_pool_t *result_pool)
 {
-  return checksum_create(svn_checksum_sha1, APR_SHA1_DIGESTSIZE, digest,
-                         result_pool);
+  return checksum_create(svn_checksum_sha1, digest, result_pool);
 }
 
 svn_checksum_t *
 svn_checksum__from_digest_fnv1a_32(const unsigned char *digest,
                                    apr_pool_t *result_pool)
 {
-  return checksum_create(svn_checksum_fnv1a_32, sizeof(digest), digest,
-                         result_pool);
+  return checksum_create(svn_checksum_fnv1a_32, digest, result_pool);
 }
 
 svn_checksum_t *
 svn_checksum__from_digest_fnv1a_32x4(const unsigned char *digest,
                                      apr_pool_t *result_pool)
 {
-  return checksum_create(svn_checksum_fnv1a_32x4, sizeof(digest), digest,
-                         result_pool);
+  return checksum_create(svn_checksum_fnv1a_32x4, digest, result_pool);
 }
 
 svn_error_t *
@@ -318,13 +326,10 @@ svn_checksum_serialize(const svn_checksum_t *checksum,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  const char *ckind_str;
-
   SVN_ERR_ASSERT_NO_RETURN(checksum->kind >= svn_checksum_md5
                            || checksum->kind <= svn_checksum_fnv1a_32x4);
-  ckind_str = (checksum->kind == svn_checksum_md5 ? "$md5 $" : "$sha1$");
   return apr_pstrcat(result_pool,
-                     ckind_str,
+                     ckind_str[checksum->kind],
                      svn_checksum_to_cstring(checksum, scratch_pool),
                      SVN_VA_NULL);
 }
@@ -336,18 +341,29 @@ svn_checksum_deserialize(const svn_checksum_t **checksum,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  svn_checksum_kind_t ckind;
+  svn_checksum_kind_t kind;
   svn_checksum_t *parsed_checksum;
 
-  /* "$md5 $..." or "$sha1$..." */
-  SVN_ERR_ASSERT(strlen(data) > 6);
+  /* All prefixes have the same length. */
+  apr_size_t prefix_len = strlen(ckind_str[0]);
 
-  ckind = (data[1] == 'm' ? svn_checksum_md5 : svn_checksum_sha1);
-  SVN_ERR(svn_checksum_parse_hex(&parsed_checksum, ckind,
-                                 data + 6, result_pool));
-  *checksum = parsed_checksum;
+  /* "$md5 $...", "$sha1$..." or ... */
+  if (strlen(data) <= prefix_len)
+    return svn_error_createf(SVN_ERR_BAD_CHECKSUM_PARSE, NULL,
+                             _("Invalid prefix in checksum '%s'"),
+                             data);
 
-  return SVN_NO_ERROR;
+  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+    if (strncmp(ckind_str[kind], data, prefix_len) == 0)
+      {
+        SVN_ERR(svn_checksum_parse_hex(&parsed_checksum, kind,
+                                       data + prefix_len, result_pool));
+        *checksum = parsed_checksum;
+        return SVN_NO_ERROR;
+      }
+
+  return svn_error_createf(SVN_ERR_BAD_CHECKSUM_KIND, NULL,
+                           "Unknown checksum kind in '%s'", data);
 }
 
 
@@ -358,26 +374,42 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
                        apr_pool_t *pool)
 {
   apr_size_t i, len;
-  char is_nonzero = '\0';
-  char *digest;
-  static const char xdigitval[256] =
+  unsigned char is_nonzero = 0;
+  unsigned char *digest;
+  static const unsigned char xdigitval[256] =
     {
-      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,-1,-1,-1,-1,-1,-1,   /* 0-9 */
-      -1,10,11,12,13,14,15,-1,-1,-1,-1,-1,-1,-1,-1,-1,   /* A-F */
-      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-      -1,10,11,12,13,14,15,-1,-1,-1,-1,-1,-1,-1,-1,-1,   /* a-f */
-      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,   /* 0-7 */
+      0x08,0x09,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,   /* 8-9 */
+      0xFF,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,0xFF,   /* A-F */
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,0xFF,   /* a-f */
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+      0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
     };
 
   if (hex == NULL)
@@ -389,18 +421,18 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
   SVN_ERR(validate_kind(kind));
 
   *checksum = svn_checksum_create(kind, pool);
-  digest = (char *)(*checksum)->digest;
+  digest = (unsigned char *)(*checksum)->digest;
   len = DIGESTSIZE(kind);
 
   for (i = 0; i < len; i++)
     {
-      char x1 = xdigitval[(unsigned char)hex[i * 2]];
-      char x2 = xdigitval[(unsigned char)hex[i * 2 + 1]];
-      if (x1 == (char)-1 || x2 == (char)-1)
+      unsigned char x1 = xdigitval[(unsigned char)hex[i * 2]];
+      unsigned char x2 = xdigitval[(unsigned char)hex[i * 2 + 1]];
+      if (x1 == 0xFF || x2 == 0xFF)
         return svn_error_create(SVN_ERR_BAD_CHECKSUM_PARSE, NULL, NULL);
 
-      digest[i] = (char)((x1 << 4) | x2);
-      is_nonzero |= (char)((x1 << 4) | x2);
+      digest[i] = (x1 << 4) | x2;
+      is_nonzero |= digest[i];
     }
 
   if (!is_nonzero)
@@ -428,10 +460,7 @@ svn_checksum_dup(const svn_checksum_t *checksum,
       case svn_checksum_sha1:
       case svn_checksum_fnv1a_32:
       case svn_checksum_fnv1a_32x4:
-        return checksum_create(checksum->kind,
-                               digest_sizes[checksum->kind],
-                               checksum->digest,
-                               pool);
+        return checksum_create(checksum->kind, checksum->digest, pool);
 
       default:
         SVN_ERR_MALFUNCTION_NO_RETURN();
@@ -446,21 +475,19 @@ svn_checksum(svn_checksum_t **checksum,
              apr_size_t len,
              apr_pool_t *pool)
 {
-  apr_sha1_ctx_t sha1_ctx;
-
   SVN_ERR(validate_kind(kind));
   *checksum = svn_checksum_create(kind, pool);
 
   switch (kind)
     {
       case svn_checksum_md5:
-        apr_md5((unsigned char *)(*checksum)->digest, data, len);
+        SVN_ERR(svn_checksum__md5((unsigned char *)(*checksum)->digest, data,
+                                  len));
         break;
 
       case svn_checksum_sha1:
-        apr_sha1_init(&sha1_ctx);
-        apr_sha1_update(&sha1_ctx, data, (unsigned int)len);
-        apr_sha1_final((unsigned char *)(*checksum)->digest, &sha1_ctx);
+        SVN_ERR(svn_checksum__sha1((unsigned char *)(*checksum)->digest, data,
+                                   len));
         break;
 
       case svn_checksum_fnv1a_32:
@@ -492,121 +519,12 @@ svn_checksum_empty_checksum(svn_checksum_kind_t kind,
       case svn_checksum_sha1:
       case svn_checksum_fnv1a_32:
       case svn_checksum_fnv1a_32x4:
-        return checksum_create(kind,
-                               digest_sizes[kind],
-                               empty_string_digests[kind],
-                               pool);
+        return checksum_create(kind, empty_string_digests[kind], pool);
 
       default:
         /* We really shouldn't get here, but if we do... */
         SVN_ERR_MALFUNCTION_NO_RETURN();
     }
-}
-
-struct svn_checksum_ctx_t
-{
-  void *apr_ctx;
-  svn_checksum_kind_t kind;
-};
-
-svn_checksum_ctx_t *
-svn_checksum_ctx_create(svn_checksum_kind_t kind,
-                        apr_pool_t *pool)
-{
-  svn_checksum_ctx_t *ctx = apr_palloc(pool, sizeof(*ctx));
-
-  ctx->kind = kind;
-  switch (kind)
-    {
-      case svn_checksum_md5:
-        ctx->apr_ctx = apr_palloc(pool, sizeof(apr_md5_ctx_t));
-        apr_md5_init(ctx->apr_ctx);
-        break;
-
-      case svn_checksum_sha1:
-        ctx->apr_ctx = apr_palloc(pool, sizeof(apr_sha1_ctx_t));
-        apr_sha1_init(ctx->apr_ctx);
-        break;
-
-      case svn_checksum_fnv1a_32:
-        ctx->apr_ctx = svn_fnv1a_32__context_create(pool);
-        break;
-
-      case svn_checksum_fnv1a_32x4:
-        ctx->apr_ctx = svn_fnv1a_32x4__context_create(pool);
-        break;
-
-      default:
-        SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
-
-  return ctx;
-}
-
-svn_error_t *
-svn_checksum_update(svn_checksum_ctx_t *ctx,
-                    const void *data,
-                    apr_size_t len)
-{
-  switch (ctx->kind)
-    {
-      case svn_checksum_md5:
-        apr_md5_update(ctx->apr_ctx, data, len);
-        break;
-
-      case svn_checksum_sha1:
-        apr_sha1_update(ctx->apr_ctx, data, (unsigned int)len);
-        break;
-
-      case svn_checksum_fnv1a_32:
-        svn_fnv1a_32__update(ctx->apr_ctx, data, len);
-        break;
-
-      case svn_checksum_fnv1a_32x4:
-        svn_fnv1a_32x4__update(ctx->apr_ctx, data, len);
-        break;
-
-      default:
-        /* We really shouldn't get here, but if we do... */
-        return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_checksum_final(svn_checksum_t **checksum,
-                   const svn_checksum_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  *checksum = svn_checksum_create(ctx->kind, pool);
-
-  switch (ctx->kind)
-    {
-      case svn_checksum_md5:
-        apr_md5_final((unsigned char *)(*checksum)->digest, ctx->apr_ctx);
-        break;
-
-      case svn_checksum_sha1:
-        apr_sha1_final((unsigned char *)(*checksum)->digest, ctx->apr_ctx);
-        break;
-
-      case svn_checksum_fnv1a_32:
-        *(apr_uint32_t *)(*checksum)->digest
-          = htonl(svn_fnv1a_32__finalize(ctx->apr_ctx));
-        break;
-
-      case svn_checksum_fnv1a_32x4:
-        *(apr_uint32_t *)(*checksum)->digest
-          = htonl(svn_fnv1a_32x4__finalize(ctx->apr_ctx));
-        break;
-
-      default:
-        /* We really shouldn't get here, but if we do... */
-        return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
-    }
-
-  return SVN_NO_ERROR;
 }
 
 apr_size_t

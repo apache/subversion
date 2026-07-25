@@ -1,0 +1,31 @@
+American Fuzzy Lop (AFL) is available from all good distros, or from
+the upstream site: http://lcamtuf.coredump.cx/afl/
+
+Configure to build the instumented binary:
+
+  CC=afl-gcc ../src/configure --disable-shared --enable-static
+
+Build the binary:
+
+   make clean
+   make afl-x509
+
+Run the fuzzer (you may need root to change the CPU governor):
+
+   mkdir afl-findings
+   afl-fuzz -i ../src/subversion/tests/afl/afl-x509-testcase \
+            -o afl-findings -M fuzzer01 \
+            subversion/tests/afl/afl-x509
+   afl-fuzz -i ../src/subversion/tests/afl/afl-x509-testcase \
+            -o afl-findings -S fuzzer02 \
+            subversion/tests/afl/afl-x509
+   afl-fuzz -i ../src/subversion/tests/afl/afl-x509-testcase \
+            -o afl-findings -S fuzzer03 \
+            subversion/tests/afl/afl-x509
+
+Wait, burning CPU...
+
+Testcases that cause SEGVs are easier to debug using a separate build
+without AFL instrumentation:
+
+   gdb --args subversion/tests/afl/afl-x509 afl-findings/fuzzer01/crashes/some-test-case

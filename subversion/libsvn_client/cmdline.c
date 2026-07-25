@@ -110,11 +110,11 @@ check_root_url_of_target(const char **root_url,
    return SVN_NO_ERROR;
 }
 
-/* Note: This is substantially copied from svn_opt__args_to_target_array() in
+/* Note: This is substantially copied from svn_opt__process_target_array() in
  * order to move to libsvn_client while maintaining backward compatibility. */
 svn_error_t *
-svn_client_args_to_target_array2(apr_array_header_t **targets_p,
-                                 apr_getopt_t *os,
+svn_client__process_target_array(apr_array_header_t **targets_p,
+                                 apr_array_header_t *utf8_targets,
                                  const apr_array_header_t *known_targets,
                                  svn_client_ctx_t *ctx,
                                  svn_boolean_t keep_last_origpath_on_truepath_collision,
@@ -135,14 +135,9 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
      If any of the targets are relative urls, then set the rel_url_found
      flag.*/
 
-  for (; os->ind < os->argc; os->ind++)
+  for (i = 0; i < utf8_targets->nelts; i++)
     {
-      /* The apr_getopt targets are still in native encoding. */
-      const char *raw_target = os->argv[os->ind];
-      const char *utf8_target;
-
-      SVN_ERR(svn_utf_cstring_to_utf8(&utf8_target,
-                                      raw_target, pool));
+      const char *utf8_target = APR_ARRAY_IDX(utf8_targets, i, const char *);
 
       if (svn_path_is_repos_relative_url(utf8_target))
         rel_url_found = TRUE;
@@ -199,6 +194,15 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
            */
           SVN_ERR(svn_opt__split_arg_at_peg_revision(&true_target, &peg_rev,
                                                      utf8_target, pool));
+
+          /* Reject the form "@abc", a peg specifier with no path. */
+          if (true_target[0] == '\0' && peg_rev[0] != '\0')
+            {
+              return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
+                                       _("'%s' is just a peg revision. "
+                                         "Maybe try '%s@' instead?"),
+                                       utf8_target, utf8_target);
+            }
 
           /* URLs and wc-paths get treated differently. */
           if (svn_path_is_url(true_target))
@@ -360,4 +364,21 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
     }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_args_to_target_array3(apr_array_header_t **targets_p,
+                                 apr_getopt_t *os,
+                                 const apr_array_header_t *known_targets,
+                                 svn_client_ctx_t *ctx,
+                                 svn_boolean_t keep_last_origpath_on_truepath_collision,
+                                 apr_pool_t *pool)
+{
+  apr_array_header_t *utf8_input_targets;
+
+  SVN_ERR(svn_opt_parse_all_args(&utf8_input_targets, os, pool));
+
+  return svn_error_trace(svn_client__process_target_array(
+      targets_p, utf8_input_targets, known_targets, ctx,
+      keep_last_origpath_on_truepath_collision, pool));
 }

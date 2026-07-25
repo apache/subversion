@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl;
@@ -32,10 +30,11 @@ import org.apache.subversion.javahl.callback.ReposNotifyCallback;
  */
 public class ReposNotifyInformation extends EventObject
 {
-    // Update the serialVersionUID when there is a incompatible change made to
-    // this class.  See the java documentation for when a change is incompatible.
-    // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
-    private static final long serialVersionUID = 1L;
+    // Update the serialVersionUID when there is an incompatible change made to
+    // this class.  See the Java documentation (following link or its counter-
+    // part in your specific Java release) for when a change is incompatible.
+    // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
+    private static final long serialVersionUID = 2L;
 
     /**
      * The {@link Action} which triggered this event.
@@ -196,7 +195,31 @@ public class ReposNotifyInformation extends EventObject
          * The structure of a revision is being verified.
          * @since 1.8
          */
-        verify_rev_structure;
+        verify_rev_structure,
+
+        /**
+         * A revprop shard got packed. @
+         * @since 1.9
+         */
+        pack_revprops,
+
+        /**
+         * A non-packed revprop shard got removed.
+         * @since 1.9
+         */
+        cleanup_revprops,
+
+        /**
+         * The repository format got bumped.
+         * @since 1.9
+         */
+        format_bumped,
+
+        /**
+         * A revision range was copied.
+         * @since 1.9
+         */
+        hotcopy_rev_range;
     }
 
     public enum NodeAction

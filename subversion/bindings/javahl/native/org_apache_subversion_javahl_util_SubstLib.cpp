@@ -37,6 +37,7 @@
 #include "JNIUtil.h"
 #include "NativeStream.hpp"
 #include "Utility.hpp"
+#include "CxxCompat.hpp"
 
 #include <apr_hash.h>
 
@@ -61,7 +62,7 @@ build_keywords_common(Java::Env env, const SVN::Pool& pool,
   svn_string_t* keywords_string = keywords_contents.get_string(pool);
   const char* revision = (jrevision < 0 ? NULL
                           : apr_psprintf(pool.getPool(),
-                                         "%"APR_UINT64_T_FMT,
+                                         "%" APR_UINT64_T_FMT,
                                          apr_uint64_t(jrevision)));
   const Java::String::Contents url_contents(url);
   const Java::String::Contents root_url_contents(repos_root_url);
@@ -118,6 +119,8 @@ Java_org_apache_subversion_javahl_util_SubstLib_buildKeywords(
     jstring jurl, jstring jrepos_root_url,
     jobject jdate, jstring jauthor)
 {
+  typedef Java::Map<Java::ByteArray, jbyteArray> ByteArrayMap;
+
   SVN_JAVAHL_JNI_TRY(SubstLib, buildKeywords)
     {
       const Java::Env env(jenv);
@@ -130,8 +133,7 @@ Java_org_apache_subversion_javahl_util_SubstLib_buildKeywords(
           env, pool, jkeywords_value, jrevision,
           jurl, jrepos_root_url, jdate, jauthor);
 
-      Java::MutableMap<Java::ByteArray, jbyteArray>
-        keywords(env, jint(apr_hash_count(kw)));
+      ByteArrayMap keywords(env, jint(apr_hash_count(kw)));
       for (apr_hash_index_t* hi = apr_hash_first(pool.getPool(), kw);
            hi; hi = apr_hash_next(hi))
         {
@@ -164,7 +166,7 @@ Java_org_apache_subversion_javahl_util_SubstLib_translateInputStream(
       const Java::Env env(jenv);
 
       // We'll allocate the stream in the bound object's pool.
-      std::auto_ptr<JavaHL::NativeInputStream>
+      JavaHL::cxx::owned_ptr<JavaHL::NativeInputStream>
         translated(new JavaHL::NativeInputStream());
       svn_stream_t* source = Java::InputStream::get_global_stream(
           env, jsource, translated->get_pool());
@@ -193,12 +195,12 @@ Java_org_apache_subversion_javahl_util_SubstLib_translateOutputStream(
     jstring jurl, jstring jrepos_root_url,
     jobject jdate, jstring jauthor)
 {
-  SVN_JAVAHL_JNI_TRY(SubstLib, translateInputStream)
+  SVN_JAVAHL_JNI_TRY(SubstLib, translateOutputStream)
     {
       const Java::Env env(jenv);
 
       // We'll allocate the stream in the bound object's pool.
-      std::auto_ptr<JavaHL::NativeOutputStream>
+      JavaHL::cxx::owned_ptr<JavaHL::NativeOutputStream>
         translated(new JavaHL::NativeOutputStream());
       svn_stream_t* destination = Java::OutputStream::get_global_stream(
           env, jdestination, translated->get_pool());

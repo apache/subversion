@@ -47,7 +47,7 @@
    the delta between the source and target revs.
 
    Spill-buffer content format: we use a simple ad-hoc format to store the
-   report operations.  Each report operation is the concatention of
+   report operations.  Each report operation is the concatenation of
    the following ("+/-" indicates the single character '+' or '-';
    <length> and <revnum> are written out as decimal strings):
 
@@ -138,7 +138,8 @@ typedef struct report_baton_t
   svn_fs_root_t *s_roots[NUM_CACHED_SOURCE_ROOTS];
 
   /* Cache for revision properties. This is used to eliminate redundant
-     revprop fetching. */
+     revprop fetching. svn_revnum_t keys so use svn_hash__make to get a
+     suitable hash function. */
   apr_hash_t *revision_infos;
 
   /* This will not change. So, fetch it once and reuse it. */
@@ -481,10 +482,12 @@ get_revision_info(report_baton_t *b,
     {
       /* Info is not available, yet.
          Get all revprops. */
-      SVN_ERR(svn_fs_revision_proplist(&r_props,
-                                       b->repos->fs,
-                                       rev,
-                                       scratch_pool));
+      SVN_ERR(svn_fs_revision_proplist2(&r_props,
+                                        b->repos->fs,
+                                        rev,
+                                        FALSE,
+                                        scratch_pool,
+                                        scratch_pool));
 
       /* Extract the committed-date. */
       cdate = svn_hash_gets(r_props, SVN_PROP_REVISION_DATE);
@@ -495,8 +498,8 @@ get_revision_info(report_baton_t *b,
       /* Create a result object */
       info = apr_palloc(b->pool, sizeof(*info));
       info->rev = rev;
-      info->date = cdate ? svn_string_dup(cdate, b->pool) : NULL;
-      info->author = author ? svn_string_dup(author, b->pool) : NULL;
+      info->date = svn_string_dup(cdate, b->pool);
+      info->author = svn_string_dup(author, b->pool);
 
       /* Cache it */
       apr_hash_set(b->revision_infos, &info->rev, sizeof(info->rev), info);
@@ -520,19 +523,13 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 {
   svn_fs_root_t *s_root;
   apr_hash_t *s_props = NULL, *t_props;
-  apr_array_header_t *prop_diffs;
-  int i;
   svn_revnum_t crev;
-  revision_info_t *revision_info;
-  svn_boolean_t changed;
-  const svn_prop_t *pc;
-  svn_lock_t *lock;
-  apr_hash_index_t *hi;
 
   /* Fetch the created-rev and send entry props. */
   SVN_ERR(svn_fs_node_created_rev(&crev, b->t_root, t_path, pool));
   if (SVN_IS_VALID_REVNUM(crev))
     {
+      revision_info_t *revision_info;
       /* convert committed-rev to  string */
       char buf[SVN_INT64_BUFFER_SIZE];
       svn_string_t cr_str;
@@ -563,6 +560,7 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   /* Update lock properties. */
   if (lock_token)
     {
+      svn_lock_t *lock;
       SVN_ERR(svn_fs_get_lock(&lock, b->repos->fs, t_path, pool));
 
       /* Delete a defunct lock. */
@@ -573,6 +571,7 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
   if (s_path)
     {
+      svn_boolean_t changed;
       SVN_ERR(get_source_root(b, &s_root, s_rev));
 
       /* Is this deltification worth our time? */
@@ -590,21 +589,25 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
   if (s_props && apr_hash_count(s_props))
     {
+      apr_array_header_t *prop_diffs;
+      int i;
+
       /* Now transmit the differences. */
       SVN_ERR(svn_prop_diffs(&prop_diffs, t_props, s_props, pool));
       for (i = 0; i < prop_diffs->nelts; i++)
         {
-          pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
+          const svn_prop_t *pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
           SVN_ERR(change_fn(b, object, pc->name, pc->value, pool));
         }
     }
   else if (apr_hash_count(t_props))
     {
+      apr_hash_index_t *hi;
       /* So source, i.e. all new.  Transmit all target props. */
       for (hi = apr_hash_first(pool, t_props); hi; hi = apr_hash_next(hi))
         {
-          const char *key = svn__apr_hash_index_key(hi);
-          svn_string_t *val = svn__apr_hash_index_val(hi);
+          const char *key = apr_hash_this_key(hi);
+          svn_string_t *val = apr_hash_this_val(hi);
 
           SVN_ERR(change_fn(b, object, key, val, pool));
         }
@@ -669,7 +672,6 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
             const char *s_path, const char *t_path, const char *lock_token,
             apr_pool_t *pool)
 {
-  svn_boolean_t changed;
   svn_fs_root_t *s_root = NULL;
   svn_txdelta_stream_t *dstream = NULL;
   svn_checksum_t *s_checksum;
@@ -683,14 +685,15 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
 
   if (s_path)
     {
+      svn_boolean_t changed;
       SVN_ERR(get_source_root(b, &s_root, s_rev));
 
       /* We're not interested in the theoretical difference between "has
          contents which have not changed with respect to" and "has the same
          actual contents as" when sending text-deltas.  If we know the
          delta is an empty one, we avoiding sending it in either case. */
-      SVN_ERR(svn_repos__compare_files(&changed, b->t_root, t_path,
-                                       s_root, s_path, pool));
+      SVN_ERR(svn_fs_contents_different(&changed, b->t_root, t_path,
+                                        s_root, s_path, pool));
 
       if (!changed)
         return SVN_NO_ERROR;
@@ -916,7 +919,7 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
              const char *e_path, path_info_t *info, svn_depth_t wc_depth,
              svn_depth_t requested_depth, apr_pool_t *pool)
 {
-  svn_fs_root_t *s_root;
+  svn_fs_root_t *s_root = NULL;
   svn_boolean_t allowed, related;
   void *new_baton;
   svn_checksum_t *checksum;
@@ -959,7 +962,26 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   if (s_entry && t_entry && s_entry->kind == t_entry->kind)
     {
       int distance = svn_fs_compare_ids(s_entry->id, t_entry->id);
-      if (distance == 0 && !any_path_info(b, e_path)
+      svn_boolean_t changed = TRUE;
+
+      /* Check related files for content changes to avoid reporting
+       * unchanged copies of files to the client as an open_file() call
+       * and change_file_prop()/apply_textdelta() calls with no-op changes.
+       * The client will otherwise raise unnecessary tree conflicts. */
+      if (!b->ignore_ancestry && t_entry->kind == svn_node_file &&
+          distance == 1)
+        {
+          if (s_root == NULL)
+            SVN_ERR(get_source_root(b, &s_root, s_rev));
+
+          SVN_ERR(svn_fs_props_changed(&changed, s_root, s_path,
+                                       b->t_root, t_path, pool));
+          if (!changed)
+            SVN_ERR(svn_fs_contents_changed(&changed, s_root, s_path,
+                                            b->t_root, t_path, pool));
+        }
+
+      if ((distance == 0 || !changed) && !any_path_info(b, e_path)
           && (requested_depth <= wc_depth || t_entry->kind == svn_node_file))
         {
           if (!info)
@@ -1246,7 +1268,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                hi;
                hi = apr_hash_next(hi))
             {
-              const svn_fs_dirent_t *s_entry = svn__apr_hash_index_val(hi);
+              const svn_fs_dirent_t *s_entry = apr_hash_this_val(hi);
 
               svn_pool_clear(iterpool);
 
@@ -1282,7 +1304,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
       /* Loop over the dirents in the target. */
       SVN_ERR(svn_fs_dir_optimal_order(&t_ordered_entries, b->t_root,
-                                       t_entries, subpool));
+                                       t_entries, subpool, iterpool));
       for (i = 0; i < t_ordered_entries->nelts; ++i)
         {
           const svn_fs_dirent_t *t_entry
@@ -1548,6 +1570,7 @@ svn_repos_finish_report(void *baton, apr_pool_t *pool)
 {
   report_baton_t *b = baton;
 
+  SVN_ERR(svn_fs_refresh_revision_props(svn_repos_fs(b->repos), pool));
   return svn_error_trace(finish_report(b, pool));
 }
 
@@ -1606,7 +1629,7 @@ svn_repos_begin_report3(void **report_baton,
   b->edit_baton = edit_baton;
   b->authz_read_func = authz_read_func;
   b->authz_read_baton = authz_read_baton;
-  b->revision_infos = apr_hash_make(pool);
+  b->revision_infos = svn_hash__make(pool);
   b->pool = pool;
   b->reader = svn_spillbuf__reader_create(1000 /* blocksize */,
                                           1000000 /* maxsize */,

@@ -2,7 +2,7 @@
 # repos.py: public Python interface for repos components
 #
 # Subversion is a tool for revision control.
-# See http://subversion.apache.org for more information.
+# See https://subversion.apache.org for more information.
 #
 ######################################################################
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -24,10 +24,10 @@
 ######################################################################
 
 from libsvn.repos import *
-from svn.core import _unprefix_names, Pool
+from svn.core import _unprefix_names, Pool, _as_list
 _unprefix_names(locals(), 'svn_repos_')
 _unprefix_names(locals(), 'SVN_REPOS_')
-__all__ = filter(lambda x: x.lower().startswith('svn_'), locals().keys())
+__all__ = [x for x in _as_list(locals()) if x.lower().startswith('svn_')]
 del _unprefix_names
 
 
@@ -126,9 +126,9 @@ class ChangeCollector(_svndelta.Editor):
         self.notify_cb(change)
 
   def _make_base_path(self, parent_path, path):
-    idx = path.rfind('/')
+    idx = path.rfind(b'/')
     if parent_path:
-      parent_path = parent_path + '/'
+      parent_path = parent_path + b'/'
     if idx == -1:
       return parent_path + path
     return parent_path + path[idx+1:]
@@ -142,7 +142,7 @@ class ChangeCollector(_svndelta.Editor):
     return root
 
   def open_root(self, base_revision, dir_pool=None):
-    return ('', '', self.base_rev)  # dir_baton
+    return (b'', b'', self.base_rev)  # dir_baton
 
   def delete_entry(self, path, revision, parent_baton, pool=None):
     base_path = self._make_base_path(parent_baton[1], path)
@@ -281,7 +281,71 @@ class RevisionChangeCollector(ChangeCollector):
     ChangeCollector.__init__(self, fs_ptr, root, pool, notify_cb)
 
   def _make_base_path(self, parent_path, path):
-    idx = path.rfind('/')
+    idx = path.rfind(b'/')
     if idx == -1:
-      return parent_path + '/' + path
+      return parent_path + b'/' + path
     return parent_path + path[idx:]
+
+
+class ParseFns3:
+    def __init__(self):
+        pass
+
+    def __del__(self):
+        pass
+
+    def _close_dumpstream(self):
+        # Does not correspond to a C method - called before finishing the
+        # parsing of the dump stream.
+        pass
+
+    def magic_header_record(self, version, pool=None):
+        pass
+
+    def uuid_record(self, uuid, pool=None):
+        pass
+
+    def new_revision_record(self, headers, pool=None):
+        return None # Returns revision_baton
+
+    def new_node_record(self, headers, revision_baton, pool=None):
+        return None # Returns node_baton
+
+    def set_revision_property(self, revision_baton, name, value):
+        pass
+
+    def set_node_property(self, node_baton, name, value):
+        pass
+
+    def delete_node_property(self, node_baton, name):
+        pass
+
+    def remove_node_props(self, node_baton):
+        pass
+
+    def set_fulltext(self, node_baton):
+        return None # Returns a writable stream
+
+    def apply_textdelta(self, node_baton):
+        return None # Returns delta window handler
+
+    def close_node(self, node_baton):
+        pass
+
+    def close_revision(self, revision_baton):
+        pass
+
+
+def make_parse_fns3(parse_fns3, pool=None, baton=None):
+  from libsvn.delta import _AncBaton
+
+  class _ParseBaton(_AncBaton):
+    # Drive _close_dumpstream method when the instance is deleted.
+    # For backward compatibility before Subversion 1.15, we call it even if
+    # the instance would not be used by C API, or the C API would cause
+    # some error.
+    def __del__(self):
+      self.editor._close_dumpstream()
+
+  parse_baton = _ParseBaton(parse_fns3, pool, baton)
+  return svn_swig_py_make_parse_fns3(pool), parse_baton

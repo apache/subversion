@@ -28,7 +28,8 @@ import os, types, sys
 import svntest
 
 # if somebody does a "from testcase import *", they only get these names
-__all__ = ['_XFail', '_Wimp', '_Skip', '_SkipUnless']
+__all__ = ['_XFail', '_Wimp', '_Skip', '_SkipUnless',
+           '_SkipDumpLoadCrossCheck']
 
 RESULT_OK = 'ok'
 RESULT_FAIL = 'fail'
@@ -135,14 +136,14 @@ class FunctionTestCase(TestCase):
   is derived from the file name in which FUNC was defined)
   """
 
-  def __init__(self, func, issues=None):
+  def __init__(self, func, issues=None, skip_cross_check=False):
     # it better be a function that accepts an sbox parameter and has a
     # docstring on it.
     assert isinstance(func, types.FunctionType)
 
-    name = func.func_name
+    name = func.__name__
 
-    assert func.func_code.co_argcount == 1, \
+    assert func.__code__.co_argcount == 1, \
         '%s must take an sbox argument' % name
 
     doc = func.__doc__.strip()
@@ -161,19 +162,22 @@ class FunctionTestCase(TestCase):
 
     TestCase.__init__(self, doc=doc, issues=issues)
     self.func = func
+    self.skip_cross_check = skip_cross_check
 
   def get_function_name(self):
-    return self.func.func_name
+    return self.func.__name__
 
   def get_sandbox_name(self):
     """Base the sandbox's name on the name of the file in which the
     function was defined."""
 
-    filename = self.func.func_code.co_filename
+    filename = self.func.__code__.co_filename
     return os.path.splitext(os.path.basename(filename))[0]
 
   def run(self, sandbox):
-    return self.func(sandbox)
+    result = self.func(sandbox)
+    sandbox.verify(skip_cross_check = self.skip_cross_check)
+    return result
 
 
 class _XFail(TestCase):
@@ -218,8 +222,8 @@ class _Wimp(_XFail):
     RESULT_SKIP: (2, TextColors.success('SKIP: '), True),
     }
 
-  def __init__(self, wip, test_case, cond_func=lambda: True):
-    _XFail.__init__(self, test_case, cond_func, wip)
+  def __init__(self, wip, test_case, cond_func=lambda: True, issues=None):
+    _XFail.__init__(self, test_case, cond_func, wip, issues)
 
 
 class _Skip(TestCase):
@@ -261,11 +265,22 @@ class _SkipUnless(_Skip):
     _Skip.__init__(self, test_case, lambda c=cond_func: not c())
 
 
-def create_test_case(func, issues=None):
+class _SkipDumpLoadCrossCheck(TestCase):
+  """A test that will skip the post-test dump/load cross-check."""
+
+  def __init__(self, test_case, cond_func=lambda: True, wip=None,
+               issues=None):
+    TestCase.__init__(self,
+                      create_test_case(test_case, skip_cross_check=True),
+                      cond_func, wip=wip, issues=issues)
+
+
+def create_test_case(func, issues=None, skip_cross_check=False):
   if isinstance(func, TestCase):
     return func
   else:
-    return FunctionTestCase(func, issues=issues)
+    return FunctionTestCase(func, issues=issues,
+                            skip_cross_check=skip_cross_check)
 
 
 # Various decorators to make declaring tests as such simpler
@@ -322,5 +337,62 @@ def Issues_deco(*issues):
 
   return _second
 
+def SkipDumpLoadCrossCheck_deco(cond_func = lambda: True):
+  def _second(func):
+    if isinstance(func, TestCase):
+      return _SkipDumpLoadCrossCheck(func, cond_func, issues=func.issues)
+    else:
+      return _SkipDumpLoadCrossCheck(func, cond_func)
+
+  return _second
+
+
 # Create a singular alias, for linguistic correctness
 Issue_deco = Issues_deco
+
+
+# Determines the name of UTF-8 locale on the system, or returns None if one
+# couldn't be found.
+def _detect_utf8_locale():
+    import locale
+
+    orig = None
+    try:
+        for name in ('C.UTF-8', 'en_US.UTF-8'):
+            try:
+                orig = locale.setlocale(locale.LC_ALL, name)
+            except locale.Error:
+                continue
+            else:
+                return name
+    finally:
+        if orig is not None:
+            locale.setlocale(locale.LC_ALL, orig)
+
+    return None  # utf-8 locale unavailable
+
+_utf8_locale = _detect_utf8_locale() if os.name != 'nt' else False
+
+# Decorator that runs the test in UTF-8 environment. If there are no good
+# UTF-8 locales availible on the system, skips the test.
+def RequireUtf8_deco(f):
+
+    import functools
+
+    @functools.wraps(f)
+    def wrapper(sbox: svntest.sandbox.Sandbox):
+        if _utf8_locale is None:
+            raise svntest.Skip
+        if _utf8_locale is not False:
+            orig = os.environ.get('LC_ALL')
+            os.environ['LC_ALL'] = _utf8_locale
+        try:
+            return f(sbox)
+        finally:
+            if _utf8_locale is not False:
+                if orig is None:
+                    del os.environ['LC_ALL']
+                else:
+                    os.environ['LC_ALL'] = orig
+
+    return wrapper

@@ -21,54 +21,65 @@
  * @endcopyright
  */
 
+#include <stdexcept>
+#include <string>
+
 #include "jni_list.hpp"
+
+#include "svn_private_config.h"
 
 namespace Java {
 
-// Class Java::BaseList
+// Class Java::BaseImmutableList
 
-const char* const BaseList::m_class_name = "java/util/List";
+const char* const BaseImmutableList::m_class_name = "java/util/List";
 
-BaseList::ClassImpl::ClassImpl(Env env, jclass cls)
+BaseImmutableList::ClassImpl::ClassImpl(Env env, jclass cls)
   : Object::ClassImpl(env, cls),
     m_mid_size(env.GetMethodID(cls, "size", "()I")),
-    m_mid_get(env.GetMethodID(cls, "get", "(I)Ljava/lang/Object;"))
+    m_mid_get(env.GetMethodID(cls, "get", "(I)Ljava/lang/Object;")),
+    m_mid_add(env.GetMethodID(cls, "add", "(Ljava/lang/Object;)Z")),
+    m_mid_clear(env.GetMethodID(cls, "clear", "()V")),
+    m_mid_iter(env.GetMethodID(cls, "listIterator", "()Ljava/util/ListIterator;"))
+{}
+
+BaseImmutableList::ClassImpl::~ClassImpl() {}
+
+jobject BaseImmutableList::operator[](jint index) const
+{
+  try
+    {
+      return m_env.CallObjectMethod(m_jthis, impl().m_mid_get, index);
+    }
+  catch (const SignalExceptionThrown&)
+    {
+      // Just rethrow if it's not an IndexOutOfBoundsException.
+      if (!m_env.IsInstanceOf(
+              m_env.ExceptionOccurred(),
+              ClassCache::get_exc_index_out_of_bounds(m_env)->get_class()))
+        throw;
+
+      m_env.ExceptionClear();
+      std::string msg(_("List index out of bounds: "));
+      msg += index;
+      throw std::out_of_range(msg.c_str());
+    }
+}
+
+BaseImmutableList::Iterator BaseImmutableList::get_iterator() const
+{
+  return Iterator(m_env, m_env.CallObjectMethod(m_jthis, impl().m_mid_iter));
+}
+
+// Class Java::BaseList
+
+const char* const BaseList::m_class_name = "java/util/ArrayList";
+
+BaseList::ClassImpl::ClassImpl(Env env, jclass cls)
+  : BaseImmutableList::ClassImpl(env, cls),
+    m_mid_ctor(env.GetMethodID(cls, "<init>", "(I)V"))
 {}
 
 BaseList::ClassImpl::~ClassImpl() {}
-
-BaseList::ovector
-BaseList::convert_to_vector(Env env, jobject jlist)
-{
-  const ClassImpl* pimpl =
-    dynamic_cast<const ClassImpl*>(ClassCache::get_list(env));
-  const jint length = env.CallIntMethod(jlist, pimpl->m_mid_size);
-
-  if (!length)
-    return ovector();
-
-  ovector contents(length);
-  ovector::iterator it;
-  jint i;
-  for (i = 0, it = contents.begin(); it != contents.end(); ++it, ++i)
-    *it = env.CallObjectMethod(jlist, pimpl->m_mid_get, i);
-  return contents;
-}
-
-
-// Class Java::BaseMutableList
-
-const char* const BaseMutableList::m_class_name = "java/util/ArrayList";
-
-BaseMutableList::ClassImpl::ClassImpl(Env env, jclass cls)
-  : Object::ClassImpl(env, cls),
-    m_mid_ctor(env.GetMethodID(cls, "<init>", "(I)V")),
-    m_mid_add(env.GetMethodID(cls, "add", "(Ljava/lang/Object;)Z")),
-    m_mid_clear(env.GetMethodID(cls, "clear", "()V")),
-    m_mid_get(env.GetMethodID(cls, "get", "(I)Ljava/lang/Object;")),
-    m_mid_size(env.GetMethodID(cls, "size", "()I"))
-{}
-
-BaseMutableList::ClassImpl::~ClassImpl() {}
 
 } // namespace Java

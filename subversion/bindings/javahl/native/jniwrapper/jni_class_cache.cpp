@@ -38,14 +38,16 @@
 #include "jni_string_map.hpp"
 
 #include "../SubversionException.hpp"
+#include "../Version.hpp"
 #include "../AuthnCallback.hpp"
 #include "../Credential.hpp"
 #include "../ExternalItem.hpp"
 #include "../EditorCallbacks.hpp"
+#include "../CxxCompat.hpp"
 
 namespace
 {
-/* This class behaves like a dumbed-down std:auto_ptr, but it
+/* This class behaves like a dumbed-down std:unique_ptr, but it
    implements atomic access and modification of the wrapped
    pointer. */
 class ClassImplPtr
@@ -132,11 +134,11 @@ class ClassCacheImpl
 
   // The statically initialized calss wrappers are always defined and
   // therefore do not need atomic access.
-#define JNIWRAPPER_DEFINE_CACHED_CLASS(M, C)            \
-  std::auto_ptr<Object::ClassImpl> m_impl_##M;          \
-  const Object::ClassImpl* get_##M(Env)                 \
-    {                                                   \
-      return m_impl_##M.get();                          \
+#define JNIWRAPPER_DEFINE_CACHED_CLASS(M, C)                     \
+  JavaHL::cxx::owned_ptr<Object::ClassImpl> m_impl_##M;          \
+  const Object::ClassImpl* get_##M(Env)                          \
+    {                                                            \
+      return m_impl_##M.get();                                   \
     }
 
   JNIWRAPPER_DEFINE_CACHED_CLASS(object, Object)
@@ -153,7 +155,7 @@ class ClassCacheImpl
       Object::ClassImpl* pimpl = m_impl_##M.get();              \
       if (!pimpl)                                               \
         {                                                       \
-          std::auto_ptr<Object::ClassImpl> tmp(                 \
+          JavaHL::cxx::owned_ptr<Object::ClassImpl> tmp(        \
               new C::ClassImpl(                                 \
                   env, env.FindClass(C::m_class_name)));        \
           pimpl = m_impl_##M.test_and_set(tmp.get());           \
@@ -163,14 +165,20 @@ class ClassCacheImpl
       return pimpl;                                             \
     }
 
-  JNIWRAPPER_DEFINE_CACHED_CLASS(list, BaseList);
-  JNIWRAPPER_DEFINE_CACHED_CLASS(array_list, BaseMutableList);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(exc_index_out_of_bounds,
+                                 IndexOutOfBoundsException);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(exc_no_such_element,
+                                 NoSuchElementException);
 
-  JNIWRAPPER_DEFINE_CACHED_CLASS(map, BaseMap);
-  JNIWRAPPER_DEFINE_CACHED_CLASS(set, BaseMap::Set);
-  JNIWRAPPER_DEFINE_CACHED_CLASS(iterator, BaseMap::Iterator);
-  JNIWRAPPER_DEFINE_CACHED_CLASS(map_entry, BaseMap::Entry);
-  JNIWRAPPER_DEFINE_CACHED_CLASS(hash_map, BaseMutableMap);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(iterator, BaseIterator);
+
+  JNIWRAPPER_DEFINE_CACHED_CLASS(list, BaseImmutableList);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(array_list, BaseList);
+
+  JNIWRAPPER_DEFINE_CACHED_CLASS(map, BaseImmutableMap);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(set, BaseImmutableMap::Set);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(map_entry, BaseImmutableMap::Entry);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(hash_map, BaseMap);
 
   JNIWRAPPER_DEFINE_CACHED_CLASS(input_stream, InputStream);
   JNIWRAPPER_DEFINE_CACHED_CLASS(output_stream, OutputStream);
@@ -180,6 +188,9 @@ class ClassCacheImpl
 
   JNIWRAPPER_DEFINE_CACHED_CLASS(subversion_exception,
                                  ::JavaHL::SubversionException);
+
+  JNIWRAPPER_DEFINE_CACHED_CLASS(version,
+                                 ::JavaHL::Version);
 
   JNIWRAPPER_DEFINE_CACHED_CLASS(authn_cb,
                                  ::JavaHL::AuthnCallback);
@@ -279,6 +290,9 @@ JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(classtype);
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(throwable);
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(string);
 
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(exc_index_out_of_bounds);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(exc_no_such_element);
+
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(list);
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(array_list);
 
@@ -294,6 +308,8 @@ JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(output_stream);
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(byte_buffer);
 
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(subversion_exception);
+
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(version);
 
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(authn_cb);
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(authn_result);

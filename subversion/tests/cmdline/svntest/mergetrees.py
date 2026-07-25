@@ -3,7 +3,7 @@
 #  mergetrees.py:  routines that create merge scenarios
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -29,7 +29,7 @@ import shutil, sys, re, os
 import time
 
 # Our testing module
-import main, wc, verify, actions, testcase
+from svntest import main, wc, verify, actions, testcase
 
 from prop_tests import binary_mime_type_on_text_file_warning
 
@@ -95,6 +95,8 @@ def expected_merge_output(rev_ranges, additional_lines=[], foreign=False,
   if (two_url):
     lines += ["--- Recording mergeinfo for merge between repository URLs .*\n"]
 
+  lines += ["Fetching text bases [.]+done\n"]
+
   # Address "The Backslash Plague"
   #
   # If ADDITIONAL_LINES are present there are possibly paths in it with
@@ -122,7 +124,7 @@ def check_mergeinfo_recursively(root_path, subpaths_mergeinfo):
   expected = verify.UnorderedOutput(
     [path + ' - ' + subpaths_mergeinfo[path] + '\n'
      for path in subpaths_mergeinfo])
-  actions.run_and_verify_svn(None, expected, [],
+  actions.run_and_verify_svn(expected, [],
                                      'propget', '-R', SVN_PROP_MERGEINFO,
                                      root_path)
 
@@ -146,7 +148,7 @@ def set_up_dir_replace(sbox):
   new_file2 = os.path.join(foo_path, "new file 2")
 
   # Make directory foo in F, and add some files within it.
-  actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
+  actions.run_and_verify_svn(None, [], 'mkdir', foo_path)
   main.file_append(new_file, "Initial text in new file.\n")
   main.file_append(new_file2, "Initial text in new file 2.\n")
   main.run_svn(None, "add", new_file)
@@ -164,10 +166,7 @@ def set_up_dir_replace(sbox):
     'A/B/F/foo/new file'    : Item(status='  ', wc_rev=2),
     'A/B/F/foo/new file 2'  : Item(status='  ', wc_rev=2),
     })
-  actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # Merge foo onto C
   expected_output = wc.State(C_path, {
@@ -200,7 +199,7 @@ def set_up_dir_replace(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None, 1)
+                                       check_props=True)
   # Commit merge of foo onto C, creating r3.
   expected_output = wc.State(wc_dir, {
     'A/C'        : Item(verb='Sending'),
@@ -217,13 +216,10 @@ def set_up_dir_replace(sbox):
     'A/C/foo/new file 2'    : Item(status='  ', wc_rev=3),
 
     })
-  actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # Delete foo on F, creating r4.
-  actions.run_and_verify_svn(None, None, [], 'rm', foo_path)
+  actions.run_and_verify_svn(None, [], 'rm', foo_path)
   expected_output = wc.State(wc_dir, {
     'A/B/F/foo'   : Item(verb='Deleting'),
     })
@@ -234,10 +230,7 @@ def set_up_dir_replace(sbox):
     'A/C/foo/new file'      : Item(status='  ', wc_rev=3),
     'A/C/foo/new file 2'    : Item(status='  ', wc_rev=3),
     })
-  actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
 #----------------------------------------------------------------------
 def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
@@ -262,82 +255,57 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
   expected_status = actions.get_virginal_state(wc_dir, 1)
   expected_disk = main.greek_state.copy()
 
+  def path_join(head, tail):
+    if not head: return tail
+    if not tail: return head
+    return head + '/' + tail
+
+  def greek_file_item(path):
+    if path[-1:].islower():
+      basename = re.sub('.*/', '', path)
+      return Item("This is the file '" + basename + "'.\n")
+    return Item()
+
+  A_paths = [
+    "",
+    "B",
+    "B/lambda",
+    "B/E",
+    "B/E/alpha",
+    "B/E/beta",
+    "B/F",
+    "mu",
+    "C",
+    "D",
+    "D/gamma",
+    "D/G",
+    "D/G/pi",
+    "D/G/rho",
+    "D/G/tau",
+    "D/H",
+    "D/H/chi",
+    "D/H/omega",
+    "D/H/psi",
+    ]
   def copy_A(dest_name, rev):
     expected = verify.UnorderedOutput(
-      ["A    " + os.path.join(wc_dir, dest_name, "B") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "B", "lambda") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "B", "E") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "B", "E", "alpha") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "B", "E", "beta") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "B", "F") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "mu") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "C") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "gamma") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "G") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "G", "pi") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "G", "rho") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "G", "tau") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "H") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "H", "chi") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "H", "omega") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "H", "psi") + "\n",
-       "Checked out revision " + str(rev - 1) + ".\n",
-       "A         " + os.path.join(wc_dir, dest_name) + "\n"])
-    expected_status.add({
-      dest_name + "/B"         : Item(status='  ', wc_rev=rev),
-      dest_name + "/B/lambda"  : Item(status='  ', wc_rev=rev),
-      dest_name + "/B/E"       : Item(status='  ', wc_rev=rev),
-      dest_name + "/B/E/alpha" : Item(status='  ', wc_rev=rev),
-      dest_name + "/B/E/beta"  : Item(status='  ', wc_rev=rev),
-      dest_name + "/B/F"       : Item(status='  ', wc_rev=rev),
-      dest_name + "/mu"        : Item(status='  ', wc_rev=rev),
-      dest_name + "/C"         : Item(status='  ', wc_rev=rev),
-      dest_name + "/D"         : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/gamma"   : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/G"       : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/G/pi"    : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/G/rho"   : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/G/tau"   : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/H"       : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/H/chi"   : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/H/omega" : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/H/psi"   : Item(status='  ', wc_rev=rev),
-      dest_name                : Item(status='  ', wc_rev=rev)})
-    expected_disk.add({
-      dest_name                : Item(),
-      dest_name + '/B'         : Item(),
-      dest_name + '/B/lambda'  : Item("This is the file 'lambda'.\n"),
-      dest_name + '/B/E'       : Item(),
-      dest_name + '/B/E/alpha' : Item("This is the file 'alpha'.\n"),
-      dest_name + '/B/E/beta'  : Item("This is the file 'beta'.\n"),
-      dest_name + '/B/F'       : Item(),
-      dest_name + '/mu'        : Item("This is the file 'mu'.\n"),
-      dest_name + '/C'         : Item(),
-      dest_name + '/D'         : Item(),
-      dest_name + '/D/gamma'   : Item("This is the file 'gamma'.\n"),
-      dest_name + '/D/G'       : Item(),
-      dest_name + '/D/G/pi'    : Item("This is the file 'pi'.\n"),
-      dest_name + '/D/G/rho'   : Item("This is the file 'rho'.\n"),
-      dest_name + '/D/G/tau'   : Item("This is the file 'tau'.\n"),
-      dest_name + '/D/H'       : Item(),
-      dest_name + '/D/H/chi'   : Item("This is the file 'chi'.\n"),
-      dest_name + '/D/H/omega' : Item("This is the file 'omega'.\n"),
-      dest_name + '/D/H/psi'   : Item("This is the file 'psi'.\n"),
-      })
+      [ "A         " + sbox.ospath(path_join(dest_name, p)) + "\n"
+        for p in A_paths ])
+    expected_status.add(
+      { path_join(dest_name, p) : Item(status='  ', wc_rev=rev)
+        for p in A_paths })
+    expected_disk.add(
+      { path_join(dest_name, p) : greek_file_item(p)
+        for p in A_paths })
 
     # Make a branch A_COPY to merge into.
-    actions.run_and_verify_svn(None, expected, [], 'copy',
+    actions.run_and_verify_svn(expected, [], 'copy',
                                        sbox.repo_url + "/A",
                                        os.path.join(wc_dir,
                                                     dest_name))
 
     expected_output = wc.State(wc_dir, {dest_name : Item(verb='Adding')})
-    actions.run_and_verify_commit(wc_dir,
-                                          expected_output,
-                                          expected_status,
-                                          None,
-                                          wc_dir)
+    actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
   for i in range(nbr_of_branches):
     if i == 0:
       copy_A('A_COPY', i + 2)
@@ -354,8 +322,7 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
                           "New content")
   expected_output = wc.State(wc_dir, {'A/D/H/psi' : Item(verb='Sending')})
   expected_status.tweak('A/D/H/psi', wc_rev=nbr_of_branches + 2)
-  actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
   expected_disk.tweak('A/D/H/psi', contents="New content")
 
   # r(nbr_of_branches + 3) - modify and commit A/D/G/rho
@@ -363,8 +330,7 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
                           "New content")
   expected_output = wc.State(wc_dir, {'A/D/G/rho' : Item(verb='Sending')})
   expected_status.tweak('A/D/G/rho', wc_rev=nbr_of_branches + 3)
-  actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
   expected_disk.tweak('A/D/G/rho', contents="New content")
 
   # r(nbr_of_branches + 4) - modify and commit A/B/E/beta
@@ -372,8 +338,7 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
                           "New content")
   expected_output = wc.State(wc_dir, {'A/B/E/beta' : Item(verb='Sending')})
   expected_status.tweak('A/B/E/beta', wc_rev=nbr_of_branches + 4)
-  actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
   expected_disk.tweak('A/B/E/beta', contents="New content")
 
   # r(nbr_of_branches + 5) - modify and commit A/D/H/omega
@@ -381,8 +346,7 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
                           "New content")
   expected_output = wc.State(wc_dir, {'A/D/H/omega' : Item(verb='Sending')})
   expected_status.tweak('A/D/H/omega', wc_rev=nbr_of_branches + 5)
-  actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
   expected_disk.tweak('A/D/H/omega', contents="New content")
 
   return expected_disk, expected_status
@@ -400,22 +364,22 @@ def svn_mkfile(path):
   dirname, filename = os.path.split(path)
   main.file_write(path, "This is the file '" + filename + "'.\n" +
                                 "Last changed in '$Revision$'.\n")
-  actions.run_and_verify_svn(None, None, [], 'add', path)
-  actions.run_and_verify_svn(None, None, [], 'propset',
+  actions.run_and_verify_svn(None, [], 'add', path)
+  actions.run_and_verify_svn(None, [], 'propset',
                                      'svn:keywords', 'Revision', path)
 
 def svn_modfile(path):
   "Make text and property mods to a WC file."
   path = local_path(path)
   main.file_append(path, "An extra line.\n")
-  actions.run_and_verify_svn(None, None, [], 'propset',
+  actions.run_and_verify_svn(None, [], 'propset',
                                      'newprop', 'v', path)
 
 def svn_copy(s_rev, path1, path2):
   "Copy a WC path locally."
   path1 = local_path(path1)
   path2 = local_path(path2)
-  actions.run_and_verify_svn(None, None, [], 'copy', '--parents',
+  actions.run_and_verify_svn(None, [], 'copy', '--parents',
                                      '-r', s_rev, path1, path2)
 
 def svn_merge(rev_range, source, target, lines=None, elides=[],
@@ -462,8 +426,9 @@ def svn_merge(rev_range, source, target, lines=None, elides=[],
                                   text_resolved=text_resolved,
                                   prop_resolved=prop_resolved,
                                   tree_resolved=tree_resolved)
-  actions.run_and_verify_svn(None, exp_out, [],
-                                     'merge', rev_arg, source, target, *args)
+  actions.run_and_verify_svn(exp_out, [],
+                                     'merge', rev_arg, source, target,
+                                     '--accept=postpone', *args)
 
 #----------------------------------------------------------------------
 # Setup helper for issue #4056 and issue #4057 tests.

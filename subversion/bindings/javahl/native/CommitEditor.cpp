@@ -48,7 +48,7 @@ CommitEditor::getCppObject(jobject jthis)
 {
   static jfieldID fid = 0;
   jlong cppAddr = SVNBase::findCppAddrForJObject(
-      jthis, &fid, JAVA_PACKAGE"/remote/CommitEditor");
+      jthis, &fid, JAVAHL_CLASS("/remote/CommitEditor"));
   return (cppAddr == 0 ? NULL : reinterpret_cast<CommitEditor*>(cppAddr));
 }
 
@@ -136,7 +136,7 @@ void CommitEditor::dispose(jobject jthis)
     abort();
 
   static jfieldID fid = 0;
-  SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/remote/CommitEditor");
+  SVNBase::dispose(jthis, &fid, JAVAHL_CLASS("/remote/CommitEditor"));
 }
 
 namespace {
@@ -184,7 +184,7 @@ build_checksum(jobject jchecksum, SVN::Pool& pool)
 
       if (0 == digest_mid || 0 == kind_mid)
         {
-          jclass cls = env->FindClass(JAVA_PACKAGE"/types/Checksum");
+          jclass cls = env->FindClass(JAVAHL_CLASS("/types/Checksum"));
           if (JNIUtil::isJavaExceptionThrown())
             return checksum;
 
@@ -192,7 +192,7 @@ build_checksum(jobject jchecksum, SVN::Pool& pool)
           if (JNIUtil::isJavaExceptionThrown())
             return checksum;
           kind_mid = env->GetMethodID(cls, "getKind", "()L"
-                                      JAVA_PACKAGE"/types/Checksum$Kind;");
+                                      JAVAHL_CLASS("/types/Checksum$Kind;"));
           if (JNIUtil::isJavaExceptionThrown())
             return checksum;
         }
@@ -444,7 +444,8 @@ svn_error_t* open_callback_session(svn_ra_session_t*& session,
   if (!session)
     {
       const char* corrected_url = NULL;
-      SVN_ERR(svn_ra_open4(&session, &corrected_url, url, uuid,
+      const char* redirect_url = NULL;
+      SVN_ERR(svn_ra_open5(&session, &corrected_url, &redirect_url, url, uuid,
                            context->getCallbacks(),
                            context->getCallbackBaton(),
                            context->getConfigData(),
@@ -459,8 +460,8 @@ svn_error_t* open_callback_session(svn_ra_session_t*& session,
           return svn_error_createf(
               SVN_ERR_RA_ILLEGAL_URL, NULL,
               _("Repository URL changed while session was open.\n"
-                "Expected URL: %s\nApparent URL: %s"),
-              url, corrected_url);
+                "Expected URL: %s\nRedirect URL:%s\nApparent URL: %s\n"),
+              url, redirect_url, corrected_url);
         }
     }
   return SVN_NO_ERROR;

@@ -73,31 +73,17 @@ svn_io__is_finfo_read_only(svn_boolean_t *read_only,
                            apr_pool_t *pool);
 
 
-/** Buffer test handler function for a generic stream. @see svn_stream_t
- * and svn_stream__is_buffered().
+/**
+ * Lock file at @a lock_file. If that file does not exist, create an empty
+ * file.
  *
- * @since New in 1.7.
+ * Lock will be automatically released when @a pool is cleared or destroyed.
+ * Use @a pool for memory allocations.
  */
-typedef svn_boolean_t (*svn_stream__is_buffered_fn_t)(void *baton);
+svn_error_t *
+svn_io__file_lock_autocreate(const char *lock_file,
+                             apr_pool_t *pool);
 
-/** Set @a stream's buffer test function to @a is_buffered_fn
- *
- * @since New in 1.7.
- */
-void
-svn_stream__set_is_buffered(svn_stream_t *stream,
-                            svn_stream__is_buffered_fn_t is_buffered_fn);
-
-/** Return whether this generic @a stream uses internal buffering.
- * This may be used to work around subtle differences between buffered
- * and non-buffered APR files.  A lazy-open stream cannot report the
- * true buffering state until after the lazy open: a stream that
- * initially reports as non-buffered may report as buffered later.
- *
- * @since New in 1.7.
- */
-svn_boolean_t
-svn_stream__is_buffered(svn_stream_t *stream);
 
 /** Return the underlying file, if any, associated with the stream, or
  * NULL if not available.  Accessing the file bypasses the stream.
@@ -116,8 +102,38 @@ svn_stream__create_for_install(svn_stream_t **install_stream,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/* Configure value of the read-only attribute that will be set when
+   the stream is installed. */
+void
+svn_stream__install_set_read_only(svn_stream_t *install_stream,
+                                  svn_boolean_t read_only);
+
+/* Configure value of the executable bit that will be set when the
+   stream is installed. */
+void
+svn_stream__install_set_executable(svn_stream_t *install_stream,
+                                   svn_boolean_t executable);
+
+/* Configure value of the last modification time that will be set
+   when the stream is installed. */
+void
+svn_stream__install_set_affected_time(svn_stream_t *install_stream,
+                                      apr_time_t mtime);
+
+/* Finalize the content, attributes and the timestamps of the underlying
+   temporary file. Return the properties of the finalized file in MTIME_P
+   and SIZE_P. The returned properties are guaranteed to be preserved
+   after the stream is installed. MTIME_P and SIZE_P both may be NULL.*/
+svn_error_t *
+svn_stream__install_finalize(apr_time_t *mtime_p,
+                             apr_off_t *size_p,
+                             svn_stream_t *install_stream,
+                             apr_pool_t *scratch_pool);
+
 /* Installs a stream created with svn_stream__create_for_install in its final
    location FINAL_ABSPATH, potentially using platform specific optimizations.
+   If the stream has not been finalized with svn_stream__install_finalize(),
+   the behavior is undefined.
 
    If MAKE_PARENTS is TRUE, this function will create missing parent
    directories if needed.
@@ -133,14 +149,13 @@ svn_error_t *
 svn_stream__install_delete(svn_stream_t *install_stream,
                            apr_pool_t *scratch_pool);
 
-/* Optimized apr_file_stat / apr_file_info_get operating on a closed
-   install stream */
-svn_error_t *
-svn_stream__install_get_info(apr_finfo_t *finfo,
-                             svn_stream_t *install_stream,
-                             apr_int32_t wanted,
-                             apr_pool_t *scratch_pool);
-
+/* Internal version of svn_stream_from_aprfile2() supporting the
+   additional TRUNCATE_ON_SEEK argument. */
+svn_stream_t *
+svn_stream__from_aprfile(apr_file_t *file,
+                         svn_boolean_t disown,
+                         svn_boolean_t truncate_on_seek,
+                         apr_pool_t *pool);
 
 #if defined(WIN32)
 
@@ -159,6 +174,56 @@ svn_error_t*
 svn_io__utf8_to_unicode_longpath(const WCHAR **result,
                                  const char *source,
                                  apr_pool_t *result_pool);
+
+/* This Windows-specific function marks the file to be deleted on close using
+   an existing file handle. It can be used to avoid having to reopen the file
+   as part of the delete handling. Return SVN_ERR_UNSUPPORTED_FEATURE if
+   delete on close operation is not supported by OS. */
+svn_error_t *
+svn_io__win_delete_file_on_close(apr_file_t *file,
+                                 const char *path,
+                                 apr_pool_t *pool);
+
+/* This Windows-specific function renames the file using an existing file
+   handle. It can be used to avoid having to reopen the file as part of the
+   rename operation. Return SVN_ERR_UNSUPPORTED_FEATURE if renaming open
+   file is not supported by OS.*/
+svn_error_t *
+svn_io__win_rename_open_file(apr_file_t *file,
+                             const char *from_path,
+                             const char *to_path,
+                             apr_pool_t *pool);
+
+/* Special value that indicates that the file system should not update
+   timestamp values such as LastAccessTime, LastWriteTime, and ChangeTime
+   during this I/O operation.
+   Corresponds to the predefined value of "0" in:
+   https://docs.microsoft.com/windows-hardware/drivers/ddi/wdm/ns-wdm-_file_basic_information#remarks
+ */
+#define SVN_IO__WIN_TIME_UNCHANGED (APR_INT64_MIN + 0)
+
+/* Special value that indicates that the file system should suspend updates
+   for timestamp values such as LastAccessTime, LastWriteTime, and ChangeTime
+   during subsequent I/O operations on the file handle.
+   Corresponds to the predefined value of "-1" in:
+   https://docs.microsoft.com/windows-hardware/drivers/ddi/wdm/ns-wdm-_file_basic_information#remarks
+ */
+#define SVN_IO__WIN_TIME_SUSPEND_UPDATE (APR_INT64_MIN + 1)
+
+/* This Windows-specific function sets the basic file information using an
+   existing file handle. The SET_MTIME will be set as the new LastWriteTime
+   value, unless it is equal to one of the predefined special values such
+   as SVN_IO__WIN_TIME_UNCHANGED or SVN_IO__WIN_TIME_SUSPEND_UPDATE.
+   If SET_READ_ONLY is non-zero, the file attributes will be updated to
+   include FILE_ATTRIBUTE_READONLY. Return SVN_ERR_UNSUPPORTED_FEATURE
+   if not supported by OS. */
+svn_error_t *
+svn_io__win_set_file_basic_info(apr_file_t *file,
+                                const char *path,
+                                apr_time_t set_mtime,
+                                svn_boolean_t set_read_only,
+                                apr_pool_t *pool);
+
 #endif /* WIN32 */
 
 /** Parse a user defined command to contain dynamically created labels

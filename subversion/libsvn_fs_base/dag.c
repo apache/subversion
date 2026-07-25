@@ -1028,12 +1028,14 @@ svn_fs_base__dag_delete_if_mutable(svn_fs_t *fs,
               void *val;
               svn_fs_dirent_t *dirent;
 
+              svn_pool_clear(subpool);
               apr_hash_this(hi, NULL, NULL, &val);
               dirent = val;
               SVN_ERR(svn_fs_base__dag_delete_if_mutable(fs, dirent->id,
                                                          txn_id, trail,
                                                          subpool));
             }
+          svn_pool_destroy(subpool);
         }
     }
 
@@ -1655,8 +1657,14 @@ svn_fs_base__things_different(svn_boolean_t *props_changed,
 
   /* Compare contents keys and their (optional) uniquifiers. */
   if (contents_changed != NULL)
-    *contents_changed = (! svn_fs_base__same_keys(noderev1->data_key,
-                                                  noderev2->data_key));
+    *contents_changed =
+      (! (svn_fs_base__same_keys(noderev1->data_key,
+                                 noderev2->data_key)
+          /* Technically, these uniquifiers aren't used and "keys",
+             but keys are base-36 stringified numbers, so we'll take
+             this liberty. */
+          && (svn_fs_base__same_keys(noderev1->data_key_uniquifier,
+                                     noderev2->data_key_uniquifier))));
 
   return SVN_NO_ERROR;
 }

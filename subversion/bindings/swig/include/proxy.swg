@@ -36,8 +36,8 @@
     if value is None or old_value is None or value is old_value: return
     
     if isinstance(value, dict):
-      for k, v in value.iteritems():
-        _copy_metadata_deep(v, old_value[k])
+      for k in value:
+        _copy_metadata_deep(value[k], old_value[k])
     elif isinstance(value, list):
       for v, old_v in zip(value, old_value):
         _copy_metadata_deep(v, old_v)
@@ -50,61 +50,76 @@
   def _assert_valid_deep(value):
     """Assert value's validity, recursively traversing lists and dicts."""
     if isinstance(value, dict):
-      for v in value.itervalues():
-        _assert_valid_deep(v)
+      for k in value:
+        _assert_valid_deep(value[k])
     elif isinstance(value, list):
       for v in value:
         _assert_valid_deep(v)
-    else:
-      if hasattr(value, "assert_valid"):
-        value.assert_valid()
+    # Ensure that the passed in value isn't a type, which could have an
+    # assert_valid attribute, but it can not be called without an instance.
+    elif type(value) != type:
+      try:
+        fn = value.assert_valid
+      except AttributeError:
+        pass
+      else:
+        fn()
+
 %}
+#if SWIG_VERSION >= 0x040000
+%pythoncode %{
+  # -classic and -modern options have been dropped and this variable
+  # is not generated since SWIG 4
+  _newclass = 1
+  _get_instance_attr = object.__getattribute__
+  _set_instance_attr = _swig_setattr_nondynamic_instance_variable(object.__setattr__)
 
-/* Default code for all wrapped proxy classes in Python */
-%define %proxy_pythoncode(TYPE)
-%pythoncode {
-  def set_parent_pool(self, parent_pool=None):
-    """Create a new proxy object for TYPE"""
-    import libsvn.core, weakref
-    self.__dict__["_parent_pool"] = \
-      parent_pool or libsvn.core.application_pool;
-    if self.__dict__["_parent_pool"]:
-      self.__dict__["_is_valid"] = weakref.ref(
-        self.__dict__["_parent_pool"]._is_valid)
+%}
+#elif defined(SWIGPYTHON_PY3)
+%pythoncode %{
+  # SWIG classes generated with -modern do not define this variable
+  try:
+    _newclass
+  except NameError:
+    _newclass = 1
+  else:
+    raise RuntimeError("Require -modern option, but _newclass is defined")
 
-  def assert_valid(self):
-    """Assert that this object is using valid pool memory"""
-    if "_is_valid" in self.__dict__:
-      assert self.__dict__["_is_valid"](), "Variable has already been deleted"
+  _get_instance_attr = object.__getattribute__
+  _set_instance_attr = _swig_setattr_nondynamic_method(object.__setattr__)
 
-  def __getattr__(self, name):
-    """Get an attribute from this object"""
-    self.assert_valid()
+%}
+#else
+%pythoncode %{
+  # SWIG classes generated with -classic do not define this variable,
+  # so set it to 0 when it doesn't exist
+  try:
+    _newclass
+  except NameError:
+    _newclass = 0
 
-    value = _swig_getattr(self, self.__class__, name)
+  if _newclass:
+    def _get_instance_attr(self, name):
+      try:
+        return object.__getattribute__(self, name)
+      except AttributeError:
+        return _swig_getattr(self, object.__getattribute__(self, '__class__'),
+                             name)
+  else:
+    def _get_instance_attr(self, name):
+      return _swig_getattr(self, self.__class__, name)
 
-    # If we got back a different object than we have, we need to copy all our
-    # metadata into it, so that it looks identical
-    members = self.__dict__.get("_members")
-    if members is not None:
-      _copy_metadata_deep(value, members.get(name))
-        
-    # Verify that the new object is good
-    _assert_valid_deep(value)
-
-    return value
-
-  def __setattr__(self, name, value):
-    """Set an attribute on this object"""
-    self.assert_valid()
-
-    # Save a copy of the object, so that the garbage
-    # collector won't kill the object while it's in
-    # SWIG-land
-    self.__dict__.setdefault("_members",{})[name] = value
-
+  def _set_instance_attr(self, name, value):
     return _swig_setattr(self, self.__class__, name, value)
-}
+
+%}
+#endif
+
+/* Default code for all wrapped proxy classes in Python.
+ * Inline the code from a separate file to avoid issues with
+ * SWIG mis-parsing the comments as preprocessor directives. */
+%define %proxy_pythoncode(TYPE)
+%pythoncode "proxy.py"
 %enddef
 
 /* Define a proxy for wrapping an existing struct */

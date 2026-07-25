@@ -60,7 +60,7 @@ CopySources::makeJCopySource(const char *path, svn_revnum_t rev, SVN::Pool &pool
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/types/CopySource");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/CopySource"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -69,8 +69,8 @@ CopySources::makeJCopySource(const char *path, svn_revnum_t rev, SVN::Pool &pool
     {
       ctor = env->GetMethodID(clazz, "<init>",
                               "(Ljava/lang/String;"
-                              "L" JAVA_PACKAGE "/types/Revision;"
-                              "L" JAVA_PACKAGE "/types/Revision;)V");
+                              JAVAHL_ARG("/types/Revision;")
+                              JAVAHL_ARG("/types/Revision;") ")V");
       if (JNIUtil::isExceptionThrown())
         POP_AND_RETURN_NULL;
     }
@@ -88,7 +88,7 @@ CopySources::array(SVN::Pool &pool)
   apr_pool_t *p = pool.getPool();
 
   JNIEnv *env = JNIUtil::getEnv();
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/types/CopySource");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/CopySource"));
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
@@ -132,7 +132,7 @@ CopySources::array(SVN::Pool &pool)
       if (getRevision == 0)
         {
           getRevision = env->GetMethodID(clazz, "getRevision",
-                                         "()L"JAVA_PACKAGE"/types/Revision;");
+                                         "()" JAVAHL_ARG("/types/Revision;"));
           if (JNIUtil::isJavaExceptionThrown() || getRevision == 0)
             return NULL;
         }
@@ -151,7 +151,7 @@ CopySources::array(SVN::Pool &pool)
       if (getPegRevision == 0)
         {
           getPegRevision = env->GetMethodID(clazz, "getPegRevision",
-                                            "()L"JAVA_PACKAGE"/types/Revision;");
+                                            "()" JAVAHL_ARG("/types/Revision;"));
           if (JNIUtil::isJavaExceptionThrown() || getPegRevision == 0)
             return NULL;
         }

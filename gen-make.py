@@ -25,7 +25,9 @@
 
 
 import os
+import traceback
 import sys
+
 import getopt
 try:
   my_getopt = getopt.gnu_getopt
@@ -45,8 +47,8 @@ sys.path.insert(0, os.path.join('build', 'generator'))
 sys.path.insert(1, 'build')
 
 gen_modules = {
+  'cmake' : ('gen_cmake', 'CMake build system'),
   'make' : ('gen_make', 'Makefiles for POSIX systems'),
-  'dsp' : ('gen_msvc_dsp', 'MSVC 6.x project files'),
   'vcproj' : ('gen_vcnet_vcproj', 'VC.Net project files'),
   }
 
@@ -65,10 +67,11 @@ def main(fname, gentype, verfname=None,
   generator.write()
   generator.write_sqlite_headers()
   generator.write_errno_table()
+  generator.write_config_keys()
 
   if ('--debug', '') in other_options:
     for dep_type, target_dict in generator.graph.deps.items():
-      sorted_targets = list(target_dict.keys()); sorted_targets.sort()
+      sorted_targets = sorted(target_dict.keys(), key=str)
       for target in sorted_targets:
         print(dep_type + ": " + _objinfo(target))
         for source in target_dict[target]:
@@ -173,6 +176,8 @@ def _usage_exit(err=None):
   print("")
   print("  --with-swig=DIR")
   print("           look for the swig program in DIR")
+  print("  --with-py3c=DIR")
+  print("           look for the py3c library in DIR")
   print("")
   print("  --with-sqlite=DIR")
   print("           look for sqlite in DIR")
@@ -202,10 +207,12 @@ def _usage_exit(err=None):
   print("  --with-static-openssl")
   print("           Use static openssl")
   print("")
+  print("  --with-shared-serf")
+  print("           Use shared library version of serf")
+  print("")
   print("  --vsnet-version=VER")
-  print("           generate for VS.NET version VER (2002, 2003, 2005, 2008,")
-  print("           2010, 2012 or 2013)")
-  print("           [only valid in combination with '-t vcproj']")
+  print("           generate for VS.NET version VER (2005-2017 or 9.0-15.0)")
+  print("           [implies '-t vcproj']")
   print("")
   print(" -D NAME[=value]")
   print("           define NAME macro during compilation")
@@ -213,8 +220,6 @@ def _usage_exit(err=None):
   print("")
   print("  --with-apr_memcache=DIR")
   print("           the apr_memcache sources are in DIR")
-  print("  --disable-gmock")
-  print("           do not use Googlemock")
   sys.exit(1)
 
 
@@ -250,11 +255,13 @@ if __name__ == '__main__':
                             'with-jdk=',
                             'with-junit=',
                             'with-swig=',
+                            'with-py3c=',
                             'with-sqlite=',
                             'with-sasl=',
                             'with-apr_memcache=',
                             'with-static-apr',
                             'with-static-openssl',
+                            'with-shared-serf',
                             'enable-pool-debug',
                             'enable-purify',
                             'enable-quantify',
@@ -262,12 +269,13 @@ if __name__ == '__main__':
                             'disable-shared',
                             'installed-libs=',
                             'vsnet-version=',
-                            'disable-gmock',
                             ])
     if len(args) > 1:
       _usage_exit("Too many arguments")
-  except getopt.GetoptError, e:
-    _usage_exit(str(e))
+  except getopt.GetoptError:
+    typ, val, tb = sys.exc_info()
+    msg = ''.join(traceback.format_exception_only(typ, val))
+    _usage_exit(msg)
 
   conf = 'build.conf'
   skip = 0
@@ -299,6 +307,8 @@ if __name__ == '__main__':
       skip = 1
     elif opt == '-t':
       gentype = val
+    elif opt == '--vsnet-version':
+      gentype = 'vcproj'
     else:
       if opt == '--with-httpd':
         rest.add('--with-apr', os.path.join(val, 'srclib', 'apr'),

@@ -316,12 +316,15 @@ svn_wc__expand_keywords(apr_hash_t **keywords,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool));
 
-      if (repos_relpath)
-        url = svn_path_url_add_component2(repos_root_url, repos_relpath,
-                                          scratch_pool);
-      else
-         SVN_ERR(svn_wc__db_read_url(&url, db, local_abspath, scratch_pool,
-                                     scratch_pool));
+      /* Handle special statuses (e.g. added) */
+      if (!repos_relpath)
+         SVN_ERR(svn_wc__db_read_repos_info(NULL, &repos_relpath,
+                                            &repos_root_url, NULL,
+                                            db, local_abspath,
+                                            scratch_pool, scratch_pool));
+
+      url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                        scratch_pool);
     }
   else
     {
@@ -436,4 +439,21 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
 #endif
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__translated_stream(svn_stream_t **stream,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          const char *versioned_abspath,
+                          apr_uint32_t flags,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+           svn_wc__internal_translated_stream(stream, wc_ctx->db,
+                                              local_abspath,
+                                              versioned_abspath,
+                                              flags, result_pool,
+                                              scratch_pool));
 }

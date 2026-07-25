@@ -76,6 +76,12 @@ svn_boolean_t
 svn_fs_fs__is_packed_revprop(svn_fs_t *fs,
                              svn_revnum_t rev);
 
+/* Return the first revision in the pack / rev file containing REVISION in
+ * filesystem FS.  For non-packed revs, this will simply be REVISION. */
+svn_revnum_t
+svn_fs_fs__packed_base_rev(svn_fs_t *fs,
+                           svn_revnum_t revision);
+
 /* Return the full path of the rev shard directory that will contain
  * revision REV in FS.  Allocate the result in POOL.
  */
@@ -183,6 +189,13 @@ const char *
 svn_fs_fs__path_min_unpacked_rev(svn_fs_t *fs,
                                  apr_pool_t *pool);
 
+/* Return the path of the 'transactions' directory in FS.
+ * The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_txns_dir(svn_fs_t *fs,
+                         apr_pool_t *pool);
+
 /* Return the path of the directory containing the transaction TXN_ID in FS.
  * The result will be allocated in POOL.
  */
@@ -190,6 +203,13 @@ const char *
 svn_fs_fs__path_txn_dir(svn_fs_t *fs,
                         const svn_fs_fs__id_part_t *txn_id,
                         apr_pool_t *pool);
+
+/* Return the path of the 'txn-protorevs' directory in FS, even if that
+ * folder may not exist in FS.  The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_txn_proto_revs(svn_fs_t *fs,
+                               apr_pool_t *pool);
 
 /* Return the path of the proto-revision file for transaction TXN_ID in FS.
  * The result will be allocated in POOL.
@@ -296,7 +316,7 @@ svn_error_t *
 svn_fs_fs__update_min_unpacked_rev(svn_fs_t *fs,
                                    apr_pool_t *pool);
 
-/* Atomically update the 'min-unpacked-rev' file in FS to hold the specifed
+/* Atomically update the 'min-unpacked-rev' file in FS to hold the specified
  * REVNUM.  Perform temporary allocations in SCRATCH_POOL.
  */
 svn_error_t *
@@ -316,7 +336,7 @@ svn_fs_fs__read_current(svn_revnum_t *rev,
                         svn_fs_t *fs,
                         apr_pool_t *pool);
 
-/* Atomically update the 'current' file to hold the specifed REV,
+/* Atomically update the 'current' file to hold the specified REV,
    NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are
    ignored and may be 0 if the FS format does not use them.)
    Perform temporary allocations in POOL. */
@@ -343,12 +363,6 @@ svn_fs_fs__try_stringbuf_from_file(svn_stringbuf_t **content,
                                    svn_boolean_t last_attempt,
                                    apr_pool_t *pool);
 
-/* Fetch the current offset of FILE into *OFFSET_P. */
-svn_error_t *
-svn_fs_fs__get_file_offset(apr_off_t *offset_p,
-                           apr_file_t *file,
-                           apr_pool_t *pool);
-
 /* Read the file FNAME and store the contents in *BUF.
    Allocations are performed in POOL. */
 svn_error_t *
@@ -374,16 +388,16 @@ svn_fs_fs__read_number_from_stream(apr_int64_t *result,
    PERMS_REFERENCE.  Temporary allocations are from POOL.
 
    This function almost duplicates svn_io_file_move(), but it tries to
-   guarantee a flush. */
+   guarantee a flush if FLUSH_TO_DISK is non-zero. */
 svn_error_t *
 svn_fs_fs__move_into_place(const char *old_filename,
                            const char *new_filename,
                            const char *perms_reference,
+                           svn_boolean_t flush_to_disk,
                            apr_pool_t *pool);
 
-/* Return TRUE, iff revision REV in FS requires logical addressing. */
+/* Return TRUE, iff FS uses logical addressing. */
 svn_boolean_t
-svn_fs_fs__use_log_addressing(svn_fs_t *fs,
-                              svn_revnum_t rev);
+svn_fs_fs__use_log_addressing(svn_fs_t *fs);
 
 #endif

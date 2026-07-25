@@ -104,7 +104,7 @@ The Status Quo
    scheme, however, such as the need to examine the a directory
    target's parent, and perhaps a handful of unspecified
    "spidey-sense" warnings.  PLEASE, if you have valid technical
-   complaints, (re-)voice them in reponse to this mail so they can be
+   complaints, (re-)voice them in response to this mail so they can be
    evaluated more closely, offering better solutions if you can.
 
    For example, the editor could be changed so that some flavor of

@@ -137,7 +137,8 @@ class Permission:
                     try:
                         groupusers.extend(self._group[token[1:]])
                     except KeyError:
-                        raise Error, "group '%s' not found" % token[1:]
+                        raise Error("group '%s' not found" % \
+                                     token[1:])
                 else:
                     groupusers.append(token)
             self._group[option] = groupusers
@@ -296,7 +297,7 @@ class MissingArgumentsException(Exception):
 def parse_options():
     try:
         opts, args = my_getopt(sys.argv[1:], "f:s:r:t:R:A:h", ["help"])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         raise Error(e.msg)
     class Options: pass
     obj = Options()
@@ -349,11 +350,11 @@ def main():
         check_perms(opts.filename, opts.section,
                     opts.repository, opts.transaction, opts.revision,
                     opts.author)
-    except MissingArgumentsException, e:
+    except MissingArgumentsException as e:
         sys.stderr.write("%s\n" % str(e))
         sys.stderr.write(USAGE)
         sys.exit(1)
-    except Error, e:
+    except Error as e:
         sys.stderr.write("error: %s\n" % str(e))
         sys.exit(1)
 

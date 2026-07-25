@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.tigris.subversion.javahl;
@@ -62,7 +60,7 @@ public class SVNAdmin
     }
 
     /**
-     * slot for the adress of the native peer. The JNI code is the only user
+     * slot for the address of the native peer. The JNI code is the only user
      * of this member
      */
     protected long cppAddr;
@@ -138,7 +136,7 @@ public class SVNAdmin
      * @param errorOut          the messages will be outputed here
      * @param start             the first revision to be dumped
      * @param end               the last revision to be dumped
-     * @param incremental       the dump will be incremantal
+     * @param incremental       the dump will be incremental
      * @throws ClientException  throw in case of problem
      */
     public void dump(String path, OutputInterface dataOut,
@@ -156,7 +154,7 @@ public class SVNAdmin
      * @param errorOut          the messages will be outputed here
      * @param start             the first revision to be dumped
      * @param end               the last revision to be dumped
-     * @param incremental       the dump will be incremantal
+     * @param incremental       the dump will be incremental
      * @param useDeltas         the dump will contain deltas between nodes
      * @throws ClientException  throw in case of problem
      * @since 1.5

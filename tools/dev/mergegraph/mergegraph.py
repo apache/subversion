@@ -177,7 +177,7 @@ class MergeGraph(pydot.Graph):
 
     def get_subgraph(graph, name):
       """Equivalent to pydot.Graph.get_subgraph() when there is no more than
-         one subgraph of the given name, but working aroung a bug in
+         one subgraph of the given name, but working around a bug in
          pydot.Graph.get_subgraph().
       """
       for subg in graph.get_subgraph_list():
@@ -242,7 +242,7 @@ class MergeDot(MergeGraph, pydot.Dot):
                                              'annotations': '[]' })
     files_read = config.read(config_filename)
     if len(files_read) == 0:
-      print >> sys.stderr, 'graph: unable to read graph config from "' + config_filename + '"'
+      sys.stderr.write('graph: unable to read graph config from "' + config_filename + '"\n')
       sys.exit(1)
     graph.basename = config.get('graph', 'basename')
     graph.title = config.get('graph', 'title')

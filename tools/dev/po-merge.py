@@ -188,7 +188,7 @@ def main(argv):
 
     # We're done.  Tell the user what we did.
     print(('%d strings updated. '
-          '%d fuzzy strings. ' 
+          '%d fuzzy strings. '
           '%d of %d strings are still untranslated (%.0f%%).' %
           (update_count, fuzzy, untranslated, string_count,
            100.0 * untranslated / string_count)))

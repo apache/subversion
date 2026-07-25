@@ -27,6 +27,7 @@
 #include "private/svn_sorts_private.h"
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_fspath.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -68,6 +69,36 @@
 /* The 256 is an arbitrary size large enough to hold the node id and the
  * various flags. */
 #define MAX_CHANGE_LINE_LEN FSFS_MAX_PATH_LEN + 256
+
+/* Convert the C string in *TEXT to a revision number and return it in *REV.
+ * Overflows, negative values other than -1 and terminating characters other
+ * than 0x20 or 0x0 will cause an error.  Set *TEXT to the first char after
+ * the initial separator or to EOS.
+ */
+static svn_error_t *
+parse_revnum(svn_revnum_t *rev,
+             const char **text)
+{
+  const char *string = *text;
+  if ((string[0] == '-') && (string[1] == '1'))
+    {
+      *rev = SVN_INVALID_REVNUM;
+      string += 2;
+    }
+  else
+    {
+      SVN_ERR(svn_revnum_parse(rev, string, &string));
+    }
+
+  if (*string == ' ')
+    ++string;
+  else if (*string != '\0')
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid character in revision number"));
+
+  *text = string;
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_fs__parse_revision_trailer(apr_off_t *root_offset,
@@ -158,40 +189,106 @@ svn_fs_fs__unparse_revision_trailer(apr_off_t root_offset,
                                changes_offset);
 }
 
+/* If ERR is not NULL, wrap it MESSAGE.  The latter must have an %ld
+ * format parameter that will be filled with REV. */
+static svn_error_t *
+wrap_footer_error(svn_error_t *err,
+                  const char *message,
+                  svn_revnum_t rev)
+{
+  if (err)
+    return svn_error_quick_wrapf(err, message, rev);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__parse_footer(apr_off_t *l2p_offset,
+                        svn_checksum_t **l2p_checksum,
                         apr_off_t *p2l_offset,
+                        svn_checksum_t **p2l_checksum,
                         svn_stringbuf_t *footer,
-                        svn_revnum_t rev)
+                        svn_revnum_t rev,
+                        apr_off_t footer_offset,
+                        apr_pool_t *result_pool)
 {
   apr_int64_t val;
+  char *last_str = footer->data;
 
-  /* Split the footer into the 2 number strings. */
-  char *seperator = strchr(footer->data, ' ');
-  if (!seperator)
+  /* Get the L2P offset. */
+  const char *str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Revision file (r%ld) has corrupt footer"),
-                             rev);
-  *seperator = '\0';
+                             "Invalid r%ld footer", rev);
 
-  /* Convert offset values. */
-  SVN_ERR(svn_cstring_atoi64(&val, footer->data));
+  SVN_ERR(wrap_footer_error(svn_cstring_strtoi64(&val, str, 0,
+                                                 footer_offset - 1, 10),
+                            "Invalid L2P offset in r%ld footer",
+                            rev));
   *l2p_offset = (apr_off_t)val;
-  SVN_ERR(svn_cstring_atoi64(&val, seperator + 1));
+
+  /* Get the L2P checksum. */
+  str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             "Invalid r%ld footer", rev);
+
+  SVN_ERR(svn_checksum_parse_hex(l2p_checksum, svn_checksum_md5, str,
+                                 result_pool));
+
+  /* Get the P2L offset. */
+  str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             "Invalid r%ld footer", rev);
+
+  SVN_ERR(wrap_footer_error(svn_cstring_strtoi64(&val, str, 0,
+                                                 footer_offset - 1, 10),
+                            "Invalid P2L offset in r%ld footer",
+                            rev));
   *p2l_offset = (apr_off_t)val;
+
+  /* The P2L index follows the L2P index */
+  if (*p2l_offset <= *l2p_offset)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             "P2L offset %s must be larger than L2P offset %s"
+                             " in r%ld footer",
+                             apr_psprintf(result_pool,
+                                          "0x%" APR_UINT64_T_HEX_FMT,
+                                          (apr_uint64_t)*p2l_offset),
+                             apr_psprintf(result_pool,
+                                          "0x%" APR_UINT64_T_HEX_FMT,
+                                          (apr_uint64_t)*l2p_offset),
+                             rev);
+
+  /* Get the P2L checksum. */
+  str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             "Invalid r%ld footer", rev);
+
+  SVN_ERR(svn_checksum_parse_hex(p2l_checksum, svn_checksum_md5, str,
+                                 result_pool));
 
   return SVN_NO_ERROR;
 }
 
 svn_stringbuf_t *
 svn_fs_fs__unparse_footer(apr_off_t l2p_offset,
+                          svn_checksum_t *l2p_checksum,
                           apr_off_t p2l_offset,
-                          apr_pool_t *result_pool)
+                          svn_checksum_t *p2l_checksum,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   return svn_stringbuf_createf(result_pool,
-                               "%" APR_OFF_T_FMT " %" APR_OFF_T_FMT,
+                               "%" APR_OFF_T_FMT " %s %" APR_OFF_T_FMT " %s",
                                l2p_offset,
-                               p2l_offset);
+                               svn_checksum_to_cstring(l2p_checksum,
+                                                       scratch_pool),
+                               p2l_offset,
+                               svn_checksum_to_cstring(p2l_checksum,
+                                                       scratch_pool));
 }
 
 /* Read the next entry in the changes record from file FILE and store
@@ -228,7 +325,7 @@ read_change(change_t **change_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid changes line in rev-file"));
 
-  info->node_rev_id = svn_fs_fs__id_parse(str, result_pool);
+  SVN_ERR(svn_fs_fs__id_parse(&info->node_rev_id, str, result_pool));
   if (info->node_rev_id == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid changes line in rev-file"));
@@ -324,7 +421,9 @@ read_change(change_t **change_p,
     }
 
   /* Get the mergeinfo-mod flag if given.  Otherwise, the next thing
-     is the path starting with a slash. */
+     is the path starting with a slash.  Also, we must initialize the
+     flag explicitly because 0 is not valid for a svn_tristate_t. */
+  info->mergeinfo_mod = svn_tristate_unknown;
   if (*last_str != '/')
     {
       str = svn_cstring_tokenize(" ", &last_str);
@@ -346,8 +445,12 @@ read_change(change_t **change_p,
                               _("Invalid mergeinfo-mod flag in rev-file"));
         }
     }
-  
+
   /* Get the changed path. */
+  if (!svn_fspath__is_canonical(last_str))
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid path in changes line"));
+
   change->path.len = strlen(last_str);
   change->path.data = apr_pstrdup(result_pool, last_str);
 
@@ -362,15 +465,11 @@ read_change(change_t **change_p,
   else
     {
       last_str = line->data;
-      str = svn_cstring_tokenize(" ", &last_str);
-      if (! str)
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Invalid changes line in rev-file"));
-      info->copyfrom_rev = SVN_STR_TO_REV(str);
+      SVN_ERR(parse_revnum(&info->copyfrom_rev, (const char **)&last_str));
 
-      if (! last_str)
+      if (!svn_fspath__is_canonical(last_str))
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Invalid changes line in rev-file"));
+                                _("Invalid copy-from path in changes line"));
 
       info->copyfrom_path = apr_pstrdup(result_pool, last_str);
     }
@@ -383,10 +482,10 @@ read_change(change_t **change_p,
 svn_error_t *
 svn_fs_fs__read_changes(apr_array_header_t **changes,
                         svn_stream_t *stream,
+                        int max_count,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  change_t *change;
   apr_pool_t *iterpool;
 
   /* Pre-allocate enough room for most change lists.
@@ -399,13 +498,16 @@ svn_fs_fs__read_changes(apr_array_header_t **changes,
    */
   *changes = apr_array_make(result_pool, 63, sizeof(change_t *));
 
-  SVN_ERR(read_change(&change, stream, result_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
-  while (change)
+  for (; max_count > 0; --max_count)
     {
-      APR_ARRAY_PUSH(*changes, change_t*) = change;
-      SVN_ERR(read_change(&change, stream, result_pool, iterpool));
+      change_t *change;
       svn_pool_clear(iterpool);
+      SVN_ERR(read_change(&change, stream, result_pool, iterpool));
+      if (!change)
+        break;
+
+      APR_ARRAY_PUSH(*changes, change_t*) = change;
     }
   svn_pool_destroy(iterpool);
 
@@ -433,15 +535,15 @@ svn_fs_fs__read_changes_incrementally(svn_stream_t *stream,
     }
   while (change);
   svn_pool_destroy(iterpool);
-  
+
   return SVN_NO_ERROR;
 }
 
-/* Write a single change entry, path PATH, change CHANGE, and copyfrom
-   string COPYFROM, into the file specified by FILE.  Only include the
-   node kind field if INCLUDE_NODE_KIND is true.  Only include the
-   mergeinfo-mod field if INCLUDE_MERGEINFO_MODS is true.  All temporary
-   allocations are in SCRATCH_POOL. */
+/* Write a single change entry, path PATH, change CHANGE, to STREAM.
+
+   Only include the node kind field if INCLUDE_NODE_KIND is true.  Only
+   include the mergeinfo-mod field if INCLUDE_MERGEINFO_MODS is true.
+   All temporary allocations are in SCRATCH_POOL. */
 static svn_error_t *
 write_change_entry(svn_stream_t *stream,
                    const char *path,
@@ -534,13 +636,19 @@ svn_fs_fs__write_changes(svn_stream_t *stream,
   svn_boolean_t include_node_kinds =
       ffd->format >= SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT;
   svn_boolean_t include_mergeinfo_mods =
-      ffd->format >= SVN_FS_FS__MIN_MERGEINFO_IN_CHANGES_FORMAT;
+      ffd->format >= SVN_FS_FS__MIN_MERGEINFO_IN_CHANGED_FORMAT;
   apr_array_header_t *sorted_changed_paths;
   int i;
 
   /* For the sake of the repository administrator sort the changes so
      that the final file is deterministic and repeatable, however the
-     rest of the FSFS code doesn't require any particular order here. */
+     rest of the FSFS code doesn't require any particular order here.
+
+     Also, this sorting is only effective in writing all entries with
+     a single call as write_final_changed_path_info() does.  For the
+     list being written incrementally during transaction, we actually
+     *must not* change the order of entries from different calls.
+   */
   sorted_changed_paths = svn_sort__hash(changes,
                                         svn_sort_compare_items_lexically,
                                         scratch_pool);
@@ -562,7 +670,7 @@ svn_fs_fs__write_changes(svn_stream_t *stream,
     }
 
   if (terminate_list)
-    svn_stream_puts(stream, "\n");
+    SVN_ERR(svn_stream_puts(stream, "\n"));
 
   svn_pool_destroy(iterpool);
 
@@ -584,8 +692,8 @@ read_header_block(apr_hash_t **headers,
     {
       svn_stringbuf_t *header_str;
       const char *name, *value;
-      apr_ssize_t i = 0;
-      apr_ssize_t name_len;
+      apr_size_t i = 0;
+      apr_size_t name_len;
       svn_boolean_t eof;
 
       SVN_ERR(svn_stream_readline(stream, &header_str, "\n", &eof,
@@ -609,19 +717,19 @@ read_header_block(apr_hash_t **headers,
       name = header_str->data;
       name_len = i;
 
-      /* Skip over the NULL byte and the space following it. */
-      i += 2;
-
-      if (i > header_str->len)
+      /* Check if we have enough data to parse. */
+      if (i + 2 > header_str->len)
         {
           /* Restore the original line for the error. */
-          i -= 2;
           header_str->data[i] = ':';
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                    _("Found malformed header '%s' in "
                                      "revision file"),
                                    header_str->data);
         }
+
+      /* Skip over the NULL byte and the space following it. */
+      i += 2;
 
       value = header_str->data + i;
 
@@ -633,6 +741,9 @@ read_header_block(apr_hash_t **headers,
   return SVN_NO_ERROR;
 }
 
+/* ### Ouch!  The implementation of this function currently modifies
+   ### the input string when tokenizing it (so the input cannot be
+   ### used after that). */
 svn_error_t *
 svn_fs_fs__parse_representation(representation_t **rep_p,
                                 svn_stringbuf_t *text,
@@ -649,16 +760,11 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
   rep = apr_pcalloc(result_pool, sizeof(*rep));
   *rep_p = rep;
 
-  str = svn_cstring_tokenize(" ", &string);
-  if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text representation offset line in node-rev"));
-
-  rep->revision = SVN_STR_TO_REV(str);
+  SVN_ERR(parse_revnum(&rep->revision, (const char **)&string));
 
   /* initialize transaction info (never stored) */
   svn_fs_fs__id_txn_reset(&rep->txn_id);
-  
+
   /* while in transactions, it is legal to simply write "-1" */
   str = svn_cstring_tokenize(" ", &string);
   if (str == NULL)
@@ -697,38 +803,73 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
 
   SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_md5, str,
                                  scratch_pool));
-  memcpy(rep->md5_digest, checksum->digest, sizeof(rep->md5_digest));
+
+  /* If STR is a all-zero checksum, CHECKSUM will be NULL and REP already
+     contains the correct value. */
+  if (checksum)
+    memcpy(rep->md5_digest, checksum->digest, sizeof(rep->md5_digest));
 
   /* The remaining fields are only used for formats >= 4, so check that. */
   str = svn_cstring_tokenize(" ", &string);
   if (str == NULL)
     return SVN_NO_ERROR;
 
-  /* Read the SHA1 hash. */
-  if (strlen(str) != (APR_SHA1_DIGESTSIZE * 2))
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text representation offset line in node-rev"));
+  /* Is the SHA1 hash present? */
+  if (str[0] == '-' && str[1] == 0)
+    {
+      checksum = NULL;
+    }
+  else
+    {
+      /* Read the SHA1 hash. */
+      if (strlen(str) != (APR_SHA1_DIGESTSIZE * 2))
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Malformed text representation offset line in node-rev"));
 
-  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_sha1, str,
-                                 scratch_pool));
+      SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_sha1, str,
+                                     scratch_pool));
+    }
+
+  /* We do have a valid SHA1 but it might be all 0.
+     We cannot be sure where that came from (Alas! legacy), so let's not
+     claim we know the SHA1 in that case. */
   rep->has_sha1 = checksum != NULL;
-  memcpy(rep->sha1_digest, checksum->digest, sizeof(rep->sha1_digest));
 
-  /* Read the uniquifier. */
-  str = svn_cstring_tokenize("/", &string);
+  /* If STR is a all-zero checksum, CHECKSUM will be NULL and REP already
+     contains the correct value. */
+  if (checksum)
+    memcpy(rep->sha1_digest, checksum->digest, sizeof(rep->sha1_digest));
+
+  str = svn_cstring_tokenize(" ", &string);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  SVN_ERR(svn_fs_fs__id_txn_parse(&rep->uniquifier.noderev_txn_id, str));
+  /* Is the uniquifier present? */
+  if (str[0] == '-' && str[1] == 0)
+    {
+      end = string;
+    }
+  else
+    {
+      char *substring = str;
 
-  str = svn_cstring_tokenize(" ", &string);
-  if (str == NULL || *str != '_')
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text representation offset line in node-rev"));
+      /* Read the uniquifier. */
+      str = svn_cstring_tokenize("/", &substring);
+      if (str == NULL)
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Malformed text representation offset line in node-rev"));
 
-  ++str;
-  rep->uniquifier.number = svn__base36toui64(&end, str);
+      SVN_ERR(svn_fs_fs__id_txn_parse(&rep->uniquifier.noderev_txn_id, str));
+
+      str = svn_cstring_tokenize(" ", &substring);
+      if (str == NULL || *str != '_')
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Malformed text representation offset line in node-rev"));
+
+      ++str;
+      rep->uniquifier.number = svn__base36toui64(&end, str);
+    }
 
   if (*end)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -797,7 +938,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
 
   SVN_ERR(svn_stream_close(stream));
 
-  noderev->id = svn_fs_fs__id_parse(value, result_pool);
+  SVN_ERR(svn_fs_fs__id_parse(&noderev->id, value, result_pool));
   noderev_id = value; /* for error messages later */
 
   /* Read the type. */
@@ -848,13 +989,19 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
   else
     {
+      if (!svn_fspath__is_canonical(value))
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Non-canonical cpath field in node-rev '%s'"),
+                            noderev_id);
+
       noderev->created_path = apr_pstrdup(result_pool, value);
     }
 
   /* Get the predecessor ID. */
   value = svn_hash_gets(headers, HEADER_PRED);
   if (value)
-    noderev->predecessor_id = svn_fs_fs__id_parse(value, result_pool);
+    SVN_ERR(svn_fs_fs__id_parse(&noderev->predecessor_id, value,
+                                result_pool));
 
   /* Get the copyroot. */
   value = svn_hash_gets(headers, HEADER_COPYROOT);
@@ -865,17 +1012,9 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
   else
     {
-      char *str;
+      SVN_ERR(parse_revnum(&noderev->copyroot_rev, (const char **)&value));
 
-      str = svn_cstring_tokenize(" ", &value);
-      if (str == NULL)
-        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                 _("Malformed copyroot line in node-rev '%s'"),
-                                 noderev_id);
-
-      noderev->copyroot_rev = SVN_STR_TO_REV(str);
-
-      if (*value == '\0')
+      if (!svn_fspath__is_canonical(value))
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  _("Malformed copyroot line in node-rev '%s'"),
                                  noderev_id);
@@ -891,13 +1030,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
   else
     {
-      char *str = svn_cstring_tokenize(" ", &value);
-      if (str == NULL)
-        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                 _("Malformed copyfrom line in node-rev '%s'"),
-                                 noderev_id);
-
-      noderev->copyfrom_rev = SVN_STR_TO_REV(str);
+      SVN_ERR(parse_revnum(&noderev->copyfrom_rev, (const char **)&value));
 
       if (*value == 0)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -927,23 +1060,35 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
 }
 
 /* Return a textual representation of the DIGEST of given KIND.
- * If IS_NULL is TRUE, no digest is available.
  * Allocate the result in RESULT_POOL.
  */
 static const char *
 format_digest(const unsigned char *digest,
               svn_checksum_kind_t kind,
-              svn_boolean_t is_null,
               apr_pool_t *result_pool)
 {
   svn_checksum_t checksum;
   checksum.digest = digest;
   checksum.kind = kind;
-  
-  if (is_null)
-    return "(null)";
 
   return svn_checksum_to_cstring_display(&checksum, result_pool);
+}
+
+/* Return a textual representation of the uniquifier represented
+ * by NODEREV_TXN_ID and NUMBER.  Use POOL for the allocations.
+ */
+static const char *
+format_uniquifier(const svn_fs_fs__id_part_t *noderev_txn_id,
+                  apr_uint64_t number,
+                  apr_pool_t *pool)
+{
+  char buf[SVN_INT64_BUFFER_SIZE];
+  const char *txn_id_str;
+
+  txn_id_str = svn_fs_fs__id_txn_unparse(noderev_txn_id, pool);
+  svn__ui64tobase36(buf, number);
+
+  return apr_psprintf(pool, "%s/_%s", txn_id_str, buf);
 }
 
 svn_stringbuf_t *
@@ -953,32 +1098,80 @@ svn_fs_fs__unparse_representation(representation_t *rep,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
-  char buffer[SVN_INT64_BUFFER_SIZE];
+  svn_stringbuf_t *str;
+  const char *sha1_str;
+  const char *uniquifier_str;
+
   if (svn_fs_fs__id_txn_used(&rep->txn_id) && mutable_rep_truncated)
     return svn_stringbuf_ncreate("-1", 2, result_pool);
 
-  if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT || !rep->has_sha1)
-    return svn_stringbuf_createf
-            (result_pool, "%ld %" APR_UINT64_T_FMT " %" SVN_FILESIZE_T_FMT
-             " %" SVN_FILESIZE_T_FMT " %s",
-             rep->revision, rep->item_index, rep->size,
-             rep->expanded_size,
-             format_digest(rep->md5_digest, svn_checksum_md5, FALSE,
-                           scratch_pool));
+  /* Format of the string:
+     <rev> <item_index> <size> <expanded-size> <md5> [<sha1>] [<uniquifier>]
+   */
+  str = svn_stringbuf_createf(
+          result_pool,
+          "%ld"
+          " %" APR_UINT64_T_FMT
+          " %" SVN_FILESIZE_T_FMT
+          " %" SVN_FILESIZE_T_FMT
+          " %s",
+          rep->revision,
+          rep->item_index,
+          rep->size,
+          rep->expanded_size,
+          format_digest(rep->md5_digest, svn_checksum_md5, scratch_pool));
 
-  svn__ui64tobase36(buffer, rep->uniquifier.number);
-  return svn_stringbuf_createf
-          (result_pool, "%ld %" APR_UINT64_T_FMT " %" SVN_FILESIZE_T_FMT
-           " %" SVN_FILESIZE_T_FMT " %s %s %s/_%s",
-           rep->revision, rep->item_index, rep->size,
-           rep->expanded_size,
-           format_digest(rep->md5_digest, svn_checksum_md5,
-                         FALSE, scratch_pool),
-           format_digest(rep->sha1_digest, svn_checksum_sha1,
-                         !rep->has_sha1, scratch_pool),
-           svn_fs_fs__id_txn_unparse(&rep->uniquifier.noderev_txn_id,
-                                     scratch_pool),
-           buffer);
+  /* Compatibility: these formats don't understand <sha1> and <uniquifier>. */
+  if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    return str;
+
+  if (format < SVN_FS_FS__MIN_REP_STRING_OPTIONAL_VALUES_FORMAT)
+    {
+      /* Compatibility: these formats can only have <sha1> and <uniquifier>
+         present simultaneously, or don't have them at all. */
+      if (rep->has_sha1)
+        {
+          sha1_str = format_digest(rep->sha1_digest, svn_checksum_sha1,
+                                   scratch_pool);
+          uniquifier_str = format_uniquifier(&rep->uniquifier.noderev_txn_id,
+                                             rep->uniquifier.number,
+                                             scratch_pool);
+          svn_stringbuf_appendbyte(str, ' ');
+          svn_stringbuf_appendcstr(str, sha1_str);
+          svn_stringbuf_appendbyte(str, ' ');
+          svn_stringbuf_appendcstr(str, uniquifier_str);
+        }
+      return str;
+    }
+
+  /* The most recent formats support optional <sha1> and <uniquifier> values. */
+  if (rep->has_sha1)
+    {
+      sha1_str = format_digest(rep->sha1_digest, svn_checksum_sha1,
+                               scratch_pool);
+    }
+  else
+    sha1_str = "-";
+
+  if (rep->uniquifier.number == 0 &&
+      rep->uniquifier.noderev_txn_id.number == 0 &&
+      rep->uniquifier.noderev_txn_id.revision == 0)
+    {
+      uniquifier_str = "-";
+    }
+  else
+    {
+      uniquifier_str = format_uniquifier(&rep->uniquifier.noderev_txn_id,
+                                         rep->uniquifier.number,
+                                         scratch_pool);
+    }
+
+  svn_stringbuf_appendbyte(str, ' ');
+  svn_stringbuf_appendcstr(str, sha1_str);
+  svn_stringbuf_appendbyte(str, ' ');
+  svn_stringbuf_appendcstr(str, uniquifier_str);
+
+  return str;
 }
 
 
@@ -1088,10 +1281,7 @@ svn_fs_fs__read_rep_header(svn_fs_fs__rep_header_t **header,
   if (! str || (strcmp(str, REP_DELTA) != 0))
     goto error;
 
-  str = svn_cstring_tokenize(" ", &last_str);
-  if (! str)
-    goto error;
-  (*header)->base_revision = SVN_STR_TO_REV(str);
+  SVN_ERR(parse_revnum(&(*header)->base_revision, (const char **)&last_str));
 
   str = svn_cstring_tokenize(" ", &last_str);
   if (! str)
@@ -1118,7 +1308,7 @@ svn_fs_fs__write_rep_header(svn_fs_fs__rep_header_t *header,
                             apr_pool_t *scratch_pool)
 {
   const char *text;
-  
+
   switch (header->type)
     {
       case svn_fs_fs__rep_plain:

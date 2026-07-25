@@ -32,7 +32,7 @@
 
 # TODO:
 # - bulk update at startup time to avoid backlog warnings
-# - fold BDEC into Daemon
+# - fold BigDoEverythingClasss ("BDEC") into Daemon
 # - fold WorkingCopy._get_match() into __init__
 # - remove wc_ready(). assume all WorkingCopy instances are usable.
 #   place the instances into .watch at creation. the .update_applies()
@@ -47,6 +47,7 @@ import errno
 import subprocess
 import threading
 import sys
+import stat
 import os
 import re
 import posixpath
@@ -482,7 +483,7 @@ def handle_options(options):
         except OSError:
             pass
         fd = os.open(options.pidfile, os.O_WRONLY | os.O_CREAT | os.O_EXCL,
-                     0444)
+                     stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
         os.write(fd, '%d\n' % pid)
         os.close(fd)
         logging.info('pid %d written to %s', pid, options.pidfile)

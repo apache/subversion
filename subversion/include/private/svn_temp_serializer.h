@@ -90,7 +90,7 @@ svn_temp_serializer__init(const void *source_struct,
  * data to serialized structures returned by svn_temp_serializer__get().
  *
  * The current size of the serialized data is given in @a currently_used.
- * If the allocated data buffer is actually larger, you may specifiy that
+ * If the allocated data buffer is actually larger, you may specify that
  * size in @a currently_allocated to prevent unnecessary re-allocations.
  * Otherwise, set it to 0.
  *
@@ -206,7 +206,7 @@ svn_temp_serializer__get(svn_temp_serializer__context_t *context);
  * the pointer to resolve in @a ptr.
  */
 void
-svn_temp_deserializer__resolve(void *buffer, void **ptr);
+svn_temp_deserializer__resolve(const void *buffer, void **ptr);
 
 /**
  * Similar to svn_temp_deserializer__resolve() but instead of modifying

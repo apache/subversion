@@ -168,6 +168,67 @@ test3(apr_pool_t *pool)
 }
 
 
+static const char *
+hash_gets_stringt(apr_hash_t *ht, const char *key)
+{
+  svn_string_t *str = svn_hash_gets(ht, key);
+  if (str)
+    return str->data;
+  else
+    return NULL;
+}
+
+static svn_error_t *
+read_hash_buffered_test(apr_pool_t *pool)
+{
+  apr_file_t *file;
+  apr_hash_t *ht;
+
+  /* Write hash table to file. */
+  ht = apr_hash_make(pool);
+  svn_hash_sets(ht, "key1", svn_string_create("value1", pool));
+  svn_hash_sets(ht, "key2", svn_string_create("value2", pool));
+  svn_hash_sets(ht, "key3", svn_string_create("value3", pool));
+  svn_hash_sets(ht, "key4", svn_string_create("value4", pool));
+  svn_hash_sets(ht, "key5", svn_string_create("value5", pool));
+  svn_hash_sets(ht, "key6", svn_string_create("value6", pool));
+  svn_hash_sets(ht, "key7", svn_string_create("value7", pool));
+  svn_hash_sets(ht, "key8", svn_string_create("value8", pool));
+
+  SVN_ERR(svn_io_file_open(&file, "hashdump.out",
+                           APR_FOPEN_CREATE | APR_FOPEN_WRITE | APR_FOPEN_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+
+  SVN_ERR(svn_hash_write2(ht, svn_stream_from_aprfile2(file, FALSE, pool),
+                          SVN_HASH_TERMINATOR, pool));
+
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  /* Read hash table using buffered APR file. */
+  ht = apr_hash_make(pool);
+  SVN_ERR(svn_io_file_open(&file, "hashdump.out",
+                           APR_FOPEN_READ | APR_FOPEN_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_hash_read2(ht, svn_stream_from_aprfile(file, pool),
+                         SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  /* Check result. */
+  SVN_TEST_STRING_ASSERT(hash_gets_stringt(ht, "key1"), "value1");
+  SVN_TEST_STRING_ASSERT(hash_gets_stringt(ht, "key2"), "value2");
+  SVN_TEST_STRING_ASSERT(hash_gets_stringt(ht, "key3"), "value3");
+  SVN_TEST_STRING_ASSERT(hash_gets_stringt(ht, "key4"), "value4");
+  SVN_TEST_STRING_ASSERT(hash_gets_stringt(ht, "key5"), "value5");
+  SVN_TEST_STRING_ASSERT(hash_gets_stringt(ht, "key6"), "value6");
+  SVN_TEST_STRING_ASSERT(hash_gets_stringt(ht, "key7"), "value7");
+  SVN_TEST_STRING_ASSERT(hash_gets_stringt(ht, "key8"), "value8");
+
+  SVN_TEST_ASSERT(apr_hash_count(ht) == 8);
+
+  SVN_ERR(svn_io_remove_file2("hashdump.out", TRUE, pool));
+
+  return SVN_NO_ERROR;
+}
 
 
 /*
@@ -189,6 +250,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "read a file into a hash"),
     SVN_TEST_PASS2(test3,
                    "write hash out, read back in, compare"),
+    SVN_TEST_PASS2(read_hash_buffered_test,
+                   "read hash from buffered file"),
     SVN_TEST_NULL
   };
 

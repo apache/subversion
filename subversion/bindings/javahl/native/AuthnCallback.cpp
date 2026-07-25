@@ -21,47 +21,56 @@
  * @endcopyright
  */
 
+#include "svn_base64.h"
+#include "svn_x509.h"
+
 #include "jniwrapper/jni_stack.hpp"
+#include "jniwrapper/jni_exception.hpp"
+#include "jniwrapper/jni_string.hpp"
+#include "jniwrapper/jni_array.hpp"
+#include "jniwrapper/jni_list.hpp"
 
 #include "AuthnCallback.hpp"
+
+#include "svn_private_config.h"
 
 namespace JavaHL {
 
 // Class JavaHL::AuthnCallback
 const char* const AuthnCallback::m_class_name =
-  JAVA_PACKAGE"/callback/AuthnCallback";
+  JAVAHL_CLASS("/callback/AuthnCallback");
 
 AuthnCallback::ClassImpl::ClassImpl(::Java::Env env, jclass cls)
   : ::Java::Object::ClassImpl(env, cls),
     m_mid_username_prompt(
         env.GetMethodID(cls, "usernamePrompt",
                         "(Ljava/lang/String;Z)"
-                        "L"JAVA_PACKAGE"/callback/AuthnCallback"
+                        JAVAHL_ARG("/callback/AuthnCallback")
                         "$UsernameResult;")),
     m_mid_user_password_prompt(
         env.GetMethodID(cls, "userPasswordPrompt",
                         "(Ljava/lang/String;Ljava/lang/String;Z)"
-                        "L"JAVA_PACKAGE"/callback/AuthnCallback"
+                        JAVAHL_ARG("/callback/AuthnCallback")
                         "$UserPasswordResult;")),
     m_mid_ssl_server_trust_prompt(
         env.GetMethodID(cls, "sslServerTrustPrompt",
                         "(Ljava/lang/String;"
-                        "L"JAVA_PACKAGE"/callback/AuthnCallback"
+                        JAVAHL_ARG("/callback/AuthnCallback")
                         "$SSLServerCertFailures;"
-                        "L"JAVA_PACKAGE"/callback/AuthnCallback"
+                        JAVAHL_ARG("/callback/AuthnCallback")
                         "$SSLServerCertInfo;"
                         "Z)"
-                        "L"JAVA_PACKAGE"/callback/AuthnCallback"
+                        JAVAHL_ARG("/callback/AuthnCallback")
                         "$SSLServerTrustResult;")),
     m_mid_ssl_client_cert_prompt(
         env.GetMethodID(cls, "sslClientCertPrompt",
                         "(Ljava/lang/String;Z)"
-                        "L"JAVA_PACKAGE"/callback/AuthnCallback"
+                        JAVAHL_ARG("/callback/AuthnCallback")
                         "$SSLClientCertResult;")),
     m_mid_ssl_client_cert_passphrase_prompt(
         env.GetMethodID(cls, "sslClientCertPassphrasePrompt",
                         "(Ljava/lang/String;Z)"
-                        "L"JAVA_PACKAGE"/callback/AuthnCallback"
+                        JAVAHL_ARG("/callback/AuthnCallback")
                         "$SSLClientCertPassphraseResult;")),
     m_mid_allow_store_plaintext_password(
         env.GetMethodID(cls, "allowStorePlaintextPassword",
@@ -134,7 +143,7 @@ bool AuthnCallback::allow_store_plaintext_passphrase(const ::Java::String& realm
 
 // Class JavaHL::AuthnCallback::AuthnResult
 const char* const AuthnCallback::AuthnResult::m_class_name =
-  JAVA_PACKAGE"/callback/AuthnCallback$AuthnResult";
+  JAVAHL_CLASS("/callback/AuthnCallback$AuthnResult");
 
 AuthnCallback::AuthnResult::ClassImpl::ClassImpl(::Java::Env env, jclass cls)
   : ::Java::Object::ClassImpl(env, cls),
@@ -148,7 +157,7 @@ AuthnCallback::AuthnResult::ClassImpl::~ClassImpl() {}
 
 // Class JavaHL::AuthnCallback::SSLServerCertFailures
 const char* const AuthnCallback::SSLServerCertFailures::m_class_name =
-  JAVA_PACKAGE"/callback/AuthnCallback$SSLServerCertFailures";
+  JAVAHL_CLASS("/callback/AuthnCallback$SSLServerCertFailures");
 
 AuthnCallback::SSLServerCertFailures::ClassImpl::ClassImpl(
     ::Java::Env env, jclass cls)
@@ -169,43 +178,88 @@ AuthnCallback::SSLServerCertFailures::SSLServerCertFailures(
 
 // Class JavaHL::AuthnCallback::SSLServerCertInfo
 const char* const AuthnCallback::SSLServerCertInfo::m_class_name =
-  JAVA_PACKAGE"/callback/AuthnCallback$SSLServerCertInfo";
+  JAVAHL_CLASS("/callback/AuthnCallback$SSLServerCertInfo");
 
 AuthnCallback::SSLServerCertInfo::ClassImpl::ClassImpl(
     ::Java::Env env, jclass cls)
   : ::Java::Object::ClassImpl(env, cls),
     m_mid_ctor(env.GetMethodID(cls, "<init>",
                                "(Ljava/lang/String;"
-                               "Ljava/lang/String;"
-                               "Ljava/lang/String;"
-                               "Ljava/lang/String;"
-                               "Ljava/lang/String;"
+                               "Ljava/lang/String;JJ[B"
+                               "Ljava/util/List;"
                                "Ljava/lang/String;)V"))
 {}
 
 AuthnCallback::SSLServerCertInfo::ClassImpl::~ClassImpl() {}
 
 AuthnCallback::SSLServerCertInfo::SSLServerCertInfo(
-    ::Java::Env env,
-    const ::Java::String& hostname,
-    const ::Java::String& fingerprint,
-    const ::Java::String& validFrom,
-    const ::Java::String& validUntil,
-    const ::Java::String& issuer,
-    const ::Java::String& der)
+    ::Java::Env env, const char* ascii_cert)
   : ::Java::Object(env,
                    ::Java::ClassCache::get_authn_ssl_server_cert_info(env))
 {
+  SVN::Pool pool;
+
+  /* Convert header-less PEM to DER by undoing base64 encoding. */
+  const svn_string_t cert_string = { ascii_cert, strlen(ascii_cert) };
+  const svn_string_t* der = svn_base64_decode_string(&cert_string,
+                                                     pool.getPool());
+
+  svn_x509_certinfo_t *certinfo;
+  SVN_JAVAHL_CHECK(env, svn_x509_parse_cert(&certinfo, der->data, der->len,
+                                            pool.getPool(), pool.getPool()));
+
+  const ::Java::String subject(
+      env, svn_x509_certinfo_get_subject(certinfo, pool.getPool()));
+  const ::Java::String issuer(
+      env, svn_x509_certinfo_get_issuer(certinfo, pool.getPool()));
+  const ::Java::String cert(env, ascii_cert);
+  const jlong valid_from =
+    (jlong(svn_x509_certinfo_get_valid_from(certinfo)) + 500) / 1000;
+  const jlong valid_to =
+    (jlong(svn_x509_certinfo_get_valid_to(certinfo)) + 500) / 1000;
+
+  const svn_checksum_t* digest = svn_x509_certinfo_get_digest(certinfo);
+  jsize digest_size;
+  switch (digest->kind)
+    {
+    case svn_checksum_sha1:
+      digest_size = 160 / 8;
+      break;
+
+    case svn_checksum_md5:
+      digest_size = 128 / 8;
+      break;
+
+    default:
+      digest_size = 0;          // Initialize this to avoid compiler warnings
+      ::Java::IllegalArgumentException(env).raise(
+          _("Unknown certificate digest type"));
+    }
+  const ::Java::ByteArray fingerprint(env, digest->digest, digest_size);
+
+  jobject jhostnames = NULL;
+  const apr_array_header_t* hostnames =
+    svn_x509_certinfo_get_hostnames(certinfo);
+  if (hostnames)
+    {
+      ::Java::List< ::Java::String> hn(env, hostnames->nelts);
+      for (int i = 0; i < hostnames->nelts; ++i)
+        hn.add(::Java::String(env, APR_ARRAY_IDX(hostnames, i, const char*)));
+      jhostnames = hn.get();
+    }
+
   set_this(env.NewObject(get_class(), impl().m_mid_ctor,
-                         hostname.get(), fingerprint.get(),
-                         validFrom.get(), validUntil.get(),
-                         issuer.get(), der.get()));
+                         subject.get(), issuer.get(),
+                         valid_from, valid_to,
+                         fingerprint.get(),
+                         jhostnames,
+                         cert.get()));
 }
 
 
 // Class JavaHL::UserPasswordCallback
 const char* const UserPasswordCallback::m_class_name =
-  JAVA_PACKAGE"/callback/UserPasswordCallback";
+  JAVAHL_CLASS("/callback/UserPasswordCallback");
 
 UserPasswordCallback::ClassImpl::ClassImpl(::Java::Env env, jclass cls)
   : ::Java::Object::ClassImpl(env, cls),

@@ -366,7 +366,7 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
    If CANCEL_FUNC is non-null, call it with CANCEL_BATON to see
    if the user has cancelled the operation.
 
-   Any items added to COMMITTABLES are allocated from the COMITTABLES
+   Any items added to COMMITTABLES are allocated from the COMMITTABLES
    hash pool, not POOL.  SCRATCH_POOL is used for temporary allocations. */
 
 struct harvest_baton
@@ -467,10 +467,12 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
+  SVN_ERR_ASSERT(commit_relpath != NULL);
+
   /* A function to retrieve not present children would be nice to have */
-  SVN_ERR(svn_wc__node_get_children_of_working_node(
-                                    &children, wc_ctx, local_abspath, TRUE,
-                                    scratch_pool, iterpool));
+  SVN_ERR(svn_wc__node_get_not_present_children(&children, wc_ctx,
+                                                local_abspath,
+                                                scratch_pool, iterpool));
 
   for (i = 0; i < children->nelts; i++)
     {
@@ -486,13 +488,10 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
                                           this_abspath, FALSE, scratch_pool));
 
       if (!not_present)
-        continue;
+        continue; /* Node is replaced */
 
-      if (commit_relpath == NULL)
-        this_commit_relpath = NULL;
-      else
-        this_commit_relpath = svn_relpath_join(commit_relpath, name,
-                                              iterpool);
+      this_commit_relpath = svn_relpath_join(commit_relpath, name,
+                                             iterpool);
 
       /* We should check if we should really add a delete operation */
       if (check_url_func)
@@ -779,7 +778,6 @@ harvest_status_callback(void *status_baton,
                                       wc_ctx, svn_dirent_dirname(local_abspath,
                                                                  scratch_pool),
                                       FALSE /* ignore_enoent */,
-                                      FALSE /* show_hidden */,
                                       scratch_pool, scratch_pool));
 
       if (copy_mode_root || status->switched || node_rev != dir_rev)
@@ -1257,13 +1255,13 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
   /* Make sure that every path in danglers is part of the commit. */
   for (hi = apr_hash_first(scratch_pool, danglers); hi; hi = apr_hash_next(hi))
     {
-      const char *dangling_parent = svn__apr_hash_index_key(hi);
+      const char *dangling_parent = apr_hash_this_key(hi);
 
       svn_pool_clear(iterpool);
 
       if (! look_up_committable(*committables, dangling_parent, iterpool))
         {
-          const char *dangling_child = svn__apr_hash_index_val(hi);
+          const char *dangling_child = apr_hash_this_val(hi);
 
           if (ctx->notify_func2 != NULL)
             {
@@ -1381,7 +1379,10 @@ svn_client__get_copy_committables(svn_client__committables_t **committables,
 }
 
 
-int svn_client__sort_commit_item_urls(const void *a, const void *b)
+/* A svn_sort__array()/qsort()-compatible sort routine for sorting
+   an array of svn_client_commit_item_t *'s by their URL member. */
+static int
+sort_commit_item_urls(const void *a, const void *b)
 {
   const svn_client_commit_item3_t *item1
     = *((const svn_client_commit_item3_t * const *) a);
@@ -1391,6 +1392,29 @@ int svn_client__sort_commit_item_urls(const void *a, const void *b)
 }
 
 
+svn_error_t *
+svn_client__condense_commit_items2(const char *base_url,
+                                   apr_array_header_t *commit_items,
+                                   apr_pool_t *pool)
+{
+  apr_array_header_t *ci = commit_items; /* convenience */
+  int i;
+
+  /* Sort our commit items by their URLs. */
+  svn_sort__array(ci, sort_commit_item_urls);
+
+  /* Hack BASE_URL off each URL; store the result as session_relpath. */
+  for (i = 0; i < ci->nelts; i++)
+    {
+      svn_client_commit_item3_t *this_item
+        = APR_ARRAY_IDX(ci, i, svn_client_commit_item3_t *);
+
+      this_item->session_relpath = svn_uri_skip_ancestor(base_url,
+                                                         this_item->url, pool);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_client__condense_commit_items(const char **base_url,
@@ -1405,7 +1429,7 @@ svn_client__condense_commit_items(const char **base_url,
   SVN_ERR_ASSERT(ci && ci->nelts);
 
   /* Sort our commit items by their URLs. */
-  svn_sort__array(ci, svn_client__sort_commit_item_urls);
+  svn_sort__array(ci, sort_commit_item_urls);
 
   /* Loop through the URLs, finding the longest usable ancestor common
      to all of them, and making sure there are no duplicate URLs.  */
@@ -1500,8 +1524,6 @@ struct file_mod_t
 /* A baton for use while driving a path-based editor driver for commit */
 struct item_commit_baton
 {
-  const svn_delta_editor_t *editor;    /* commit editor */
-  void *edit_baton;                    /* commit editor's baton */
   apr_hash_t *file_mods;               /* hash: path->file_mod_t */
   const char *notify_path_prefix;      /* notification path prefix
                                           (NULL is okay, else abs path) */
@@ -1523,6 +1545,8 @@ struct item_commit_baton
  * This implements svn_delta_path_driver_cb_func_t. */
 static svn_error_t *
 do_item_commit(void **dir_baton,
+               const svn_delta_editor_t *editor,
+               void *edit_baton,
                void *parent_baton,
                void *callback_baton,
                const char *path,
@@ -1534,7 +1558,6 @@ do_item_commit(void **dir_baton,
   svn_node_kind_t kind = item->kind;
   void *file_baton = NULL;
   apr_pool_t *file_pool = NULL;
-  const svn_delta_editor_t *editor = icb->editor;
   apr_hash_t *file_mods = icb->file_mods;
   svn_client_ctx_t *ctx = icb->ctx;
   svn_error_t *err;
@@ -1560,7 +1583,7 @@ do_item_commit(void **dir_baton,
     file_pool = pool;
 
   /* Subpools are cheap, but memory isn't */
-  file_pool = svn_pool_create(file_pool); 
+  file_pool = svn_pool_create(file_pool);
 
   /* Call the cancellation function. */
   if (ctx->cancel_func)
@@ -1650,7 +1673,7 @@ do_item_commit(void **dir_baton,
         {
           notify->kind = item->kind;
           notify->path_prefix = icb->notify_path_prefix;
-          (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+          ctx->notify_func2(ctx->notify_baton2, notify, pool);
         }
     }
 
@@ -1736,7 +1759,7 @@ do_item_commit(void **dir_baton,
             {
               if (! parent_baton)
                 {
-                  err = editor->open_root(icb->edit_baton, item->revision,
+                  err = editor->open_root(edit_baton, item->revision,
                                           pool, dir_baton);
                 }
               else
@@ -1870,8 +1893,6 @@ svn_client__do_commit(const char *base_url,
     }
 
   /* Setup the callback baton. */
-  cb_baton.editor = editor;
-  cb_baton.edit_baton = edit_baton;
   cb_baton.file_mods = file_mods;
   cb_baton.notify_path_prefix = notify_path_prefix;
   cb_baton.ctx = ctx;
@@ -1879,7 +1900,7 @@ svn_client__do_commit(const char *base_url,
   cb_baton.base_url = base_url;
 
   /* Drive the commit editor! */
-  SVN_ERR(svn_delta_path_driver2(editor, edit_baton, paths, TRUE,
+  SVN_ERR(svn_delta_path_driver3(editor, edit_baton, paths, TRUE,
                                  do_item_commit, &cb_baton, scratch_pool));
 
   /* Transmit outstanding text deltas. */
@@ -1887,7 +1908,7 @@ svn_client__do_commit(const char *base_url,
        hi;
        hi = apr_hash_next(hi))
     {
-      struct file_mod_t *mod = svn__apr_hash_index_val(hi);
+      struct file_mod_t *mod = apr_hash_this_val(hi);
       const svn_client_commit_item3_t *item = mod->item;
       const svn_checksum_t *new_text_base_md5_checksum;
       const svn_checksum_t *new_text_base_sha1_checksum;
@@ -1916,7 +1937,7 @@ svn_client__do_commit(const char *base_url,
           && ! (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY))
         fulltext = TRUE;
 
-      err = svn_wc_transmit_text_deltas3(&new_text_base_md5_checksum,
+      err = svn_wc_transmit_text_deltas4(&new_text_base_md5_checksum,
                                          &new_text_base_sha1_checksum,
                                          ctx->wc_ctx, item->path,
                                          fulltext, editor, mod->file_baton,
@@ -2010,7 +2031,7 @@ svn_client__get_log_msg(const char **log_msg,
               old_item->kind = item->kind;
               old_item->url = item->url;
               /* The pre-1.3 API used the revision field for copyfrom_rev
-                 and revision depeding of copyfrom_url. */
+                 and revision depending of copyfrom_url. */
               old_item->revision = item->copyfrom_url ?
                 item->copyfrom_rev : item->revision;
               old_item->copyfrom_url = item->copyfrom_url;

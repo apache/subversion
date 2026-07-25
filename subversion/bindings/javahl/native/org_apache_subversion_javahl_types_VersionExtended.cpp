@@ -33,7 +33,23 @@
 #include "JNIStackElement.h"
 #include <string>
 
+#include "svn_private_config.h"
+
 // VersionExtended native methods
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_types_VersionExtended_dispose(
+    JNIEnv *env, jobject jthis)
+{
+  JNIEntry(VersionExtended, dispose);
+  VersionExtended *const vx = VersionExtended::getCppObject(jthis);
+  if (vx == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+  vx->dispose(jthis);
+}
 
 JNIEXPORT jstring JNICALL
 Java_org_apache_subversion_javahl_types_VersionExtended_getBuildDate(

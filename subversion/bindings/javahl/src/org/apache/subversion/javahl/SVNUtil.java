@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl;
@@ -66,7 +64,7 @@ public class SVNUtil
      * remote.RemoteFactory#setPrompt}) will be called every time the
      * underlying library needs access to the credentials.
      * <p>
-     * This mode is intented to support client implementations that
+     * This mode is intended to support client implementations that
      * use their own credentials store.
      * <p>
      * The standard credentials store is enabled by default.
@@ -101,9 +99,10 @@ public class SVNUtil
      */
     public static class CredentialTypeMismatch extends SubversionException
     {
-        // Update the serialVersionUID when there is a incompatible change made to
-        // this class.  See the java documentation for when a change is incompatible.
-        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        // Update the serialVersionUID when there is an incompatible change made to
+        // this class.  See the Java documentation (following link or its counter-
+        // part in your specific Java release) for when a change is incompatible.
+        // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
         private static final long serialVersionUID = 1L;
 
         public CredentialTypeMismatch(Credential.Kind kind, String attribute)
@@ -119,9 +118,10 @@ public class SVNUtil
      */
     public static class Credential implements java.io.Serializable
     {
-        // Update the serialVersionUID when there is a incompatible change made to
-        // this class.  See the java documentation for when a change is incompatible.
-        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        // Update the serialVersionUID when there is an incompatible change made to
+        // this class.  See the Java documentation (following link or its counter-
+        // part in your specific Java release) for when a change is incompatible.
+        // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
         private static final long serialVersionUID = 1L;
 
         /**
@@ -265,53 +265,53 @@ public class SVNUtil
         //           for adding credentials. These factory methods are
         //           placeholders.
         //
-        ///**
-        // * Creates an "svn.username" credential.
-        // * @param realm The realm string.
-        // * @param username The username for <code>realm</code>.
-        // */
-        //public static Credential
-        //    createUsername(String realm, String username)
-        //{
-        //    return new Credential(Kind.username, realm, null,
-        //                          username, null, null, null, null);
-        //}
+        // /**
+        //  * Creates an "svn.username" credential.
+        //  * @param realm The realm string.
+        //  * @param username The username for <code>realm</code>.
+        //  */
+        // public static Credential
+        //     createUsername(String realm, String username)
+        // {
+        //     return new Credential(Kind.username, realm, null,
+        //                           username, null, null, null, null);
+        // }
         //
-        ///**
-        // * Creates an "svn.simple" credential.
-        // * @param realm The realm string.
-        // * @param username The username for <code>realm</code>.
-        // * @param password The password for <code>username</code>.
-        // */
-        //public static Credential
-        //    createSimple(String realm, String username, String password)
-        //{
-        //    return new Credential(Kind.simple, realm, null,
-        //                          username, password, null, null, null);
-        //}
+        // /**
+        //  * Creates an "svn.simple" credential.
+        //  * @param realm The realm string.
+        //  * @param username The username for <code>realm</code>.
+        //  * @param password The password for <code>username</code>.
+        //  */
+        // public static Credential
+        //     createSimple(String realm, String username, String password)
+        // {
+        //     return new Credential(Kind.simple, realm, null,
+        //                           username, password, null, null, null);
+        // }
         //
-        ///** Creates an "svn.ssl.server" credential. */
-        //public static Credential
-        //    createSSLServerCertTrust(String realm,
-        //                             AuthnCallback.SSLServerCertInfo info,
-        //                             AuthnCallback.SSLServerCertFailures failures)
-        //{
-        //    return new Credential(Kind.sslServer, realm, null,
-        //                          null, null, info, failures, null);
-        //}
+        // /** Creates an "svn.ssl.server" credential. */
+        // public static Credential
+        //     createSSLServerCertTrust(String realm,
+        //                              AuthnCallback.SSLServerCertInfo info,
+        //                              AuthnCallback.SSLServerCertFailures failures)
+        // {
+        //     return new Credential(Kind.sslServer, realm, null,
+        //                           null, null, info, failures, null);
+        // }
         //
-        ///**
-        // * Creates an "svn.ssl.client-passphrase" credential.
-        // * @param realm The realm string.
-        // * @param passphrase The passphrase for for the client certificate
-        // *        used for <code>realm</code>.
-        // */
-        //public static Credential
-        //    createSSLClientCertPassphrase(String realm, String passphrase)
-        //{
-        //    return new Credential(Kind.simple, realm, null,
-        //                          null, null, null, null, passphrase);
-        //}
+        // /**
+        //  * Creates an "svn.ssl.client-passphrase" credential.
+        //  * @param realm The realm string.
+        //  * @param passphrase The passphrase for for the client certificate
+        //  *        used for <code>realm</code>.
+        //  */
+        // public static Credential
+        //     createSSLClientCertPassphrase(String realm, String passphrase)
+        // {
+        //     return new Credential(Kind.simple, realm, null,
+        //                           null, null, null, null, passphrase);
+        // }
 
         private Credential(Kind kind, String realm, String store,
                            String username, String password,
@@ -417,34 +417,34 @@ public class SVNUtil
     // ### TODO: There are currently no proper APIs in Subversion for
     //           adding credentials. This method is a placeholder.
     //
-    ///**
-    // * Store a new credential, or replace an existing credential.
-    // * <p>
-    // * <b>Note:</b> If the native credentials store is disabled, this
-    // *              method will always return <code>null</code>.
-    // *
-    // * @param configDir The path to the configuration directory; if
-    // *        <code>null</code>, the default (system-specific) user
-    // *        configuration path will be used.
-    // * @param credential The credential to store.
-    // * @param replace If <code>true</code>, any existing matching
-    // *        credential will be replaced.
-    // *
-    // * @return the stored credential. If <code>replace</code> was
-    // * <code>false</code>, and a credential with the same kind and
-    // * for the same realm exists, it will be returned. If the given
-    // * credential was successfully added, the same object reference
-    // * will be returned (the calling code can compare reference values
-    // * to determine this). Will return <code>null</code> if the
-    // * credential could not be stored for any reason.
-    // */
-    //public static Credential addCredential(String configDir,
-    //                                       Credential credential,
-    //                                       boolean replace)
-    //    throws ClientException, SubversionException
-    //{
-    //    return configLib.addCredential(configDir, credential, replace);
-    //}
+    // /**
+    //  * Store a new credential, or replace an existing credential.
+    //  * <p>
+    //  * <b>Note:</b> If the native credentials store is disabled, this
+    //  *              method will always return <code>null</code>.
+    //  *
+    //  * @param configDir The path to the configuration directory; if
+    //  *        <code>null</code>, the default (system-specific) user
+    //  *        configuration path will be used.
+    //  * @param credential The credential to store.
+    //  * @param replace If <code>true</code>, any existing matching
+    //  *        credential will be replaced.
+    //  *
+    //  * @return the stored credential. If <code>replace</code> was
+    //  * <code>false</code>, and a credential with the same kind and
+    //  * for the same realm exists, it will be returned. If the given
+    //  * credential was successfully added, the same object reference
+    //  * will be returned (the calling code can compare reference values
+    //  * to determine this). Will return <code>null</code> if the
+    //  * credential could not be stored for any reason.
+    //  */
+    // public static Credential addCredential(String configDir,
+    //                                        Credential credential,
+    //                                        boolean replace)
+    //     throws ClientException, SubversionException
+    // {
+    //     return configLib.addCredential(configDir, credential, replace);
+    // }
 
     /**
      * Find stored credentials that match the given search criteria.
@@ -466,11 +466,12 @@ public class SVNUtil
      *             otherwise, only those credentials that have a username,
      *             and where the username matches the pattern, will be
      *             returned.
-     * @param hostnamePattern A glob pattern for the hostname (CN) of
-     *             a server certificate; if <code>null</code>, all credntials
-     *             will be considered; otherwise, only those credentials
-     *             that have a server certificate with a hostname that
-     *             matches the pattern will be returned.
+     * @param hostnamePattern A glob pattern for the hostnames of a
+     *             server certificate; if <code>null</code>, all
+     *             credntials will be considered; otherwise, only
+     *             those credentials that have a server certificate
+     *             with a hostname that matches the pattern will be
+     *             returned.
      * @param textPattern A glob pattern that must match any textual
      *             information in a credential, for example, a realm,
      *             username, certificate details, etc; passwords, passphrases
@@ -700,11 +701,11 @@ public class SVNUtil
      *        owns the property; only used for error messages
      * @param kind The node kind of the file or dir that owns the property
      * @param mimeType If <code>kind</code> is {@link NodeKind.file}, this is
-     *        tye file's mime-type, used for extra validation for the
+     *        the file's mime-type, used for extra validation for the
      *        <code>svn:eol-style</code> property. If it is <code>null</code>,
      *        the extra validation will be skipped.
      * @return a canonicalized representation of the property value
-     * @see http://subversion.apache.org/docs/api/latest/group__svn__wc__properties.html#ga83296313ec59cc825176224ac8282ec2
+     * @see https://subversion.apache.org/docs/api/latest/group__svn__wc__properties.html#ga83296313ec59cc825176224ac8282ec2
      */
     public static byte[] canonicalizeNodeProperty(
         String name, byte[] value, String path, NodeKind kind,
@@ -724,7 +725,7 @@ public class SVNUtil
      *        owns the property; only used for error messages
      * @param kind The node kind of the file or dir that owns the property
      * @param mimeType If <code>kind</code> is {@link NodeKind.file}, this is
-     *        tye file's mime-type, used for extra validation for the
+     *        the file's mime-type, used for extra validation for the
      *        <code>svn:eol-style</code> property. If it is <code>null</code>,
      *        the extra validation will be skipped.
      * @param fileContents A stream with the file's contents. Only used
@@ -733,7 +734,7 @@ public class SVNUtil
      *        <code>kind</code> is {@link NodeKind.file} and
      *        <code>mimeType</code> is not <code>null</code>.
      * @return a canonicalized representation of the property value
-     * @see http://subversion.apache.org/docs/api/latest/group__svn__wc__properties.html#ga83296313ec59cc825176224ac8282ec2
+     * @see https://subversion.apache.org/docs/api/latest/group__svn__wc__properties.html#ga83296313ec59cc825176224ac8282ec2
      */
     public static byte[] canonicalizeNodeProperty(
         String name, byte[] value, String path, NodeKind kind,
@@ -751,7 +752,7 @@ public class SVNUtil
      * parsed external items.
      * @param description The externals description.
      * @param parentDirectory Used to construct error messages.
-     * @param canonicalizeUrl Whe <code>true</code>, canonicalize the
+     * @param canonicalizeUrl When <code>true</code>, canonicalize the
      *     <code>url</code> member of the returned objects. If the
      *     <code>url</code> member refers to an absolute URL, it will
      *     be canonicalized as URL consistent with the way URLs are
@@ -876,7 +877,7 @@ public class SVNUtil
      * Build a dictionary of expanded keyword values, given the
      * contents of a file's <code>svn:keywords</code> property, its
      * revision, URL, the date it was committed on, the author of the
-     * commit and teh URL of the repository root.
+     * commit and the URL of the repository root.
      *<p>
      * Custom keywords defined in <code>svn:keywords</code> properties
      * are expanded using the provided parameters and in accordance

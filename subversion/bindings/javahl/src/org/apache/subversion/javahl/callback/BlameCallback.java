@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl.callback;
@@ -31,7 +29,9 @@ import org.apache.subversion.javahl.ISVNClient;
 /**
  * This interface is used to receive every single line for a file on a
  * the {@link ISVNClient#blame} call.
+ * @deprecated use {@link BlameLineCallback} instead.
  */
+@Deprecated
 public interface BlameCallback
 {
     /**

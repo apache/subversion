@@ -87,7 +87,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.7\n"
+"Project-Id-Version: subversion 1.9\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
 "POT-Creation-Date: 2010-11-12 08:49-0600\n"
 "PO-Revision-Date: 2009-10-14 16:21+0200\n"
@@ -5807,7 +5807,7 @@ msgid ""
 "Copyright (C) 2010 The Apache Software Foundation.\n"
 "This software consists of contributions made by many people;\n"
 "see the NOTICE file for more information.\n"
-"Subversion is open source software, see http://subversion.apache.org/\n"
+"Subversion is open source software, see https://subversion.apache.org/\n"
 "\n"
 msgstr ""
 "Opphavsrett (C) 2009 The Subversion Corporation.\n"
@@ -7090,12 +7090,12 @@ msgid ""
 "This client is too old to work with the working copy at\n"
 "'%s' (format %d).\n"
 "You need to get a newer Subversion client. For more details, see\n"
-"  http://subversion.apache.org/faq.html#working-copy-format-change\n"
+"  https://subversion.apache.org/faq.html#working-copy-format-change\n"
 msgstr ""
 "Denne klienten er for gammel til å virke med arbeidskopien på\n"
 "«%s» (format %d).\n"
 "Du må hente en nyere Subversionklient. For flere detaljer, se\n"
-"  http://subversion.apache.org/faq.html#working-copy-format-change\n"
+"  https://subversion.apache.org/faq.html#working-copy-format-change\n"
 
 #: ../libsvn_wc/wc_db_pdh.c:265
 msgid "Cleanup with an older 1.7 client before upgrading with this client"
@@ -7467,7 +7467,7 @@ msgstr ""
 #, fuzzy
 msgid ""
 "Subversion is a tool for version control.\n"
-"For additional information, see http://subversion.apache.org/\n"
+"For additional information, see https://subversion.apache.org/\n"
 msgstr ""
 "Subversion er et verktøy for versjonshåndtering\n"
 "Se http://subversion.tigris.org/ for mer informasjon\n"
@@ -10226,13 +10226,11 @@ msgid "local %s, incoming %s upon %s"
 msgstr "lokal %s, innkommende %s på %s"
 
 #: ../svn/util.c:74
-#, fuzzy, c-format
+#, c-format
 msgid ""
-"\n"
 "Committed revision %ld%s.\n"
 msgstr ""
-"\n"
-"La inn revisjon %ld.\n"
+"La inn revisjon %ld%s.\n"
 
 #: ../svn/util.c:78
 msgid " (the answer to life, the universe, and everything)"

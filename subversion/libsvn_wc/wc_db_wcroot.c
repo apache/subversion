@@ -28,6 +28,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_path.h"
+#include "svn_pools.h"
 #include "svn_version.h"
 
 #include "wc.h"
@@ -42,7 +43,7 @@
 #define UNKNOWN_WC_ID ((apr_int64_t) -1)
 #define FORMAT_FROM_SDB (-1)
 
-
+/* #define VERIFY_ON_CLOSE */
 
 /* Get the format version from a wc-1 directory. If it is not a working copy
    directory, then it sets VERSION to zero and returns no error.  */
@@ -162,6 +163,27 @@ svn_wc__db_verify_no_work(svn_sqlite__db_t *sdb)
   return SVN_NO_ERROR;
 }
 
+#if defined(VERIFY_ON_CLOSE) && defined(SVN_DEBUG)
+/* Implements svn_wc__db_verify_cb_t */
+static svn_error_t *
+verify_db_cb(void *baton,
+             const char *wc_abspath,
+             const char *local_relpath,
+             int op_depth,
+             int id,
+             const char *msg,
+             apr_pool_t *scratch_pool)
+{
+  if (op_depth >= 0)
+    SVN_DBG(("DB-VRFY: %s: %s (%d): SV%04d %s",
+              wc_abspath, local_relpath, op_depth, id, msg));
+  else
+    SVN_DBG(("DB-VRFY: %s: %s: SV%04d %s",
+              wc_abspath, local_relpath, id, msg));
+
+  return SVN_NO_ERROR;
+}
+#endif
 
 /* */
 static apr_status_t
@@ -171,6 +193,18 @@ close_wcroot(void *data)
   svn_error_t *err;
 
   SVN_ERR_ASSERT_NO_RETURN(wcroot->sdb != NULL);
+
+#if defined(VERIFY_ON_CLOSE) && defined(SVN_DEBUG)
+  if (getenv("SVN_CMDLINE_VERIFY_SQL_AT_CLOSE"))
+    {
+      apr_pool_t *scratch_pool = svn_pool_create(NULL);
+
+      svn_error_clear(svn_wc__db_verify_db_full_internal(
+                                    wcroot, verify_db_cb, NULL, scratch_pool));
+
+      svn_pool_destroy(scratch_pool);
+    }
+#endif
 
   err = svn_sqlite__close(wcroot->sdb);
   wcroot->sdb = NULL;
@@ -245,8 +279,8 @@ svn_wc__db_close(svn_wc__db_t *db)
        hi;
        hi = apr_hash_next(hi))
     {
-      svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
-      const char *local_abspath = svn__apr_hash_index_key(hi);
+      svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
+      const char *local_abspath = apr_hash_this_key(hi);
 
       if (wcroot->sdb)
         svn_hash_sets(roots, wcroot->abspath, wcroot);
@@ -267,10 +301,11 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              apr_int64_t wc_id,
                              int format,
                              svn_boolean_t verify_format,
+                             svn_boolean_t store_pristine,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  if (sdb != NULL)
+  if (sdb && format == FORMAT_FROM_SDB)
     SVN_ERR(svn_sqlite__read_schema_version(&format, sdb, scratch_pool));
 
   /* If we construct a wcroot, then we better have a format.  */
@@ -294,7 +329,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
         _("This client is too old to work with the working copy at\n"
           "'%s' (format %d).\n"
           "You need to get a newer Subversion client. For more details, see\n"
-          "  http://subversion.apache.org/faq.html#working-copy-format-change\n"
+          "  https://subversion.apache.org/faq.html#working-copy-format-change\n"
           ),
         svn_dirent_local_style(wcroot_abspath, scratch_pool),
         format);
@@ -303,7 +338,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
   /* Verify that no work items exists. If they do, then our integrity is
      suspect and, thus, we cannot upgrade this database.  */
   if (format >= SVN_WC__HAS_WORK_QUEUE &&
-      format < SVN_WC__VERSION && verify_format)
+      format < SVN_WC__SUPPORTED_VERSION && verify_format)
     {
       svn_error_t *err = svn_wc__db_verify_no_work(sdb);
       if (err)
@@ -311,7 +346,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
           /* Special message for attempts to upgrade a 1.7-dev wc with
              outstanding workqueue items. */
           if (err->apr_err == SVN_ERR_WC_CLEANUP_REQUIRED
-              && format < SVN_WC__VERSION && verify_format)
+              && format < SVN_WC__SUPPORTED_VERSION && verify_format)
             err = svn_error_quick_wrap(err, _("Cleanup with an older 1.7 "
                                               "client before upgrading with "
                                               "this client"));
@@ -320,16 +355,27 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
     }
 
   /* Auto-upgrade the SDB if possible.  */
-  if (format < SVN_WC__VERSION && verify_format)
+  if (format < SVN_WC__SUPPORTED_VERSION && verify_format)
     {
-      return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
-                               _("The working copy at '%s'\nis too old "
-                                 "(format %d) to work with client version "
-                                 "'%s' (expects format %d). You need to "
-                                 "upgrade the working copy first.\n"),
-                               svn_dirent_local_style(wcroot_abspath,
-                                                      scratch_pool),
-                               format, SVN_VERSION, SVN_WC__VERSION);
+      if (SVN_WC__SUPPORTED_VERSION == SVN_WC__VERSION)
+        return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
+                                 _("The working copy at '%s'\nis too old "
+                                   "(format %d) to work with client version "
+                                   "'%s' (expects format %d). You need "
+                                   "to upgrade the working copy first.\n"),
+                                 svn_dirent_local_style(wcroot_abspath,
+                                                        scratch_pool),
+                                 format, SVN_VERSION, SVN_WC__VERSION);
+      else
+        return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
+                                 _("The working copy at '%s'\nis too old "
+                                   "(format %d) to work with client version "
+                                   "'%s' (expects format %d to %d). You need "
+                                   "to upgrade the working copy first.\n"),
+                                 svn_dirent_local_style(wcroot_abspath,
+                                                        scratch_pool),
+                                 format, SVN_VERSION,
+                                 SVN_WC__SUPPORTED_VERSION, SVN_WC__VERSION);
     }
 
   *wcroot = apr_palloc(result_pool, sizeof(**wcroot));
@@ -343,6 +389,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
   (*wcroot)->owned_locks = apr_array_make(result_pool, 8,
                                           sizeof(svn_wc__db_wclock_t));
   (*wcroot)->access_cache = apr_hash_make(result_pool);
+  (*wcroot)->store_pristine = store_pristine;
 
   /* SDB will be NULL for pre-NG working copies. We only need to run a
      cleanup when the SDB is present.  */
@@ -362,7 +409,7 @@ svn_wc__db_close_many_wcroots(apr_hash_t *roots,
 
   for (hi = apr_hash_first(scratch_pool, roots); hi; hi = apr_hash_next(hi))
     {
-      svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
+      svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
       apr_status_t result;
 
       result = apr_pool_cleanup_run(state_pool, wcroot, close_wcroot);
@@ -422,6 +469,85 @@ read_link_target(const char **link_target_abspath,
   return SVN_NO_ERROR;
 }
 
+/* Verify if the sqlite_stat1 table exists and if not tries to add
+   this table (but ignores errors on adding the schema) */
+static svn_error_t *
+verify_stats_table(svn_sqlite__db_t *sdb,
+                   int format,
+                   apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  if (format != SVN_WC__ENSURE_STAT1_TABLE)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_HAVE_STAT1_TABLE));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (!have_row)
+    {
+      svn_error_clear(
+          svn_wc__db_install_schema_statistics(sdb, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Read and return the settings for WC_ID in SDB. */
+static svn_error_t *
+read_settings(svn_boolean_t *store_pristine_p,
+              svn_sqlite__db_t *sdb,
+              int format,
+              apr_int64_t wc_id,
+              apr_pool_t *scratch_pool)
+{
+  if (format >= SVN_WC__HAS_SETTINGS)
+    {
+      svn_sqlite__stmt_t *stmt;
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_SETTINGS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "i", wc_id));
+      SVN_ERR(svn_sqlite__step_row(stmt));
+
+      *store_pristine_p = svn_sqlite__column_boolean(stmt, 0);
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+  else
+    {
+      *store_pristine_p = TRUE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Sqlite transaction helper for opening the db in
+   svn_wc__db_wcroot_parse_local_abspath() to avoid multiple
+   db operations that each obtain and release a lock */
+static svn_error_t *
+fetch_sdb_info(apr_int64_t *wc_id,
+               int *format,
+               svn_boolean_t *store_pristine,
+               svn_sqlite__db_t *sdb,
+               apr_pool_t *scratch_pool)
+{
+  *wc_id = -1;
+  *format = -1;
+
+  SVN_SQLITE__WITH_LOCK4(
+        svn_wc__db_util_fetch_wc_id(wc_id, sdb, scratch_pool),
+        svn_sqlite__read_schema_version(format, sdb, scratch_pool),
+        verify_stats_table(sdb, *format, scratch_pool),
+        read_settings(store_pristine, sdb, *format, *wc_id, scratch_pool),
+        sdb);
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                       const char **local_relpath,
@@ -444,6 +570,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
   const char *adm_relpath;
   /* Non-NULL if WCROOT is found through a symlink: */
   const char *symlink_wcroot_abspath = NULL;
+  apr_pool_t *iterpool;
 
   /* ### we need more logic for finding the database (if it is located
      ### outside of the wcroot) and then managing all of that within DB.
@@ -529,16 +656,20 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
      database in the right place. If we find it... great! If not, then
      peel off some components, and try again. */
 
+  iterpool = svn_pool_create(scratch_pool);
   adm_relpath = svn_wc_get_adm_dir(scratch_pool);
   while (TRUE)
     {
       svn_error_t *err;
       svn_node_kind_t adm_subdir_kind;
 
-      const char *adm_subdir = svn_dirent_join(local_abspath, adm_relpath,
-                                               scratch_pool);
+      const char *adm_subdir;
 
-      SVN_ERR(svn_io_check_path(adm_subdir, &adm_subdir_kind, scratch_pool));
+      svn_pool_clear(iterpool);
+
+      adm_subdir = svn_dirent_join(local_abspath, adm_relpath, iterpool);
+
+      SVN_ERR(svn_io_check_path(adm_subdir, &adm_subdir_kind, iterpool));
 
       if (adm_subdir_kind == svn_node_dir)
         {
@@ -589,7 +720,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
           if (!moved_upwards || always_check)
             {
               SVN_ERR(get_old_version(&wc_format, local_abspath,
-                                      scratch_pool));
+                                      iterpool));
               if (wc_format != 0)
                 break;
             }
@@ -613,7 +744,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
 
               SVN_ERR(svn_io_check_resolved_path(local_abspath,
                                                  &resolved_kind,
-                                                 scratch_pool));
+                                                 iterpool));
               if (resolved_kind == svn_node_dir)
                 {
                   /* Is this directory recorded in our hash?  */
@@ -662,17 +793,17 @@ try_symlink_as_dir:
       /* We finally found the database. Construct a wcroot_t for it.  */
 
       apr_int64_t wc_id;
+      int format;
+      svn_boolean_t store_pristine;
       svn_error_t *err;
 
-      err = svn_wc__db_util_fetch_wc_id(&wc_id, sdb, scratch_pool);
+      err = fetch_sdb_info(&wc_id, &format, &store_pristine, sdb, scratch_pool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_WC_CORRUPT)
-            return svn_error_quick_wrap(
-              err, apr_psprintf(scratch_pool,
-                                _("Missing a row in WCROOT for '%s'."),
-                                svn_dirent_local_style(original_abspath,
-                                                       scratch_pool)));
+            return svn_error_quick_wrapf(
+              err, _("Missing a row in WCROOT for '%s'."),
+              svn_dirent_local_style(original_abspath, scratch_pool));
           return svn_error_trace(err);
         }
 
@@ -685,8 +816,9 @@ try_symlink_as_dir:
                                         symlink_wcroot_abspath
                                           ? symlink_wcroot_abspath
                                           : local_abspath),
-                            sdb, wc_id, FORMAT_FROM_SDB,
+                            sdb, wc_id, format,
                             db->verify_format,
+                            store_pristine,
                             db->state_pool, scratch_pool);
       if (err && (err->apr_err == SVN_ERR_WC_UNSUPPORTED_FORMAT ||
                   err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED) &&
@@ -762,6 +894,7 @@ try_symlink_as_dir:
                                           : local_abspath),
                             NULL, UNKNOWN_WC_ID, wc_format,
                             db->verify_format,
+                            TRUE,
                             db->state_pool, scratch_pool));
     }
 
@@ -890,6 +1023,7 @@ try_symlink_as_dir:
     }
   while (strcmp(scan_abspath, local_abspath) != 0);
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -916,15 +1050,46 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
        hi;
        hi = apr_hash_next(hi))
     {
-      svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
+      svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
 
       if (wcroot == root_wcroot)
-        svn_hash_sets(db->dir_data, svn__apr_hash_index_key(hi), NULL);
+        svn_hash_sets(db->dir_data, apr_hash_this_key(hi), NULL);
     }
 
   result = apr_pool_cleanup_run(db->state_pool, root_wcroot, close_wcroot);
   if (result != APR_SUCCESS)
     return svn_error_wrap_apr(result, NULL);
 
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__settings_from_context(int *format_p,
+                              svn_boolean_t *store_pristine_p,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool)
+{
+  const char *current_path = local_abspath;
+
+  do
+    {
+      svn_wc__db_wcroot_t *wcroot;
+
+      wcroot = svn_hash_gets(wc_ctx->db->dir_data, current_path);
+      if (wcroot)
+        {
+          *format_p = wcroot->format;
+          *store_pristine_p = wcroot->store_pristine;
+          return SVN_NO_ERROR;
+        }
+
+      current_path = svn_dirent_dirname(current_path, scratch_pool);
+    }
+  while (!svn_dirent_is_root(current_path, strlen(current_path)));
+
+  *format_p = SVN_WC__DEFAULT_VERSION;
+  *store_pristine_p = TRUE;
   return SVN_NO_ERROR;
 }

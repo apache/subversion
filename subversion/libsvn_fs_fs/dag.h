@@ -177,6 +177,12 @@ svn_error_t *svn_fs_fs__dag_get_proplist(apr_hash_t **proplist_p,
                                          dag_node_t *node,
                                          apr_pool_t *pool);
 
+/* Set *HAS_PROPS to TRUE if NODE has properties. Use SCRATCH_POOL
+   for temporary allocations */
+svn_error_t *svn_fs_fs__dag_has_props(svn_boolean_t *has_props,
+                                      dag_node_t *node,
+                                      apr_pool_t *scratch_pool);
+
 /* Set the property list of NODE to PROPLIST, allocating from POOL.
    The node being changed must be mutable.
 

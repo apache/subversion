@@ -34,6 +34,8 @@
 #include "svn_error.h"
 #include "private/svn_sorts_private.h"
 
+#include "svn_private_config.h"
+
 
 
 /*** svn_sort__hash() ***/
@@ -244,14 +246,48 @@ svn_sort__array_lookup(const apr_array_header_t *array,
    * hit location) first.  This speeds up linear scans. */
   if (hint)
     {
-      idx = *hint;
-      *hint = ++idx;
-      if (idx >= 0 && idx < array->nelts)
+      /* We intend to insert right behind *HINT.
+       * Exit this function early, if we actually can. */
+      idx = *hint + 1;
+      if (idx >= array->nelts)
         {
+          /* We intend to insert after the last entry.
+           * That is only allowed if that last entry is smaller than KEY.
+           * In that case, there will be no current entry, i.e. we must
+           * return NULL. */
+          apr_size_t offset;
+
+          *hint = array->nelts;
+          if (array->nelts == 0)
+            return NULL;
+
+          offset = (array->nelts - 1) * array->elt_size;
+          if (compare_func(array->elts + offset, key) < 0)
+            return NULL;
+        }
+      else if (idx > 0)
+        {
+          /* Intend to insert at a position inside the array, i.e. not
+           * at one of the boundaries.  The predecessor must be smaller
+           * and the current entry at IDX must be larger than KEY. */
+          void *previous;
+
+          *hint = idx;
+          previous = array->elts + (idx-1) * array->elt_size;
           result = array->elts + idx * array->elt_size;
-          if (!compare_func(result, key))
+          if (compare_func(previous, key) && !compare_func(result, key))
             return result;
         }
+      else if (idx <= 0)
+        {
+          /* Intend to insert at the beginning of an non-empty array.
+           * That requires the first entry to be larger than KEY. */
+          *hint = 0;
+          if (!compare_func(array->elts, key))
+            return array->elts;
+        }
+
+      /* The HINT did not help. */
     }
 
   idx = bsearch_lower_bound(key, array->elts, array->nelts, array->elt_size,
@@ -265,15 +301,20 @@ svn_sort__array_lookup(const apr_array_header_t *array,
   return compare_func(result, key) ? NULL : result;
 }
 
-void
-svn_sort__array_insert(apr_array_header_t *array,
-                       const void *new_element,
-                       int insert_index)
+svn_error_t *
+svn_sort__array_insert2(apr_array_header_t *array,
+                        const void *new_element,
+                        int insert_index)
 {
   int elements_to_move;
   char *new_position;
 
-  assert(0 <= insert_index && insert_index <= array->nelts);
+  if (insert_index < 0 || insert_index > array->nelts)
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             _("svn_sort__array_insert2: Attempted insert "
+                               "at index %d in array length %d"),
+                             insert_index, array->nelts);
+
   elements_to_move = array->nelts - insert_index;  /* before bumping nelts */
 
   /* Grow the array, allocating a new space at the end. Note: this can
@@ -288,31 +329,35 @@ svn_sort__array_insert(apr_array_header_t *array,
 
   /* Copy in the new element */
   memcpy(new_position, new_element, array->elt_size);
+  return SVN_NO_ERROR;
 }
 
-void
-svn_sort__array_delete(apr_array_header_t *arr,
-                       int delete_index,
-                       int elements_to_delete)
+svn_error_t *
+svn_sort__array_delete2(apr_array_header_t *arr,
+                        int delete_index,
+                        int elements_to_delete)
 {
-  /* Do we have a valid index and are there enough elements? */
-  if (delete_index >= 0
-      && delete_index < arr->nelts
-      && elements_to_delete > 0
-      && (elements_to_delete + delete_index) <= arr->nelts)
-    {
-      /* If we are not deleting a block of elements that extends to the end
-         of the array, then we need to move the remaining elements to keep
-         the array contiguous. */
-      if ((elements_to_delete + delete_index) < arr->nelts)
-        memmove(
-          arr->elts + arr->elt_size * delete_index,
-          arr->elts + (arr->elt_size * (delete_index + elements_to_delete)),
-          arr->elt_size * (arr->nelts - elements_to_delete - delete_index));
+  if (!(delete_index >= 0
+        && delete_index < arr->nelts
+        && elements_to_delete > 0
+        && (arr->nelts - delete_index) >= elements_to_delete))
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             _("svn_sort__array_delete2: Attempted delete "
+                               "at index %d, %d elements, in array length %d"),
+                             delete_index, elements_to_delete, arr->nelts);
 
-      /* Delete the last ELEMENTS_TO_DELETE elements. */
-      arr->nelts -= elements_to_delete;
-    }
+  /* If we are deleting a block of elements that does not extend to the end
+     of the array, then we need to move the remaining elements to keep
+     the array contiguous. */
+  if ((elements_to_delete + delete_index) < arr->nelts)
+    memmove(
+      arr->elts + arr->elt_size * delete_index,
+      arr->elts + (arr->elt_size * (delete_index + elements_to_delete)),
+      arr->elt_size * (arr->nelts - elements_to_delete - delete_index));
+
+  /* Delete the last ELEMENTS_TO_DELETE elements. */
+  arr->nelts -= elements_to_delete;
+  return SVN_NO_ERROR;
 }
 
 void
@@ -450,7 +495,7 @@ svn_priority_queue__create(apr_array_header_t *elements,
 
   for (i = elements->nelts / 2; i >= 0; --i)
     heap_bubble_up(queue, i);
-  
+
   return queue;
 }
 

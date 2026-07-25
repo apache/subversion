@@ -465,8 +465,8 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   for (hi = apr_hash_first(pool, deleted);
        hi; hi = apr_hash_next(hi))
     {
-      const char *from_path = svn__apr_hash_index_key(hi);
-      svn_rangelist_t *merge_revarray = svn__apr_hash_index_val(hi);
+      const char *from_path = apr_hash_this_key(hi);
+      svn_rangelist_t *merge_revarray = apr_hash_this_val(hi);
       svn_string_t *merge_revstr;
 
       svn_pool_clear(iterpool);
@@ -482,8 +482,8 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   for (hi = apr_hash_first(pool, added);
        hi; hi = apr_hash_next(hi))
     {
-      const char *from_path = svn__apr_hash_index_key(hi);
-      svn_rangelist_t *merge_revarray = svn__apr_hash_index_val(hi);
+      const char *from_path = apr_hash_this_key(hi);
+      svn_rangelist_t *merge_revarray = apr_hash_this_val(hi);
       svn_string_t *merge_revstr;
 
       svn_pool_clear(iterpool);
@@ -516,6 +516,9 @@ svn_diff__display_prop_diffs(svn_stream_t *outstream,
                              const apr_array_header_t *propchanges,
                              apr_hash_t *original_props,
                              svn_boolean_t pretty_print_mergeinfo,
+                             int context_size,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
                              apr_pool_t *scratch_pool)
 {
   apr_pool_t *pool = scratch_pool;
@@ -600,9 +603,10 @@ svn_diff__display_prop_diffs(svn_stream_t *outstream,
          * UNIX patch could apply the property diff to, so we use "##"
          * instead of "@@" as the default hunk delimiter for property diffs.
          * We also suppress the diff header. */
-        SVN_ERR(svn_diff_mem_string_output_unified2(
+        SVN_ERR(svn_diff_mem_string_output_unified3(
                   outstream, diff, FALSE /* no header */, "##", NULL, NULL,
-                  encoding, orig, val, iterpool));
+                  encoding, orig, val, context_size,
+                  cancel_func, cancel_baton, iterpool));
       }
     }
   svn_pool_destroy(iterpool);

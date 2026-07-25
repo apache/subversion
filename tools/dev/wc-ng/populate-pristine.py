@@ -103,6 +103,6 @@ if __name__ == '__main__':
   for wc_path in paths:
     try:
       populate(wc_path)
-    except UnknownFormat, e:
+    except UnknownFormat as e:
       sys.stderr.write("Don't know how to handle '%s' (format %d)'\n"
                        % (wc_path, e.formatno))

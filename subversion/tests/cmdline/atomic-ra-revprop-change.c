@@ -58,13 +58,14 @@ construct_auth_baton(svn_auth_baton_t **auth_baton_p,
                      const char *config_dir,
                      apr_pool_t *pool)
 {
-  SVN_ERR(svn_cmdline_create_auth_baton(auth_baton_p,
-                                        TRUE  /* non_interactive */,
-                                        "jrandom", "rayjandom",
-                                        config_dir,
-                                        TRUE  /* no_auth_cache */,
-                                        FALSE /* trust_server_cert */,
-                                        NULL, NULL, NULL, pool));
+  SVN_ERR(svn_cmdline_create_auth_baton2(auth_baton_p,
+                                         TRUE  /* non_interactive */,
+                                         "jrandom", "rayjandom",
+                                         config_dir,
+                                         TRUE  /* no_auth_cache */,
+                                         FALSE /* trust_server_cert */,
+                                         FALSE, FALSE, FALSE, FALSE,
+                                         NULL, NULL, NULL, pool));
   return SVN_NO_ERROR;
 }
 
@@ -98,8 +99,8 @@ change_rev_prop(const char *url,
   SVN_ERR(construct_auth_baton(&callbacks->auth_baton, config_dir, pool));
   SVN_ERR(construct_config(&config, config_dir, pool));
 
-  SVN_ERR(svn_ra_open4(&sess, NULL, url, NULL, callbacks, NULL /* baton */,
-                       config, pool));
+  SVN_ERR(svn_ra_open5(&sess, NULL, NULL, url, NULL,
+                       callbacks, NULL /* baton */, config, pool));
 
   SVN_ERR(svn_ra_has_capability(sess, &capable,
                                 SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
@@ -118,13 +119,13 @@ change_rev_prop(const char *url,
         }
       else if (! want_error && ! err)
         /* Expectation was matched.  Get out. */
-      	return SVN_NO_ERROR;
+        return SVN_NO_ERROR;
       else if (want_error && ! err)
         return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                                 "An error was expected but not seen");
       else
-      	/* A real (non-SVN_ERR_FS_PROP_BASEVALUE_MISMATCH) error. */
-      	return svn_error_trace(err);
+        /* A real (non-SVN_ERR_FS_PROP_BASEVALUE_MISMATCH) error. */
+        return svn_error_trace(err);
     }
   else
     /* Running under --server-minor-version? */

@@ -57,7 +57,8 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
       svn_fs_fs__revision_file_t *file;
       svn_pool_clear(iterpool);
 
-      err = svn_fs_fs__open_pack_or_rev_file(&file, fs, right, iterpool);
+      err = svn_fs_fs__open_pack_or_rev_file(&file, fs, right, iterpool,
+                                             iterpool);
       if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
         {
           svn_error_clear(err);
@@ -80,7 +81,8 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
       svn_fs_fs__revision_file_t *file;
       svn_pool_clear(iterpool);
 
-      err = svn_fs_fs__open_pack_or_rev_file(&file, fs, probe, iterpool);
+      err = svn_fs_fs__open_pack_or_rev_file(&file, fs, probe, iterpool,
+                                             iterpool);
       if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
         {
           svn_error_clear(err);
@@ -158,6 +160,7 @@ recover_find_max_ids(svn_fs_t *fs,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
   node_revision_t *noderev;
+  svn_error_t *err;
 
   baton.stream = rev_file->stream;
   SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &offset, pool));
@@ -191,19 +194,26 @@ recover_find_max_ids(svn_fs_t *fs,
                               "representation"));
 
   /* Now create a stream that's allowed to read only as much data as is
-     stored in the representation.  Note that this is a directory, i.e. 
+     stored in the representation.  Note that this is a directory, i.e.
      represented using the hash format on disk and can never have 0 length. */
   baton.pool = pool;
-  baton.remaining = noderev->data_rep->expanded_size
-                  ? noderev->data_rep->expanded_size
-                  : noderev->data_rep->size;
+  baton.remaining = noderev->data_rep->expanded_size;
   stream = svn_stream_create(&baton, pool);
   svn_stream_set_read2(stream, NULL /* only full read support */,
                        read_handler_recover);
 
   /* Now read the entries from that stream. */
   entries = apr_hash_make(pool);
-  SVN_ERR(svn_hash_read2(entries, stream, SVN_HASH_TERMINATOR, pool));
+  err = svn_hash_read2(entries, stream, SVN_HASH_TERMINATOR, pool);
+  if (err)
+    {
+      svn_string_t *id_str = svn_fs_fs__id_unparse(noderev->id, pool);
+
+      err = svn_error_compose_create(err, svn_stream_close(stream));
+      return svn_error_quick_wrapf(err,
+                _("malformed representation for node-revision '%s'"),
+                id_str->data);
+    }
   SVN_ERR(svn_stream_close(stream));
 
   /* Now check each of the entries in our directory to find new node and
@@ -214,11 +224,11 @@ recover_find_max_ids(svn_fs_t *fs,
       char *str_val;
       char *str;
       svn_node_kind_t kind;
-      svn_fs_id_t *id;
+      const svn_fs_id_t *id;
       const svn_fs_fs__id_part_t *rev_item;
       apr_uint64_t node_id, copy_id;
       apr_off_t child_dir_offset;
-      const svn_string_t *path = svn__apr_hash_index_val(hi);
+      const svn_string_t *path = apr_hash_this_val(hi);
 
       svn_pool_clear(iterpool);
 
@@ -244,7 +254,7 @@ recover_find_max_ids(svn_fs_t *fs,
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Directory entry corrupt"));
 
-      id = svn_fs_fs__id_parse(str, iterpool);
+      SVN_ERR(svn_fs_fs__id_parse(&id, str, iterpool));
 
       rev_item = svn_fs_fs__id_rev_item(id);
       if (rev_item->revision != rev)
@@ -343,8 +353,10 @@ recover_body(void *baton, apr_pool_t *pool)
   svn_revnum_t youngest_rev;
   svn_node_kind_t youngest_revprops_kind;
 
-  /* Lose potentially corrupted data in temp files */
-  SVN_ERR(svn_fs_fs__cleanup_revprop_namespace(fs));
+  /* The admin may have created a plain copy of this repo before attempting
+     to recover it (hotcopy may or may not work with corrupted repos).
+     Bump the instance ID. */
+  SVN_ERR(svn_fs_fs__set_uuid(fs, fs->uuid, NULL, pool));
 
   /* We need to know the largest revision in the filesystem. */
   SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));
@@ -410,7 +422,8 @@ recover_body(void *baton, apr_pool_t *pool)
           if (b->cancel_func)
             SVN_ERR(b->cancel_func(b->cancel_baton));
 
-          SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev, pool));
+          SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev, pool,
+                                                   iterpool));
           SVN_ERR(recover_get_root_offset(&root_offset, rev, rev_file, pool));
           SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
                                        &next_node_id, &next_copy_id, pool));
@@ -458,9 +471,15 @@ recover_body(void *baton, apr_pool_t *pool)
     }
 
   /* Prune younger-than-(newfound-youngest) revisions from the rep
-     cache if sharing is enabled taking care not to create the cache
-     if it does not exist. */
-  if (ffd->rep_sharing_allowed)
+     cache, taking care not to create the cache if it does not exist.
+
+     We do this whenever rep-cache.db exists, whether it's currently enabled
+     or not, to prevent a data loss that could result from having revisions
+     created after this 'recover' operation referring to rep-cache.db rows
+     that were created before the recover and that point to revisions younger-
+     than-(newfound-youngest).
+   */
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     {
       svn_boolean_t rep_cache_exists;
 

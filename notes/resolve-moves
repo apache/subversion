@@ -1,0 +1,237 @@
+
+ = How Subversion's conflict resolver handles incoming moves =
+
+Given a victim of a tree conflict which may involve an incoming move,
+the conflict resolver must solve these problems:
+
+1) Find all moves in the log within the operative revision range recorded
+   in conflict meta data. Move detection is based on changed-paths data
+   in the revision log.
+
+2) If the conflict victim is not in the working copy, find a path in the
+   working copy which corresponds to the current repository location of
+   the conflict victim.
+
+3) Find the conflict victim's counterpart and its path-wise history.
+
+4) Determine which, if any, moves apply to the conflict victim's counterpart.
+
+The result of incoming move detection describes all moves affecting
+the conflict victim's counterpart, and by extension the victim itself,
+within the operative revision range recorded in conflict data.
+
+The result allows the conflict resolver to offer options which resolve the
+tree conflict by merging appropriate changes from the victim's counterpart
+to a node in the working copy which represents the conflict victim.
+
+== Node ==
+
+A node is a versioned file or a directory as represented in an SVN repository.
+
+== Node relatedness ==
+
+Given a node at path A at revision rX, and a node at path B at revision rY, 
+the two nodes are related if the history of both nodes can be traced back
+to a single path C at revision rZ.
+
+== Finding moves in a given revision ==
+
+In the revision log, moves are represented by disjoint copy and delete
+operations.
+
+Since Subversion 1.8, SVN clients enforce that after 'svn move A B', the
+deletion of A and the addition of B (as a copy of A) must be committed in
+the same revision.
+Move detection in the conflict resolver relies on this enforcement.
+
+=== "Direct" moves ===
+
+Direct moves appear with the following pattern:
+
+  - A changed path P is deleted in rN.
+  - A changed path Q appears in rN and is a copy of P at or after
+    the last-changed revision of P@r{N-1}.
+  - There is no other changed path R which is also a copy of P at
+    or after the last-changed revison of P@r{N-1}.
+
+Example:
+
+In the most simple case, a file '^/trunk/alpha' moved in r3 would appear
+in the output of 'svn log -v' as:
+
+  Changed paths:
+     D /trunk/alpha
+     A /trunk/alpha-moved (from /trunk/alpha:2)
+
+This same pattern would also be recognized as a move if it appeared in,
+say, r6, provided that the last-changed revision of ^/trunk/alpha@5 is
+still smaller or equal r2.
+
+=== "Ambiguous" moves ===
+
+Ambiguous moves appear with the following pattern:
+
+  - A changed path P is deleted in rN.
+  - A changed path Q1 appears in rN and is a copy of P at or after
+    the last-changed revision of P@r{N-1}.
+  - One or more changed paths Q[2,3,4,...] appear in rN as a copy of P
+    at or after the last-changed revision of P@r{N-1}.
+
+Example:
+
+If a file '^/trunk/alpha' was copied twice and then moved in r3,
+this would appear in the output of 'svn log -v' as:
+
+  Changed paths:
+     D /trunk/alpha
+     A /trunk/alpha-copied1 (from /trunk/alpha:2)
+     A /trunk/alpha-copied2 (from /trunk/alpha:2)
+     A /trunk/alpha-moved (from /trunk/alpha:2)
+
+In such situations, SVN cannot tell whether any of alpha's copies should
+in fact be treated as a move.
+Ambiguous moves require user interaction. During conflict resolution the
+user must pick the move destination from a set of candidates.
+
+=== "Nested" moves ===
+
+Nested moves appear with the following pattern:
+
+  - A direct or ambiguous move M appears in rN.
+  - A path P is deleted and P is a path-wise child of the copied path
+    which belongs to move M.
+  - A new path Q is added which was copied from the location P would have had
+    in absence of the move M, at or after the last-changed revision of P@{N-1}.
+
+Examples:
+
+If a directory 'gamma' was moved in r3 and the child 'gamma/delta' was
+also moved in r3, this would appear in the output of 'svn log -v' as:
+
+  Changed paths:
+     D /trunk/gamma
+     A /trunk/gamma-moved (from /trunk/gamma:2)
+     D /trunk/gamma-moved/delta
+     A /trunk/gamma-moved/delta-moved (from /trunk/gamma/delta:2)
+ 
+If the child was moved outside its parent instead of within its parent,
+the output might look like:
+
+  Changed paths:
+     A /trunk/epsilon/delta-moved (from /trunk/gamma/delta:2)
+     D /trunk/gamma
+     A /trunk/gamma-moved (from /trunk/gamma:2)
+     D /trunk/gamma-moved/delta
+
+Nested moves inside nested moves are also possible. Again, added nodes appear
+as copied from locations they would have had in the absence of any other moves:
+
+  Changed paths:
+     D /trunk/gamma
+     A /trunk/gamma-moved (from /trunk/gamma:4)
+     D /trunk/gamma-moved/psi
+     A /trunk/gamma-moved/psi-moved (from /trunk/gamma/psi:4)
+     D /trunk/gamma-moved/psi-moved/omega
+     A /trunk/omega-moved (from /trunk/gamma/psi/omega:4)
+
+== Finding a particular move ==
+
+Repository nodes the update/merge/switch editor was working with are
+recorded in conflict meta data:
+  - path@old-rev, old-node-kind
+  - path@new-rev, new-node-kind
+The repos-path@rev is for the conflict victim is also available, as it
+appeared in the working copy at the time the conflict was flagged.
+
+To determine whether path@old-rev was moved to another path-moved@new-rev,
+SVN must look for a chain of moves which starts at path@old-rev and ends at
+new-rev. If a single such chain is found, then the final path-moved@new-rev
+is known.
+
+To do this, SVN scans all revisions between old-rev and new-rev and
+detects any moves within them. Moves of the same node are linked together
+and form move chains. If ambiguous moves are found in a revision, move
+chains may diverge into several directions at that revision.
+
+If nested moves are found in a revision, they end up being represented
+the same way as direct moves are (so they are no longer a special case
+from this point onwards).
+
+== Finding missing conflict victims ==
+
+The repository location of the conflict victim is unkown if the victim
+cannot be found in the working copy ("local missing").
+
+To find such missing nodes, SVN must first find all moves in the entire
+history of the parent directory of the conflict victim. Additionally,
+in the case of a merge operation, SVN must also find all moves in the
+history of the parent directory of path@old-rev, all the way up to the
+common ancestor of the root of the merge operation. This is because such
+moves might not have been applied to the target branch (working copy),
+for instance when cherry-picking a file modification, after the file has
+been moved on the source branch (see example at the end of this section).
+
+### jcorvel: Maybe this additional search for moves on the source branch
+             (in case of a merge operation) can be optional? Only do it if
+             the moves found in the first search don't suffice?
+
+For each such move it checks whether the moved node is related to the known
+node at path@old-rev, or, if that does not exist, path@new-rev, by tracing
+backwards in history from path@old-rev/new-rev if the move's revision is
+smaller than old-rev/new-rev, or by tracing backwards in history from the
+moved path if the move's revision is larger than old-rev/new-rev.
+
+For any such related node's repository path at revision new-rev recorded in the
+conflict, a local path in the working copy is searched which is related to this
+repository path. Any such nodes found in the working copy are candidates for
+the missing conflict victim's current location, unless the node is inside a
+switched subtree or is itself a switched node or is an external.
+
+If multiple matches are found the user must be given a choice with a default
+suggestion. To avoid choosing bad default suggestions in cases where multiple
+branches are checked out into a working copy (such as in SVN's own test suite),
+a path-wise closest node to the conflict victim is the preferred suggestion.
+
+If no such node can be found, SVN assumes that the conflict victim was
+deleted instead of moved.
+
+=== Missing conflict victim due to skipped move in merge source history ===
+
+This can typically happen when cherry-picking a revision with a file
+modification, where this file has been moved on the source branch of the
+merge (and this move was not applied to the target branch):
+
+In r1, create directory A with file mu:
+  Changed paths:
+     A /A
+     A /A/mu
+
+In r2, directory A is copied to A1 (branched):
+  Changed paths:
+     A /A1 (from /A:1)
+
+In r3, A/mu is moved:
+  Changed paths:
+     D /A/mu
+     A /A/mu-moved (from /A/mu:2)
+
+In r4, A/mu-moved is edited:
+  Changed paths:
+     M /A/mu-moved
+
+If we now want to cherry-pick r4 from /A to a working copy of /A1, we get a
+tree conflict because mu-moved is missing. The relevant move we need to
+resolve this happened on /A, in r3.
+
+== Determining which, if any, moves apply ==
+
+Next, SVN must determine whether any moves found between old-rev and
+new-rev link path@old-rev to an path-moved@new-rev, and whether
+path-moved@new-rev is related to the conflict victim.
+
+A move of path A to path B in rN applies to a path P@N if P is a path-wise
+child of, or equal to, A.
+
+== Special considerations for reverse operations ==
+
+... TODO talk about reverse-updates and -merges, and switches to older revs ...

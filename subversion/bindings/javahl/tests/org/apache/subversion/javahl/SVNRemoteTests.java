@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 package org.apache.subversion.javahl;
 
@@ -53,15 +51,35 @@ import java.security.NoSuchAlgorithmException;
  */
 public class SVNRemoteTests extends SVNTests
 {
+    /**
+     * Base name of all our tests.
+     */
+    public final static String testName = "remote_test";
+
     protected OneTest thisTest;
 
     public SVNRemoteTests()
     {
+        init();
     }
 
     public SVNRemoteTests(String name)
     {
         super(name);
+        init();
+    }
+
+    /**
+     * Initialize the testBaseName and the testCounter, if this is the
+     * first test of this class.
+     */
+    private void init()
+    {
+        if (!testName.equals(testBaseName))
+        {
+            testCounter = 0;
+            testBaseName = testName;
+        }
     }
 
     protected void setUp() throws Exception
@@ -937,6 +955,7 @@ public class SVNRemoteTests extends SVNTests
                        0, false, false, false, null,
                        receiver);
         assertEquals(1, receiver.logs.size());
+        assertTrue(receiver.logs.get(0).revprops.size() > 0);
 
         receiver.logs.clear();
         session.reparent(getTestRepoUrl() + "/A");
@@ -945,6 +964,7 @@ public class SVNRemoteTests extends SVNTests
                        0, 0, false, false, false, null,
                        receiver);
         assertEquals(2, receiver.logs.size());
+        assertTrue(receiver.logs.get(0).revprops.size() > 0);
     }
 
     public void testGetLogMissing() throws Exception
@@ -1063,6 +1083,13 @@ public class SVNRemoteTests extends SVNTests
                 return this.relpath.equals(that.relpath);
             }
 
+            @Override
+            public int hashCode()
+            {
+                return this.relpath.hashCode();
+            }
+
+            @Override
             public int compareTo(StatInfo that)
             {
                 return this.relpath.compareTo(that.relpath);
@@ -1354,9 +1381,9 @@ public class SVNRemoteTests extends SVNTests
     {
         ISVNRemote session = getSession();
 
-        Long expected = new Long(1L);
+        Long expected = Long.valueOf(1L);
         ArrayList<Long> revs = new ArrayList<Long>(3);
-        revs.add(new Long(0L));
+        revs.add(Long.valueOf(0L));
         revs.add(expected);
 
         Map<Long, String> locs = session.getLocations("A", 1, revs);
@@ -1391,6 +1418,7 @@ public class SVNRemoteTests extends SVNTests
         ISVNRemote.FileRevision rev = result.get(0);
         assertEquals("/iota", rev.getPath());
         assertFalse(rev.isResultOfMerge());
+        assertTrue(rev.hasTextDelta());
     }
 
     // This test is a result of a threading bug that was identified in

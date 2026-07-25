@@ -58,7 +58,7 @@ apr_hash_t *PropertyTable::hash(const SVN::Pool &pool)
           const char *msg = apr_psprintf(pool.getPool(),
                                          "Invalid property name: '%s'",
                                          propname);
-          JNIUtil::throwNativeException(JAVA_PACKAGE "/ClientException", msg,
+          JNIUtil::throwNativeException(JAVAHL_CLASS("/ClientException"), msg,
                                         NULL, SVN_ERR_CLIENT_PROPERTY_NAME);
           return NULL;
         }

@@ -21,15 +21,16 @@
  * svn_delta.i: SWIG interface file for svn_delta.h
  */
 
+%include svn_global.swg
+
 #if defined(SWIGPYTHON)
-%module(package="libsvn") delta
+%module(package="libsvn", moduleimport=SVN_PYTHON_MODULEIMPORT) delta
 #elif defined(SWIGPERL)
 %module "SVN::_Delta"
 #elif defined(SWIGRUBY)
 %module "svn::ext::delta"
 #endif
 
-%include svn_global.swg
 %import core.i
 
 #ifdef SWIGRUBY
@@ -67,8 +68,6 @@
    ### There must be a cleaner way to implement this? 
    ### Maybe follow Ruby by wrapping it where passing an editor? */
 void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
-                             void **edit_baton,
-                             PyObject *py_editor,
                              apr_pool_t *pool);
 #endif
 
@@ -205,11 +204,55 @@ void _ops_get(int *num_ops, const svn_txdelta_op_t **ops)
 %include svn_delta_h.swg
 
 #ifdef SWIGPYTHON
-%pythoncode {
+%pythoncode %{
+# Baton container class for editor/parse_fns3 batons and their decendants.
+class _ItemBaton:
+  def __init__(self, editor, pool, baton=None):
+    import libsvn.core
+    self.pool = pool if pool else libsvn.core.svn_pool_create()
+    self.baton = baton
+    self.editor = editor
+
+  def get_ancestor(self):
+    raise NotImplementedError
+
+  def make_decendant(self, pool, baton=None):
+    return _DecBaton(self, pool, baton)
+
+
+class _DecBaton(_ItemBaton):
+  def __init__(self, parent, pool, baton=None):
+    import weakref
+    _ItemBaton.__init__(self, parent.editor, pool, baton)
+    self._anc = weakref.ref(parent.get_ancestor())
+    self._anc().hold_baton(self)
+
+  def get_ancestor(self):
+    return self._anc()
+
+  def release_self(self):
+    self._anc().release_baton(self)
+
+
+class _AncBaton(_ItemBaton):
+  def __init__(self, editor, pool, baton=None):
+    _ItemBaton.__init__(self, editor, pool, baton)
+    self._dec = {}     # hold decendant batons.
+
+  def get_ancestor(self):
+    return self
+
+  def hold_baton(self, baton):
+    self._dec[id(baton)] = baton
+
+  def release_baton(self, baton):
+    del self._dec[id(baton)]
+
+
 # This function is for backwards compatibility only.
 # Use svn_txdelta_window_t.ops instead.
 svn_txdelta_window_t_ops_get = svn_txdelta_window_t._ops_get
-}
+%}
 #endif
 
 #ifdef SWIGRUBY
@@ -231,7 +274,7 @@ svn_swig_rb_delta_editor_get_target_revision(VALUE editor)
   if (NIL_P(rb_target_address))
     return Qnil;
 
-  target_address = (svn_revnum_t *)(NUM2LONG(rb_target_address));
+  target_address = (svn_revnum_t *)(NUM2SWIG(rb_target_address));
   if (!target_address)
     return Qnil;
 

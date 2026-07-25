@@ -26,12 +26,14 @@
 #include "svn_io.h"
 #include "svn_subst.h"
 #include "svn_base64.h"
+#include "svn_hash.h"
 #include <apr_general.h>
 
 #include "private/svn_io_private.h"
 
 #include "../svn_test.h"
 
+/*------------------------ Tests --------------------------- */
 
 static svn_error_t *
 test_stream_from_string(apr_pool_t *pool)
@@ -374,7 +376,7 @@ test_stream_seek_translated(apr_pool_t *pool)
 
   keywords = apr_hash_make(pool);
   keyword_val = svn_string_create("my keyword was expanded", pool);
-  apr_hash_set(keywords, "MyKeyword", APR_HASH_KEY_STRING, keyword_val);
+  svn_hash_sets(keywords, "MyKeyword", keyword_val);
   stringbuf = svn_stringbuf_create("One$MyKeyword$Two", pool);
   stream = svn_stream_from_stringbuf(stringbuf, pool);
   translated_stream = svn_subst_stream_translated(stream, APR_EOL_STR,
@@ -549,9 +551,27 @@ test_stream_base64(apr_pool_t *pool)
     NULL
   };
 
+  /* Test svn_base64_encode2() with BREAK_LINES=FALSE. */
   stream = svn_stream_from_stringbuf(actual, pool);
   stream = svn_base64_decode(stream, pool);
-  stream = svn_base64_encode(stream, pool);
+  stream = svn_base64_encode2(stream, TRUE, pool);
+
+  for (i = 0; strings[i]; i++)
+    {
+      apr_size_t len = strlen(strings[i]);
+
+      svn_stringbuf_appendbytes(expected, strings[i], len);
+      SVN_ERR(svn_stream_write(stream, strings[i], &len));
+    }
+
+  SVN_ERR(svn_stream_close(stream));
+
+  SVN_TEST_STRING_ASSERT(actual->data, expected->data);
+
+  /* Test svn_base64_encode2() with BREAK_LINES=FALSE. */
+  stream = svn_stream_from_stringbuf(actual, pool);
+  stream = svn_base64_decode(stream, pool);
+  stream = svn_base64_encode2(stream, FALSE, pool);
 
   for (i = 0; strings[i]; i++)
     {
@@ -700,6 +720,7 @@ test_stream_base64_2(apr_pool_t *pool)
   };
   int i;
 
+  /* Test svn_base64_encode2() with BREAK_LINES=TRUE. */
   for (i = 0; data[i].encoded1; i++)
     {
       apr_size_t len1 = strlen(data[i].encoded1);
@@ -708,7 +729,32 @@ test_stream_base64_2(apr_pool_t *pool)
       svn_stringbuf_t *expected = svn_stringbuf_create_empty(pool);
       svn_stream_t *stream = svn_stream_from_stringbuf(actual, pool);
 
-      stream = svn_base64_encode(stream, pool);
+      stream = svn_base64_encode2(stream, TRUE, pool);
+      stream = svn_base64_decode(stream, pool);
+
+      SVN_ERR(svn_stream_write(stream, data[i].encoded1, &len1));
+      svn_stringbuf_appendbytes(expected, data[i].encoded1, len1);
+
+      if (data[i].encoded2)
+        {
+          apr_size_t len2 = strlen(data[i].encoded2);
+          SVN_ERR(svn_stream_write(stream, data[i].encoded2, &len2));
+          svn_stringbuf_appendbytes(expected, data[i].encoded2, len2);
+        }
+
+      SVN_ERR(svn_stream_close(stream));
+    }
+
+  /* Test svn_base64_encode2() with BREAK_LINES=FALSE. */
+  for (i = 0; data[i].encoded1; i++)
+    {
+      apr_size_t len1 = strlen(data[i].encoded1);
+
+      svn_stringbuf_t *actual = svn_stringbuf_create_empty(pool);
+      svn_stringbuf_t *expected = svn_stringbuf_create_empty(pool);
+      svn_stream_t *stream = svn_stream_from_stringbuf(actual, pool);
+
+      stream = svn_base64_encode2(stream, FALSE, pool);
       stream = svn_base64_decode(stream, pool);
 
       SVN_ERR(svn_stream_write(stream, data[i].encoded1, &len1));
@@ -771,6 +817,255 @@ test_stringbuf_from_stream(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+empty_read_full_fn(void *baton, char *buffer, apr_size_t *len)
+{
+    *len = 0;
+    return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_compressed_read_full(apr_pool_t *pool)
+{
+  svn_stream_t *stream, *empty_stream;
+  char buf[1];
+  apr_size_t len;
+
+  /* Reading an empty stream with read_full only support should not error. */
+  empty_stream = svn_stream_create(NULL, pool);
+
+  /* Create stream with only full read support. */
+  svn_stream_set_read2(empty_stream, NULL, empty_read_full_fn);
+
+  stream = svn_stream_compressed(empty_stream, pool);
+  len = sizeof(buf);
+  SVN_ERR(svn_stream_read_full(stream, buf, &len));
+  if (len > 0)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Got unexpected result.");
+
+  SVN_ERR(svn_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_checksum(apr_pool_t *pool)
+{
+  svn_string_t *str =
+    svn_string_create("The quick brown fox jumps over the lazy dog", pool);
+  svn_checksum_t *actual;
+
+  SVN_ERR(svn_stream_contents_checksum(&actual,
+                                       svn_stream_from_string(str, pool),
+                                       svn_checksum_md5, pool, pool));
+  SVN_TEST_STRING_ASSERT("9e107d9d372bb6826bd81d3542a419d6",
+                         svn_checksum_to_cstring(actual, pool));
+
+  SVN_ERR(svn_stream_contents_checksum(&actual,
+                                       svn_stream_from_string(str, pool),
+                                       svn_checksum_sha1, pool, pool));
+  SVN_TEST_STRING_ASSERT("2fd4e1c67a2d28fced849ee1bb76e7391b93eb12",
+                         svn_checksum_to_cstring(actual, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_readline_file(const char *testname,
+                          const char *eol,
+                          apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  const char *tmp_file;
+  svn_stream_t *stream;
+  svn_stringbuf_t *line;
+  svn_boolean_t eof;
+  static const char long_line[] =
+    "The quick brown fox jumps over the lazy dog, and "
+    "jackdaws love my big sphinx of quartz, and "
+    "pack my box with five dozen liquor jugs.";
+
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, testname, pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  /* Test 1: Read empty file. */
+  tmp_file = svn_dirent_join(tmp_dir, "empty", pool);
+  SVN_ERR(svn_io_file_create(tmp_file, "", pool));
+  SVN_ERR(svn_stream_open_readonly(&stream, tmp_file, pool, pool));
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 0);
+  SVN_TEST_STRING_ASSERT(line->data, "");
+  SVN_TEST_ASSERT(eof);
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 0);
+  SVN_TEST_STRING_ASSERT(line->data, "");
+  SVN_TEST_ASSERT(eof);
+
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Test 2: Read empty line. */
+  tmp_file = svn_dirent_join(tmp_dir, "empty-line", pool);
+  SVN_ERR(svn_io_file_create(tmp_file, eol, pool));
+  SVN_ERR(svn_stream_open_readonly(&stream, tmp_file, pool, pool));
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 0);
+  SVN_TEST_STRING_ASSERT(line->data, "");
+  SVN_TEST_ASSERT(!eof);
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 0);
+  SVN_TEST_STRING_ASSERT(line->data, "");
+  SVN_TEST_ASSERT(eof);
+
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Test 3: Read two lines. */
+  tmp_file = svn_dirent_join(tmp_dir, "lines", pool);
+  SVN_ERR(svn_io_file_create(tmp_file,
+                             apr_pstrcat(pool,
+                                         "first", eol, "second", eol,
+                                         SVN_VA_NULL),
+                             pool));
+  SVN_ERR(svn_stream_open_readonly(&stream, tmp_file, pool, pool));
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 5);
+  SVN_TEST_STRING_ASSERT(line->data, "first");
+  SVN_TEST_ASSERT(!eof);
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 6);
+  SVN_TEST_STRING_ASSERT(line->data, "second");
+  SVN_TEST_ASSERT(!eof);
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 0);
+  SVN_TEST_STRING_ASSERT(line->data, "");
+  SVN_TEST_ASSERT(eof);
+
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Test 4: Content without end-of-line. */
+  tmp_file = svn_dirent_join(tmp_dir, "no-eol", pool);
+  SVN_ERR(svn_io_file_create(tmp_file, "text", pool));
+  SVN_ERR(svn_stream_open_readonly(&stream, tmp_file, pool, pool));
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 4);
+  SVN_TEST_STRING_ASSERT(line->data, "text");
+  SVN_TEST_ASSERT(eof);
+
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Test 5: Read long line. */
+  tmp_file = svn_dirent_join(tmp_dir, "long-line", pool);
+  SVN_ERR(svn_io_file_create(tmp_file,
+                             apr_pstrcat(pool, long_line, eol, SVN_VA_NULL),
+                             pool));
+  SVN_ERR(svn_stream_open_readonly(&stream, tmp_file, pool, pool));
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == strlen(long_line));
+  SVN_TEST_STRING_ASSERT(line->data, long_line);
+  SVN_TEST_ASSERT(!eof);
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 0);
+  SVN_TEST_STRING_ASSERT(line->data, "");
+  SVN_TEST_ASSERT(eof);
+
+  SVN_ERR(svn_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_readline_file_lf(apr_pool_t *pool)
+{
+  SVN_ERR(test_stream_readline_file("test_stream_readline_file_lf",
+                                    "\n", pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_readline_file_crlf(apr_pool_t *pool)
+{
+  SVN_ERR(test_stream_readline_file("test_stream_readline_file_crlf",
+                                    "\r\n", pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_readline_file_nul(apr_pool_t *pool)
+{
+  /* Test is written based on the problem report in
+       https://lists.apache.org/thread.html/c96eb5618ac0bf6e083345e0fdcdcf834e30913f26eabe6ada7bab62@%3Cusers.subversion.apache.org%3E
+     where the user had an OOM when calling `svndumpfilter` with
+     a (most likely) invalid dump containing nul bytes.
+   */
+  const char data[] =
+    {
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n'
+    };
+  const char *tmp_dir;
+  const char *tmp_file;
+  svn_stream_t *stream;
+
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_stream_readline_file_nul", pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  tmp_file = svn_dirent_join(tmp_dir, "file", pool);
+  SVN_ERR(svn_io_file_create_bytes(tmp_file, data, sizeof(data), pool));
+  SVN_ERR(svn_stream_open_readonly(&stream, tmp_file, pool, pool));
+
+  while (1)
+    {
+      svn_boolean_t eof;
+      svn_stringbuf_t *line;
+
+      SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, pool));
+      if (eof)
+        break;
+
+      /* Don't check the contents of the `line` here, at least for now.
+
+         In other words, we just test that this case does not crash or cause
+         unexpected errors.  The reason is that currently our `readline_fn`
+         implementations have inconsistent behavior when dealing with \0 bytes,
+         handling those differently, either in strchr() or memchr() styles.
+
+         Once we make them consistent (or even decide to bail out with an error
+         for \0), this part of the test should start properly checking `data`;
+         maybe also for non-file streams.
+       */
+    }
+
+  SVN_ERR(svn_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 static int max_threads = 1;
@@ -800,6 +1095,16 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "base64 decoding allocation problem"),
     SVN_TEST_PASS2(test_stringbuf_from_stream,
                    "test svn_stringbuf_from_stream"),
+    SVN_TEST_PASS2(test_stream_compressed_read_full,
+                   "test compression for streams without partial read"),
+    SVN_TEST_PASS2(test_stream_checksum,
+                   "test svn_stream_contents_checksum()"),
+    SVN_TEST_PASS2(test_stream_readline_file_lf,
+                   "test reading LF-terminated lines from file"),
+    SVN_TEST_PASS2(test_stream_readline_file_crlf,
+                   "test reading CRLF-terminated lines from file"),
+    SVN_TEST_PASS2(test_stream_readline_file_nul,
+                   "test reading line from file with nul bytes"),
     SVN_TEST_NULL
   };
 

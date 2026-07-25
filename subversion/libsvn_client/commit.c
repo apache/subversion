@@ -205,8 +205,8 @@ collect_lock_tokens(apr_hash_t **result,
 
   for (hi = apr_hash_first(pool, all_tokens); hi; hi = apr_hash_next(hi))
     {
-      const char *url = svn__apr_hash_index_key(hi);
-      const char *token = svn__apr_hash_index_val(hi);
+      const char *url = apr_hash_this_key(hi);
+      const char *token = apr_hash_this_val(hi);
       const char *relpath = svn_uri_skip_ancestor(base_url, url, pool);
 
       if (relpath)
@@ -240,47 +240,28 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
     loop_recurse = TRUE;
 
   remove_lock = (! keep_locks && (item->state_flags
-                                       & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN));
+                                       & (SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN
+                                          | SVN_CLIENT_COMMIT_ITEM_ADD
+                                          | SVN_CLIENT_COMMIT_ITEM_DELETE)));
 
-  /* When the node was deleted (or replaced), we need to always remove the 
-     locks, as they're invalidated on the server. We cannot honor the 
+  /* When the node was deleted (or replaced), we need to always remove the
+     locks, as they're invalidated on the server. We cannot honor the
      SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN flag here because it does not tell
      us whether we have locked children. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
     remove_lock = TRUE;
 
   return svn_error_trace(
-         svn_wc_queue_committed3(queue, wc_ctx, item->path,
+         svn_wc_queue_committed4(queue, wc_ctx, item->path,
                                  loop_recurse,
+                                 0 != (item->state_flags &
+                                       (SVN_CLIENT_COMMIT_ITEM_ADD
+                                        | SVN_CLIENT_COMMIT_ITEM_DELETE
+                                        | SVN_CLIENT_COMMIT_ITEM_TEXT_MODS
+                                        | SVN_CLIENT_COMMIT_ITEM_PROP_MODS)),
                                  item->incoming_prop_changes,
                                  remove_lock, !keep_changelists,
                                  sha1_checksum, scratch_pool));
-}
-
-/* Do similar handling as post_process_commit_item() but for items that
- * are commit items, but aren't actual changes. Most importantly
- * remove lock tokens. */
-static svn_error_t *
-post_process_no_commit_item(const svn_client_commit_item3_t *item,
-                            svn_wc_context_t *wc_ctx,
-                            svn_boolean_t keep_changelists,
-                            svn_boolean_t keep_locks,
-                            apr_pool_t *scratch_pool)
-{
-  if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
-      && !keep_locks)
-    {
-      SVN_ERR(svn_wc_remove_lock2(wc_ctx, item->path, scratch_pool));
-    }
-
-  if (!keep_changelists)
-    SVN_ERR(svn_wc_set_changelist2(wc_ctx, item->path, NULL,
-                                   svn_depth_empty, NULL,
-                                   NULL, NULL,
-                                   NULL, NULL,
-                                   scratch_pool));
-
-  return SVN_NO_ERROR;
 }
 
 /* Given a list of committables described by their common base abspath
@@ -353,8 +334,8 @@ determine_lock_targets(apr_array_header_t **lock_targets,
        hi = apr_hash_next(hi))
     {
       const char *common;
-      const char *wcroot_abspath = svn__apr_hash_index_key(hi);
-      apr_array_header_t *wc_targets = svn__apr_hash_index_val(hi);
+      const char *wcroot_abspath = apr_hash_this_key(hi);
+      apr_array_header_t *wc_targets = apr_hash_this_val(hi);
 
       svn_pool_clear(iterpool);
 
@@ -519,6 +500,129 @@ append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
   return SVN_NO_ERROR;
 }
 
+/* Crawl the working copy for commit items.
+ */
+static svn_error_t *
+harvest_committables(apr_array_header_t **commit_items_p,
+                     apr_hash_t **committables_by_path_p,
+                     apr_hash_t **lock_tokens,
+                     const char *base_dir_abspath,
+                     const apr_array_header_t *targets,
+                     int depth_empty_start,
+                     svn_depth_t depth,
+                     svn_boolean_t just_locked,
+                     const apr_array_header_t *changelists,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  struct check_url_kind_baton cukb;
+  svn_client__committables_t *committables;
+  apr_hash_index_t *hi;
+
+  /* Prepare for when we have a copy containing not-present nodes. */
+  cukb.pool = scratch_pool;
+  cukb.session = NULL; /* ### Can we somehow reuse session? */
+  cukb.repos_root_url = NULL;
+  cukb.ctx = ctx;
+
+  SVN_ERR(svn_client__harvest_committables(&committables, lock_tokens,
+                                           base_dir_abspath, targets,
+                                           depth_empty_start, depth,
+                                           just_locked,
+                                           changelists,
+                                           check_url_kind, &cukb,
+                                           ctx, result_pool, scratch_pool));
+  if (apr_hash_count(committables->by_repository) == 0)
+    {
+      *commit_items_p = NULL;
+      return SVN_NO_ERROR;  /* Nothing to do */
+    }
+  else if (apr_hash_count(committables->by_repository) > 1)
+    {
+      return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+          _("Commit can only commit to a single repository at a time.\n"
+            "Are all targets part of the same working copy?"));
+    }
+
+  hi = apr_hash_first(scratch_pool, committables->by_repository);
+  *commit_items_p = apr_hash_this_val(hi);
+  if (committables_by_path_p)
+    *committables_by_path_p = committables->by_path;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__wc_replay(const char *src_wc_abspath,
+                      const apr_array_header_t *targets,
+                      svn_depth_t depth,
+                      const apr_array_header_t *changelists,
+                      const svn_delta_editor_t *editor,
+                      void *edit_baton,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool)
+{
+  const char *base_abspath;
+  apr_array_header_t *rel_targets;
+  apr_hash_t *lock_tokens;
+  apr_array_header_t *commit_items;
+  svn_client__pathrev_t *base;
+  const char *base_url;
+  svn_wc_notify_func2_t saved_notify_func;
+  void *saved_notify_baton;
+
+  /* Condense the target list. This makes all targets absolute. */
+  SVN_ERR(svn_dirent_condense_targets(&base_abspath, &rel_targets, targets,
+                                      FALSE, pool, pool));
+
+  /* No targets means nothing to commit, so just return. */
+  if (base_abspath == NULL)
+    return SVN_NO_ERROR;
+
+  SVN_ERR_ASSERT(rel_targets != NULL);
+
+  /* If we calculated only a base and no relative targets, this
+     must mean that we are being asked to commit (effectively) a
+     single path. */
+  if (rel_targets->nelts == 0)
+    APR_ARRAY_PUSH(rel_targets, const char *) = "";
+
+  /* Crawl the working copy for commit items. */
+  SVN_ERR(harvest_committables(&commit_items, NULL /*committables_by_path_p*/,
+                               &lock_tokens,
+                               base_abspath, rel_targets,
+                               -1 /*depth_empty_start*/,
+                               depth,
+                               FALSE /*just_locked*/,
+                               changelists,
+                               ctx, pool, pool));
+  if (!commit_items)
+    {
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_client__wc_node_get_base(&base,
+                                       src_wc_abspath, ctx->wc_ctx, pool, pool));
+  base_url = base->url;
+  /* Sort our COMMIT_ITEMS by URL and find their relative URL-paths. */
+  SVN_ERR(svn_client__condense_commit_items2(base_url, commit_items, pool));
+
+  saved_notify_func = ctx->notify_func2;
+  saved_notify_baton = ctx->notify_baton2;
+  ctx->notify_func2 = notify_func;
+  ctx->notify_baton2 = notify_baton;
+  /* BASE_URL is only used here in notifications & errors */
+  SVN_ERR(svn_client__do_commit(base_url, commit_items,
+                                editor, edit_baton,
+                                NULL /*notify_prefix*/, NULL /*sha1_checksums*/,
+                                ctx, pool, pool));
+  ctx->notify_func2 = saved_notify_func;
+  ctx->notify_baton2 = saved_notify_baton;
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_commit6(const apr_array_header_t *targets,
                    svn_depth_t depth,
@@ -544,7 +648,7 @@ svn_client_commit6(const apr_array_header_t *targets,
   apr_array_header_t *rel_targets;
   apr_array_header_t *lock_targets;
   apr_array_header_t *locks_obtained;
-  svn_client__committables_t *committables;
+  apr_hash_t *committables_by_path;
   apr_hash_t *lock_tokens;
   apr_hash_t *sha1_checksums;
   apr_array_header_t *commit_items;
@@ -558,6 +662,7 @@ svn_client_commit6(const apr_array_header_t *targets,
   const char *current_abspath;
   const char *notify_prefix;
   int depth_empty_after = -1;
+  apr_hash_t *move_youngest = NULL;
   int i;
 
   SVN_ERR_ASSERT(depth != svn_depth_unknown && depth != svn_depth_exclude);
@@ -603,6 +708,10 @@ svn_client_commit6(const apr_array_header_t *targets,
                                                    pool, pool));
     }
 
+  /* Optimization: for commit, we avoid fetching the text-bases at the
+     beginning of the operation and only delta against the text-bases that
+     are available locally.  See svn_wc__internal_transmit_text_deltas(). */
+
   SVN_ERR(determine_lock_targets(&lock_targets, ctx->wc_ctx, base_abspath,
                                  rel_targets, pool, iterpool));
 
@@ -633,55 +742,27 @@ svn_client_commit6(const apr_array_header_t *targets,
                                                   pool);
 
   /* Crawl the working copy for commit items. */
-  {
-    struct check_url_kind_baton cukb;
-
-    /* Prepare for when we have a copy containing not-present nodes. */
-    cukb.pool = iterpool;
-    cukb.session = NULL; /* ### Can we somehow reuse session? */
-    cukb.repos_root_url = NULL;
-    cukb.ctx = ctx;
-
-    cmt_err = svn_error_trace(
-                   svn_client__harvest_committables(&committables,
-                                                    &lock_tokens,
-                                                    base_abspath,
-                                                    rel_targets,
-                                                    depth_empty_after,
-                                                    depth,
-                                                    ! keep_locks,
-                                                    changelists,
-                                                    check_url_kind,
-                                                    &cukb,
-                                                    ctx,
-                                                    pool,
-                                                    iterpool));
-
-    svn_pool_clear(iterpool);
-  }
+  cmt_err = svn_error_trace(
+              harvest_committables(&commit_items, &committables_by_path,
+                                   &lock_tokens,
+                                   base_abspath,
+                                   rel_targets,
+                                   depth_empty_after,
+                                   depth,
+                                   ! keep_locks,
+                                   changelists,
+                                   ctx,
+                                   pool,
+                                   iterpool));
+  svn_pool_clear(iterpool);
 
   if (cmt_err)
     goto cleanup;
 
-  if (apr_hash_count(committables->by_repository) == 0)
+  if (!commit_items)
     {
       goto cleanup; /* Nothing to do */
     }
-  else if (apr_hash_count(committables->by_repository) > 1)
-    {
-      cmt_err = svn_error_create(
-             SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-             _("Commit can only commit to a single repository at a time.\n"
-               "Are all targets part of the same working copy?"));
-      goto cleanup;
-    }
-
-  {
-    apr_hash_index_t *hi = apr_hash_first(iterpool,
-                                          committables->by_repository);
-
-    commit_items = svn__apr_hash_index_val(hi);
-  }
 
   /* If our array of targets contains only locks (and no actual file
      or prop modifications), then we return here to avoid committing a
@@ -728,62 +809,12 @@ svn_client_commit6(const apr_array_header_t *targets,
           if (cmt_err)
             goto cleanup;
 
-          if (moved_from_abspath && delete_op_root_abspath &&
-              strcmp(moved_from_abspath, delete_op_root_abspath) == 0)
-
+          if (moved_from_abspath && delete_op_root_abspath)
             {
-              svn_boolean_t found_delete_half =
-                (svn_hash_gets(committables->by_path, delete_op_root_abspath)
-                 != NULL);
+              svn_client_commit_item3_t *delete_half =
+                svn_hash_gets(committables_by_path, delete_op_root_abspath);
 
-              if (!found_delete_half)
-                {
-                  const char *delete_half_parent_abspath;
-
-                  /* The delete-half isn't in the commit target list.
-                   * However, it might itself be the child of a deleted node,
-                   * either because of another move or a deletion.
-                   *
-                   * For example, consider: mv A/B B; mv B/C C; commit;
-                   * C's moved-from A/B/C is a child of the deleted A/B.
-                   * A/B/C does not appear in the commit target list, but
-                   * A/B does appear.
-                   * (Note that moved-from information is always stored
-                   * relative to the BASE tree, so we have 'C moved-from
-                   * A/B/C', not 'C moved-from B/C'.)
-                   *
-                   * An example involving a move and a delete would be:
-                   * mv A/B C; rm A; commit;
-                   * Now C is moved-from A/B which does not appear in the
-                   * commit target list, but A does appear.
-                   */
-
-                  /* Scan upwards for a deletion op-root from the
-                   * delete-half's parent directory. */
-                  delete_half_parent_abspath =
-                    svn_dirent_dirname(delete_op_root_abspath, iterpool);
-                  if (strcmp(delete_op_root_abspath,
-                             delete_half_parent_abspath) != 0)
-                    {
-                      const char *parent_delete_op_root_abspath;
-
-                      cmt_err = svn_error_trace(
-                                  svn_wc__node_get_deleted_ancestor(
-                                    &parent_delete_op_root_abspath,
-                                    ctx->wc_ctx, delete_half_parent_abspath,
-                                    iterpool, iterpool));
-                      if (cmt_err)
-                        goto cleanup;
-
-                      if (parent_delete_op_root_abspath)
-                        found_delete_half =
-                          (svn_hash_gets(committables->by_path,
-                                         parent_delete_op_root_abspath)
-                           != NULL);
-                    }
-                }
-
-              if (!found_delete_half)
+              if (!delete_half)
                 {
                   cmt_err = svn_error_createf(
                               SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -808,6 +839,17 @@ svn_client_commit6(const apr_array_header_t *targets,
 
                   goto cleanup;
                 }
+              else if (delete_half->revision == item->copyfrom_rev)
+                {
+                  /* Ok, now we know that we perform an out-of-date check
+                     on the copyfrom location. Remember this for a fixup
+                     round right before committing. */
+
+                  if (!move_youngest)
+                    move_youngest = apr_hash_make(pool);
+
+                  svn_hash_sets(move_youngest, item->path, item);
+                }
             }
         }
 
@@ -826,7 +868,7 @@ svn_client_commit6(const apr_array_header_t *targets,
 
           if (moved_to_abspath && copy_op_root_abspath &&
               strcmp(moved_to_abspath, copy_op_root_abspath) == 0 &&
-              svn_hash_gets(committables->by_path, copy_op_root_abspath)
+              svn_hash_gets(committables_by_path, copy_op_root_abspath)
               == NULL)
             {
               cmt_err = svn_error_createf(
@@ -906,6 +948,37 @@ svn_client_commit6(const apr_array_header_t *targets,
   if (cmt_err)
     goto cleanup;
 
+  if (move_youngest != NULL)
+    {
+      apr_hash_index_t *hi;
+      svn_revnum_t youngest;
+
+      SVN_ERR(svn_ra_get_latest_revnum(ra_session, &youngest, pool));
+
+      for (hi = apr_hash_first(iterpool, move_youngest);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          svn_client_commit_item3_t *item = apr_hash_this_val(hi);
+
+          /* We delete the original side with its original revision and will
+             receive an out-of-date error if that node changed since that
+             revision.
+
+             The copy is of that same revision and we know that this revision
+             didn't change between this revision and youngest. So we can just
+             as well commit a copy from youngest.
+
+            Note that it is still possible to see gaps between the delete and
+            copy revisions as the repository might handle multiple commits
+            at the same time (or when an out of date proxy is involved), but
+            in general it should decrease the number of gaps. */
+
+          if (item->copyfrom_rev < youngest)
+            item->copyfrom_rev = youngest;
+        }
+    }
+
   cmt_err = svn_error_trace(
               get_ra_editor(&editor, &edit_baton, ra_session, ctx,
                             log_msg, commit_items, revprop_table,
@@ -943,11 +1016,6 @@ svn_client_commit6(const apr_array_header_t *targets,
           svn_client_commit_item3_t *item
             = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
 
-          if (! (item->state_flags & ~ SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN))
-            {
-              continue; /* Nothing to post process via the queue */
-            }
-
           svn_pool_clear(iterpool);
           bump_err = post_process_commit_item(
                        queue, item, ctx->wc_ctx,
@@ -969,23 +1037,6 @@ svn_client_commit6(const apr_array_header_t *targets,
 
       if (bump_err)
         goto cleanup;
-
-      for (i = 0; i < commit_items->nelts; i++)
-        {
-          svn_client_commit_item3_t *item
-            = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
-
-          if (item->state_flags & ~ SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
-            continue; /* Already processed via the queue */
-
-          svn_pool_clear(iterpool);
-          bump_err = post_process_no_commit_item(
-                       item, ctx->wc_ctx,
-                       keep_changelists, keep_locks,
-                       iterpool);
-          if (bump_err)
-            goto cleanup;
-        }
     }
 
  cleanup:
@@ -1026,6 +1077,12 @@ svn_client_commit6(const apr_array_header_t *targets,
                                                 const char *);
 
           svn_pool_clear(iterpool);
+
+          unlock_err = svn_error_compose_create(
+                           svn_client__textbase_sync(NULL, lock_root,
+                                                     FALSE, TRUE, ctx,
+                                                     NULL, iterpool, iterpool),
+                           unlock_err);
 
           unlock_err = svn_error_compose_create(
                            svn_wc__release_write_lock(ctx->wc_ctx, lock_root,

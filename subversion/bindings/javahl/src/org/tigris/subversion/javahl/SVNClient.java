@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.tigris.subversion.javahl;
@@ -73,7 +71,7 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
-     * slot for the adress of the native peer. The JNI code is the only user
+     * slot for the address of the native peer. The JNI code is the only user
      * of this member
      */
     protected long cppAddr;
@@ -1200,6 +1198,7 @@ public class SVNClient implements SVNClientInterface
      *                                  boolean, boolean, int, String)} instead.
      * @since 1.0
      */
+    @Deprecated
     public long doExport(String srcPath, String destPath,
                                 Revision revision, boolean force)
             throws ClientException
@@ -1213,6 +1212,7 @@ public class SVNClient implements SVNClientInterface
      *                                  boolean, boolean, int, String)} instead.
      * @since 1.2
      */
+    @Deprecated
     public long doExport(String srcPath, String destPath, Revision revision,
                          Revision pegRevision, boolean force,
                          boolean ignoreExternals, boolean recurse,
@@ -1251,6 +1251,7 @@ public class SVNClient implements SVNClientInterface
      *             instead.
      * @since 1.0
      */
+    @Deprecated
     public long doSwitch(String path, String url, Revision revision,
                          boolean recurse)
             throws ClientException
@@ -1265,6 +1266,7 @@ public class SVNClient implements SVNClientInterface
      *                                  boolean)} instead.
      * @since 1.5
      */
+    @Deprecated
     public long doSwitch(String path, String url, Revision revision,
                          Revision pegRevision, int depth,
                          boolean depthIsSticky, boolean ignoreExternals,
@@ -1359,6 +1361,7 @@ public class SVNClient implements SVNClientInterface
      *                               boolean, boolean)} instead.
      * @since 1.0
      */
+    @Deprecated
     public void merge(String path1, Revision revision1, String path2,
                       Revision revision2, String localPath,
                       boolean force, boolean recurse)
@@ -1374,6 +1377,7 @@ public class SVNClient implements SVNClientInterface
      *                               boolean, boolean)} instead.
      * @since 1.2
      */
+    @Deprecated
     public void merge(String path1, Revision revision1, String path2,
                       Revision revision2, String localPath, boolean force,
                       boolean recurse, boolean ignoreAncestry, boolean dryRun)
@@ -2418,18 +2422,18 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-        	final List<org.apache.subversion.javahl.types.Info> infos =
-        		new ArrayList<org.apache.subversion.javahl.types.Info>();
-        	aSVNClient.info2(path,
-        					org.apache.subversion.javahl.types.Revision.HEAD,
-        					org.apache.subversion.javahl.types.Revision.HEAD,
-        					org.apache.subversion.javahl.types.Depth.empty,
-        				    null, new org.apache.subversion.javahl.callback.InfoCallback()
-        	{
-				public void singleInfo(org.apache.subversion.javahl.types.Info info) {
-					infos.add(info);
-				}
-        	});
+            final List<org.apache.subversion.javahl.types.Info> infos =
+                new ArrayList<org.apache.subversion.javahl.types.Info>();
+            aSVNClient.info2(path,
+                            org.apache.subversion.javahl.types.Revision.HEAD,
+                            org.apache.subversion.javahl.types.Revision.HEAD,
+                            org.apache.subversion.javahl.types.Depth.empty,
+                            null, new org.apache.subversion.javahl.callback.InfoCallback()
+            {
+                public void singleInfo(org.apache.subversion.javahl.types.Info info) {
+                    infos.add(info);
+                }
+            });
             return new Info(infos.get(0));
         }
         catch (org.apache.subversion.javahl.ClientException ex)

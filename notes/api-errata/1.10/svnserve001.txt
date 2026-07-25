@@ -1,0 +1,39 @@
+API ERRATA -- $Id$
+
+Root Cause of Errata: design error
+ Library(s) Affected: svnserve.conf
+Function(s) Affected: the 'use-sasl' configuration knob
+     New Behavior in: 1.10
+
+== Details ==
+
+The documentation of the '[sasl]' section and the 'use-sasl' option in
+svnserve.conf promised that that section would be ignored by Subversion builds
+compiled without SASL support.
+
+That behaviour violated the principle of least surprise and could lead to
+incorrect authentication and authorization settings being used, if an svnserve
+compiled without SASL support was inadvertently used with an svnserve.conf
+file specifying 'use-sasl = true'.
+
+svnserve has been changed to decline to serve a repository, if svnserve.conf
+contains the setting 'use-sasl = true' and SASL support was not compiled in.
+
+
+== Impact on API Users ==
+
+Subversion builds compiled with SASL support will have no change in behaviour.
+
+Subversion builds compiled without SASL support will now decline to serve
+repositories when the svnserve.conf config file sets 'use-sasl = true' in the
+'[sasl]' section.  Such repositories may set 'use-sasl = false' to restore the
+effective 1.9 behaviour, or recompile svnserve with SASL support to use SASL
+transport.
+
+If 'use-sasl' is not explicitly set (commented out), it defaults to 'false'.
+Installations using this setting are unaffected, regardless of svnserve compile
+options.
+
+The default location of svnserve.conf is REPOS_DIR/conf/svnserve.conf on the
+server (the file is not versioned), but this may be changed via the
+'--config-file' command-line option.

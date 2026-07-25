@@ -29,6 +29,7 @@
 
 #include <apr_tables.h>
 #include "svn_types.h"
+#include "svn_diff.h"
 #include "Pool.h"
 #include "JNIUtil.h"
 
@@ -38,10 +39,16 @@ class DiffOptions
   DiffOptions(jobject joptions);
 
   apr_array_header_t *optionsArray(SVN::Pool &resultPool) const;
+  svn_diff_file_options_t *fileOptions(SVN::Pool &resultPool) const;
 
   svn_boolean_t useGitDiffFormat() const
   {
     return (flags & USE_GIT_DIFF_FORMAT ? TRUE : FALSE);
+  }
+
+  svn_boolean_t formatMergeinfo() const
+  {
+    return (flags & FORMAT_MERGEINFO ? TRUE : FALSE);
   }
 
  private:
@@ -50,6 +57,7 @@ class DiffOptions
   static const jint IGNORE_EOL_STYLE    = 0x04;
   static const jint SHOW_C_FUNCTION     = 0x08;
   static const jint USE_GIT_DIFF_FORMAT = 0x10;
+  static const jint FORMAT_MERGEINFO    = 0x20;
 
   const jint flags;
 };

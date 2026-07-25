@@ -970,6 +970,12 @@ B<svncopy> - extended form of B<svn copy>
 
 B<svncopy.pl> [option ...] source [source ...] destination
 
+--------------------------------------------------------------------------
+NOTE: This script is deprecated. Please use 'svn copy --pin-externals' for
+pinning externals, and use the relative external URL syntax instead of the
+'--update-externals' functionality of this script.
+--------------------------------------------------------------------------
+
 This script copies one Subversion location or set of locations to another,
 in the same way as B<svn copy>.  Using the script allows more advanced operations,
 in particular allowing svn:externals to be dealt with properly for branching

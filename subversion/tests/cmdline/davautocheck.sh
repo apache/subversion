@@ -52,6 +52,7 @@
 # Run this script with the test suite name and test number to execute just this
 # test:
 #   subversion/tests/cmdline/davautocheck.sh basic 4
+# This script can also be invoked via "make davautocheck".
 #
 # If the temporary directory is not deleted, it can be reused for further
 # manual DAV protocol interoperation testing. HTTPD must be started by
@@ -62,31 +63,32 @@
 # one version's client against another version's server) specify both APXS
 # *and* MODULE_PATH for the other server:
 #
-#   APXS=/opt/svn/1.4.x/bin/apxs MODULE_PATH=/opt/svn/1.4.x/modules \ 
+#   APXS=/opt/svn/1.4.x/bin/apxs MODULE_PATH=/opt/svn/1.4.x/modules \
 #     subversion/tests/cmdline/davautocheck.sh
 #
-# To prevent the server from advertising httpv2, pass USE_HTTPV1 in
-# the environment.
+# Other environment variables that are interpreted by this script:
 #
-# To enable "SVNCacheRevProps on" set CACHE_REVPROPS in the environment.
+#  make davautocheck CACHE_REVPROPS=1       # sets SVNCacheRevProps on
 #
-# To test over https set USE_SSL in the environment.
-# 
-# To use value for "SVNPathAuthz" directive set SVN_PATH_AUTHZ with
-# appropriate value in the environment.
+#  make davautocheck BLOCK_READ=1           # sets SVNBlockRead on
 #
-# To load an MPM module for Apache 2.4 use APACHE_MPM=event in the
-# environment.
+#  make davautocheck USE_SSL=1              # run over https
+#
+#  make davautocheck USE_HTTPV1=1           # sets SVNAdvertiseV2Protocol off
+#
+#  make davautocheck APACHE_MPM=event       # specifies the 2.4 MPM
+#
+#  make davautocheck SVN_PATH_AUTHZ=short_circuit  # SVNPathAuthz short_circuit
 #
 # Passing --no-tests as argv[1] will have the script start a server
-# but not run any tests.  Passing --gdb will do the same, and in addition
-# spawn gdb in the foreground attached to the running server.
+# but not run any tests.  Passing --gdb or --lldb will do the same, and in
+# addition spawn gdb/lldb in the foreground attached to the running server.
 
 PYTHON=${PYTHON:-python}
 
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
-STOPSCRIPT=$SCRIPTDIR/.$SCRIPT.stop
+STOPSCRIPT=$(pwd)/.$SCRIPT.stop
 
 trap stop_httpd_and_die HUP TERM INT
 
@@ -114,7 +116,7 @@ query() {
   if [ -n "$BASH_VERSION" ]; then
     read -n 1 -t 32
   else
-    # 
+    #
     prog="
 import select as s
 import sys
@@ -163,7 +165,8 @@ get_prog_name() {
 }
 
 # Don't assume sbin is in the PATH.
-# ### Presumably this is used to locate /usr/sbin/apxs or /usr/sbin/apache2    
+# This is used to locate apxs when the script is invoked manually; when
+# invoked by 'make davautocheck' the APXS environment variable is set.
 PATH="$PATH:/usr/sbin:/usr/local/sbin"
 
 # Find the source and build directories. The build dir can be found if it is
@@ -221,6 +224,11 @@ if [ ${CACHE_REVPROPS:+set} ]; then
   CACHE_REVPROPS_SETTING=on
 fi
 
+BLOCK_READ_SETTING=off
+if [ ${BLOCK_READ:+set} ]; then
+  BLOCK_READ_SETTING=on
+fi
+
 if [ ${MODULE_PATH:+set} ]; then
     MOD_DAV_SVN="$MODULE_PATH/mod_dav_svn.so"
     MOD_AUTHZ_SVN="$MODULE_PATH/mod_authz_svn.so"
@@ -264,8 +272,6 @@ HTTPD=$(get_prog_name $httpd) || fail "HTTPD '$HTTPD' not found"
 "$HTTPD" -v 1>/dev/null 2>&1 \
   || fail "HTTPD '$HTTPD' doesn't start properly"
 
-say "Using '$HTTPD'..."
-
 HTPASSWD=$(get_prog_name htpasswd htpasswd2) \
   || fail "Could not find htpasswd or htpasswd2"
 [ -x $HTPASSWD ] \
@@ -274,6 +280,9 @@ say "Using '$HTPASSWD'..."
 
 LOAD_MOD_DAV=$(get_loadmodule_config mod_dav) \
   || fail "DAV module not found"
+
+LOAD_MOD_DAV_FS=$(get_loadmodule_config mod_dav_fs) \
+  || fail "Filesystem DAV module not found"
 
 LOAD_MOD_LOG_CONFIG=$(get_loadmodule_config mod_log_config) \
   || fail "log_config module not found"
@@ -291,6 +300,9 @@ LOAD_MOD_AUTH=$(get_loadmodule_config mod_auth) \
 say "Monolithic Auth module not found. Assuming we run against Apache 2.1+"
 LOAD_MOD_AUTH="$(get_loadmodule_config mod_auth_basic)" \
     || fail "Auth_Basic module not found."
+# FIXME: Uncomment to test digest authentication:
+# LOAD_MOD_AUTH="$(get_loadmodule_config mod_auth_digest)" \
+#     || fail "Auth_Digest module not found."
 LOAD_MOD_ACCESS_COMPAT="$(get_loadmodule_config mod_access_compat)" \
     && {
 say "Found modules for Apache 2.3.0+"
@@ -298,8 +310,6 @@ LOAD_MOD_AUTHN_CORE="$(get_loadmodule_config mod_authn_core)" \
     || fail "Authn_Core module not found."
 LOAD_MOD_AUTHZ_CORE="$(get_loadmodule_config mod_authz_core)" \
     || fail "Authz_Core module not found."
-LOAD_MOD_AUTHZ_HOST="$(get_loadmodule_config mod_authz_host)" \
-    || fail "Authz_Host module not found."
 LOAD_MOD_UNIXD=$(get_loadmodule_config mod_unixd) \
     || fail "UnixD module not found"
 }
@@ -307,10 +317,17 @@ LOAD_MOD_AUTHN_FILE="$(get_loadmodule_config mod_authn_file)" \
     || fail "Authn_File module not found."
 LOAD_MOD_AUTHZ_USER="$(get_loadmodule_config mod_authz_user)" \
     || fail "Authz_User module not found."
+LOAD_MOD_AUTHZ_GROUPFILE="$(get_loadmodule_config mod_authz_groupfile)" \
+    || fail "Authz_GroupFile module not found."
+LOAD_MOD_AUTHZ_HOST="$(get_loadmodule_config mod_authz_host)" \
+    || fail "Authz_Host module not found."
 }
 if [ ${APACHE_MPM:+set} ]; then
     LOAD_MOD_MPM=$(get_loadmodule_config mod_mpm_$APACHE_MPM) \
       || fail "MPM module not found"
+fi
+if [ x"$APACHE_MPM" = x"event" ] && [ x"$FS_TYPE" = x"bdb" ]; then
+  fail "FS_TYPE=bdb and APACHE_MPM=event are mutually exclusive (see SVN-4157)"
 fi
 if [ ${USE_SSL:+set} ]; then
     LOAD_MOD_SSL=$(get_loadmodule_config mod_ssl) \
@@ -320,12 +337,18 @@ fi
 # Stop any previous instances, os we can re-use the port.
 if [ -x $STOPSCRIPT ]; then $STOPSCRIPT ; sleep 1; fi
 
+ss -n > /dev/null 2>&1 || netstat -n > /dev/null 2>&1 || fail "unable to find ss or netstat required to find a free port"
+
 HTTPD_PORT=3691
-while netstat -an | grep $HTTPD_PORT | grep 'LISTEN' >/dev/null; do
+while \
+  (ss -ltn sport = :$HTTPD_PORT 2>&1 | grep :$HTTPD_PORT > /dev/null ) \
+  || \
+  (netstat -an 2>&1 | grep $HTTPD_PORT | grep 'LISTEN' > /dev/null ) \
+  do
   HTTPD_PORT=$(( HTTPD_PORT + 1 ))
   if [ $HTTPD_PORT -eq 65536 ]; then
     # Most likely the loop condition is true regardless of $HTTPD_PORT
-    fail "netstat claims you have no free ports for httpd to listen on."
+    fail "ss/netstat claim you have no free ports for httpd to listen on."
   fi
 done
 HTTPD_ROOT="$ABS_BUILDDIR/subversion/tests/cmdline/httpd-$(date '+%Y%m%d-%H%M%S')"
@@ -343,6 +366,7 @@ else
   BASE_URL="$BASE_URL:$HTTPD_PORT"
 fi
 HTTPD_USERS="$HTTPD_ROOT/users"
+HTTPD_GROUPS="$HTTPD_ROOT/groups"
 
 mkdir "$HTTPD_ROOT" \
   || fail "couldn't create temporary directory '$HTTPD_ROOT'"
@@ -354,47 +378,62 @@ if [ ${USE_SSL:+set} ]; then
   BASE_URL="https://localhost:$HTTPD_PORT"
 # A self-signed certifcate for localhost that expires after 2039-12-30
 # generated via:
-#   openssl req -new -x509 -nodes -days 10000 -out cert.pem -keyout cert-key.pem
+#   openssl req -x509 -newkey rsa:2048 -nodes -days 10000 \
+#     -out cert.pem -keyout cert-key.pem -subj "/C=XX/CN=localhost"
 # This is embedded, rather than generated on-the-fly, to avoid consuming
 # system entropy.
   SSL_CERTIFICATE_FILE="$HTTPD_ROOT/cert.pem"
 cat > "$SSL_CERTIFICATE_FILE" <<__EOF__
 -----BEGIN CERTIFICATE-----
-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
+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
 -----END CERTIFICATE-----
 __EOF__
   SSL_CERTIFICATE_KEY_FILE="$HTTPD_ROOT/cert-key.pem"
 cat > "$SSL_CERTIFICATE_KEY_FILE" <<__EOF__
------BEGIN RSA PRIVATE KEY-----
-MIICXQIBAAKBgQD2QHHq2tRZCcU0Otb51TXn3MRtJYa2zdJwhMgxMsTgRyUyHnRI
-/YGckOd62Q07wmE9c6bgpmJd0m6BYCTQ2alrCECTfFXEeHk3zDDI+TcgzHv5i76y
-Byx3QOP1grV8hrOBNSn8OyRUYm+q76SA1jE+/NaL86wEtb9k2n6ylPOgBwIDAQAB
-AoGBAJBzhV+rNl10qcXVrj2noJN+oYsVNE0Pt55hhb22dl7J3TvlOXmHm/xn1CHw
-KR8hC0GtEfs+Hv3CbyhdabtJs2L7QxO5VjgLO+onBmAOw1iPF9DjbMcAlFJnoOWI
-HYwANOWGp2jRxL5cHUfrBVCgUISen3VUZEnQkr4n/Zty/QEBAkEA/XIZ3oh5MiFA
-o4IaFaFQpBc6K/e6fnM0217scaPvfZiYS1k9Fx/UQTAGsxJOnhnsi04WgHPMS5wB
-RP4/PiIGIQJBAPi7yIKKS4E8hWBZL+79TI8Zm2uehGCB8V6m9k7e3I82To9Tgcow
-qZHsAPtN50fg85I94L3REg2FSQlDlzbMkScCQQC2pweLv/EQNrS94eJomkRirban
-vzYxMVfzjRp737iWXGXNT7feNXsjq7f4UAZGnMpDrvg6hLnD999WWKE9ZwnhAkBl
-c9p9/EB9zxyrxtT5StGuUIiHJdnirz2vGLTASMB3nXP/m9UFjkGr5jIkTos2Uzel
-/50qbxtI7oNyxuHnlRrjAkASfQ51kaBcABYRiacesQi94W/kE3MkgHWkCXNb6//u
-gxk/ezALZ8neJzJudzRkX3auGwH1ne9vCM1ED5dkM54H
------END RSA PRIVATE KEY-----
+-----BEGIN PRIVATE KEY-----
+MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCT40UroK2AX0xX
+3X9KT0SNaScMdbDhoU7ztXGtG435uPALPJo0nc71WPWJZr7w5jamX+IPDGG7rPHU
+WpwOhlsRAfW4nc0fbitP8+6SWBcyC3my/tK7ZBktOCavn5WmEpSOYN3yq8zmlLAL
+FNzy4X2Oj3HPXQdQzfkHXEr759sf+abuZ3CHB/Vc6xmZv05dhM5kciRIC1LcWC3j
+OhfgCgv7b0FBkQtHyWIcz/m1RfC5Hnrgq+CH/0VmxhYX4HrNmsmei1g6ToJ30XO5
++BcA+wvLeyVvs9mZvTXBIv91zeuPz1k0FC56FZUBXDLAn/KcFOidi0+joUL4lGbn
+a3pWHye1AgMBAAECggEAG6yj/Q4MacFrn+WrNFSxF2VeEU7U0uREygZiR2qontqk
+0PV+RepiGDeVeyjnAl2STIAU5YwDngM3He321iD+WahsOygMgp0zLbsQIgKqFIth
+MsXM2ZRZwcSIOMU8U9+WPS6TWh4cMeoRJ4G39xuLS2o8efmGrPBecaorvggdUVY1
+mYx5zhM6KzUK7pdPNbTwK8Zhrb3ud60K8TNwzZqsJRod21vlIEph0lDAyjf1fNry
+lLV/qwinB/zUru6rX0ydtlbmyS7spIJjcvxI3wlJjqBZueJndU3aQKXA5qFtQZFv
+42niOzqE9Bb/VT53I9QpaysLp0OAtkkJIJb7+60UAQKBgQDOzGuIGzxhAzsrtjG+
+lmp3jCU7+ZB5EDv48kJWPheilufgGt8Z32qSmhCDQa3kIj3ch6ZvIHtu6+DxB3y1
+hjRPP4uf2L3k9gIcpaJ5PWRW9ZO2DtfkADfDPDPb9k3zQKLqjEh53xsERl12DN3l
+IWBjLp7MgGtLyWLPHy/Dl1BclQKBgQC3Er6NMJMhffDtpWKF/Mm521YlLEEmfzhf
+umUYR7LAO9GhKX9VhBn3KC8dt2CdGsrr1u6j/fgFjwVG4pBPQePI9og2oDwpitkG
+z4n4tK5oMApUR2PdDs5utbInahOCrw4CV8TobvXiwMHhWiD65S17Qr6dI+V5vEQk
+MG84G/e2oQKBgFAl+icuJyCSWASBAJaVRX4/2s570vqYyCWb/wnd1ts1EXlR8NXe
+OTfIbk3wzqx0ePVXvbGkLTK4SN4hwLu539w3DK5PGon6rqbbqzTCDnmFhFIzPokn
+bHVGh/LgayW0D3BIHm7dgWMOwnpWUknTvb+y+ejYfL1Kt/j+ZUyxAHxhAoGAGncJ
+ONvmyRatt40K+xeaCdYdU+5b1LbbbWtCpgnnW0bKfSPElpYsMsCKXx9dRhjTcNh3
+UxmpuxP7zU1/UxXRWgHZmxv61n6N9SAXb+6er80SETDozNIRIYv+nxgEjgXEXq5V
+dsxjm04GOQ+QaPSsaH8zkv/Xcou2xgyCZ3gTjUECgYBRuZqP6BaLmW5pX8bjhmP7
+6L9iIAX6pdSi85VG3oioklatrH653/4x8vZAg2ucZ4uRneT+dEC86FKeZ5q5K9VT
+nX797MoUmqwXunURyu7Uxp2e3PxFQeH1MQzH7LqwUymcNApbUmTwYNXEV3zrSieO
+2RdWoaRi0LRz496Z7fpi1g==
+-----END PRIVATE KEY-----
 __EOF__
   SSL_MAKE_VAR="SSL_CERT=$SSL_CERTIFICATE_FILE"
   SSL_TEST_ARG="--ssl-cert $SSL_CERTIFICATE_FILE"
@@ -403,6 +442,31 @@ fi
 say "Adding users for lock authentication"
 $HTPASSWD -bc $HTTPD_USERS jrandom   rayjandom
 $HTPASSWD -b  $HTTPD_USERS jconstant rayjandom
+$HTPASSWD -b  $HTTPD_USERS __dumpster__ __loadster__
+$HTPASSWD -b  $HTTPD_USERS JRANDOM   rayjandom
+$HTPASSWD -b  $HTTPD_USERS JCONSTANT rayjandom
+
+# FIXME: Uncomment to test digest authentication:
+# rm -f $HTTPD_USERS
+# gen_digest_authn() {
+#   # This is what `htdigest` does when we're not looking.
+#   r="Subversion Repository"
+#   p="$1:$r:"
+#   s="$1:$r:$2"
+#   $PYTHON -c "from hashlib import md5; print('$p' + md5(b'$s').hexdigest())" \
+#           >> $HTTPD_USERS
+# }
+# gen_digest_authn jrandom   rayjandom
+# gen_digest_authn jconstant rayjandom
+# gen_digest_authn __dumpster__ __loadster__
+# gen_digest_authn JRANDOM   rayjandom
+# gen_digest_authn JCONSTANT rayjandom
+
+say "Adding groups for mod_authz_svn tests"
+cat > "$HTTPD_GROUPS" <<__EOF__
+random: jrandom
+constant: jconstant
+__EOF__
 
 touch $HTTPD_MIME_TYPES
 
@@ -420,13 +484,16 @@ $LOAD_MOD_MIME
 $LOAD_MOD_ALIAS
 $LOAD_MOD_UNIXD
 $LOAD_MOD_DAV
+$LOAD_MOD_DAV_FS
 LoadModule          dav_svn_module "$MOD_DAV_SVN"
 $LOAD_MOD_AUTH
 $LOAD_MOD_AUTHN_CORE
 $LOAD_MOD_AUTHN_FILE
 $LOAD_MOD_AUTHZ_CORE
 $LOAD_MOD_AUTHZ_USER
+$LOAD_MOD_AUTHZ_GROUPFILE
 $LOAD_MOD_AUTHZ_HOST
+$LOAD_MOD_ACCESS_COMPAT
 LoadModule          authz_svn_module "$MOD_AUTHZ_SVN"
 LoadModule          dontdothat_module "$MOD_DONTDOTHAT"
 
@@ -452,6 +519,13 @@ mkdir "$HTTPD_LOCK" \
 </IfModule>
 __EOF__
 fi
+
+HTTPD_DAV="$HTTPD_ROOT/dav"
+mkdir "$HTTPD_DAV" \
+    || fail "couldn't create DAV lock directory '$HTTPD_DAV'"
+cat >> "$HTTPD_CFG" <<__EOF__
+DavLockDB "$HTTPD_DAV/lock.db"
+__EOF__
 
 if [ ${USE_SSL:+set} ]; then
 cat >> "$HTTPD_CFG" <<__EOF__
@@ -496,45 +570,191 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   #Require           all granted
 </Directory>
 
+Alias /nodavroot $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/nodavroot
+<Directory $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/nodavroot>
+</Directory>
+
+Alias /fsdavroot $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/fsdavroot
+<Directory $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/fsdavroot>
+  DAV filesystem
+</Directory>
+
 <Location /svn-test-work/repositories>
+__EOF__
+location_common_without_authz() {
+# FIXME: To test digest authentication, replace 'AuthType Basic' with:
+#    AuthType          Digest
+#    AuthDigestProvider file
+cat >> "$HTTPD_CFG" <<__EOF__
   DAV               svn
-  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/repositories"
-  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
   AuthType          Basic
   AuthName          "Subversion Repository"
   AuthUserFile      $HTTPD_USERS
-  Require           valid-user
   SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
   SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
+  SVNListParentPath On
+  SVNBlockRead      ${BLOCK_READ_SETTING}
+__EOF__
+}
+location_common() {
+location_common_without_authz
+cat >> "$HTTPD_CFG" <<__EOF__
+  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
+__EOF__
+}
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/repositories"
+  Require           valid-user
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
 <Location /ddt-test-work/repositories>
-  DAV               svn
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
   SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/repositories"
-  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
-  AuthType          Basic
-  AuthName          "Subversion Repository"
-  AuthUserFile      $HTTPD_USERS
   Require           valid-user
-  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
-  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
   ${SVN_PATH_AUTHZ_LINE}
   DontDoThatConfigFile "$HTTPD_DONTDOTHAT"
 </Location>
 <Location /svn-test-work/local_tmp/repos>
-  DAV               svn
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
   SVNPath           "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp/repos"
-  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
-  AuthType          Basic
-  AuthName          "Subversion Repository"
-  AuthUserFile      $HTTPD_USERS
   Require           valid-user
-  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
+<Location /svn-test-work/local_tmp/trojan>
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
+  SVNPath           "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp/trojan"
+  Require           valid-user
+  ${SVN_PATH_AUTHZ_LINE}
+</Location>
+<Location /authz-test-work/anon>
+  DAV               svn
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
+  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
+  SVNListParentPath On
+  # This may seem unnecessary but granting access to everyone here is necessary
+  # to exercise a bug with httpd 2.3.x+.  The "Require all granted" syntax is
+  # new to 2.3.x+ which we can detect with the mod_authz_core.c module
+  # signature.  Use the "Allow from all" syntax with older versions for symmetry.
+  <IfModule mod_authz_core.c>
+    Require all granted
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Allow from all
+  </IfModule>
+  ${SVN_PATH_AUTHZ_LINE}
+</Location>
+<Location /authz-test-work/in-repos-authz>
+__EOF__
+location_common_without_authz
+cat >> "$HTTPD_CFG" <<__EOF__
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/repositories"
+  Require           valid-user
+  Satisfy Any
+  AuthzSVNReposRelativeAccessFile "^/authz"
+</Location>
+<Location /authz-test-work/mixed>
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  Require           valid-user
+  Satisfy Any
+  ${SVN_PATH_AUTHZ_LINE}
+</Location>
+<Location /authz-test-work/mixed-noauthwhenanon>
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  Require           valid-user
+  AuthzSVNNoAuthWhenAnonymousAllowed On
+  SVNPathAuthz On
+</Location>
+<Location /authz-test-work/authn>
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  Require           valid-user
+  ${SVN_PATH_AUTHZ_LINE}
+</Location>
+<Location /authz-test-work/authn-anonoff>
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  Require           valid-user
+  AuthzSVNAnonymous Off
+  SVNPathAuthz On
+</Location>
+<Location /authz-test-work/authn-lcuser>
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  Require           valid-user
+  AuthzForceUsernameCase Lower
+  ${SVN_PATH_AUTHZ_LINE}
+</Location>
+<Location /authz-test-work/authn-group>
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  AuthGroupFile     $HTTPD_GROUPS
+  Require           group random
+  AuthzSVNAuthoritative Off
+  SVNPathAuthz On
+</Location>
+<IfModule mod_authz_core.c>
+  <Location /authz-test-work/sallrany>
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
+    SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+    AuthzSendForbiddenOnFailure On
+    Satisfy All
+    <RequireAny>
+      Require valid-user
+      Require expr req('ALLOW') == '1'
+    </RequireAny>
+    ${SVN_PATH_AUTHZ_LINE}
+  </Location>
+  <Location /authz-test-work/sallrall>
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
+    SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+    AuthzSendForbiddenOnFailure On
+    Satisfy All
+    <RequireAll>
+      Require valid-user
+      Require expr req('ALLOW') == '1'
+    </RequireAll>
+    ${SVN_PATH_AUTHZ_LINE}
+  </Location>
+</IfModule>
 RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)\$ /svn-test-work/repositories/\$1
 RedirectMatch           ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)\$ /svn-test-work/repositories/\$1
 __EOF__
+
+
+# Our configure script extracts the HTTPD version from
+# headers. However, that may not be the same as the runtime version;
+# an example of this discrepancy occurs on OSX 1.9.5, where the
+# headers report 2.2.26 but the server reports 2.2.29. Since our tests
+# use the version to interpret test case results, use the actual
+# runtime version here to avoid spurious test failures.
+HTTPD_VERSION=$("$HTTPD" -V -f $HTTPD_CFG | grep '^Server version:' | sed 's|^.*/\([0-9]*\.[0-9]*\.[0-9]*\).*$|\1|')
 
 START="$HTTPD -f $HTTPD_CFG"
 printf \
@@ -552,14 +772,14 @@ fi
 ' >$STOPSCRIPT "$HTTPD_ROOT" "$START" "$HTTPD_PID" "$HTTPD_PID"
 chmod +x $STOPSCRIPT
 
-$START -t \
+$START -t > /dev/null \
   || fail "Configuration file didn't pass the check, most likely modules couldn't be loaded"
 
 # need to pause for some time to let HTTPD start
 $START &
 sleep 2
 
-say "HTTPD started and listening on '$BASE_URL'..."
+say "HTTPD $HTTPD_VERSION started and listening on '$BASE_URL'..."
 #query "Ready" "y"
 
 # Perform a trivial validation of our httpd configuration by
@@ -591,18 +811,19 @@ if [ $# -eq 1 ] && [ "x$1" = 'x--no-tests' ]; then
   exit
 fi
 
+if [ $# -eq 1 ] && [ "x$1" = 'x--lldb' ]; then
+  echo "http://localhost:$HTTPD_PORT/svn-test-work/repositories"
+  $STOPSCRIPT && lldb --one-line=run -- $START -X
+  exit
+fi
+
 if [ $# -eq 1 ] && [ "x$1" = 'x--gdb' ]; then
   echo "http://localhost:$HTTPD_PORT/svn-test-work/repositories"
   $STOPSCRIPT && gdb -silent -ex r -args $START -X
   exit
 fi
 
-
-if type time > /dev/null; then
-  TIME_CMD=time
-else
-  TIME_CMD=""
-fi
+if type time > /dev/null ; then TIME_CMD() { time "$@"; } ; else TIME_CMD() { "$@"; } ; fi
 
 MAKE=${MAKE:-make}
 
@@ -621,13 +842,13 @@ else
 fi
 
 if [ $# = 0 ]; then
-  $TIME_CMD "$MAKE" check "BASE_URL=$BASE_URL" $SSL_MAKE_VAR
+  TIME_CMD "$MAKE" check "BASE_URL=$BASE_URL" "HTTPD_VERSION=$HTTPD_VERSION" $SSL_MAKE_VAR
   r=$?
 else
   (cd "$ABS_BUILDDIR/subversion/tests/cmdline/"
   TEST="$1"
   shift
-  $TIME_CMD "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" $SSL_TEST_ARG "$@")
+  TIME_CMD "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" "--httpd-version=$HTTPD_VERSION" $SSL_TEST_ARG "$@")
   r=$?
 fi
 

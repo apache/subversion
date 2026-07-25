@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl;
@@ -30,6 +28,7 @@ import java.io.OutputStream;
 import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.ByteArrayOutputStream;
+import java.io.UnsupportedEncodingException;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -77,7 +76,7 @@ public class SVNClient implements ISVNClient
 
     /**
      * Build the native peer
-     * @return the adress of the peer
+     * @return the address of the peer
      */
     private native long ctNative();
 
@@ -92,7 +91,7 @@ public class SVNClient implements ISVNClient
     public native void finalize();
 
     /**
-     * slot for the adress of the native peer. The JNI code is the only user
+     * slot for the address of the native peer. The JNI code is the only user
      * of this member
      */
     protected long cppAddr;
@@ -141,10 +140,38 @@ public class SVNClient implements ISVNClient
                ignoreExternals, false, changelists, callback);
     }
 
-    public native void list(String url, Revision revision,
-                            Revision pegRevision, Depth depth, int direntFields,
-                            boolean fetchLocks, ListCallback callback)
+    public native void list(String url, Revision revision, Revision pegRevision,
+                            List<String> patterns, Depth depth, int direntFields,
+                            boolean fetchLocks, boolean includeExternals,
+                            ListItemCallback callback)
             throws ClientException;
+
+    private final class ListCallbackWrapper implements ListItemCallback
+    {
+        private final ListCallback wrappedCallback;
+
+        ListCallbackWrapper(ListCallback wrappedCallback)
+        {
+            this.wrappedCallback = wrappedCallback;
+        }
+
+        public void doEntry(DirEntry dirent, Lock lock,
+                            String externalParentURL,
+                            String externalTarget)
+        {
+            wrappedCallback.doEntry(dirent, lock);
+        }
+    };
+
+    @Deprecated
+    public void list(String url, Revision revision,
+                     Revision pegRevision, Depth depth, int direntFields,
+                     boolean fetchLocks, ListCallback callback)
+            throws ClientException
+    {
+        list(url, revision, pegRevision, null, depth, direntFields,
+             fetchLocks, false, new ListCallbackWrapper(callback));
+    }
 
     public native void username(String username);
 
@@ -157,19 +184,47 @@ public class SVNClient implements ISVNClient
 
     public native void setTunnelAgent(TunnelAgent tunnelAgent);
 
+    @Deprecated
+    public void logMessages(String path, Revision pegRevision,
+                            List<RevisionRange> ranges, boolean stopOnCopy,
+                            boolean discoverPath, boolean includeMergedRevisions,
+                            Set<String> revProps, long limit,
+                            LogMessageCallback callback)
+            throws ClientException
+    {
+        logMessages(path, pegRevision, ranges, stopOnCopy, discoverPath,
+                    includeMergedRevisions, revProps, false, limit, callback);
+    }
+
     public native void logMessages(String path, Revision pegRevision,
                                    List<RevisionRange> revisionRanges,
                                    boolean stopOnCopy, boolean discoverPath,
                                    boolean includeMergedRevisions,
-                                   Set<String> revProps, long limit,
-                                   LogMessageCallback callback)
+                                   Set<String> revProps, boolean allRevProps,
+                                   long limit, LogMessageCallback callback)
             throws ClientException;
 
+    @Override
     public native long checkout(String moduleName, String destPath,
                                 Revision revision, Revision pegRevision,
                                 Depth depth, boolean ignoreExternals,
+                                boolean allowUnverObstructions,
+                                Version wcFormatVersion,
+                                Tristate storePristines)
+        throws ClientException;
+
+    @Override
+    public long checkout(String moduleName, String destPath,
+                                Revision revision, Revision pegRevision,
+                                Depth depth, boolean ignoreExternals,
                                 boolean allowUnverObstructions)
-            throws ClientException;
+            throws ClientException
+    {
+        return checkout(moduleName, destPath,
+                        revision, pegRevision, depth,
+                        ignoreExternals, allowUnverObstructions,
+                        null, Tristate.Unknown);
+    }
 
     public void notification2(ClientNotifyCallback notify)
     {
@@ -194,21 +249,34 @@ public class SVNClient implements ISVNClient
 
     public native void revert(Set<String> paths, Depth depth,
                               Collection<String> changelists,
-                              boolean clearChangelists)
+                              boolean clearChangelists,
+                              boolean metadataOnly,
+                              boolean addedKeepLocal)
             throws ClientException;
+
+
+    public void revert(Set<String> paths, Depth depth,
+                       Collection<String> changelists,
+                       boolean clearChangelists,
+                       boolean metadataOnly)
+            throws ClientException
+    {
+        revert(paths, depth, changelists, clearChangelists,
+               metadataOnly, true);
+    }
 
     public void revert(Set<String> paths, Depth depth,
                        Collection<String> changelists)
             throws ClientException
     {
-        revert(paths, depth, changelists, false);
+        revert(paths, depth, changelists, false, false);
     }
 
     public void revert(String path, Depth depth,
                        Collection<String> changelists)
             throws ClientException
     {
-        revert(Collections.singleton(path), depth, changelists, false);
+        revert(Collections.singleton(path), depth, changelists, false, false);
     }
 
     public native void add(String path, Depth depth, boolean force,
@@ -239,10 +307,23 @@ public class SVNClient implements ISVNClient
 
     public native void copy(List<CopySource> sources, String destPath,
                             boolean copyAsChild, boolean makeParents,
-                            boolean ignoreExternals,
+                            boolean ignoreExternals, boolean metadataOnly,
+                            boolean pinExternals,
+                            Map<String, List<ExternalItem>> externalsToPin,
                             Map<String, String> revpropTable,
                             CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
+
+    public void copy(List<CopySource> sources, String destPath,
+                     boolean copyAsChild, boolean makeParents,
+                     boolean ignoreExternals,
+                     Map<String, String> revpropTable,
+                     CommitMessageCallback handler, CommitCallback callback)
+            throws ClientException
+    {
+        copy(sources, destPath, copyAsChild, makeParents, ignoreExternals,
+             false, false, null, revpropTable, handler, callback);
+    }
 
     public native void move(Set<String> srcPaths, String destPath,
                             boolean force, boolean moveAsChild,
@@ -280,7 +361,7 @@ public class SVNClient implements ISVNClient
 
     public void cleanup(String path) throws ClientException
     {
-        cleanup(path, false, true, true, true, false);
+        cleanup(path, true, true, true, true, false);
     }
 
     public native void resolve(String path, Depth depth,
@@ -432,42 +513,87 @@ public class SVNClient implements ISVNClient
                         discoverChangedPaths, depth, revProps, callback);
     }
 
-    public void diff(String target1, Revision revision1, String target2,
-                     Revision revision2, String relativeToDir,
-                     String outFileName, Depth depth,
-                     Collection<String> changelists,
+    // svn_client_diff7
+
+    @Override
+    public void diff(String target1, Revision revision1,
+                     String target2, Revision revision2,
+                     String relativeToDir,
+                     String outFileName,
+                     Depth depth, Collection<String> changelists,
                      boolean ignoreAncestry, boolean noDiffDeleted,
                      boolean force, boolean copiesAsAdds)
             throws ClientException
     {
-        try {
-            OutputStream stream = new FileOutputStream(outFileName);
-            diff(target1, revision1, target2, revision2, relativeToDir,
-                 stream, depth, changelists, ignoreAncestry, noDiffDeleted,
-                 force, copiesAsAdds, false, false, null);
-        } catch (FileNotFoundException ex) {
-            throw ClientException.fromException(ex);
-        }
+        diff(target1, revision1, target2, revision2,
+             relativeToDir, outFileName, /*errFileName*/ null,
+             depth, changelists, ignoreAncestry, noDiffDeleted,
+             force, copiesAsAdds, /*ignoreProps*/ false, /*propsOnly*/ false,
+             /*options*/ null);
     }
 
-    public void diff(String target1, Revision revision1, String target2,
-                     Revision revision2, String relativeToDir,
-                     OutputStream stream, Depth depth,
-                     Collection<String> changelists,
+    @Override
+    public void diff(String target1, Revision revision1,
+                     String target2, Revision revision2,
+                     String relativeToDir,
+                     OutputStream outStream,
+                     Depth depth, Collection<String> changelists,
                      boolean ignoreAncestry, boolean noDiffDeleted,
                      boolean force, boolean copiesAsAdds,
                      boolean ignoreProps, boolean propsOnly)
             throws ClientException
     {
-        diff(target1, revision1, target2, revision2, relativeToDir,
-             stream, depth, changelists, ignoreAncestry, noDiffDeleted,
-             force, copiesAsAdds, ignoreProps, propsOnly, null);
+        diff(target1, revision1, target2, revision2,
+             relativeToDir, outStream, /*errStream*/ null,
+             depth, changelists, ignoreAncestry, noDiffDeleted,
+             force, copiesAsAdds, ignoreProps, propsOnly,
+             /*options*/ null);
     }
 
-    public void diff(String target1, Revision revision1, String target2,
-                     Revision revision2, String relativeToDir,
-                     String outFileName, Depth depth,
-                     Collection<String> changelists,
+    @Override
+    public void diff(String target1, Revision revision1,
+                     String target2, Revision revision2,
+                     String relativeToDir,
+                     String outFileName,
+                     Depth depth, Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds,
+                     boolean ignoreProps, boolean propsOnly,
+                     DiffOptions options)
+            throws ClientException
+    {
+        diff(target1, revision1, target2, revision2,
+             relativeToDir, outFileName, /*errFileName*/ null,
+             depth, changelists, ignoreAncestry, noDiffDeleted,
+             force, copiesAsAdds, ignoreProps, propsOnly,
+             options);
+    }
+
+    @Override
+    public void diff(String target1, Revision revision1,
+                     String target2, Revision revision2,
+                     String relativeToDir,
+                     OutputStream outStream,
+                     Depth depth, Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds,
+                     boolean ignoreProps, boolean propsOnly,
+                     DiffOptions options)
+            throws ClientException
+    {
+        diff(target1, revision1, target2, revision2,
+             relativeToDir, outStream, /*errStream*/ null,
+             depth, changelists, ignoreAncestry, noDiffDeleted,
+             force, copiesAsAdds, ignoreProps, propsOnly,
+             options);
+    }
+
+    @Override
+    public void diff(String target1, Revision revision1,
+                     String target2, Revision revision2,
+                     String relativeToDir,
+                     String outFileName, String errFileName,
+                     Depth depth, Collection<String> changelists,
                      boolean ignoreAncestry, boolean noDiffDeleted,
                      boolean force, boolean copiesAsAdds,
                      boolean ignoreProps, boolean propsOnly,
@@ -475,62 +601,112 @@ public class SVNClient implements ISVNClient
             throws ClientException
     {
         try {
-            OutputStream stream = new FileOutputStream(outFileName);
-            diff(target1, revision1, target2, revision2, relativeToDir,
-                 stream, depth, changelists, ignoreAncestry, noDiffDeleted,
-                 force, copiesAsAdds, ignoreProps, propsOnly, options);
+            OutputStream outStream = new FileOutputStream(outFileName);
+            OutputStream errStream = errFileName == null
+                ? null : new FileOutputStream(errFileName);
+
+            diff(target1, revision1, target2, revision2,
+                 relativeToDir, outStream, errStream,
+                 depth, changelists, ignoreAncestry, noDiffDeleted,
+                 force, copiesAsAdds, ignoreProps, propsOnly,
+                 options);
         } catch (FileNotFoundException ex) {
             throw ClientException.fromException(ex);
         }
     }
 
-    public native void diff(String target1, Revision revision1, String target2,
-                            Revision revision2, String relativeToDir,
-                            OutputStream stream, Depth depth,
-                            Collection<String> changelists,
+    @Override
+    public native void diff(String target1, Revision revision1,
+                            String target2, Revision revision2,
+                            String relativeToDir,
+                            OutputStream outStream, OutputStream errStream,
+                            Depth depth, Collection<String> changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
                             boolean force, boolean copiesAsAdds,
                             boolean ignoreProps, boolean propsOnly,
                             DiffOptions options)
             throws ClientException;
 
+    // svn_client_diff_peg7
 
-
+    @Override
     public void diff(String target, Revision pegRevision,
                      Revision startRevision, Revision endRevision,
-                     String relativeToDir, String outFileName,
+                     String relativeToDir,
+                     String outFileName,
                      Depth depth, Collection<String> changelists,
                      boolean ignoreAncestry, boolean noDiffDeleted,
                      boolean force, boolean copiesAsAdds)
             throws ClientException
     {
-        try {
-            OutputStream stream = new FileOutputStream(outFileName);
-            diff(target, pegRevision, startRevision, endRevision,
-                 relativeToDir, stream, depth, changelists, ignoreAncestry,
-                 noDiffDeleted, force, copiesAsAdds, false, false, null);
-        } catch (FileNotFoundException ex) {
-            throw ClientException.fromException(ex);
-        }
+        diff(target, pegRevision, startRevision, endRevision,
+             relativeToDir, outFileName, /*errFileName*/ null,
+             depth, changelists, ignoreAncestry, noDiffDeleted,
+             force, copiesAsAdds, /*ignoreProps*/ false, /*propsOnly*/ false,
+             /*options*/ null);
     }
 
+    @Override
     public void diff(String target, Revision pegRevision,
                      Revision startRevision, Revision endRevision,
-                     String relativeToDir, OutputStream stream,
+                     String relativeToDir,
+                     OutputStream outStream,
                      Depth depth, Collection<String> changelists,
                      boolean ignoreAncestry, boolean noDiffDeleted,
                      boolean force, boolean copiesAsAdds,
                      boolean ignoreProps, boolean propsOnly)
             throws ClientException
     {
-        diff(target, pegRevision, startRevision, endRevision, relativeToDir,
-             stream, depth, changelists, ignoreAncestry, noDiffDeleted,
-             force, copiesAsAdds, ignoreProps, propsOnly, null);
+        diff(target, pegRevision, startRevision, endRevision,
+             relativeToDir, outStream, /*errStream*/ null,
+             depth, changelists, ignoreAncestry, noDiffDeleted,
+             force, copiesAsAdds, ignoreProps, propsOnly,
+             /*options*/ null);
     }
 
+    @Override
     public void diff(String target, Revision pegRevision,
                      Revision startRevision, Revision endRevision,
-                     String relativeToDir, String outFileName,
+                     String relativeToDir,
+                     String outFileName,
+                     Depth depth, Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds,
+                     boolean ignoreProps, boolean propsOnly,
+                     DiffOptions options)
+            throws ClientException
+    {
+        diff(target, pegRevision, startRevision, endRevision,
+             relativeToDir, outFileName, /*errFileName*/ null,
+             depth, changelists, ignoreAncestry, noDiffDeleted,
+             force, copiesAsAdds, ignoreProps, propsOnly,
+             options);
+    }
+
+    @Override
+    public void diff(String target, Revision pegRevision,
+                     Revision startRevision, Revision endRevision,
+                     String relativeToDir,
+                     OutputStream outStream,
+                     Depth depth, Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds,
+                     boolean ignoreProps, boolean propsOnly,
+                     DiffOptions options)
+            throws ClientException
+    {
+        diff(target, pegRevision, startRevision, endRevision,
+             relativeToDir, outStream, /*errStream*/ null,
+             depth, changelists, ignoreAncestry, noDiffDeleted,
+             force, copiesAsAdds, ignoreProps, propsOnly,
+             options);
+    }
+
+    @Override
+    public void diff(String target, Revision pegRevision,
+                     Revision startRevision, Revision endRevision,
+                     String relativeToDir,
+                     String outFileName, String errFileName,
                      Depth depth, Collection<String> changelists,
                      boolean ignoreAncestry, boolean noDiffDeleted,
                      boolean force, boolean copiesAsAdds,
@@ -539,18 +715,25 @@ public class SVNClient implements ISVNClient
             throws ClientException
     {
         try {
-            OutputStream stream = new FileOutputStream(outFileName);
-            diff(target, pegRevision, startRevision, endRevision, relativeToDir,
-                 stream, depth, changelists, ignoreAncestry, noDiffDeleted,
-                 force, copiesAsAdds, ignoreProps, propsOnly, options);
+            OutputStream outStream = new FileOutputStream(outFileName);
+            OutputStream errStream = errFileName == null
+                ? null : new FileOutputStream(errFileName);
+
+            diff(target, pegRevision, startRevision, endRevision,
+                 relativeToDir, outStream, errStream,
+                 depth, changelists, ignoreAncestry, noDiffDeleted,
+                 force, copiesAsAdds, ignoreProps, propsOnly,
+                 options);
         } catch (FileNotFoundException ex) {
             throw ClientException.fromException(ex);
         }
     }
 
+    @Override
     public native void diff(String target, Revision pegRevision,
                             Revision startRevision, Revision endRevision,
-                            String relativeToDir, OutputStream stream,
+                            String relativeToDir,
+                            OutputStream outStream, OutputStream errStream,
                             Depth depth, Collection<String> changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
                             boolean force, boolean copiesAsAdds,
@@ -651,12 +834,40 @@ public class SVNClient implements ISVNClient
                                 boolean ignoreExternals)
             throws ClientException;
 
+    @Deprecated
+    public void blame(String path, Revision pegRevision,
+                      Revision revisionStart,
+                      Revision revisionEnd, boolean ignoreMimeType,
+                      boolean includeMergedRevisions,
+                      BlameCallback callback)
+            throws ClientException
+    {
+        blame(path, pegRevision, revisionStart, revisionEnd, ignoreMimeType,
+              includeMergedRevisions, callback, null);
+    }
+
+    @Deprecated
+    public void blame(String path, Revision pegRevision,
+                      Revision revisionStart,
+                      Revision revisionEnd, boolean ignoreMimeType,
+                      boolean includeMergedRevisions,
+                      BlameCallback callback,
+                      DiffOptions options)
+            throws ClientException
+    {
+        blame(path, pegRevision, revisionStart, revisionEnd,
+              ignoreMimeType, includeMergedRevisions, options,
+              null, new BlameCallbackAdapter(callback));
+    }
+
     public native void blame(String path, Revision pegRevision,
                              Revision revisionStart,
                              Revision revisionEnd, boolean ignoreMimeType,
                              boolean includeMergedRevisions,
-                             BlameCallback callback)
-            throws ClientException;
+                             DiffOptions options,
+                             BlameRangeCallback rangeCallback,
+                             BlameLineCallback lineCallback)
+        throws ClientException;
 
     public native void setConfigDirectory(String configDir)
             throws ClientException;
@@ -691,8 +902,15 @@ public class SVNClient implements ISVNClient
                                         boolean lastChanged)
             throws ClientException;
 
-    public native void upgrade(String path)
+    @Override
+    public native Version upgrade(String path, Version targetWcVersion)
             throws ClientException;
+
+    @Override
+    public void upgrade(String path) throws ClientException
+    {
+        upgrade(path, (Version) null);
+    }
 
     /**
      * Enable logging in the JNI-code
@@ -724,28 +942,36 @@ public class SVNClient implements ISVNClient
     /**
      * Returns version information of subversion and the javahl binding
      * @return version information
+     * @deprecated
      */
+    @Deprecated
     public static native String version();
 
     /**
      * Returns the major version of the javahl binding. Same version of the
      * javahl support the same interfaces
      * @return major version number
+     * @deprecated
      */
+    @Deprecated
     public static native int versionMajor();
 
     /**
      * Returns the minor version of the javahl binding. Same version of the
      * javahl support the same interfaces
      * @return minor version number
+     * @deprecated
      */
+    @Deprecated
     public static native int versionMinor();
 
     /**
      * Returns the micro (patch) version of the javahl binding. Same version of
      * the javahl support the same interfaces
      * @return micro version number
+     * @deprecated
      */
+    @Deprecated
     public static native int versionMicro();
 
     public native void lock(Set<String> paths, String comment, boolean force)
@@ -785,6 +1011,10 @@ public class SVNClient implements ISVNClient
                               boolean removeUnusedPristines,
                               boolean includeExternals)
             throws ClientException;
+
+    public native Version defaultWcVersion() throws ClientException;
+    public static native Version oldestWcVersion();
+    public static native Version latestWcVersion();
 
     public ISVNRemote openRemoteSession(String pathOrUrl)
             throws ClientException, SubversionException
@@ -829,6 +1059,44 @@ public class SVNClient implements ISVNClient
             else
                 return new ConflictResult(ConflictResult.Choice.postpone,
                                           null);
+        }
+    }
+
+    /**
+     * A private class that adapts from BlameLineCallback to BlameCallback.
+     */
+    @Deprecated
+    private class BlameCallbackAdapter implements BlameLineCallback
+    {
+        private BlameCallback wrappedCallback = null;
+
+        public BlameCallbackAdapter(BlameCallback callback)
+        {
+            wrappedCallback = callback;
+        }
+
+        // Implementation of BlameLineCallback
+        public void singleLine(long lineNum, long revision,
+                               Map<String, byte[]> revProps, long mergedRevision,
+                               Map<String, byte[]> mergedRevProps,
+                               String mergedPath, boolean localChange,
+                               byte[] line)
+            throws ClientException
+        {
+            if (wrappedCallback == null)
+                return;
+
+            String convertedLine = null;
+            try {
+                convertedLine = new String(line, "UTF-8");
+            }
+            catch (UnsupportedEncodingException ex) {
+                throw ClientException.fromException(ex);
+            }
+
+            wrappedCallback.singleLine(lineNum, revision,
+                                       revProps, mergedRevision, mergedRevProps,
+                                       mergedPath, convertedLine, localChange);
         }
     }
 }

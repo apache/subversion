@@ -38,6 +38,8 @@
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>   /* For getpid() */
+#elif WIN32
+#include <process.h>  /* For getpid() */
 #endif
 
 struct logger_t
@@ -58,9 +60,9 @@ logger__create_for_stderr(logger_t **logger,
 {
   logger_t *result = apr_pcalloc(pool, sizeof(*result));
   result->pool = svn_pool_create(pool);
-  
+
   SVN_ERR(svn_stream_for_stderr(&result->stream, pool));
-  SVN_ERR(svn_mutex__init(&result->mutex, TRUE, FALSE, pool));
+  SVN_ERR(svn_mutex__init(&result->mutex, TRUE, pool));
 
   *logger = result;
 
@@ -74,11 +76,11 @@ logger__create(logger_t **logger,
 {
   logger_t *result = apr_pcalloc(pool, sizeof(*result));
   apr_file_t *file;
-  
+
   SVN_ERR(svn_io_file_open(&file, filename,
                            APR_WRITE | APR_CREATE | APR_APPEND,
                            APR_OS_DEFAULT, pool));
-  SVN_ERR(svn_mutex__init(&result->mutex, TRUE, FALSE, pool));
+  SVN_ERR(svn_mutex__init(&result->mutex, TRUE, pool));
 
   result->stream = svn_stream_from_aprfile2(file, FALSE,  pool);
   result->pool = svn_pool_create(pool);
@@ -88,19 +90,21 @@ logger__create(logger_t **logger,
   return SVN_NO_ERROR;
 }
 
-void
-logger__log_error(logger_t *logger,
-                  svn_error_t *err,
-                  repository_t *repository,
-                  client_info_t *client_info)
+static void
+log_message(logger_t *logger,
+            const svn_error_t *err,
+            const char *prefix,
+            repository_t *repository,
+            client_info_t *client_info)
 {
   if (logger && err)
     {
       const char *timestr, *continuation;
       const char *user, *repos, *remote_host;
-      char errbuf[256];
+
       /* 8192 from MAX_STRING_LEN in from httpd-2.2.4/include/httpd.h */
-      char errstr[8192];
+      const apr_size_t errstr_size = 8192;
+      char *errstr = apr_palloc(logger->pool, errstr_size);
 
       svn_error_clear(svn_mutex__lock(logger->mutex));
 
@@ -118,23 +122,27 @@ logger__log_error(logger_t *logger,
       continuation = "";
       while (err)
         {
+          char errbuf[256];
           const char *message = svn_err_best_message(err, errbuf, sizeof(errbuf));
           /* based on httpd-2.2.4/server/log.c:log_error_core */
-          apr_size_t len = apr_snprintf(errstr, sizeof(errstr),
+          apr_size_t len = apr_snprintf(errstr, errstr_size,
                                         "%" APR_PID_T_FMT
-                                        " %s %s %s %s ERR%s %s %ld %d ",
+                                        " %s %s %s %s %s%s %s %ld %d ",
                                         getpid(), timestr, remote_host, user,
-                                        repos, continuation,
+                                        repos, prefix, continuation,
                                         err->file ? err->file : "-", err->line,
                                         err->apr_err);
 
           len += escape_errorlog_item(errstr + len, message,
-                                      sizeof(errstr) - len);
+                                      errstr_size - len);
           /* Truncate for the terminator (as apr_snprintf does) */
-          if (len > sizeof(errstr) - sizeof(APR_EOL_STR)) {
-            len = sizeof(errstr) - sizeof(APR_EOL_STR);
+          if (len > errstr_size - sizeof(APR_EOL_STR)) {
+            len = errstr_size - sizeof(APR_EOL_STR);
           }
+
           memcpy(errstr + len, APR_EOL_STR, sizeof(APR_EOL_STR));
+          len += sizeof(APR_EOL_STR) -1;  /* add NL, ex terminating NUL */
+
           svn_error_clear(svn_stream_write(logger->stream, errstr, &len));
 
           continuation = "-";
@@ -142,9 +150,27 @@ logger__log_error(logger_t *logger,
         }
 
       svn_pool_clear(logger->pool);
-      
+
       svn_error_clear(svn_mutex__unlock(logger->mutex, SVN_NO_ERROR));
     }
+}
+
+void
+logger__log_error(logger_t *logger,
+                  const svn_error_t *err,
+                  repository_t *repository,
+                  client_info_t *client_info)
+{
+  log_message(logger, err, "ERR", repository, client_info);
+}
+
+void
+logger__log_warning(logger_t *logger,
+                    const svn_error_t *err,
+                    repository_t *repository,
+                    client_info_t *client_info)
+{
+  log_message(logger, err, "WARN", repository, client_info);
 }
 
 svn_error_t *

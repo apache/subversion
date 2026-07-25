@@ -637,25 +637,25 @@ module Svn
                        ignore_externals, allow_unver_obstruction, self)
       end
 
-      def set_log_msg_func(callback=Proc.new)
+      def set_log_msg_func(&callback)
         callback_wrapper = Proc.new do |items|
           items = items.collect do |item|
             item_wrapper = CommitItemWrapper.new(item)
           end
           callback.call(items)
         end
-        set_log_msg_func2(callback_wrapper)
+        set_log_msg_func2(&callback_wrapper)
       end
 
-      def set_log_msg_func2(callback=Proc.new)
+      def set_log_msg_func2(&callback)
         @log_msg_baton = Client.set_log_msg_func3(self, callback)
       end
 
-      def set_notify_func(callback=Proc.new)
+      def set_notify_func(&callback)
         @notify_baton = Client.set_notify_func2(self, callback)
       end
 
-      def set_cancel_func(callback=Proc.new)
+      def set_cancel_func(&callback)
         @cancel_baton = Client.set_cancel_func(self, callback)
       end
 
@@ -707,9 +707,9 @@ module Svn
 
       private
       def init_callbacks
-        set_log_msg_func(nil)
-        set_notify_func(nil)
-        set_cancel_func(nil)
+        set_log_msg_func
+        set_notify_func
+        set_cancel_func
       end
       %w(log_msg notify cancel).each do |type|
         private "#{type}_func", "#{type}_baton"

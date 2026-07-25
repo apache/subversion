@@ -180,7 +180,7 @@ faster than parsing the output of the B<svn> command-line client.
 
 =item B<-e>, B<--exclude>
 
-A regular expression for filenames to be exluded. For example, the following
+A regular expression for filenames to be excluded. For example, the following
 command will skip files ending in ".zip":
 
 =over 8

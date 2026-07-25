@@ -180,7 +180,7 @@ detranslate_wc_file(const char **detranslated_abspath,
       = prop ? (prop->value ? prop->value->data : NULL) : old_mime_value;
 
     old_is_binary = old_mime_value && svn_mime_type_is_binary(old_mime_value);
-    new_is_binary = new_mime_value && svn_mime_type_is_binary(new_mime_value);;
+    new_is_binary = new_mime_value && svn_mime_type_is_binary(new_mime_value);
   }
 
   /* See what translations we want to do */
@@ -392,6 +392,8 @@ do_text_merge(svn_boolean_t *contains_conflicts,
               const char *target_label,
               const char *left_label,
               const char *right_label,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
               apr_pool_t *pool)
 {
   svn_diff_t *diff;
@@ -416,13 +418,14 @@ do_text_merge(svn_boolean_t *contains_conflicts,
 
   ostream = svn_stream_from_aprfile2(result_f, TRUE, pool);
 
-  SVN_ERR(svn_diff_file_output_merge2(ostream, diff,
+  SVN_ERR(svn_diff_file_output_merge3(ostream, diff,
                                       left, detranslated_target, right,
                                       left_marker,
                                       target_marker,
                                       right_marker,
                                       "=======", /* separator */
                                       svn_diff_conflict_display_modified_original_latest,
+                                      cancel_func, cancel_baton,
                                       pool));
   SVN_ERR(svn_stream_close(ostream));
 
@@ -871,6 +874,7 @@ merge_text_file(svn_skel_t **work_items,
                           target_label,
                           left_label,
                           right_label,
+                          cancel_func, cancel_baton,
                           pool));
 
   SVN_ERR(svn_io_file_close(result_f, pool));
@@ -1198,7 +1202,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
 
 
 svn_error_t *
-svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
+svn_wc_merge6(enum svn_wc_merge_outcome_t *merge_content_outcome,
               enum svn_wc_notify_state_t *merge_props_outcome,
               svn_wc_context_t *wc_ctx,
               const char *left_abspath,
@@ -1226,6 +1230,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
   apr_hash_t *pristine_props = NULL;
   apr_hash_t *old_actual_props;
   apr_hash_t *new_actual_props = NULL;
+  svn_node_kind_t kind;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(left_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(right_abspath));
@@ -1238,7 +1243,6 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
   /* Sanity check:  the merge target must be a file under revision control */
   {
     svn_wc__db_status_t status;
-    svn_node_kind_t kind;
     svn_boolean_t had_props;
     svn_boolean_t props_mod;
     svn_boolean_t conflicted;
@@ -1401,7 +1405,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
           svn_boolean_t text_conflicted, prop_conflicted;
 
           SVN_ERR(svn_wc__conflict_invoke_resolver(
-                    wc_ctx->db, target_abspath,
+                    wc_ctx->db, target_abspath, kind,
                     conflict_skel, merge_options,
                     conflict_func, conflict_baton,
                     cancel_func, cancel_baton,

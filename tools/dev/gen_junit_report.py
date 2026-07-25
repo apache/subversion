@@ -178,7 +178,7 @@ def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'l:d:h',
                                   ['log-file=', 'output-dir=', 'help'])
-    except getopt.GetoptError, err:
+    except getopt.GetoptError as err:
         usage(err)
 
     log_file = None
@@ -201,7 +201,7 @@ def main():
         print("Directory '%s' not exists, creating ..." % output_dir)
         try:
             os.makedirs(output_dir)
-        except OSError, err:
+        except OSError as err:
             sys.stderr.write("ERROR: %s\n" % err)
             sys.exit(1)
     patterns = {
@@ -221,7 +221,7 @@ def main():
     fp = None
     try:
         fp = open(log_file, 'r')
-    except IOError, err:
+    except IOError as err:
         sys.stderr.write("ERROR: %s\n" % err)
         sys.exit(1)
 

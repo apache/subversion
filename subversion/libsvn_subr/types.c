@@ -62,14 +62,14 @@ svn_revnum_parse(svn_revnum_t *rev,
         return svn_error_createf
                   (SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
                   _("Revision number longer than 10 digits '%s'"), str);
-        
+
       /* we support 32 bit revision numbers only. check for overflows */
       if (*str > '2' || (apr_uint32_t)result > APR_INT32_MAX)
         return svn_error_createf
                   (SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
                   _("Revision number too large '%s'"), str);
     }
-  
+
   if (endptr)
     *endptr = end;
 

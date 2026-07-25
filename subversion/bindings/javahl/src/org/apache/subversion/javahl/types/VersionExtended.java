@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl.types;
@@ -41,6 +39,21 @@ public class VersionExtended
     }
 
     /**
+     * Release the native peer. This method must be called to release
+     * the native resources held by this object.
+     * <p>
+     * Once this method is called, all object references obtained from
+     * the iterators returned by {@link #getLinkedLibs()} and
+     * {@link #getLoadedLibs()} become invalid and should no longer be used.
+     */
+    public native void dispose();
+
+    /**
+     * release the native peer (should use dispose instead)
+     */
+    public native void finalize();
+
+    /**
      * @return The date when the libsvn_subr library was compiled, in
      * the format defined by the C standard macro #__DATE__.
      */
@@ -56,7 +69,7 @@ public class VersionExtended
      * @return The canonical host triplet (arch-vendor-osname) of the
      * system where libsvn_subr was compiled.
      * <p>
-     * <b>Note:</b> On Unix-like systems (includng Mac OS X), this string
+     * <b>Note:</b> On Unix-like systems (including Mac OS X), this string
      * is the same as the output of the config.guess script for the
      * underlying Subversion libraries.
      */
@@ -243,7 +256,7 @@ public class VersionExtended
     };
 
     /**
-     * Slot for the adress of the native peer.
+     * Slot for the address of the native peer.
      * The JNI code is the only user of this member.
      */
     private long cppAddr = 0;

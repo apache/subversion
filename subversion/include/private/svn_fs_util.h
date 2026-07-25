@@ -29,11 +29,16 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_version.h"
 #include "svn_fs.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+/* Get libsvn_fs_util version information. */
+const svn_version_t *
+svn_fs_util__version(void);
 
 /* Returns whether PATH is in canonical form as defined by
    svn_fs__canonicalize_abspath().
@@ -200,6 +205,15 @@ svn_fs_path_change2_t *
 svn_fs__path_change_create_internal(const svn_fs_id_t *node_rev_id,
                                     svn_fs_path_change_kind_t change_kind,
                                     apr_pool_t *pool);
+
+/* Allocate an svn_fs_path_change3_t structure in RESULT_POOL, initialize
+   and return it.
+
+   Set the change_kind to CHANGE_KIND.  Set all other fields to their
+   _unknown, NULL or invalid value, respectively. */
+svn_fs_path_change3_t *
+svn_fs__path_change_create_internal2(svn_fs_path_change_kind_t change_kind,
+                                     apr_pool_t *result_pool);
 
 /* Append REL_PATH (which may contain slashes) to each path that exists in
    the mergeinfo INPUT, and return a new mergeinfo in *OUTPUT.  Deep

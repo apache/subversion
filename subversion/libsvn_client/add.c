@@ -169,8 +169,8 @@ get_auto_props_for_pattern(apr_hash_t *properties,
        hi != NULL;
        hi = apr_hash_next(hi))
     {
-      const char *propname = svn__apr_hash_index_key(hi);
-      const char *propval = svn__apr_hash_index_val(hi);
+      const char *propname = apr_hash_this_key(hi);
+      const char *propval = apr_hash_this_val(hi);
       svn_string_t *propval_str =
         svn_string_create_empty(apr_hash_pool_get(properties));
 
@@ -207,8 +207,8 @@ svn_client__get_paths_auto_props(apr_hash_t **properties,
            hi != NULL;
            hi = apr_hash_next(hi))
         {
-          const char *pattern = svn__apr_hash_index_key(hi);
-          apr_hash_t *propvals = svn__apr_hash_index_val(hi);
+          const char *pattern = apr_hash_this_key(hi);
+          apr_hash_t *propvals = apr_hash_this_val(hi);
 
           get_auto_props_for_pattern(*properties, mimetype, &have_executable,
                                      svn_dirent_basename(path, scratch_pool),
@@ -427,8 +427,8 @@ add_dir_recursive(const char *dir_abspath,
      version control. */
   for (hi = apr_hash_first(scratch_pool, dirents); hi; hi = apr_hash_next(hi))
     {
-      const char *name = svn__apr_hash_index_key(hi);
-      svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
+      const char *name = apr_hash_this_key(hi);
+      svn_io_dirent2_t *dirent = apr_hash_this_val(hi);
       const char *abspath;
 
       svn_pool_clear(iterpool);
@@ -647,7 +647,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
 
 
   /* Are "traditional" auto-props enabled?  If so grab them from the
-    config.  This is our starting set auto-props, which may be overriden
+    config.  This is our starting set auto-props, which may be overridden
     by svn:auto-props. */
   SVN_ERR(svn_config_get_bool(cfg, &use_autoprops,
                               SVN_CONFIG_SECTION_MISCELLANY,
@@ -764,59 +764,6 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
     }
 
   svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
-                                               const char *path_or_url,
-                                               svn_client_ctx_t *ctx,
-                                               apr_pool_t *result_pool,
-                                               apr_pool_t *scratch_pool)
-{
-  svn_opt_revision_t rev;
-  apr_hash_t *explicit_ignores;
-  apr_array_header_t *inherited_ignores;
-  svn_boolean_t target_is_url = svn_path_is_url(path_or_url);
-  svn_string_t *explicit_prop;
-  int i;
-
-  if (target_is_url)
-    rev.kind = svn_opt_revision_head;
-  else
-    rev.kind = svn_opt_revision_working;
-
-  SVN_ERR(svn_client_propget5(&explicit_ignores, &inherited_ignores,
-                              SVN_PROP_INHERITABLE_IGNORES, path_or_url,
-                              &rev, &rev, NULL, svn_depth_empty, NULL, ctx,
-                              scratch_pool, scratch_pool));
-
-  explicit_prop = svn_hash_gets(explicit_ignores, path_or_url);
-
-  if (explicit_prop)
-    {
-      svn_prop_inherited_item_t *new_iprop =
-        apr_palloc(scratch_pool, sizeof(*new_iprop));
-      new_iprop->path_or_url = path_or_url;
-      new_iprop->prop_hash = apr_hash_make(scratch_pool);
-      svn_hash_sets(new_iprop->prop_hash, SVN_PROP_INHERITABLE_IGNORES,
-                    explicit_prop);
-      APR_ARRAY_PUSH(inherited_ignores,
-                     svn_prop_inherited_item_t *) = new_iprop;
-    }
-
-  *ignores = apr_array_make(result_pool, 16, sizeof(const char *));
-
-  for (i = 0; i < inherited_ignores->nelts; i++)
-    {
-      svn_prop_inherited_item_t *elt = APR_ARRAY_IDX(
-        inherited_ignores, i, svn_prop_inherited_item_t *);
-      svn_string_t *ignore_val = svn_hash_gets(elt->prop_hash,
-                                               SVN_PROP_INHERITABLE_IGNORES);
-      if (ignore_val)
-        svn_cstring_split_append(*ignores, ignore_val->data, "\n\r\t\v ",
-                                 FALSE, result_pool);
-    }
 
   return SVN_NO_ERROR;
 }
@@ -1036,12 +983,13 @@ svn_client_add5(const char *path,
 
 static svn_error_t *
 path_driver_cb_func(void **dir_baton,
+                    const svn_delta_editor_t *editor,
+                    void *edit_baton,
                     void *parent_baton,
                     void *callback_baton,
                     const char *path,
                     apr_pool_t *pool)
 {
-  const svn_delta_editor_t *editor = callback_baton;
   SVN_ERR(svn_path_check_valid(path, pool));
   return editor->add_directory(path, parent_baton, NULL,
                                SVN_INVALID_REVNUM, pool, dir_baton);
@@ -1230,8 +1178,8 @@ mkdir_urls(const apr_array_header_t *urls,
 
   /* Call the path-based editor driver. */
   err = svn_error_trace(
-        svn_delta_path_driver2(editor, edit_baton, targets, TRUE,
-                               path_driver_cb_func, (void *)editor, pool));
+        svn_delta_path_driver3(editor, edit_baton, targets, TRUE,
+                               path_driver_cb_func, NULL, pool));
 
   if (err)
     {
@@ -1270,11 +1218,7 @@ svn_client__make_local_parents(const char *local_abspath,
   else
     SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
 
-  /* Should no longer use svn_depth_empty to indicate that only the directory
-     itself is added, since it not only constraints the operation depth, but
-     also defines the depth of the target directory now. Moreover, the new
-     directory will have no children at all.*/
-  err = svn_client_add5(local_abspath, svn_depth_infinity, FALSE, FALSE, FALSE,
+  err = svn_client_add5(local_abspath, svn_depth_empty, FALSE, FALSE, FALSE,
                         make_parents, ctx, scratch_pool);
 
   /* If we created a new directory, but couldn't add it to version

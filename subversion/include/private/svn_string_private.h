@@ -131,6 +131,14 @@ svn_membuf__nzero(svn_membuf_t *membuf, apr_size_t size);
 svn_string_t *
 svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf);
 
+/** Utility macro to define static svn_string_t objects.  @a value must
+ * be a static string; the "" in the macro declaration tries to ensure this.
+ *
+ * Usage:
+ * static const svn_string_t my_string = SVN__STATIC_STRING("my text");
+ */
+#define SVN__STATIC_STRING(value) { value "", sizeof(value "") - 1 }
+
 /** Like strtoul but with a fixed base of 10 and without overflow checks.
  * This allows the compiler to generate massively faster (4x on 64bit LINUX)
  * code.  Overflow checks may be added on the caller side where you might
@@ -138,13 +146,6 @@ svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf);
  */
 unsigned long
 svn__strtoul(const char *buffer, const char **end);
-
-/** Like strtol but with a fixed base of 10 and without overflow checks.
- * This allows the compiler to generate massively faster code.
- * (E.g. Avoiding locale specific processing)
- */
-long
-svn__strtol(const char *buffer, const char **end);
 
 /** Number of chars needed to represent signed (19 places + sign + NUL) or
  * unsigned (20 places + NUL) integers as strings.
@@ -204,10 +205,17 @@ apr_uint64_t
 svn__base36toui64(const char **next, const char *source);
 
 /**
+ * The upper limit of the similarity range returned by
+ * svn_cstring__similarity() and svn_string__similarity().
+ */
+#define SVN_STRING__SIM_RANGE_MAX 1000000
+
+/**
  * Computes the similarity score of STRA and STRB. Returns the ratio
  * of the length of their longest common subsequence and the average
- * length of the strings, normalized to the range [0..1000].
- * The result is equivalent to Python's
+ * length of the strings, normalized to the range
+ * [0..SVN_STRING__SIM_RANGE_MAX]. The result is equivalent to
+ * Python's
  *
  *   difflib.SequenceMatcher.ratio
  *
@@ -232,7 +240,7 @@ svn__base36toui64(const char **next, const char *source);
  *    has O(strlen(STRA) * strlen(STRB)) worst-case performance,
  *    so do keep a rein on your enthusiasm.
  */
-unsigned int
+apr_size_t
 svn_cstring__similarity(const char *stra, const char *strb,
                         svn_membuf_t *buffer, apr_size_t *rlcs);
 
@@ -240,7 +248,7 @@ svn_cstring__similarity(const char *stra, const char *strb,
  * Like svn_cstring__similarity, but accepts svn_string_t's instead
  * of NUL-terminated character strings.
  */
-unsigned int
+apr_size_t
 svn_string__similarity(const svn_string_t *stringa,
                        const svn_string_t *stringb,
                        svn_membuf_t *buffer, apr_size_t *rlcs);

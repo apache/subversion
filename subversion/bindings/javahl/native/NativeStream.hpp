@@ -43,7 +43,7 @@ class NativeInputStream : public ::SVNBase
 {
 public:
   /**
-   * Construcs the native instance that will be wrapped in a Java obejct.
+   * Constructs the native instance that will be wrapped in a Java object.
    * If @a stream is @c NULL, you must call #set_stream before creating
    * the Java wrapper.
    */
@@ -80,6 +80,8 @@ public:
    * Retrieve the address of the native object from the bound Java object.
    */
   static NativeInputStream* get_self(::Java::Env env, jobject jthis);
+
+  static NativeInputStream* get_self_unsafe(::Java::Env env, jobject jthis);
 
 public:
   /**
@@ -139,7 +141,7 @@ class NativeOutputStream : public ::SVNBase
 {
 public:
   /**
-   * Construcs the native instance that will be wrapped in a Java obejct.
+   * Constructs the native instance that will be wrapped in a Java object.
    * If @a stream is @c NULL, you must call #set_stream before creating
    * the Java wrapper.
    */
@@ -175,6 +177,8 @@ public:
    * Retrieve the address of the native object from the bound Java object.
    */
   static NativeOutputStream* get_self(::Java::Env env, jobject jthis);
+
+  static NativeOutputStream* get_self_unsafe(::Java::Env env, jobject jthis);
 
 public:
   /**

@@ -45,7 +45,7 @@
 Prompter::UniquePtr Prompter::create(jobject jprompter)
 {
   if (!jprompter)
-    return UniquePtr(NULL);
+    return UniquePtr();
 
   // Make sure no C++ exceptions are propagated from here.
   const ::Java::Env jenv;
@@ -53,12 +53,12 @@ Prompter::UniquePtr Prompter::create(jobject jprompter)
     {
       const jclass cls = ::Java::ClassCache::get_authn_cb(jenv)->get_class();
       if (!jenv.IsInstanceOf(jprompter, cls))
-        return UniquePtr(NULL);
+        return UniquePtr();
 
       return UniquePtr(new Prompter(jenv, jprompter));
     }
   SVN_JAVAHL_JNI_CATCH;
-  return UniquePtr(NULL);
+  return UniquePtr();
 }
 
 Prompter::UniquePtr Prompter::clone() const
@@ -325,14 +325,7 @@ svn_error_t *Prompter::dispatch_ssl_server_trust_prompt(
       authn.ssl_server_trust_prompt(
           ::Java::String(env, realm),
           ::JavaHL::AuthnCallback::SSLServerCertFailures(env, jint(failures)),
-          ::JavaHL::AuthnCallback::SSLServerCertInfo(
-              env,
-              ::Java::String(env, cert_info->hostname),
-              ::Java::String(env, cert_info->fingerprint),
-              ::Java::String(env, cert_info->valid_from),
-              ::Java::String(env, cert_info->valid_until),
-              ::Java::String(env, cert_info->issuer_dname),
-              ::Java::String(env, cert_info->ascii_cert)),
+          ::JavaHL::AuthnCallback::SSLServerCertInfo(env, cert_info->ascii_cert),
           may_save));
   if (!result.get())
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
@@ -349,8 +342,7 @@ svn_error_t *Prompter::dispatch_ssl_server_trust_prompt(
   svn_auth_cred_ssl_server_trust_t *cred =
     static_cast<svn_auth_cred_ssl_server_trust_t*>(apr_pcalloc(pool, sizeof(*cred)));
   cred->may_save = save;
-  if (save)
-    cred->accepted_failures = failures;
+  cred->accepted_failures = failures;
   *cred_p = cred;
 
   return SVN_NO_ERROR;
@@ -439,7 +431,7 @@ svn_error_t *Prompter::dispatch_plaintext_passphrase_prompt(
 Prompter::UniquePtr CompatPrompter::create(jobject jprompter)
 {
   if (!jprompter)
-    return UniquePtr(NULL);
+    return UniquePtr();
 
   // Make sure no C++ exceptions are propagated from here.
   const ::Java::Env jenv;
@@ -448,12 +440,12 @@ Prompter::UniquePtr CompatPrompter::create(jobject jprompter)
       const jclass cls =
         ::Java::ClassCache::get_user_passwd_cb(jenv)->get_class();
       if (!jenv.IsInstanceOf(jprompter, cls))
-        return UniquePtr(NULL);
+        return UniquePtr();
 
       return UniquePtr(new CompatPrompter(jenv, jprompter));
     }
   SVN_JAVAHL_JNI_CATCH;
-  return UniquePtr(NULL);
+  return UniquePtr();
 }
 
 Prompter::UniquePtr CompatPrompter::clone() const
@@ -604,6 +596,7 @@ CompatPrompter::dispatch_ssl_server_trust_prompt(
     {
     case org_apache_subversion_javahl_callback_UserPasswordCallback_AcceptTemporary:
       cred->may_save = FALSE;
+      cred->accepted_failures = failures;
       *cred_p = cred;
       break;
     case org_apache_subversion_javahl_callback_UserPasswordCallback_AcceptPermanently:

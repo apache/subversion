@@ -2,7 +2,7 @@
 # delta.py: public Python interface for delta components
 #
 # Subversion is a tool for revision control.
-# See http://subversion.apache.org for more information.
+# See https://subversion.apache.org for more information.
 #
 ######################################################################
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -24,10 +24,10 @@
 ######################################################################
 
 from libsvn.delta import *
-from svn.core import _unprefix_names
+from svn.core import _unprefix_names, _as_list
 _unprefix_names(locals(), 'svn_delta_')
 _unprefix_names(locals(), 'svn_txdelta_', 'tx_')
-__all__ = filter(lambda x: x.lower().startswith('svn_'), locals().keys())
+__all__ = [x for x in _as_list(locals()) if x.lower().startswith('svn_')]
 del _unprefix_names
 
 class Editor:
@@ -77,5 +77,6 @@ class Editor:
     pass
 
 
-def make_editor(editor, pool=None):
-  return svn_swig_py_make_editor(editor, pool)
+def make_editor(editor, pool=None, baton=None):
+  from libsvn.delta import _AncBaton
+  return svn_swig_py_make_editor(pool), _AncBaton(editor, pool, baton)

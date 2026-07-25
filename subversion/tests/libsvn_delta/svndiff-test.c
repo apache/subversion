@@ -88,7 +88,7 @@ main(int argc, char **argv)
 #ifdef QUOPRINT_SVNDIFFS
   encoder = svn_quoprint_encode(stdout_stream, pool);
 #else
-  encoder = svn_base64_encode(stdout_stream, pool);
+  encoder = svn_base64_encode2(stdout_stream, TRUE, pool);
 #endif
   /* use maximum compression level */
   svn_txdelta_to_svndiff3(&svndiff_handler, &svndiff_baton,

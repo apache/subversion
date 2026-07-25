@@ -151,7 +151,7 @@ Comments from projects that switched from CVS to SVN:
 
 * The w.c. space penalty is a real issue for large projects.  Disk
   space is not as cheap as we thought, those .svn/text-base/* files
-  hurt.  See http://subversion.tigris.org/issues/show_bug.cgi?id=525.
+  hurt.  See https://issues.apache.org/jira/browse/SVN-525.
   
   [gerv: Random thought - if you can't easily do copy-on-write, could
   you perhaps share text-base files by hard-linking between multiple

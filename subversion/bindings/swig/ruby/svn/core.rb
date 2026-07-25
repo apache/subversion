@@ -141,7 +141,7 @@ module Svn
         if len.nil?
           read_all
         else
-          buf = ""
+          buf = String.new
           while len > CHUNK_SIZE
             buf << _read(CHUNK_SIZE)
             len -= CHUNK_SIZE
@@ -165,7 +165,7 @@ module Svn
       end
 
       def read_all
-        buf = ""
+        buf = String.new
         while chunk = _read(CHUNK_SIZE)
           buf << chunk
         end
@@ -249,31 +249,31 @@ module Svn
         end
       end
 
-      def add_simple_prompt_provider(retry_limit, prompt=Proc.new)
+      def add_simple_prompt_provider(retry_limit, &prompt)
         args = [retry_limit]
         klass = AuthCredSimple
         add_prompt_provider("simple", args, prompt, klass)
       end
 
-      def add_username_prompt_provider(retry_limit, prompt=Proc.new)
+      def add_username_prompt_provider(retry_limit, &prompt)
         args = [retry_limit]
         klass = AuthCredUsername
         add_prompt_provider("username", args, prompt, klass)
       end
 
-      def add_ssl_server_trust_prompt_provider(prompt=Proc.new)
+      def add_ssl_server_trust_prompt_provider(&prompt)
         args = []
         klass = AuthCredSSLServerTrust
         add_prompt_provider("ssl_server_trust", args, prompt, klass)
       end
 
-      def add_ssl_client_cert_prompt_provider(retry_limit, prompt=Proc.new)
+      def add_ssl_client_cert_prompt_provider(retry_limit, &prompt)
         args = [retry_limit]
         klass = AuthCredSSLClientCert
         add_prompt_provider("ssl_client_cert", args, prompt, klass)
       end
 
-      def add_ssl_client_cert_pw_prompt_provider(retry_limit, prompt=Proc.new)
+      def add_ssl_client_cert_pw_prompt_provider(retry_limit, &prompt)
         args = [retry_limit]
         klass = AuthCredSSLClientCertPw
         add_prompt_provider("ssl_client_cert_pw", args, prompt, klass)
@@ -587,7 +587,7 @@ module Svn
 
       alias_method :_to_s, :to_s
       def to_s
-        result = ""
+        result = String.new
         each_section do |section|
           result << "[#{section}]\n"
           each_option(section) do |name, value|
@@ -812,7 +812,7 @@ module Svn
       def diff(to, consider_inheritance=false)
         result = Core.rangelist_diff(self, to, consider_inheritance)
         deleted = result.pop
-        added = result
+        added = result.pop
         [added, deleted].collect do |result|
           self.class.new(*result)
         end

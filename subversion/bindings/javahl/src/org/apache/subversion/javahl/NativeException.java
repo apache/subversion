@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl;
@@ -29,9 +27,10 @@ package org.apache.subversion.javahl;
  */
 class NativeException extends SubversionException
 {
-    // Update the serialVersionUID when there is a incompatible change made to
-    // this class.  See the java documentation for when a change is incompatible.
-    // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+    // Update the serialVersionUID when there is an incompatible change made to
+    // this class.  See the Java documentation (following link or its counter-
+    // part in your specific Java release) for when a change is incompatible.
+    // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
     private static final long serialVersionUID = 1L;
 
     /**
@@ -85,7 +84,11 @@ class NativeException extends SubversionException
      */
     public String getMessage()
     {
-        StringBuffer msg = new StringBuffer(super.getMessage());
+        StringBuilder msg = new StringBuilder();
+        String message = super.getMessage();
+        if (message != null) {
+            msg.append(message);
+        }
         // ### This might be better off in JNIUtil::handleSVNError().
         String src = getSource();
         if (src != null)

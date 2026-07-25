@@ -32,7 +32,7 @@ extern "C" {
 
 /* A string table is a very space efficient, read-only representation for
  * a set of strings with high degreed of prefix and postfix overhead.
- * 
+ *
  * Creating a string table is a two-stage process:  Use a builder class,
  * stuff all the strings in there and let it then do the heavy lifting of
  * classification and compression to create the actual string table object.
@@ -47,10 +47,10 @@ typedef struct string_table_builder_t string_table_builder_t;
 /* the string table */
 typedef struct string_table_t string_table_t;
 
-/* Returns a new string table builder object, allocated in POOL.
+/* Returns a new string table builder object, allocated in RESULT_POOL.
  */
 string_table_builder_t *
-svn_fs_x__string_table_builder_create(apr_pool_t *pool);
+svn_fs_x__string_table_builder_create(apr_pool_t *result_pool);
 
 /* Add an arbitrary NUL-terminated C-string STRING of the given length LEN
  * to BUILDER.  Return the index of that string in the future string table.
@@ -69,29 +69,29 @@ apr_size_t
 svn_fs_x__string_table_builder_estimate_size(string_table_builder_t *builder);
 
 /* From the given BUILDER object, create a string table object allocated
- * in POOL that contains all strings previously added to BUILDER.
+ * in RESULT_POOL that contains all strings previously added to BUILDER.
  */
 string_table_t *
 svn_fs_x__string_table_create(const string_table_builder_t *builder,
-                              apr_pool_t *pool);
+                              apr_pool_t *result_pool);
 
 /* Extract string number INDEX from TABLE and return a copy of it allocated
- * in POOL.  If LENGTH is not NULL, set *LENGTH to strlen() of the result
- * string.  Returns an empty string for invalid indexes.
+ * in RESULT_POOL.  If LENGTH is not NULL, set *LENGTH to strlen() of the
+ * result string.  Returns an empty string for invalid indexes.
  */
 const char*
 svn_fs_x__string_table_get(const string_table_t *table,
                            apr_size_t index,
                            apr_size_t *length,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool);
 
 /* Write a serialized representation of the string table TABLE to STREAM.
- * Use POOL for temporary allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__write_string_table(svn_stream_t *stream,
                              const string_table_t *table,
-                             apr_pool_t *pool);
+                             apr_pool_t *scratch_pool);
 
 /* Read the serialized string table representation from STREAM and return
  * the resulting runtime representation in *TABLE_P.  Allocate it in
@@ -101,7 +101,7 @@ svn_error_t *
 svn_fs_x__read_string_table(string_table_t **table_p,
                             svn_stream_t *stream,
                             apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool); 
+                            apr_pool_t *scratch_pool);
 
 /* Serialize string table *ST within the serialization CONTEXT.
  */
@@ -116,15 +116,15 @@ svn_fs_x__deserialize_string_table(void *buffer,
                                    string_table_t **table);
 
 /* Extract string number INDEX from the cache serialized representation at
- * TABLE and return a copy of it allocated in POOL.  If LENGTH is not NULL,
- * set *LENGTH to strlen() of the result string.  Returns an empty string
- * for invalid indexes.
+ * TABLE and return a copy of it allocated in RESULT_POOL.  If LENGTH is not
+ * NULL, set *LENGTH to strlen() of the result string.  Returns an empty
+ * string for invalid indexes.
  */
 const char*
 svn_fs_x__string_table_get_func(const string_table_t *table,
                                 apr_size_t idx,
                                 apr_size_t *length,
-                                apr_pool_t *pool);
+                                apr_pool_t *result_pool);
 
 #ifdef __cplusplus
 }

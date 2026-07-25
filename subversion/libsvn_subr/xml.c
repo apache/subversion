@@ -31,9 +31,8 @@
 #include "svn_pools.h"
 #include "svn_xml.h"
 #include "svn_error.h"
-#include "svn_ctype.h"
 
-#include "private/svn_utf_private.h"
+#include "private/svn_subr_private.h"
 
 #ifdef SVN_HAVE_OLD_EXPAT
 #include <xmlparse.h>
@@ -41,9 +40,39 @@
 #include <expat.h>
 #endif
 
+#ifndef XML_VERSION_AT_LEAST
+#define XML_VERSION_AT_LEAST(major,minor,patch)                  \
+(((major) < XML_MAJOR_VERSION)                                       \
+ || ((major) == XML_MAJOR_VERSION && (minor) < XML_MINOR_VERSION)    \
+ || ((major) == XML_MAJOR_VERSION && (minor) == XML_MINOR_VERSION && \
+     (patch) <= XML_MICRO_VERSION))
+#endif /* XML_VERSION_AT_LEAST */
+
 #ifdef XML_UNICODE
 #error Expat is unusable -- it has been compiled for wide characters
 #endif
+
+const char *
+svn_xml__compiled_version(void)
+{
+  static const char xml_version_str[] = APR_STRINGIFY(XML_MAJOR_VERSION)
+                                        "." APR_STRINGIFY(XML_MINOR_VERSION)
+                                        "." APR_STRINGIFY(XML_MICRO_VERSION);
+
+  return xml_version_str;
+}
+
+const char *
+svn_xml__runtime_version(void)
+{
+  const char *expat_version = XML_ExpatVersion();
+
+  if (!strncmp(expat_version, "expat_", 6))
+    expat_version += 6;
+
+  return expat_version;
+}
+
 
 /* The private internals for a parser object. */
 struct svn_xml_parser_t
@@ -68,251 +97,6 @@ struct svn_xml_parser_t
 };
 
 
-/*** XML character validation ***/
-
-svn_boolean_t
-svn_xml_is_xml_safe(const char *data, apr_size_t len)
-{
-  const char *end = data + len;
-  const char *p;
-
-  if (! svn_utf__is_valid(data, len))
-    return FALSE;
-
-  for (p = data; p < end; p++)
-    {
-      unsigned char c = *p;
-
-      if (svn_ctype_iscntrl(c))
-        {
-          if ((c != SVN_CTYPE_ASCII_TAB)
-              && (c != SVN_CTYPE_ASCII_LINEFEED)
-              && (c != SVN_CTYPE_ASCII_CARRIAGERETURN)
-              && (c != SVN_CTYPE_ASCII_DELETE))
-            return FALSE;
-        }
-    }
-  return TRUE;
-}
-
-
-
-
-
-/*** XML escaping. ***/
-
-/* ### ...?
- *
- * If *OUTSTR is @c NULL, set *OUTSTR to a new stringbuf allocated
- * in POOL, else append to the existing stringbuf there.
- */
-static void
-xml_escape_cdata(svn_stringbuf_t **outstr,
-                 const char *data,
-                 apr_size_t len,
-                 apr_pool_t *pool)
-{
-  const char *end = data + len;
-  const char *p = data, *q;
-
-  if (*outstr == NULL)
-    *outstr = svn_stringbuf_create_empty(pool);
-
-  while (1)
-    {
-      /* Find a character which needs to be quoted and append bytes up
-         to that point.  Strictly speaking, '>' only needs to be
-         quoted if it follows "]]", but it's easier to quote it all
-         the time.
-
-         So, why are we escaping '\r' here?  Well, according to the
-         XML spec, '\r\n' gets converted to '\n' during XML parsing.
-         Also, any '\r' not followed by '\n' is converted to '\n'.  By
-         golly, if we say we want to escape a '\r', we want to make
-         sure it remains a '\r'!  */
-      q = p;
-      while (q < end && *q != '&' && *q != '<' && *q != '>' && *q != '\r')
-        q++;
-      svn_stringbuf_appendbytes(*outstr, p, q - p);
-
-      /* We may already be a winner.  */
-      if (q == end)
-        break;
-
-      /* Append the entity reference for the character.  */
-      if (*q == '&')
-        svn_stringbuf_appendcstr(*outstr, "&amp;");
-      else if (*q == '<')
-        svn_stringbuf_appendcstr(*outstr, "&lt;");
-      else if (*q == '>')
-        svn_stringbuf_appendcstr(*outstr, "&gt;");
-      else if (*q == '\r')
-        svn_stringbuf_appendcstr(*outstr, "&#13;");
-
-      p = q + 1;
-    }
-}
-
-/* Essentially the same as xml_escape_cdata, with the addition of
-   whitespace and quote characters. */
-static void
-xml_escape_attr(svn_stringbuf_t **outstr,
-                const char *data,
-                apr_size_t len,
-                apr_pool_t *pool)
-{
-  const char *end = data + len;
-  const char *p = data, *q;
-
-  if (*outstr == NULL)
-    *outstr = svn_stringbuf_create_ensure(len, pool);
-
-  while (1)
-    {
-      /* Find a character which needs to be quoted and append bytes up
-         to that point. */
-      q = p;
-      while (q < end && *q != '&' && *q != '<' && *q != '>'
-             && *q != '"' && *q != '\'' && *q != '\r'
-             && *q != '\n' && *q != '\t')
-        q++;
-      svn_stringbuf_appendbytes(*outstr, p, q - p);
-
-      /* We may already be a winner.  */
-      if (q == end)
-        break;
-
-      /* Append the entity reference for the character.  */
-      if (*q == '&')
-        svn_stringbuf_appendcstr(*outstr, "&amp;");
-      else if (*q == '<')
-        svn_stringbuf_appendcstr(*outstr, "&lt;");
-      else if (*q == '>')
-        svn_stringbuf_appendcstr(*outstr, "&gt;");
-      else if (*q == '"')
-        svn_stringbuf_appendcstr(*outstr, "&quot;");
-      else if (*q == '\'')
-        svn_stringbuf_appendcstr(*outstr, "&apos;");
-      else if (*q == '\r')
-        svn_stringbuf_appendcstr(*outstr, "&#13;");
-      else if (*q == '\n')
-        svn_stringbuf_appendcstr(*outstr, "&#10;");
-      else if (*q == '\t')
-        svn_stringbuf_appendcstr(*outstr, "&#9;");
-
-      p = q + 1;
-    }
-}
-
-
-void
-svn_xml_escape_cdata_stringbuf(svn_stringbuf_t **outstr,
-                               const svn_stringbuf_t *string,
-                               apr_pool_t *pool)
-{
-  xml_escape_cdata(outstr, string->data, string->len, pool);
-}
-
-
-void
-svn_xml_escape_cdata_string(svn_stringbuf_t **outstr,
-                            const svn_string_t *string,
-                            apr_pool_t *pool)
-{
-  xml_escape_cdata(outstr, string->data, string->len, pool);
-}
-
-
-void
-svn_xml_escape_cdata_cstring(svn_stringbuf_t **outstr,
-                             const char *string,
-                             apr_pool_t *pool)
-{
-  xml_escape_cdata(outstr, string, (apr_size_t) strlen(string), pool);
-}
-
-
-void
-svn_xml_escape_attr_stringbuf(svn_stringbuf_t **outstr,
-                              const svn_stringbuf_t *string,
-                              apr_pool_t *pool)
-{
-  xml_escape_attr(outstr, string->data, string->len, pool);
-}
-
-
-void
-svn_xml_escape_attr_string(svn_stringbuf_t **outstr,
-                           const svn_string_t *string,
-                           apr_pool_t *pool)
-{
-  xml_escape_attr(outstr, string->data, string->len, pool);
-}
-
-
-void
-svn_xml_escape_attr_cstring(svn_stringbuf_t **outstr,
-                            const char *string,
-                            apr_pool_t *pool)
-{
-  xml_escape_attr(outstr, string, (apr_size_t) strlen(string), pool);
-}
-
-
-const char *
-svn_xml_fuzzy_escape(const char *string, apr_pool_t *pool)
-{
-  const char *end = string + strlen(string);
-  const char *p = string, *q;
-  svn_stringbuf_t *outstr;
-  char escaped_char[6];   /* ? \ u u u \0 */
-
-  for (q = p; q < end; q++)
-    {
-      if (svn_ctype_iscntrl(*q)
-          && ! ((*q == '\n') || (*q == '\r') || (*q == '\t')))
-        break;
-    }
-
-  /* Return original string if no unsafe characters found. */
-  if (q == end)
-    return string;
-
-  outstr = svn_stringbuf_create_empty(pool);
-  while (1)
-    {
-      q = p;
-
-      /* Traverse till either unsafe character or eos. */
-      while ((q < end)
-             && ((! svn_ctype_iscntrl(*q))
-                 || (*q == '\n') || (*q == '\r') || (*q == '\t')))
-        q++;
-
-      /* copy chunk before marker */
-      svn_stringbuf_appendbytes(outstr, p, q - p);
-
-      if (q == end)
-        break;
-
-      /* Append an escaped version of the unsafe character.
-
-         ### This format was chosen for consistency with
-         ### svn_utf__cstring_from_utf8_fuzzy().  The two functions
-         ### should probably share code, even though they escape
-         ### different characters.
-      */
-      apr_snprintf(escaped_char, sizeof(escaped_char), "?\\%03u",
-                   (unsigned char) *q);
-      svn_stringbuf_appendcstr(outstr, escaped_char);
-
-      p = q + 1;
-    }
-
-  return outstr->data;
-}
-
-
 /*** Map from the Expat callback types to the SVN XML types. ***/
 
 static void expat_start_handler(void *userData,
@@ -322,6 +106,15 @@ static void expat_start_handler(void *userData,
   svn_xml_parser_t *svn_parser = userData;
 
   (*svn_parser->start_handler)(svn_parser->baton, name, atts);
+
+#if XML_VERSION_AT_LEAST(1, 95, 8)
+  /* Stop XML parsing if svn_xml_signal_bailout() was called.
+     We cannot do this in svn_xml_signal_bailout() because Expat
+     documentation states that XML_StopParser() must be called only from
+     callbacks. */
+  if (svn_parser->error)
+    (void) XML_StopParser(svn_parser->parser, 0 /* resumable */);
+#endif
 }
 
 static void expat_end_handler(void *userData, const XML_Char *name)
@@ -329,6 +122,15 @@ static void expat_end_handler(void *userData, const XML_Char *name)
   svn_xml_parser_t *svn_parser = userData;
 
   (*svn_parser->end_handler)(svn_parser->baton, name);
+
+#if XML_VERSION_AT_LEAST(1, 95, 8)
+  /* Stop XML parsing if svn_xml_signal_bailout() was called.
+     We cannot do this in svn_xml_signal_bailout() because Expat
+     documentation states that XML_StopParser() must be called only from
+     callbacks. */
+  if (svn_parser->error)
+    (void) XML_StopParser(svn_parser->parser, 0 /* resumable */);
+#endif
 }
 
 static void expat_data_handler(void *userData, const XML_Char *s, int len)
@@ -336,10 +138,54 @@ static void expat_data_handler(void *userData, const XML_Char *s, int len)
   svn_xml_parser_t *svn_parser = userData;
 
   (*svn_parser->data_handler)(svn_parser->baton, s, (apr_size_t)len);
+
+#if XML_VERSION_AT_LEAST(1, 95, 8)
+  /* Stop XML parsing if svn_xml_signal_bailout() was called.
+     We cannot do this in svn_xml_signal_bailout() because Expat
+     documentation states that XML_StopParser() must be called only from
+     callbacks. */
+  if (svn_parser->error)
+    (void) XML_StopParser(svn_parser->parser, 0 /* resumable */);
+#endif
 }
 
+#if XML_VERSION_AT_LEAST(1, 95, 8)
+static void expat_entity_declaration(void *userData,
+                                     const XML_Char *entityName,
+                                     int is_parameter_entity,
+                                     const XML_Char *value,
+                                     int value_length,
+                                     const XML_Char *base,
+                                     const XML_Char *systemId,
+                                     const XML_Char *publicId,
+                                     const XML_Char *notationName)
+{
+  svn_xml_parser_t *svn_parser = userData;
+
+  /* Stop the parser if an entity declaration is hit. */
+  XML_StopParser(svn_parser->parser, 0 /* resumable */);
+}
+#else
+/* A noop default_handler. */
+static void expat_default_handler(void *userData, const XML_Char *s, int len)
+{
+}
+#endif
 
 /*** Making a parser. ***/
+
+static apr_status_t parser_cleanup(void *data)
+{
+  svn_xml_parser_t *svn_parser = data;
+
+  /* Free Expat parser. */
+  if (svn_parser->parser)
+    {
+      XML_ParserFree(svn_parser->parser);
+      svn_parser->parser = NULL;
+    }
+  return APR_SUCCESS;
+}
 
 svn_xml_parser_t *
 svn_xml_make_parser(void *baton,
@@ -349,8 +195,6 @@ svn_xml_make_parser(void *baton,
                     apr_pool_t *pool)
 {
   svn_xml_parser_t *svn_parser;
-  apr_pool_t *subpool;
-
   XML_Parser parser = XML_ParserCreate(NULL);
 
   XML_SetElementHandler(parser,
@@ -359,21 +203,28 @@ svn_xml_make_parser(void *baton,
   XML_SetCharacterDataHandler(parser,
                               data_handler ? expat_data_handler : NULL);
 
-  /* ### we probably don't want this pool; or at least we should pass it
-     ### to the callbacks and clear it periodically.  */
-  subpool = svn_pool_create(pool);
+#if XML_VERSION_AT_LEAST(1, 95, 8)
+  XML_SetEntityDeclHandler(parser, expat_entity_declaration);
+#else
+  XML_SetDefaultHandler(parser, expat_default_handler);
+#endif
 
-  svn_parser = apr_pcalloc(subpool, sizeof(*svn_parser));
+  svn_parser = apr_pcalloc(pool, sizeof(*svn_parser));
 
   svn_parser->parser = parser;
   svn_parser->start_handler = start_handler;
   svn_parser->end_handler = end_handler;
   svn_parser->data_handler = data_handler;
   svn_parser->baton = baton;
-  svn_parser->pool = subpool;
+  svn_parser->pool = pool;
 
   /* store our parser info as the UserData in the Expat parser */
   XML_SetUserData(parser, svn_parser);
+
+  /* Register pool cleanup handler to free Expat XML parser on cleanup,
+     if svn_xml_free_parser() was not called explicitly. */
+  apr_pool_cleanup_register(svn_parser->pool, svn_parser,
+                            parser_cleanup, apr_pool_cleanup_null);
 
   return svn_parser;
 }
@@ -383,11 +234,7 @@ svn_xml_make_parser(void *baton,
 void
 svn_xml_free_parser(svn_xml_parser_t *svn_parser)
 {
-  /* Free the expat parser */
-  XML_ParserFree(svn_parser->parser);
-
-  /* Free the subversion parser */
-  svn_pool_destroy(svn_parser->pool);
+  apr_pool_cleanup_run(svn_parser->pool, svn_parser, parser_cleanup);
 }
 
 
@@ -405,6 +252,14 @@ svn_xml_parse(svn_xml_parser_t *svn_parser,
   /* Parse some xml data */
   success = XML_Parse(svn_parser->parser, buf, (int) len, is_final);
 
+  /* Did an error occur somewhere *inside* the expat callbacks? */
+  if (svn_parser->error)
+    {
+      /* Kill all parsers and return the error */
+      svn_xml_free_parser(svn_parser);
+      return svn_parser->error;
+    }
+
   /* If expat choked internally, return its error. */
   if (! success)
     {
@@ -421,14 +276,6 @@ svn_xml_parse(svn_xml_parser_t *svn_parser,
       return err;
     }
 
-  /* Did an error occur somewhere *inside* the expat callbacks? */
-  if (svn_parser->error)
-    {
-      err = svn_parser->error;
-      svn_xml_free_parser(svn_parser);
-      return err;
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -440,7 +287,9 @@ void svn_xml_signal_bailout(svn_error_t *error,
   /* This will cause the current XML_Parse() call to finish quickly! */
   XML_SetElementHandler(svn_parser->parser, NULL, NULL);
   XML_SetCharacterDataHandler(svn_parser->parser, NULL);
-
+#if XML_VERSION_AT_LEAST(1, 95, 8)
+  XML_SetEntityDeclHandler(svn_parser->parser, NULL);
+#endif
   /* Once outside of XML_Parse(), the existence of this field will
      cause svn_delta_parse()'s main read-loop to return error. */
   svn_parser->error = error;

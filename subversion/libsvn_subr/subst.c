@@ -111,7 +111,8 @@ svn_subst_translation_required(svn_subst_eol_style_t style,
                                svn_boolean_t special,
                                svn_boolean_t force_eol_check)
 {
-  return (special || keywords
+  return (special
+          || (keywords && apr_hash_count(keywords) > 0)
           || (style != svn_subst_eol_style_none && force_eol_check)
           || (style == svn_subst_eol_style_native &&
               strcmp(APR_EOL_STR, SVN_SUBST_NATIVE_EOL_STR) != 0)
@@ -159,7 +160,7 @@ keyword_printf(const char *fmt,
                const char *author,
                apr_pool_t *pool)
 {
-  svn_stringbuf_t *value = svn_stringbuf_ncreate("", 0, pool);
+  svn_stringbuf_t *value = svn_stringbuf_create_empty(pool);
   const char *cur;
   size_t n;
 
@@ -297,7 +298,7 @@ build_keywords(apr_hash_t **kw,
 
   for (i = 0; i < keyword_tokens->nelts; ++i)
     {
-      const char *keyword = APR_ARRAY_IDX(keyword_tokens, i, const char *);
+      char *keyword = APR_ARRAY_IDX(keyword_tokens, i, char *);
       const char *custom_fmt = NULL;
 
       if (expand_custom_keywords)
@@ -1127,7 +1128,7 @@ translate_chunk(svn_stream_t *dst,
                 {
                   /* Check 4 bytes at once to allow for efficient pipelining
                     and to reduce loop condition overhead. */
-                  while ((p + len + 4) <= end)
+                  while ((end - p) >= (len + 4))
                     {
                       if (interesting[(unsigned char)p[len]]
                           || interesting[(unsigned char)p[len+1]]
@@ -1150,14 +1151,14 @@ translate_chunk(svn_stream_t *dst,
                   const char *start = p + len;
                   const char *eol
                     = svn_eol__find_eol_start((char *)start, end - start);
-                  
+
                   /* EOL will be NULL if we did not find a line ending */
                   len += (eol ? eol : end) - start;
                 }
             }
           while (b->nl_translation_skippable ==
                    svn_tristate_true &&       /* can potentially skip EOLs */
-                 p + len + 2 < end &&         /* not too close to EOF */
+                 (end - p) > (len + 2) &&     /* not too close to EOF */
                  eol_unchanged(b, p + len));  /* EOL format already ok */
 
           while ((p + len) < end && !interesting[(unsigned char)p[len]])
@@ -1431,14 +1432,6 @@ translated_stream_seek(void *baton, const svn_stream_mark_t *mark)
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_stream__is_buffered_fn_t. */
-static svn_boolean_t
-translated_stream_is_buffered(void *baton)
-{
-  struct translated_stream_baton *b = baton;
-  return svn_stream__is_buffered(b->stream);
-}
-
 svn_error_t *
 svn_subst_read_specialfile(svn_stream_t **stream,
                            const char *path,
@@ -1491,10 +1484,6 @@ stream_translated(svn_stream_t *stream,
                   svn_boolean_t expand,
                   apr_pool_t *result_pool)
 {
-  struct translated_stream_baton *baton
-    = apr_palloc(result_pool, sizeof(*baton));
-  svn_stream_t *s = svn_stream_create(baton, result_pool);
-
   /* Make sure EOL_STR and KEYWORDS are allocated in RESULT_POOL
      so they have the same lifetime as the stream. */
   if (eol_str)
@@ -1527,30 +1516,43 @@ stream_translated(svn_stream_t *stream,
         }
     }
 
-  /* Setup the baton fields */
-  baton->stream = stream;
-  baton->in_baton
-    = create_translation_baton(eol_str, translated_eol, repair, keywords,
-                               expand, result_pool);
-  baton->out_baton
-    = create_translation_baton(eol_str, translated_eol, repair, keywords,
-                               expand, result_pool);
-  baton->written = FALSE;
-  baton->readbuf = svn_stringbuf_create_empty(result_pool);
-  baton->readbuf_off = 0;
-  baton->iterpool = svn_pool_create(result_pool);
-  baton->buf = apr_palloc(result_pool, SVN__TRANSLATION_BUF_SIZE);
+  if (eol_str || keywords)
+    {
+      struct translated_stream_baton *baton
+        = apr_palloc(result_pool, sizeof(*baton));
+      svn_stream_t *s = svn_stream_create(baton, result_pool);
 
-  /* Setup the stream methods */
-  svn_stream_set_read2(s, NULL /* only full read support */,
-                       translated_stream_read);
-  svn_stream_set_write(s, translated_stream_write);
-  svn_stream_set_close(s, translated_stream_close);
-  svn_stream_set_mark(s, translated_stream_mark);
-  svn_stream_set_seek(s, translated_stream_seek);
-  svn_stream__set_is_buffered(s, translated_stream_is_buffered);
+      /* Setup the baton fields */
+      baton->stream = stream;
+      baton->in_baton
+        = create_translation_baton(eol_str, translated_eol, repair, keywords,
+                                   expand, result_pool);
+      baton->out_baton
+        = create_translation_baton(eol_str, translated_eol, repair, keywords,
+                                   expand, result_pool);
+      baton->written = FALSE;
+      baton->readbuf = svn_stringbuf_create_empty(result_pool);
+      baton->readbuf_off = 0;
+      baton->iterpool = svn_pool_create(result_pool);
+      baton->buf = apr_palloc(result_pool, SVN__TRANSLATION_BUF_SIZE);
 
-  return s;
+      /* Setup the stream methods */
+      svn_stream_set_read2(s, NULL /* only full read support */,
+                           translated_stream_read);
+      svn_stream_set_write(s, translated_stream_write);
+      svn_stream_set_close(s, translated_stream_close);
+      if (svn_stream_supports_mark(stream))
+        svn_stream_set_mark(s, translated_stream_mark);
+      if (svn_stream_supports_seek(stream))
+        svn_stream_set_seek(s, translated_stream_seek);
+
+      return s;
+    }
+  else
+    {
+      /* No translation is necessary, return the original stream. */
+      return stream;
+    }
 }
 
 svn_stream_t *
@@ -1622,7 +1624,7 @@ svn_subst_translate_cstring2(const char *src,
                              apr_pool_t *pool)
 {
   return translate_cstring(dst, NULL, src, eol_str, repair, keywords, expand,
-                            pool);
+                           pool);
 }
 
 /* Given a special file at SRC, generate a textual representation of
@@ -1649,7 +1651,7 @@ detranslate_special_file(const char *src, const char *dst,
                            cancel_func, cancel_baton, scratch_pool));
 
   /* Do the atomic rename from our temporary location. */
-  return svn_error_trace(svn_io_file_rename(dst_tmp, dst, scratch_pool));
+  return svn_error_trace(svn_io_file_rename2(dst_tmp, dst, FALSE, scratch_pool));
 }
 
 /* Creates a special file DST from the "normal form" located in SOURCE.
@@ -1691,17 +1693,16 @@ create_special_file_from_stream(svn_stream_t *source, const char *dst,
                                                    ".tmp", pool);
 
       /* If we had an error, check to see if it was because symlinks are
-         not supported on the platform.  If so, fall back
-         to using the internal representation. */
-      if (err)
+         not supported on the platform.  If so, fall back to using the
+         internal representation. */
+      if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
         {
-          if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
-            {
-              svn_error_clear(err);
-              create_using_internal_representation = TRUE;
-            }
-          else
-            return err;
+          svn_error_clear(err);
+          create_using_internal_representation = TRUE;
+        }
+      else if (err)
+        {
+          return svn_error_trace(err);
         }
     }
   else
@@ -1733,7 +1734,7 @@ create_special_file_from_stream(svn_stream_t *source, const char *dst,
     }
 
   /* Do the atomic rename from our temporary location. */
-  return svn_error_trace(svn_io_file_rename(dst_tmp, dst, pool));
+  return svn_error_trace(svn_io_file_rename2(dst_tmp, dst, FALSE, pool));
 }
 
 
@@ -1824,7 +1825,7 @@ svn_subst_copy_and_translate4(const char *src,
     }
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  SVN_ERR(svn_io_file_rename(dst_tmp, dst, pool));
+  SVN_ERR(svn_io_file_rename2(dst_tmp, dst, FALSE, pool));
 
   /* Preserve the source file's permission bits. */
   SVN_ERR(svn_io_copy_perms(src, dst, pool));
@@ -1972,7 +1973,7 @@ svn_subst_translate_string2(svn_string_t **new_value,
       return SVN_NO_ERROR;
     }
 
-  if (encoding && !strcmp(encoding, "UTF-8")) 
+  if (encoding && !strcmp(encoding, "UTF-8"))
     {
       val_utf8 = value->data;
     }

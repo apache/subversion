@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl.remote;
@@ -33,6 +31,7 @@ import java.util.GregorianCalendar;
 import java.util.Locale;
 import java.util.SimpleTimeZone;
 import java.io.InputStream;
+import java.io.IOException;
 import java.nio.charset.Charset;
 
 /**
@@ -78,6 +77,14 @@ class StatusEditor implements ISVNEditor
                         long replacesRevision)
     {
         //DEBUG:System.err.println("  [J] StatusEditor.addFile");
+        if (contents != null) {
+            try {
+                contents.close();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+
         checkState();
         receiver.addedFile(relativePath);
     }
@@ -98,7 +105,7 @@ class StatusEditor implements ISVNEditor
     {
         //DEBUG:System.err.println("  [J] StatusEditor.addAbsent");
         checkState();
-        throw new RuntimeException("Not implemented: StatusEditor.addAbsent");
+        // ignore this callback, as svn status -u does
     }
 
     public void alterDirectory(String relativePath,
@@ -120,6 +127,14 @@ class StatusEditor implements ISVNEditor
                           Map<String, byte[]> properties)
     {
         //DEBUG:System.err.println("  [J] StatusEditor.alterFile");
+        if (contents != null) {
+            try {
+                contents.close();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+
         checkState();
         receiver.modifiedFile(relativePath,
                               (checksum != null && contents != null),

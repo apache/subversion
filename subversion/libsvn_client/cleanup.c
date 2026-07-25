@@ -148,8 +148,8 @@ cleanup_status_walk(void *baton,
               notify = svn_wc_create_notify(local_abspath,
                                             svn_wc_notify_cleanup_external,
                                             scratch_pool);
-              (*b->ctx->notify_func2)(b->ctx->notify_baton2, notify,
-                                      scratch_pool);
+              b->ctx->notify_func2(b->ctx->notify_baton2, notify,
+                                   scratch_pool);
             }
 
           err = do_cleanup(local_abspath,
@@ -208,7 +208,7 @@ cleanup_status_walk(void *baton,
       notify = svn_wc_create_notify(local_abspath, svn_wc_notify_delete,
                                     scratch_pool);
       notify->kind = kind_on_disk;
-      (*b->ctx->notify_func2)(b->ctx->notify_baton2, notify, scratch_pool);
+      b->ctx->notify_func2(b->ctx->notify_baton2, notify, scratch_pool);
     }
 
   return SVN_NO_ERROR;

@@ -44,7 +44,7 @@
  * in *ROOT_OFFSET and the offset of the changed paths list in
  * *CHANGES_OFFSET.  Offsets are relative to the revision's start offset.
  * ROOT_OFFSET and / or CHANGES_OFFSET may be NULL.
- * 
+ *
  * Note that REV is only used to construct nicer error objects.
  */
 svn_error_t *
@@ -64,31 +64,46 @@ svn_fs_fs__unparse_revision_trailer(apr_off_t root_offset,
 
 /* Given the format 7+ revision / pack FOOTER, parse it destructively
  * and return the start offsets of the index data in *L2P_OFFSET and
- * *P2L_OFFSET, respectively.
- * 
+ * *P2L_OFFSET, respectively.  Also, return the expected checksums in
+ * in *L2P_CHECKSUM and *P2L_CHECKSUM.
+ *
+ * FOOTER_OFFSET is used for validation.
+ *
  * Note that REV is only used to construct nicer error objects that
- * mention this revision.
+ * mention this revision.  Allocate the checksums in RESULT_POOL.
  */
 svn_error_t *
 svn_fs_fs__parse_footer(apr_off_t *l2p_offset,
+                        svn_checksum_t **l2p_checksum,
                         apr_off_t *p2l_offset,
+                        svn_checksum_t **p2l_checksum,
                         svn_stringbuf_t *footer,
-                        svn_revnum_t rev);
+                        svn_revnum_t rev,
+                        apr_off_t footer_offset,
+                        apr_pool_t *result_pool);
 
-/* Given the offset of the L2P index data in L2P_OFFSET and the offset of
- * the P2L index data in P2L_OFFSET,  return the corresponding format 7+
- * revision / pack file footer.  Allocate it in RESULT_POOL.
+/* Given the offset of the L2P index data in L2P_OFFSET, the content
+ * checksum in L2P_CHECKSUM and the offset plus checksum of the P2L
+ * index data in P2L_OFFSET and P2L_CHECKSUM.
+ *
+ * Return the corresponding format 7+ revision / pack file footer.
+ * Allocate it in RESULT_POOL and use SCRATCH_POOL for temporary.
  */
 svn_stringbuf_t *
 svn_fs_fs__unparse_footer(apr_off_t l2p_offset,
+                          svn_checksum_t *l2p_checksum,
                           apr_off_t p2l_offset,
-                          apr_pool_t *result_pool);
+                          svn_checksum_t *p2l_checksum,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
-/* Read all the changes from STREAM and store them in *CHANGES,
-   allocated in RESULT_POOL. Do temporary allocations in SCRATCH_POOL. */
+/* Read up to MAX_COUNT of the changes from STREAM and store them in
+   *CHANGES, allocated in RESULT_POOL.  Do temporary allocations in
+   SCRATCH_POOL. */
 svn_error_t *
 svn_fs_fs__read_changes(apr_array_header_t **changes,
                         svn_stream_t *stream,
+                        int max_count,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
@@ -112,8 +127,9 @@ svn_fs_fs__read_changes_incrementally(svn_stream_t *stream,
 
 /* Write the changed path info from CHANGES in filesystem FS to the
    output stream STREAM.  You may call this function multiple time on
-   the same stream but the last call should set TERMINATE_LIST to write
-   an extra empty line that marks the end of the changed paths list.
+   the same stream.  If you are writing to a (proto-)revision file,
+   the last call must set TERMINATE_LIST to write an extra empty line
+   that marks the end of the changed paths list.
    Perform temporary allocations in SCRATCH_POOL.
  */
 svn_error_t *

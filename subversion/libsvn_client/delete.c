@@ -181,12 +181,13 @@ can_delete_node(svn_boolean_t *target_missing,
 
 static svn_error_t *
 path_driver_cb_func(void **dir_baton,
+                    const svn_delta_editor_t *editor,
+                    void *edit_baton,
                     void *parent_baton,
                     void *callback_baton,
                     const char *path,
                     apr_pool_t *pool)
 {
-  const svn_delta_editor_t *editor = callback_baton;
   *dir_baton = NULL;
   return editor->delete_entry(path, SVN_INVALID_REVNUM, parent_baton, pool);
 }
@@ -248,8 +249,8 @@ single_repos_delete(svn_ra_session_t *ra_session,
                                     pool));
 
   /* Call the path-based editor driver. */
-  err = svn_delta_path_driver2(editor, edit_baton, relpaths, TRUE,
-                               path_driver_cb_func, (void *)editor, pool);
+  err = svn_delta_path_driver3(editor, edit_baton, relpaths, TRUE,
+                               path_driver_cb_func, NULL, pool);
 
   if (err)
     {
@@ -305,7 +306,7 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
 
       for (hi = apr_hash_first(pool, deletables); hi; hi = apr_hash_next(hi))
         {
-          const char *repos_root = svn__apr_hash_index_key(hi);
+          const char *repos_root = apr_hash_this_key(hi);
 
           repos_relpath = svn_uri_skip_ancestor(repos_root, uri, pool);
           if (repos_relpath)
@@ -313,7 +314,7 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
               /* Great!  We've found another URI underneath this
                  session.  We'll pick out the related RA session for
                  use later, store the new target, and move on.  */
-              repos_deletables = svn__apr_hash_index_val(hi);
+              repos_deletables = apr_hash_this_val(hi);
               APR_ARRAY_PUSH(repos_deletables->target_uris, const char *) =
                 apr_pstrdup(pool, uri);
               break;
@@ -370,7 +371,7 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
   iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, deletables); hi; hi = apr_hash_next(hi))
     {
-      struct repos_deletables_t *repos_deletables = svn__apr_hash_index_val(hi);
+      struct repos_deletables_t *repos_deletables = apr_hash_this_val(hi);
       const char *base_uri;
       apr_array_header_t *target_relpaths;
 
@@ -582,7 +583,7 @@ svn_client_delete4(const apr_array_header_t *paths,
       for (hi = apr_hash_first(pool, wcroots); hi; hi = apr_hash_next(hi))
         {
           const char *root_abspath;
-          const apr_array_header_t *targets = svn__apr_hash_index_val(hi);
+          const apr_array_header_t *targets = apr_hash_this_val(hi);
 
           svn_pool_clear(iterpool);
 

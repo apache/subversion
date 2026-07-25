@@ -22,24 +22,13 @@
 
 #include "svn_fs.h"
 
-/* Write the CURRENT revprop generation to disk for repository FS.
- */
-svn_error_t *
-svn_fs_fs__write_revprop_generation_file(svn_fs_t *fs,
-                                         apr_int64_t current,
-                                         apr_pool_t *pool);
-
-/* Make sure the revprop_namespace member in FS is set. */
-svn_error_t *
-svn_fs_fs__cleanup_revprop_namespace(svn_fs_t *fs);
-
 /* In the filesystem FS, pack all revprop shards up to min_unpacked_rev.
- * 
+ *
  * NOTE: Keep the old non-packed shards around until after the format bump.
  * Otherwise, re-running upgrade will drop the packed revprop shard but
  * have no unpacked data anymore.  Call upgrade_cleanup_pack_revprops after
  * the bump.
- * 
+ *
  * NOTIFY_FUNC and NOTIFY_BATON as well as CANCEL_FUNC and CANCEL_BATON are
  * used in the usual way.  Temporary allocations are done in SCRATCH_POOL.
  */
@@ -53,7 +42,7 @@ svn_fs_fs__upgrade_pack_revprops(svn_fs_t *fs,
 
 /* In the filesystem FS, remove all non-packed revprop shards up to
  * min_unpacked_rev.  Temporary allocations are done in SCRATCH_POOL.
- * 
+ *
  * NOTIFY_FUNC and NOTIFY_BATON as well as CANCEL_FUNC and CANCEL_BATON are
  * used in the usual way.  Cancellation is supported in the sense that we
  * will cleanly abort the operation.  However, there will be remnant shards
@@ -69,15 +58,32 @@ svn_fs_fs__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
                                          void *cancel_baton,
                                          apr_pool_t *scratch_pool);
 
+/* Invalidate the revprop cache in FS. */
+void
+svn_fs_fs__reset_revprop_cache(svn_fs_t *fs);
+
+/* Set *PROPS_SIZE_P to the size in bytes on disk of the revprops for
+ * revision REV in FS. The size excludes indexes.
+ */
+svn_error_t *
+svn_fs_fs__get_revision_props_size(apr_off_t *props_size_p,
+                                   svn_fs_t *fs,
+                                   svn_revnum_t rev,
+                                   apr_pool_t *scratch_pool);
+
 /* Read the revprops for revision REV in FS and return them in *PROPERTIES_P.
+ * If REFRESH is set, clear the revprop cache before accessing the data.
  *
- * Allocations will be done in POOL.
+ * The result will be allocated in RESULT_POOL; SCRATCH_POOL is used for
+ * temporaries.
  */
 svn_error_t *
 svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
                                  svn_fs_t *fs,
                                  svn_revnum_t rev,
-                                 apr_pool_t *pool);
+                                 svn_boolean_t refresh,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 /* Set the revision property list of revision REV in filesystem FS to
    PROPLIST.  Use POOL for temporary allocations. */
@@ -90,7 +96,7 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
 
 /* Return TRUE, if for REVISION in FS, we can find the revprop pack file.
  * Use POOL for temporary allocations.
- * Set *MISSING, if the reason is a missing manifest or pack file. 
+ * Set *MISSING, if the reason is a missing manifest or pack file.
  */
 svn_boolean_t
 svn_fs_fs__packed_revprop_available(svn_boolean_t *missing,
@@ -114,8 +120,9 @@ svn_fs_fs__packed_revprop_available(svn_boolean_t *missing,
  * a hint on which initial buffer size we should use to hold the pack file
  * content.
  *
- * CANCEL_FUNC and CANCEL_BATON are used as usual. Temporary allocations
- * are done in SCRATCH_POOL.
+ * If FLUSH_TO_DISK is non-zero, do not return until the data has actually
+ * been written on the disk.  CANCEL_FUNC and CANCEL_BATON are used as usual.
+ * Temporary allocations are done in SCRATCH_POOL.
  */
 svn_error_t *
 svn_fs_fs__copy_revprops(const char *pack_file_dir,
@@ -126,6 +133,7 @@ svn_fs_fs__copy_revprops(const char *pack_file_dir,
                          apr_array_header_t *sizes,
                          apr_size_t total_size,
                          int compression_level,
+                         svn_boolean_t flush_to_disk,
                          svn_cancel_func_t cancel_func,
                          void *cancel_baton,
                          apr_pool_t *scratch_pool);
@@ -137,16 +145,18 @@ svn_fs_fs__copy_revprops(const char *pack_file_dir,
  * have no unpacked data anymore.  Call upgrade_cleanup_pack_revprops after
  * the bump.
  *
- * NOTIFY_FUNC and NOTIFY_BATON as well as CANCEL_FUNC and CANCEL_BATON are
- * used in the usual way.  Temporary allocations are done in SCRATCH_POOL.
+ * If FLUSH_TO_DISK is non-zero, do not return until the data has actually
+ * been written on the disk.  CANCEL_FUNC and CANCEL_BATON areused in the
+ * usual way.  Temporary allocations are done in SCRATCH_POOL.
  */
 svn_error_t *
 svn_fs_fs__pack_revprops_shard(const char *pack_file_dir,
                                const char *shard_path,
                                apr_int64_t shard,
                                int max_files_per_dir,
-                               apr_off_t max_pack_size,
+                               apr_int64_t max_pack_size,
                                int compression_level,
+                               svn_boolean_t flush_to_disk,
                                svn_cancel_func_t cancel_func,
                                void *cancel_baton,
                                apr_pool_t *scratch_pool);

@@ -33,7 +33,7 @@ if [ $SVN_VER_MINOR -ge 9 ]; then
   APR=/home/bt/packages/apr-1.3.9-prefix/bin/apr-1-config
   APU=/home/bt/packages/apr-1.3.9-prefix/bin/apu-1-config
   APXS=/home/bt/packages/apr-1.3.9-prefix/bin/apxs
-  SERF=/home/bt/packages/apr-1.3.9-prefix 
+  SERF=/home/bt/packages/apr-1.3.9-prefix
 else
   APR=/usr
   APU=/usr

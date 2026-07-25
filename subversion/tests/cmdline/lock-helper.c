@@ -26,7 +26,6 @@
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
 #include "svn_fs.h"
-#include "svn_fs.h"
 
 int
 main(int argc, const char *argv[])

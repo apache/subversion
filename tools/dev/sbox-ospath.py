@@ -54,10 +54,10 @@ def rewrite_file(fname):
       lines[i] = line[:start] + 'sbox.ospath(' + parts + ')' + line[end:]
       count += 1
   if count == 0:
-    print 'No changes.'
+    print('No changes.')
   else:
     open(fname, 'w').writelines(lines)
-    print '%s rewrites performed.' % (count,)
+    print('%s rewrites performed.' % (count,))
 
 
 if __name__ == '__main__':

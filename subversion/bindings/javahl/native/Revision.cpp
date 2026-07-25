@@ -57,12 +57,12 @@ Revision::Revision(jobject jthis, bool headIfUnspecified,
       static jfieldID fid = 0;
       if (fid == 0)
         {
-          jclass clazz = env->FindClass(JAVA_PACKAGE"/types/Revision");
+          jclass clazz = env->FindClass(JAVAHL_CLASS("/types/Revision"));
           if (JNIUtil::isJavaExceptionThrown())
             POP_AND_RETURN_NOTHING();
 
           fid = env->GetFieldID(clazz, "revKind",
-                                "L"JAVA_PACKAGE"/types/Revision$Kind;");
+                                JAVAHL_ARG("/types/Revision$Kind;"));
           if (JNIUtil::isJavaExceptionThrown())
             POP_AND_RETURN_NOTHING();
         }
@@ -81,7 +81,7 @@ Revision::Revision(jobject jthis, bool headIfUnspecified,
             if (fidNum == 0)
               {
                 jclass clazz =
-                  env->FindClass(JAVA_PACKAGE"/types/Revision$Number");
+                  env->FindClass(JAVAHL_CLASS("/types/Revision$Number"));
                 if (JNIUtil::isJavaExceptionThrown())
                   POP_AND_RETURN_NOTHING();
 
@@ -99,7 +99,7 @@ Revision::Revision(jobject jthis, bool headIfUnspecified,
             if (fidDate == 0)
               {
                 jclass clazz =
-                  env->FindClass(JAVA_PACKAGE"/types/Revision$DateSpec");
+                  env->FindClass(JAVAHL_CLASS("/types/Revision$DateSpec"));
                 if (JNIUtil::isJavaExceptionThrown())
                   POP_AND_RETURN_NOTHING();
 
@@ -158,7 +158,7 @@ jobject
 Revision::makeJRevision(svn_revnum_t rev)
 {
   JNIEnv *env = JNIUtil::getEnv();
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/types/Revision");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/Revision"));
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
@@ -166,7 +166,7 @@ Revision::makeJRevision(svn_revnum_t rev)
   if (getInstance == 0)
     {
       getInstance = env->GetStaticMethodID(clazz, "getInstance",
-                                           "(J)L" JAVA_PACKAGE "/types/Revision;");
+                                           "(J)" JAVAHL_ARG("/types/Revision;"));
       if (JNIUtil::isExceptionThrown())
         return NULL;
     }

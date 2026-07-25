@@ -24,12 +24,66 @@
 import os
 import shutil
 import copy
-import urllib
 import logging
+import re
 
 import svntest
 
 logger = logging.getLogger()
+
+
+def make_mirror(sbox, source_prop_encoding=None):
+  """Make a mirror of the repository in SBOX.
+  """
+  # Set up the mirror repository.
+  dest_sbox = sbox.clone_dependent()
+  dest_sbox.build(create_wc=False, empty=True)
+  exit_code, output, errput = svntest.main.run_svnlook("uuid", sbox.repo_dir)
+  svntest.actions.run_and_verify_svnadmin2(None, None, 0,
+                                           'setuuid', dest_sbox.repo_dir,
+                                           output[0][:-1])
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
+
+  repo_url = sbox.repo_url
+  dest_repo_url = dest_sbox.repo_url
+
+  # Synchronize it.
+  args = (svntest.main.svnrdump_crosscheck_authentication,)
+  if source_prop_encoding:
+    args = args + ("--source-prop-encoding=" + source_prop_encoding,)
+  svntest.actions.run_and_verify_svnsync(svntest.verify.AnyOutput, [],
+                                         "initialize",
+                                         dest_repo_url, repo_url, *args)
+  svntest.actions.run_and_verify_svnsync(None, [],
+                                         "synchronize",
+                                         dest_repo_url, repo_url, *args)
+
+  return dest_sbox
+
+def verify_mirror(repo_url, repo_dir, expected_dumpfile):
+  """Compare the repository content at REPO_URL/REPO_DIR with that in
+     EXPECTED_DUMPFILE (which is a non-delta dump).
+  """
+  # Remove some SVNSync-specific housekeeping properties from the
+  # mirror repository in preparation for the comparison dump.
+  for prop_name in ("svn:sync-from-url", "svn:sync-from-uuid",
+                    "svn:sync-last-merged-rev"):
+    svntest.actions.run_and_verify_svn(
+      None, [], "propdel", "--revprop", "-r", "0",
+      prop_name, repo_url)
+  # Create a dump file from the mirror repository.
+  dumpfile_s_n = svntest.actions.run_and_verify_dump(repo_dir)
+  # Compare the mirror's dumpfile, ignoring any expected differences:
+  # The original dumpfile in some cases lacks 'Text-content-sha1' headers;
+  # the mirror dump always has them -- ### Why?
+  svnsync_headers_always = re.compile("Text-content-sha1: ")
+  dumpfile_a_n_cmp = [l for l in expected_dumpfile
+                      if not svnsync_headers_always.match(l)]
+  dumpfile_s_n_cmp = [l for l in dumpfile_s_n
+                      if not svnsync_headers_always.match(l)]
+  svntest.verify.compare_dump_files(None, None,
+                                    dumpfile_a_n_cmp,
+                                    dumpfile_s_n_cmp)
 
 
 class Sandbox:
@@ -46,7 +100,9 @@ class Sandbox:
     # This flag is set to True by build() and returned by is_built()
     self._is_built = False
 
-  def _set_name(self, name, read_only=False):
+    self.was_cwd = os.getcwd()
+
+  def _set_name(self, name, read_only=False, empty=False, tree=None):
     """A convenience method for renaming a sandbox, useful when
     working with multiple repositories in the same unit test."""
     if not name is None:
@@ -54,14 +110,22 @@ class Sandbox:
     self.read_only = read_only
     self.wc_dir = os.path.join(svntest.main.general_wc_dir, self.name)
     self.add_test_path(self.wc_dir)
-    if not read_only:
+    if empty or not read_only:  # use a local repo
       self.repo_dir = os.path.join(svntest.main.general_repo_dir, self.name)
       self.repo_url = (svntest.main.options.test_area_url + '/'
-                       + urllib.pathname2url(self.repo_dir))
+                       + svntest.wc.svn_uri_quote(
+                                self.repo_dir.replace(os.path.sep, '/')))
       self.add_test_path(self.repo_dir)
     else:
-      self.repo_dir = svntest.main.pristine_greek_repos_dir
-      self.repo_url = svntest.main.pristine_greek_repos_url
+      if tree == 'greek':
+        self.repo_dir = svntest.main.pristine_greek_repos_dir
+        self.repo_url = svntest.main.pristine_greek_repos_url
+      elif tree == 'trojan':
+        self.repo_dir = svntest.main.pristine_trojan_repos_dir
+        self.repo_url = svntest.main.pristine_trojan_repos_url
+      else:
+        raise ValueError("'tree' must be 'greek' or 'trojan'"
+                         " but was '%s'" % str(tree))
 
     if self.repo_url.startswith("http"):
       self.authz_file = os.path.join(svntest.main.work_dir, "authz")
@@ -88,28 +152,36 @@ class Sandbox:
       shutil.copytree(self.wc_dir, clone.wc_dir, symlinks=True)
     return clone
 
-  def build(self, name=None, create_wc=True, read_only=False,
-            minor_version=None):
-    """Make a 'Greek Tree' repo (or refer to the central one if READ_ONLY),
+  def build(self, name=None, create_wc=True, read_only=False, empty=False,
+            minor_version=None, tree='greek'):
+    """Make a 'Greek Tree' or 'Trojan Tree' repo (or refer to the central
+       one if READ_ONLY), or make an empty repo if EMPTY is true,
        and check out a WC from it (unless CREATE_WC is false). Change the
        sandbox's name to NAME. See actions.make_repo_and_wc() for details."""
-    self._set_name(name, read_only)
+    self._set_name(name, read_only, empty, tree)
     self._ensure_authz()
-    svntest.actions.make_repo_and_wc(self, create_wc, read_only, minor_version)
+    svntest.actions.make_repo_and_wc(self, create_wc, read_only, empty,
+                                     minor_version, tree)
     self._is_built = True
 
   def _ensure_authz(self):
     "make sure the repository is accessible"
+
+    def get_content(f):
+      with open(f, 'r') as fp:
+        content = fp.read()
+      return content
 
     if self.repo_url.startswith("http"):
       default_authz = "[/]\n* = rw\n"
 
       if (svntest.main.options.parallel == 0
           and (not os.path.isfile(self.authz_file)
-               or open(self.authz_file,'r').read() != default_authz)):
+               or get_content(self.authz_file) != default_authz)):
 
         tmp_authz_file = os.path.join(svntest.main.work_dir, "authz-" + self.name)
-        open(tmp_authz_file, 'w').write(default_authz)
+        with open(tmp_authz_file, 'w') as f:
+          f.write(default_authz)
         shutil.move(tmp_authz_file, self.authz_file)
 
   def authz_name(self, repo_dir=None):
@@ -136,7 +208,8 @@ class Sandbox:
     path = (os.path.join(svntest.main.general_repo_dir, self.name)
             + '.' + suffix)
     url = svntest.main.options.test_area_url + \
-                                        '/' + urllib.pathname2url(path)
+                                        '/' + svntest.wc.svn_uri_quote(
+                                                path.replace(os.path.sep, '/'))
     self.add_test_path(path, remove)
     return path, url
 
@@ -165,6 +238,20 @@ class Sandbox:
     self.tempname_offs = self.tempname_offs + 1
 
     return os.path.join(self.tmp_dir, '%s-%s' % (prefix, self.tempname_offs))
+
+  def create_config_dir(self, config_contents=None, server_contents=None,
+                        ssl_cert=None, ssl_url=None, http_proxy=None,
+                        exclusive_wc_locks=None):
+    """Create a config directory with specified or default files.
+       Return its path.
+    """
+
+    tmp_dir = os.path.abspath(svntest.main.temp_dir)
+    config_dir = os.path.join(tmp_dir, 'config_' + self.name)
+    svntest.main.create_config_dir(config_dir, config_contents, server_contents,
+                                   ssl_cert, ssl_url, http_proxy,
+                                   exclusive_wc_locks)
+    return config_dir
 
   def cleanup_test_paths(self):
     "Clean up detritus from this sandbox, and any dependents."
@@ -216,6 +303,12 @@ class Sandbox:
     return '%s/REDIRECT-%s-%s' % (parts[0],
                                   temporary and 'TEMP' or 'PERM',
                                   parts[1])
+
+  def file_protocol_repo_url(self):
+    """get a file:// url pointing to the repository"""
+    return svntest.main.file_scheme_prefix + \
+           svntest.wc.svn_uri_quote(
+                os.path.abspath(self.repo_dir).replace(os.path.sep, '/'))
 
   def simple_update(self, target=None, revision='HEAD'):
     """Update the WC or TARGET.
@@ -322,15 +415,18 @@ class Sandbox:
         raise Exception("Unexpected line '" + line + "' in proplist output" + str(out))
     return props
 
-  def simple_add_symlink(self, dest, target):
-    """Create a symlink TARGET pointing to DEST and add it to subversion"""
+  def simple_symlink(self, dest, target):
+    """Create a symlink TARGET pointing to DEST"""
     if svntest.main.is_posix_os():
       os.symlink(dest, self.ospath(target))
     else:
       svntest.main.file_write(self.ospath(target), "link %s" % dest)
+
+  def simple_add_symlink(self, dest, target, add=True):
+    """Create a symlink TARGET pointing to DEST and add it to subversion"""
+    self.simple_symlink(dest, target)
     self.simple_add(target)
-    if not svntest.main.is_posix_os():
-      # '*' is evaluated on Windows
+    if not svntest.main.is_posix_os():      # '*' is evaluated on Windows
       self.simple_propset('svn:special', 'X', target)
 
   def simple_add_text(self, text, *targets):
@@ -365,7 +461,8 @@ class Sandbox:
   def simple_append(self, dest, contents, truncate=False):
     """Append CONTENTS to file DEST, optionally truncating it first.
        DEST is a relpath relative to the WC."""
-    open(self.ospath(dest), truncate and 'w' or 'a').write(contents)
+    svntest.main.file_write(self.ospath(dest), contents,
+                            truncate and 'wb' or 'ab')
 
   def simple_lock(self, *targets):
     """Lock TARGETS in the WC.
@@ -376,10 +473,161 @@ class Sandbox:
 
   def youngest(self):
     _, output, _ = svntest.actions.run_and_verify_svnlook(
-                     None, svntest.verify.AnyOutput, [],
+                     svntest.verify.AnyOutput, [],
                      'youngest', self.repo_dir)
     youngest = int(output[0])
     return youngest
+
+  def verify_repo(self):
+    """
+    """
+    svnrdump_headers_missing = re.compile(
+        "Text-content-sha1: .*|Text-copy-source-md5: .*|"
+        "Text-copy-source-sha1: .*|Text-delta-base-sha1: .*"
+    )
+    svnrdump_headers_always = re.compile(
+        "Prop-delta: .*"
+    )
+
+    dumpfile_a_n = svntest.actions.run_and_verify_dump(self.repo_dir,
+                                                       deltas=False)
+    dumpfile_a_d = svntest.actions.run_and_verify_dump(self.repo_dir,
+                                                       deltas=True)
+    dumpfile_r_d = svntest.actions.run_and_verify_svnrdump(
+      None, svntest.verify.AnyOutput, [], 0, 'dump', '-q', self.repo_url,
+      svntest.main.svnrdump_crosscheck_authentication)
+
+    # Compare the two deltas dumpfiles, ignoring expected differences
+    dumpfile_a_d_cmp = [l for l in dumpfile_a_d
+                       if not svnrdump_headers_missing.match(l)
+                                and not svnrdump_headers_always.match(l)]
+    dumpfile_r_d_cmp = [l for l in dumpfile_r_d
+                       if not svnrdump_headers_always.match(l)]
+    # Ignore differences in number of blank lines between node records,
+    # as svnrdump puts 3 whereas svnadmin puts 2 after a replace-with-copy.
+    svntest.verify.compare_dump_files('svnadmin dump, tweaked',
+                                      'svnrdump dump, tweaked',
+                                      dumpfile_a_d_cmp,
+                                      dumpfile_r_d_cmp,
+                                      ignore_number_of_blank_lines=True)
+
+    # Try loading the dump files.
+    # For extra points, load each with the other tool:
+    #   svnadmin dump | svnrdump load
+    #   svnrdump dump | svnadmin load
+    repo_dir_a_n, repo_url_a_n = self.add_repo_path('load_a_n')
+    svntest.main.create_repos(repo_dir_a_n)
+    svntest.actions.enable_revprop_changes(repo_dir_a_n)
+    svntest.actions.run_and_verify_svnrdump(
+      dumpfile_a_n, svntest.verify.AnyOutput, [], 0, 'load', repo_url_a_n,
+      svntest.main.svnrdump_crosscheck_authentication)
+
+    repo_dir_a_d, repo_url_a_d = self.add_repo_path('load_a_d')
+    svntest.main.create_repos(repo_dir_a_d)
+    svntest.actions.enable_revprop_changes(repo_dir_a_d)
+    svntest.actions.run_and_verify_svnrdump(
+      dumpfile_a_d, svntest.verify.AnyOutput, [], 0, 'load', repo_url_a_d,
+      svntest.main.svnrdump_crosscheck_authentication)
+
+    repo_dir_r_d, repo_url_r_d = self.add_repo_path('load_r_d')
+    svntest.main.create_repos(repo_dir_r_d)
+    svntest.actions.run_and_verify_load(repo_dir_r_d, dumpfile_r_d)
+
+    # Dump the loaded repositories in the same way; expect exact equality
+    reloaded_dumpfile_a_n = svntest.actions.run_and_verify_dump(repo_dir_a_n)
+    reloaded_dumpfile_a_d = svntest.actions.run_and_verify_dump(repo_dir_a_d)
+    reloaded_dumpfile_r_d = svntest.actions.run_and_verify_dump(repo_dir_r_d)
+    svntest.verify.compare_dump_files('svnadmin dump no delta, loaded, dumped',
+                                      'svnadmin dump --deltas, loaded, dumped',
+                                      reloaded_dumpfile_a_n,
+                                      reloaded_dumpfile_a_d,
+                                      ignore_uuid=True)
+    svntest.verify.compare_dump_files('svnadmin dump, loaded, dumped',
+                                      'svnrdump dump, loaded, dumped',
+                                      reloaded_dumpfile_a_d,
+                                      reloaded_dumpfile_r_d,
+                                      ignore_uuid=True)
+
+    # Run each dump through svndumpfilter and check for no further change.
+    for dumpfile, dumpfile_desc in [(dumpfile_a_n, 'svnadmin dump'),
+                                    (dumpfile_a_d, 'svnadmin dump --deltas'),
+                                    (dumpfile_r_d, 'svnrdump dump'),
+                                    ]:
+      ### No buffer size seems to work for update_tests-2. So skip that test?
+      ### (Its dumpfile size is ~360 KB non-delta, ~180 KB delta.)
+      if len(''.join(dumpfile)) > 100000:
+        continue
+
+      exit_code, dumpfile2, errput = svntest.main.run_command_stdin(
+        svntest.main.svndumpfilter_binary, None, -1, True,
+        dumpfile, '--quiet', 'include', '/')
+      assert not exit_code and not errput
+      # Ignore empty prop sections in the input file during comparison, as
+      # svndumpfilter strips them.
+      # Ignore differences in number of blank lines between node records,
+      # as svndumpfilter puts 3 instead of 2 after an add or delete record.
+      svntest.verify.compare_dump_files(dumpfile_desc,
+                                        'after svndumpfilter include /',
+                                        dumpfile, dumpfile2,
+                                        expect_content_length_always=True,
+                                        ignore_empty_prop_sections=True,
+                                        ignore_number_of_blank_lines=True)
+
+    # Run the repository through 'svnsync' and check that this does not
+    # change the repository content. (Don't bother if it's already been
+    # created by svnsync.)
+    if "svn:sync-from-url\n" not in dumpfile_a_n:
+      dest_sbox = make_mirror(self)
+      verify_mirror(dest_sbox.repo_url, dest_sbox.repo_dir, dumpfile_a_n)
+
+  def verify(self, skip_cross_check=False):
+    """Do additional testing that should hold for any sandbox, such as
+       verifying that the repository can be dumped.
+    """
+    if (not skip_cross_check
+        and svntest.main.tests_verify_dump_load_cross_check()):
+      if self.is_built() and not self.read_only:
+        # verify that we can in fact dump the repo
+        # (except for the few tests that deliberately corrupt the repo)
+        os.chdir(self.was_cwd)
+        if os.path.exists(self.repo_dir):
+          logger.info("VERIFY: running dump/load cross-check")
+          self.verify_repo()
+      else:
+        logger.info("VERIFY: WARNING: skipping dump/load cross-check:"
+                    " is-built=%s, read-only=%s"
+                    % (self.is_built() and "true" or "false",
+                       self.read_only and "true" or "false"))
+    pass
+
+  @staticmethod
+  def _wc_format_of(wc_db_path):
+    """Return the working copy format of the given wc.db file."""
+    db = svntest.sqlite3.connect(wc_db_path)
+    c = db.cursor()
+    c.execute('pragma user_version;')
+    found_format = c.fetchone()[0]
+    db.close()
+    return found_format
+
+  def read_wc_formats(self):
+    """Return a dictionary mapping working copy root relpaths to their
+    format numbers.
+
+    The relpaths are relative to self.wc_dir.
+
+    The return value will always contain an empty string key.
+    """
+    dot_svn = svntest.main.get_admin_name()
+    ret = dict()
+    for root, dirs, files in os.walk(self.wc_dir):
+      if dot_svn in dirs:
+        wc_db_path = os.path.join(root, dot_svn, 'wc.db')
+        # If we didn't check existence, wc.db would be auto-created if .svn
+        # exists and .svn/wc.db doesn't.
+        if os.path.exists(wc_db_path):
+          ret[root[len(self.wc_dir)+1:]] = self._wc_format_of(wc_db_path)
+    return { k.replace(os.sep, '/') : ret[k] for k in ret }
 
 def is_url(target):
   return (target.startswith('^/')

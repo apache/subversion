@@ -19,10 +19,11 @@
 #
 #
 import unittest, weakref, setup_path
-import os, tempfile
+import os, tempfile, gc
 import svn.core, svn.client, libsvn.core
 from svn.core import *
 from libsvn.core import application_pool, GenericSWIGWrapper
+import utils
 
 # Test case for the new automatic pool management infrastructure
 
@@ -207,6 +208,51 @@ class PoolTestCase(unittest.TestCase):
 
     # We can still destroy and create pools at will
     svn_pool_destroy(svn_pool_create())
+
+  def _test_pools_in_circular_reference(self, finalizer=False):
+
+    class Circular(object):
+
+      def __init__(self, pool):
+        self.pool = pool
+        self.loop = None
+
+      if finalizer:
+        def __del__(self):
+          self.pool = self.loop = None
+
+    def create_circularl():
+      pool = Pool(libsvn.core.application_pool)
+      subpool1 = Pool(pool)
+      subpool2 = Pool(pool)
+      circularly1 = Circular(pool)
+      circularly2 = Circular(subpool2)
+      circularly3 = Circular(subpool1)
+      circularly1.loop = circularly3
+      circularly2.loop = circularly1
+      circularly3.loop = circularly2
+      refs = weakref.WeakValueDictionary()
+      refs['pool'] = pool
+      refs['subpool1'] = subpool1
+      refs['subpool2'] = subpool2
+      return refs
+
+    refs = create_circularl()
+    self.assertEqual({'pool', 'subpool1', 'subpool2'},
+                     set(name for name, pool in refs.items()
+                              if pool is not None))
+    gc.collect()
+    self.assertEqual(set(), set(name for name, pool in refs.items()
+                                     if pool is not None))
+
+  def test_pools_in_circular_reference_without_finalizer(self):
+    self._test_pools_in_circular_reference(finalizer=False)
+
+  @unittest.skipIf(not utils.IS_PY3,
+                   "Python 2 cannot collect garbage which involves circular "
+                   "references with finalizer")
+  def test_pools_in_circular_reference_with_finalizer(self):
+    self._test_pools_in_circular_reference(finalizer=True)
 
 def suite():
   return unittest.defaultTestLoader.loadTestsFromTestCase(PoolTestCase)

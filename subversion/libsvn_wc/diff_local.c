@@ -1,6 +1,6 @@
 /*
- * diff_pristine.c -- A simple diff walker which compares local files against
- *                    their pristine versions.
+ * diff_local.c -- A simple diff walker which compares local files against
+ *                 their pristine versions.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -88,9 +88,6 @@ struct diff_baton
 
   /* Should this diff ignore node ancestry? */
   svn_boolean_t ignore_ancestry;
-
-  /* Hash whose keys are const char * changelist names. */
-  apr_hash_t *changelist_hash;
 
   /* Cancel function/baton */
   svn_cancel_func_t cancel_func;
@@ -249,11 +246,6 @@ diff_status_callback(void *baton,
   if (eb->cur && eb->cur->skip_children)
     return SVN_NO_ERROR;
 
-  if (eb->changelist_hash != NULL
-      && (!status->changelist
-          || ! svn_hash_gets(eb->changelist_hash, status->changelist)))
-    return SVN_NO_ERROR; /* Filtered via changelist */
-
   /* This code does about the same thing as the inner body of
      walk_local_nodes_diff() in diff_editor.c, except that
      it is already filtered by the status walker, doesn't have to
@@ -289,7 +281,8 @@ diff_status_callback(void *baton,
       {
         local_only = TRUE; /* Only report additions */
       }
-    else if (db_status == svn_wc__db_status_normal)
+    else if (db_status == svn_wc__db_status_normal
+             || db_status == svn_wc__db_status_incomplete)
       {
         /* Simple diff */
         base_kind = db_kind;
@@ -305,7 +298,8 @@ diff_status_callback(void *baton,
                                          eb->db, local_abspath,
                                          scratch_pool, scratch_pool));
 
-        if (base_status != svn_wc__db_status_normal)
+        if (base_status != svn_wc__db_status_normal
+            && base_status != svn_wc__db_status_incomplete)
           return SVN_NO_ERROR;
       }
     else
@@ -320,7 +314,8 @@ diff_status_callback(void *baton,
                                          eb->db, local_abspath,
                                          scratch_pool, scratch_pool));
 
-        if (base_status != svn_wc__db_status_normal)
+        if (base_status != svn_wc__db_status_normal
+            && base_status != svn_wc__db_status_incomplete)
           local_only = TRUE;
         else if (base_kind != db_kind || !eb->ignore_ancestry)
           {
@@ -358,7 +353,6 @@ diff_status_callback(void *baton,
             SVN_ERR(svn_wc__diff_base_working_diff(db, child_abspath,
                                                    child_relpath,
                                                    SVN_INVALID_REVNUM,
-                                                   eb->changelist_hash,
                                                    eb->processor,
                                                    eb->cur
                                                         ? eb->cur->baton
@@ -397,12 +391,22 @@ diff_status_callback(void *baton,
 
     if (local_only && (db_status != svn_wc__db_status_deleted))
       {
+        /* Moved from. Relative from diff anchor*/
+        const char *moved_from_relpath = NULL;
+
+        if (status->moved_from_abspath)
+          {
+            moved_from_relpath = svn_dirent_skip_ancestor(
+                                          eb->anchor_abspath,
+                                          status->moved_from_abspath);
+          }
+
         if (db_kind == svn_node_file)
           SVN_ERR(svn_wc__diff_local_only_file(db, child_abspath,
                                                child_relpath,
+                                               moved_from_relpath,
                                                eb->processor,
                                                eb->cur ? eb->cur->baton : NULL,
-                                               eb->changelist_hash,
                                                FALSE,
                                                eb->cancel_func,
                                                eb->cancel_baton,
@@ -410,9 +414,9 @@ diff_status_callback(void *baton,
         else if (db_kind == svn_node_dir)
           SVN_ERR(svn_wc__diff_local_only_dir(db, child_abspath,
                                               child_relpath, depth_below_here,
+                                              moved_from_relpath,
                                               eb->processor,
                                               eb->cur ? eb->cur->baton : NULL,
-                                              eb->changelist_hash,
                                               FALSE,
                                               eb->cancel_func,
                                               eb->cancel_baton,
@@ -429,8 +433,7 @@ diff_status_callback(void *baton,
 
 /* Public Interface */
 svn_error_t *
-svn_wc__diff7(const char **root_relpath,
-              svn_boolean_t *root_is_dir,
+svn_wc__diff7(svn_boolean_t anchor_at_given_paths,
               svn_wc_context_t *wc_ctx,
               const char *local_abspath,
               svn_depth_t depth,
@@ -455,34 +458,46 @@ svn_wc__diff7(const char **root_relpath,
 
   eb.anchor_abspath = local_abspath;
 
-  if (root_relpath)
+  if (anchor_at_given_paths)
     {
+      /* Anchor the underlying diff processor at the parent of
+         LOCAL_ABSPATH (if possible), and adjust so the outgoing
+         DIFF_PROCESSOR is always anchored at LOCAL_ABSPATH. */
+      /* ### Why anchor the underlying diff processor at the parent? */
       svn_boolean_t is_wcroot;
 
       SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot,
                                    wc_ctx->db, local_abspath, scratch_pool));
 
       if (!is_wcroot)
-        eb.anchor_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+        {
+          const char *relpath;
+
+          eb.anchor_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+          relpath = svn_dirent_basename(local_abspath, NULL);
+          diff_processor = svn_diff__tree_processor_filter_create(
+                             diff_processor, relpath, scratch_pool);
+        }
     }
   else if (kind != svn_node_dir)
     eb.anchor_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  if (root_relpath)
-    *root_relpath = apr_pstrdup(result_pool,
-                                svn_dirent_skip_ancestor(eb.anchor_abspath,
-                                                         local_abspath));
-  if (root_is_dir)
-    *root_is_dir = (kind == svn_node_dir);
+  /* Apply changelist filtering to the output */
+  if (changelist_filter && changelist_filter->nelts)
+    {
+      apr_hash_t *changelist_hash;
+
+      SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
+                                         result_pool));
+      diff_processor = svn_wc__changelist_filter_tree_processor_create(
+                         diff_processor, wc_ctx, eb.anchor_abspath,
+                         changelist_hash, result_pool);
+    }
 
   eb.db = wc_ctx->db;
   eb.processor = diff_processor;
   eb.ignore_ancestry = ignore_ancestry;
   eb.pool = scratch_pool;
-
-  if (changelist_filter && changelist_filter->nelts)
-    SVN_ERR(svn_hash_from_cstring_keys(&eb.changelist_hash, changelist_filter,
-                                       scratch_pool));
 
   if (ignore_ancestry)
     get_all = TRUE; /* We need unmodified descendants of copies */
@@ -532,7 +547,7 @@ svn_wc__diff7(const char **root_relpath,
 }
 
 svn_error_t *
-svn_wc_diff6(svn_wc_context_t *wc_ctx,
+svn_wc_diff7(svn_wc_context_t *wc_ctx,
              const char *local_abspath,
              const svn_wc_diff_callbacks4_t *callbacks,
              void *callback_baton,
@@ -560,7 +575,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
     processor = svn_diff__tree_processor_copy_as_changed_create(processor,
                                                                 scratch_pool);
 
-  return svn_error_trace(svn_wc__diff7(NULL, NULL,
+  return svn_error_trace(svn_wc__diff7(FALSE,
                                        wc_ctx, local_abspath,
                                        depth,
                                        ignore_ancestry,

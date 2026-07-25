@@ -158,12 +158,37 @@ extern "C" {
  * Bumped in r1395109.
  *
  * == 1.8.x shipped with format 31
- * 
+ * == 1.9.x shipped with format 31
+ * == 1.10.x shipped with format 31
+ * == 1.11.x shipped with format 31
+ *
+ * The bump to 32 adds support for optional pristine contents; see the docstring
+ * of STMT_UPGRADE_TO_32 for details.
+ *
+ * == 1.15.x shipped with format 32 and multi-wc-format support
+ *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 31
+/* The newest WC format this client supports.
+ *
+ * @see svn_wc__max_supported_format()
+ */
+/* IMPORTANT: Update SVN_WC__VERSIONS_ALSO_RAN (below)
+              and svntest.main.wc_format()
+              whenever you change this value! */
+#define SVN_WC__VERSION 32
 
+/* The minimum WC version supported by the client.
+ *
+ * @see svn_wc__min_supported_format()
+ */
+/* IMPORTANT: See IMPORTANT at SVN_WC__VERSION (above). */
+#define SVN_WC__SUPPORTED_VERSION 31
+
+/* The default WC version that the Subversion library should create
+ * (or upgrade to) when not otherwise specified. */
+#define SVN_WC__DEFAULT_VERSION SVN_WC__SUPPORTED_VERSION
 
 /* Formats <= this have no concept of "revert text-base/props".  */
 #define SVN_WC__NO_REVERT_FILES 4
@@ -190,15 +215,16 @@ extern "C" {
 /* A version < this has no work queue (see workqueue.h).  */
 #define SVN_WC__HAS_WORK_QUEUE 13
 
-/* Return a string indicating the released version (or versions) of
- * Subversion that used WC format number WC_FORMAT, or some other
- * suitable string if no released version used WC_FORMAT.
- *
- * ### It's not ideal to encode this sort of knowledge in this low-level
- * library.  On the other hand, it doesn't need to be updated often and
- * should be easily found when it does need to be updated.  */
-const char *
-svn_wc__version_string_from_format(int wc_format);
+/* While we still have this DB version we should verify if there is
+   sqlite_stat1 table on opening */
+#define SVN_WC__ENSURE_STAT1_TABLE 31
+
+/* Starting from this version, pristine content is optional and can be
+ * fetched on demand.  */
+#define SVN_WC__HAS_OPTIONAL_PRISTINE 32
+
+/* Starting from this version, the DB stores per-WC settings. */
+#define SVN_WC__HAS_SETTINGS 32
 
 /* Return true iff error E indicates an "is not a working copy" type
    of error, either because something wasn't a working copy at all, or
@@ -249,52 +275,6 @@ svn_wc__context_create_with_db(svn_wc_context_t **wc_ctx,
 apr_pool_t *
 svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue);
 
-
-/** Internal helper for svn_wc_process_committed_queue2().
- *
- * ### If @a queue is NULL, then ...?
- * ### else:
- * Bump an item from @a queue (the one associated with @a
- * local_abspath) to @a new_revnum after a commit succeeds, recursing
- * if @a recurse is set.
- *
- * @a new_date is the (server-side) date of the new revision, or 0.
- *
- * @a rev_author is the (server-side) author of the new
- * revision; it may be @c NULL.
- *
- * @a new_dav_cache is a hash of dav property changes to be made to
- * the @a local_abspath.
- *   ### [JAF]  Is it? See svn_wc_queue_committed3(). It ends up being
- *   ### assigned as a whole to wc.db:BASE_NODE:dav_cache.
- *
- * If @a no_unlock is set, don't release any user locks on @a
- * local_abspath; otherwise release them as part of this processing.
- *
- * If @a keep_changelist is set, don't remove any changeset assignments
- * from @a local_abspath; otherwise, clear it of such assignments.
- *
- * If @a sha1_checksum is non-NULL, use it to identify the node's pristine
- * text.
- *
- * Set TOP_OF_RECURSE to TRUE to show that this the top of a possibly
- * recursive commit operation.
- */
-svn_error_t *
-svn_wc__process_committed_internal(svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   svn_boolean_t recurse,
-                                   svn_boolean_t top_of_recurse,
-                                   svn_revnum_t new_revnum,
-                                   apr_time_t new_date,
-                                   const char *rev_author,
-                                   apr_hash_t *new_dav_cache,
-                                   svn_boolean_t no_unlock,
-                                   svn_boolean_t keep_changelist,
-                                   const svn_checksum_t *sha1_checksum,
-                                   const svn_wc_committed_queue_t *queue,
-                                   apr_pool_t *scratch_pool);
-
 
 /*** Update traversals. ***/
 
@@ -329,6 +309,7 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_TMP                 "tmp"
 #define SVN_WC__ADM_PRISTINE            "pristine"
 #define SVN_WC__ADM_NONEXISTENT_PATH    "nonexistent-path"
+#define SVN_WC__ADM_EXPERIMENTAL        "experimental"
 
 /* The basename of the ".prej" file, if a directory ever has property
    conflicts.  This .prej file will appear *within* the conflicted
@@ -433,7 +414,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
 
    Property changes sent by the update are provided in PROP_DIFF.
 
-   For a complete description, see svn_wc_merge5() for which this is
+   For a complete description, see svn_wc_merge6() for which this is
    the (loggy) implementation.
 
    *WORK_ITEMS will be allocated in RESULT_POOL. All temporary allocations
@@ -519,9 +500,9 @@ svn_wc__conflicted_for_update_p(svn_boolean_t *conflicted_p,
                                 apr_pool_t *scratch_pool);
 
 
-/* Internal version of svn_wc_transmit_text_deltas3(). */
+/* Internal version of svn_wc_transmit_text_deltas4(). */
 svn_error_t *
-svn_wc__internal_transmit_text_deltas(const char **tempfile,
+svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
                                       const svn_checksum_t **new_text_base_md5_checksum,
                                       const svn_checksum_t **new_text_base_sha1_checksum,
                                       svn_wc__db_t *db,
@@ -543,12 +524,14 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
 /* Library-internal version of svn_wc_ensure_adm4(). */
 svn_error_t *
 svn_wc__internal_ensure_adm(svn_wc__db_t *db,
+                            int target_format,
                             const char *local_abspath,
                             const char *url,
                             const char *repos_root_url,
                             const char *repos_uuid,
                             svn_revnum_t revision,
                             svn_depth_t depth,
+                            svn_boolean_t store_pristine,
                             apr_pool_t *scratch_pool);
 
 
@@ -623,19 +606,9 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
-/* Internal version of svn_wc__node_get_repos_info() */
-svn_error_t *
-svn_wc__internal_get_repos_info(svn_revnum_t *revision,
-                                const char **repos_relpath,
-                                const char **repos_root_url,
-                                const char **repos_uuid,
-                                svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
-
 /* Upgrade the wc sqlite database given in SDB for the wc located at
-   WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.
+   WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT,
+   and the intended format is given by TARGET_FORMAT.
    After the upgrade is complete (to as far as the automatic upgrade will
    perform), the resulting format is RESULT_FORMAT. All allocations are
    performed in SCRATCH_POOL.  */
@@ -644,7 +617,17 @@ svn_wc__upgrade_sdb(int *result_format,
                     const char *wcroot_abspath,
                     svn_sqlite__db_t *sdb,
                     int start_format,
+                    int target_format,
                     apr_pool_t *scratch_pool);
+
+/* The schema-update part of svn_wc__upgrade_sdb. */
+svn_error_t *
+svn_wc__update_schema(int *result_format,
+                      const char *wcroot_abspath,
+                      svn_sqlite__db_t *sdb,
+                      int start_format,
+                      int target_format,
+                      apr_pool_t *scratch_pool);
 
 /* Create a conflict skel from the old separated data */
 svn_error_t *
@@ -676,7 +659,7 @@ svn_wc__write_check(svn_wc__db_t *db,
                     const char *local_abspath,
                     apr_pool_t *scratch_pool);
 
-/* Read into CONFLICTS svn_wc_conflict_description3_t* structs
+/* Read into CONFLICTS svn_wc_conflict_description2_t* structs
  * for all conflicts that have LOCAL_ABSPATH as victim.
  *
  * Victim must be versioned or be part of a tree conflict.
@@ -688,9 +671,11 @@ svn_wc__write_check(svn_wc__db_t *db,
  */
 svn_error_t *
 svn_wc__read_conflicts(const apr_array_header_t **conflicts,
+                       svn_skel_t **conflict_skel,
                        svn_wc__db_t *db,
                        const char *local_abspath,
                        svn_boolean_t create_tempfiles,
+                       svn_boolean_t only_tree_conflict,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
@@ -779,6 +764,7 @@ svn_wc__node_has_local_mods(svn_boolean_t *modified,
                             svn_boolean_t *all_edits_are_deletes,
                             svn_wc__db_t *db,
                             const char *local_abspath,
+                            svn_boolean_t ignore_unversioned,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool);

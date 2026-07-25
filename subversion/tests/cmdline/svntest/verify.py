@@ -24,10 +24,15 @@
 #    under the License.
 ######################################################################
 
-import re, sys
+import os, re
 from difflib import unified_diff, ndiff
 import pprint
 import logging
+import itertools
+from io import BytesIO
+from typing import Iterable
+
+import xml.etree.ElementTree
 
 import svntest
 
@@ -76,6 +81,9 @@ class SVNDumpParseError(svntest.Failure):
   """Exception raised if parsing a dump file fails"""
   pass
 
+class SVNXMLSchemaValidationError(SVNUnexpectedOutput):
+  """Exception raised if XML output failed validation against its schema"""
+  pass
 
 ######################################################################
 # Comparison of expected vs. actual output
@@ -109,6 +117,8 @@ class ExpectedOutput(object):
   def __init__(self, expected, match_all=True):
     """Initialize the expected output to EXPECTED which is a string, or
        a list of strings.
+
+       See also: svntest.verify.createExpectedOutput().
     """
     assert expected is not None
     self.expected = expected
@@ -148,8 +158,9 @@ class ExpectedOutput(object):
        MESSAGE unless it is None, the expected lines, the ACTUAL lines,
        and a diff, all labeled with LABEL.
     """
-    display_lines(message, self.expected, actual, label, label)
-    display_lines_diff(self.expected, actual, label, label)
+    e_label = label + ' (match_all=%s)' % (self.match_all,)
+    display_lines(message, self.expected, actual, e_label, label)
+    display_lines_diff(self.expected, actual, e_label, label)
 
 
 class AnyOutput(ExpectedOutput):
@@ -179,17 +190,41 @@ class AnyOutput(ExpectedOutput):
       logger.warn(message)
 
 
+def re_fullmatch(pattern, string, flags=0):
+  """If the whole STRING matches the regular expression PATTERN,
+     return a corresponding match object.
+     Based on re.fullmatch() in Python 3.4.
+  """
+  if pattern.endswith('$'):
+    return re.match(pattern, string, flags)
+
+  return re.match(pattern + '$', string, flags)
+
+def regex_fullmatch(rx, string):
+  """If the whole STRING matches the compiled regular expression RX,
+     return a corresponding match object.
+     Based on regex.fullmatch() in Python 3.4.
+  """
+  if rx.pattern.endswith('$'):
+    return rx.match(string)
+
+  return re_fullmatch(rx.pattern, string, rx.flags)
+
 class RegexOutput(ExpectedOutput):
   """Matches a single regular expression.
 
      If MATCH_ALL is true, every actual line must match the RE.  If
      MATCH_ALL is false, at least one actual line must match the RE.  In
      any case, there must be at least one line of actual output.
+
+     The RE must match a prefix of the actual line, in contrast to the
+     RegexListOutput and UnorderedRegexListOutput classes which match
+     whole lines.
   """
 
   def __init__(self, expected, match_all=True):
     "EXPECTED is a regular expression string."
-    assert isinstance(expected, str)
+    assert isinstance(expected, str) or isinstance(expected, bytes)
     ExpectedOutput.__init__(self, expected, match_all)
     self.expected_re = re.compile(expected)
 
@@ -210,7 +245,8 @@ class RegexOutput(ExpectedOutput):
       return any(self.expected_re.match(line) for line in actual)
 
   def display_differences(self, message, label, actual):
-    display_lines(message, self.expected, actual, label + ' (regexp)', label)
+    e_label = label + ' (regexp, match_all=%s)' % (self.match_all,)
+    display_lines(message, self.expected, actual, e_label, label)
 
   def insert(self, index, line):
     self.expected.insert(index, line)
@@ -226,6 +262,9 @@ class RegexListOutput(ExpectedOutput):
      ones.
 
      In any case, there must be at least one line of actual output.
+
+     The REs must match whole actual lines, in contrast to the RegexOutput
+     class which matches a prefix of the actual line.
   """
 
   def __init__(self, expected, match_all=True):
@@ -241,18 +280,37 @@ class RegexListOutput(ExpectedOutput):
 
     if self.match_all:
       return (len(self.expected_res) == len(actual) and
-              all(e.match(a) for e, a in zip(self.expected_res, actual)))
+              all(regex_fullmatch(e, a) for e, a in zip(self.expected_res, actual)))
 
     i_expected = 0
     for actual_line in actual:
-      if self.expected_res[i_expected].match(actual_line):
+      if regex_fullmatch(self.expected_res[i_expected], actual_line):
         i_expected += 1
         if i_expected == len(self.expected_res):
           return True
     return False
 
   def display_differences(self, message, label, actual):
-    display_lines(message, self.expected, actual, label + ' (regexp)', label)
+    e_label = label + ' (regexp, match_all=%s)' % (self.match_all,)
+    display_lines(message, self.expected, actual, e_label, label)
+
+    assert actual is not None
+    if not isinstance(actual, list):
+      actual = [actual]
+
+    if self.match_all:
+      logger.warn('DIFF ' + label + ':')
+      if len(self.expected) != len(actual):
+        logger.warn('# Expected %d lines; actual %d lines' %
+                    (len(self.expected), len(actual)))
+      for e, a in itertools.zip_longest(self.expected_res, actual):
+        if e is not None and a is not None and regex_fullmatch(e, a):
+          logger.warn("|  " + repr(a))
+        else:
+          if e is not None:
+            logger.warn("| -" + repr(e.pattern))
+          if a is not None:
+            logger.warn("| +" + repr(a))
 
   def insert(self, index, line):
     self.expected.insert(index, line)
@@ -277,8 +335,9 @@ class UnorderedOutput(ExpectedOutput):
     return sorted(self.expected) == sorted(actual)
 
   def display_differences(self, message, label, actual):
-    display_lines(message, self.expected, actual, label + ' (unordered)', label)
-    display_lines_diff(self.expected, actual, label + ' (unordered)', label)
+    e_label = label + ' (unordered)'
+    display_lines(message, self.expected, actual, e_label, label)
+    display_lines_diff(sorted(self.expected), sorted(actual), e_label, label)
 
 
 class UnorderedRegexListOutput(ExpectedOutput):
@@ -293,6 +352,9 @@ class UnorderedRegexListOutput(ExpectedOutput):
      expressions.  The implementation matches each expression in turn to
      the first unmatched actual line that it can match, and does not try
      all the permutations when there are multiple possible matches.
+
+     The REs must match whole actual lines, in contrast to the RegexOutput
+     class which matches a prefix of the actual line.
   """
 
   def __init__(self, expected):
@@ -303,13 +365,16 @@ class UnorderedRegexListOutput(ExpectedOutput):
     assert actual is not None
     if not isinstance(actual, list):
       actual = [actual]
+    else:
+      # copy the list so we can remove elements without affecting caller
+      actual = actual[:]
 
     if len(self.expected) != len(actual):
       return False
     for e in self.expected:
       expect_re = re.compile(e)
       for actual_line in actual:
-        if expect_re.match(actual_line):
+        if regex_fullmatch(expect_re, actual_line):
           actual.remove(actual_line)
           break
       else:
@@ -318,9 +383,30 @@ class UnorderedRegexListOutput(ExpectedOutput):
     return True
 
   def display_differences(self, message, label, actual):
-    display_lines(message, self.expected, actual,
-                  label + ' (regexp) (unordered)', label)
+    e_label = label + ' (regexp) (unordered)'
+    display_lines(message, self.expected, actual, e_label, label)
 
+    assert actual is not None
+    if not isinstance(actual, list):
+      actual = [actual]
+    else:
+      # copy the list so we can remove elements without affecting caller
+      actual = actual[:]
+
+    logger.warn('DIFF ' + label + ':')
+    if len(self.expected) != len(actual):
+      logger.warn('# Expected %d lines; actual %d lines' %
+                  (len(self.expected), len(actual)))
+    for e in self.expected:
+      expect_re = re.compile(e)
+      for actual_line in actual:
+        if regex_fullmatch(expect_re, actual_line):
+          actual.remove(actual_line)
+          break
+      else:
+        logger.warn("| -" + expect_re.pattern.rstrip())
+    for a in actual:
+      logger.warn("| +" + a.rstrip())
 
 class AlternateOutput(ExpectedOutput):
   """Matches any one of a list of ExpectedOutput instances.
@@ -416,9 +502,10 @@ def compare_and_display_lines(message, label, expected, actual,
   if not isinstance(expected, ExpectedOutput):
     expected = ExpectedOutput(expected)
 
-  if isinstance(actual, str):
-    actual = [actual]
-  actual = svntest.main.filter_dbg(actual)
+  actual = svntest.main.ensure_list(actual)
+  if len(actual) > 0:
+    is_binary = not isinstance(actual[0], str)
+    actual = svntest.main.filter_dbg(actual, is_binary)
 
   if not expected.matches(actual):
     expected.display_differences(message, label, actual)
@@ -464,25 +551,28 @@ def verify_exit_code(message, actual, expected,
 # A simple dump file parser.  While sufficient for the current
 # testsuite it doesn't cope with all valid dump files.
 class DumpParser:
-  def __init__(self, lines):
+  def __init__(self, lines, ignore_sha1=False):
     self.current = 0
     self.lines = lines
     self.parsed = {}
+    self.ignore_sha1 = ignore_sha1
 
   def parse_line(self, regex, required=True):
     m = re.match(regex, self.lines[self.current])
     if not m:
       if required:
         raise SVNDumpParseError("expected '%s' at line %d\n%s"
+                                "\nPrevious lines:\n%s"
                                 % (regex, self.current,
-                                   self.lines[self.current]))
+                                   self.lines[self.current],
+                                   ''.join(self.lines[max(0,self.current - 10):self.current])))
       else:
         return None
     self.current += 1
     return m.group(1)
 
   def parse_blank(self, required=True):
-    if self.lines[self.current] != '\n':  # Works on Windows
+    if self.lines[self.current] != b'\n':  # Works on Windows
       if required:
         raise SVNDumpParseError("expected blank at line %d\n%s"
                                 % (self.current, self.lines[self.current]))
@@ -491,62 +581,91 @@ class DumpParser:
     self.current += 1
     return True
 
+  def parse_header(self, header):
+    regex = b'([^:]*): (.*)$'
+    m = re.match(regex, self.lines[self.current])
+    if not m:
+      raise SVNDumpParseError("expected a header at line %d, but found:\n%s"
+                              % (self.current, self.lines[self.current]))
+    self.current += 1
+    return m.groups()
+
+  def parse_headers(self):
+    headers = []
+    while self.lines[self.current] != b'\n':
+      key, val = self.parse_header(self)
+      headers.append((key, val))
+    return headers
+
+
+  def parse_boolean(self, header, required):
+    return self.parse_line(header + b': (false|true)$', required)
+
   def parse_format(self):
-    return self.parse_line('SVN-fs-dump-format-version: ([0-9]+)$')
+    return self.parse_line(b'SVN-fs-dump-format-version: ([0-9]+)$')
 
   def parse_uuid(self):
-    return self.parse_line('UUID: ([0-9a-z-]+)$')
+    return self.parse_line(b'UUID: ([0-9a-z-]+)$')
 
   def parse_revision(self):
-    return self.parse_line('Revision-number: ([0-9]+)$')
+    return self.parse_line(b'Revision-number: ([0-9]+)$')
+
+  def parse_prop_delta(self):
+    return self.parse_line(b'Prop-delta: (false|true)$', required=False)
 
   def parse_prop_length(self, required=True):
-    return self.parse_line('Prop-content-length: ([0-9]+)$', required)
+    return self.parse_line(b'Prop-content-length: ([0-9]+)$', required)
 
   def parse_content_length(self, required=True):
-    return self.parse_line('Content-length: ([0-9]+)$', required)
+    return self.parse_line(b'Content-length: ([0-9]+)$', required)
 
   def parse_path(self):
-    path = self.parse_line('Node-path: (.+)$', required=False)
-    if not path and self.lines[self.current] == 'Node-path: \n':
-      self.current += 1
-      path = ''
+    path = self.parse_line(b'Node-path: (.*)$', required=False)
     return path
 
   def parse_kind(self):
-    return self.parse_line('Node-kind: (.+)$', required=False)
+    return self.parse_line(b'Node-kind: (.+)$', required=False)
 
   def parse_action(self):
-    return self.parse_line('Node-action: ([0-9a-z-]+)$')
+    return self.parse_line(b'Node-action: ([0-9a-z-]+)$')
 
   def parse_copyfrom_rev(self):
-    return self.parse_line('Node-copyfrom-rev: ([0-9]+)$', required=False)
+    return self.parse_line(b'Node-copyfrom-rev: ([0-9]+)$', required=False)
 
   def parse_copyfrom_path(self):
-    path = self.parse_line('Node-copyfrom-path: (.+)$', required=False)
+    path = self.parse_line(b'Node-copyfrom-path: (.+)$', required=False)
     if not path and self.lines[self.current] == 'Node-copyfrom-path: \n':
       self.current += 1
       path = ''
     return path
 
   def parse_copy_md5(self):
-    return self.parse_line('Text-copy-source-md5: ([0-9a-z]+)$', required=False)
+    return self.parse_line(b'Text-copy-source-md5: ([0-9a-z]+)$', required=False)
 
   def parse_copy_sha1(self):
-    return self.parse_line('Text-copy-source-sha1: ([0-9a-z]+)$', required=False)
+    return self.parse_line(b'Text-copy-source-sha1: ([0-9a-z]+)$', required=False)
 
   def parse_text_md5(self):
-    return self.parse_line('Text-content-md5: ([0-9a-z]+)$', required=False)
+    return self.parse_line(b'Text-content-md5: ([0-9a-z]+)$', required=False)
 
   def parse_text_sha1(self):
-    return self.parse_line('Text-content-sha1: ([0-9a-z]+)$', required=False)
+    return self.parse_line(b'Text-content-sha1: ([0-9a-z]+)$', required=False)
+
+  def parse_text_delta(self):
+    return self.parse_line(b'Text-delta: (false|true)$', required=False)
+
+  def parse_text_delta_base_md5(self):
+    return self.parse_line(b'Text-delta-base-md5: ([0-9a-f]+)$', required=False)
+
+  def parse_text_delta_base_sha1(self):
+    return self.parse_line(b'Text-delta-base-sha1: ([0-9a-f]+)$', required=False)
 
   def parse_text_length(self):
-    return self.parse_line('Text-content-length: ([0-9]+)$', required=False)
+    return self.parse_line(b'Text-content-length: ([0-9]+)$', required=False)
 
   def get_props(self):
     props = []
-    while not re.match('PROPS-END$', self.lines[self.current]):
+    while not re.match(b'PROPS-END$', self.lines[self.current]):
       props.append(self.lines[self.current])
       self.current += 1
     self.current += 1
@@ -562,7 +681,7 @@ class DumpParser:
         curprop[0] += 1
 
         # key / value
-        key = ''
+        key = b''
         while len(key) != klen + 1:
           key += props[curprop[0]]
           curprop[0] += 1
@@ -570,14 +689,20 @@ class DumpParser:
 
         return key
 
-      key = read_key_or_value(curprop)
-      value = read_key_or_value(curprop)
+      if props[curprop[0]].startswith(b'K'):
+        key = read_key_or_value(curprop)
+        value = read_key_or_value(curprop)
+      elif props[curprop[0]].startswith(b'D'):
+        key = read_key_or_value(curprop)
+        value = None
+      else:
+        raise
       prophash[key] = value
 
     return prophash
 
   def get_content(self, length):
-    content = ''
+    content = b''
     while len(content) < length:
       content += self.lines[self.current]
       self.current += 1
@@ -590,17 +715,46 @@ class DumpParser:
 
   def parse_one_node(self):
     node = {}
+
+    # optional 'kind' and required 'action' must be next
     node['kind'] = self.parse_kind()
     action = self.parse_action()
-    node['copyfrom_rev'] = self.parse_copyfrom_rev()
-    node['copyfrom_path'] = self.parse_copyfrom_path()
-    node['copy_md5'] = self.parse_copy_md5()
-    node['copy_sha1'] = self.parse_copy_sha1()
-    node['prop_length'] = self.parse_prop_length(required=False)
-    node['text_length'] = self.parse_text_length()
-    node['text_md5'] = self.parse_text_md5()
-    node['text_sha1'] = self.parse_text_sha1()
-    node['content_length'] = self.parse_content_length(required=False)
+
+    # read any remaining headers
+    headers_list = self.parse_headers()
+    headers = dict(headers_list)
+
+    # Content-length must be last, if present
+    if b'Content-length' in headers and headers_list[-1][0] != b'Content-length':
+      raise SVNDumpParseError("'Content-length' header is not last, "
+                              "in header block ending at line %d"
+                              % (self.current,))
+
+    # parse the remaining optional headers and store in specific keys in NODE
+    for key, header, regex in [
+        ('copyfrom_rev',    b'Node-copyfrom-rev',    b'([0-9]+)$'),
+        ('copyfrom_path',   b'Node-copyfrom-path',   b'(.*)$'),
+        ('copy_md5',        b'Text-copy-source-md5', b'([0-9a-z]+)$'),
+        ('copy_sha1',       b'Text-copy-source-sha1',b'([0-9a-z]+)$'),
+        ('prop_length',     b'Prop-content-length',  b'([0-9]+)$'),
+        ('text_length',     b'Text-content-length',  b'([0-9]+)$'),
+        ('text_md5',        b'Text-content-md5',     b'([0-9a-z]+)$'),
+        ('text_sha1',       b'Text-content-sha1',    b'([0-9a-z]+)$'),
+        ('content_length',  b'Content-length',       b'([0-9]+)$'),
+        ]:
+      if not header in headers:
+        node[key] = None
+        continue
+      if self.ignore_sha1 and (key in ['copy_sha1', 'text_sha1']):
+        node[key] = None
+        continue
+      m = re.match(regex, headers[header])
+      if not m:
+        raise SVNDumpParseError("expected '%s' at line %d\n%s"
+                                % (regex, self.current,
+                                   self.lines[self.current]))
+      node[key] = m.group(1)
+
     self.parse_blank()
     if node['prop_length']:
       node['props'] = self.get_props()
@@ -622,7 +776,7 @@ class DumpParser:
       if self.current >= len(self.lines):
         break
       path = self.parse_path()
-      if not path and not path is '':
+      if path is None:
         break
       if not nodes.get(path):
         nodes[path] = {}
@@ -660,17 +814,55 @@ class DumpParser:
     self.parse_all_revisions()
     return self.parsed
 
-def compare_dump_files(message, label, expected, actual):
+def compare_dump_files(label_expected, label_actual,
+                       expected, actual,
+                       ignore_uuid=False,
+                       expect_content_length_always=False,
+                       ignore_empty_prop_sections=False,
+                       ignore_number_of_blank_lines=False):
   """Parse two dump files EXPECTED and ACTUAL, both of which are lists
   of lines as returned by run_and_verify_dump, and check that the same
   revisions, nodes, properties, etc. are present in both dumps.
   """
-
-  parsed_expected = DumpParser(expected).parse()
+  parsed_expected = DumpParser(expected, not svntest.main.fs_has_sha1()).parse()
   parsed_actual = DumpParser(actual).parse()
 
+  if ignore_uuid:
+    parsed_expected['uuid'] = '<ignored>'
+    parsed_actual['uuid'] = '<ignored>'
+
+  for parsed in [parsed_expected, parsed_actual]:
+    for rev_name, rev_record in parsed.items():
+      #print "Found %s" % (rev_name,)
+      if b'nodes' in rev_record:
+        #print "Found %s.%s" % (rev_name, 'nodes')
+        for path_name, path_record in rev_record['nodes'].items():
+          #print "Found %s.%s.%s" % (rev_name, 'nodes', path_name)
+          for action_name, action_record in path_record.items():
+            #print "Found %s.%s.%s.%s" % (rev_name, 'nodes', path_name, action_name)
+
+            if expect_content_length_always:
+              if action_record.get('content_length') == None:
+                #print 'Adding: %s.%s.%s.%s.%s' % (rev_name, 'nodes', path_name, action_name, 'content_length=0')
+                action_record['content_length'] = '0'
+            if ignore_empty_prop_sections:
+              if action_record.get('prop_length') == '10':
+                #print 'Removing: %s.%s.%s.%s.%s' % (rev_name, 'nodes', path_name, action_name, 'prop_length')
+                action_record['prop_length'] = None
+                del action_record['props']
+                old_content_length = int(action_record['content_length'])
+                action_record['content_length'] = str(old_content_length - 10)
+            if ignore_number_of_blank_lines:
+              action_record['blanks'] = 0
+
   if parsed_expected != parsed_actual:
-    raise svntest.Failure('\n' + '\n'.join(ndiff(
+    print('DIFF of raw dumpfiles (including expected differences)')
+    print('--- ' + (label_expected or 'expected'))
+    print('+++ ' + (label_actual or 'actual'))
+    print(''.join(ndiff([repr(line) for line in expected],
+                        [repr(line) for line in actual])))
+    raise svntest.Failure('DIFF of parsed dumpfiles (ignoring expected differences)\n'
+                          + '\n'.join(ndiff(
           pprint.pformat(parsed_expected).splitlines(),
           pprint.pformat(parsed_actual).splitlines())))
 
@@ -755,22 +947,22 @@ def make_git_diff_header(target_path, repos_relpath,
   if add:
     output.extend([
       "diff --git a/" + repos_relpath + " b/" + repos_relpath + "\n",
-      "new file mode 10644\n",
+      "new file mode 100644\n",
     ])
     if text_changes:
       output.extend([
-        "--- /dev/null\t(" + old_tag + ")\n",
+        "--- a/" + repos_relpath + src_label + "\t(" + old_tag + ")\n",
         "+++ b/" + repos_relpath + dst_label + "\t(" + new_tag + ")\n"
       ])
   elif delete:
     output.extend([
       "diff --git a/" + repos_relpath + " b/" + repos_relpath + "\n",
-      "deleted file mode 10644\n",
+      "deleted file mode 100644\n",
     ])
     if text_changes:
       output.extend([
         "--- a/" + repos_relpath + src_label + "\t(" + old_tag + ")\n",
-        "+++ /dev/null\t(" + new_tag + ")\n"
+        "+++ b/" + repos_relpath + dst_label + "\t(" + new_tag + ")\n"
       ])
   elif cp:
     if copyfrom_rev:
@@ -840,7 +1032,7 @@ def make_diff_prop_added(pname, pval):
   ] + make_diff_prop_val("+", pval)
 
 def make_diff_prop_modified(pname, pval1, pval2):
-  """Return a property diff for modification of property PNAME, old value
+  r"""Return a property diff for modification of property PNAME, old value
      PVAL1, new value PVAL2.
 
      PVAL is a single string with no embedded newlines.  A newline at the
@@ -854,3 +1046,39 @@ def make_diff_prop_modified(pname, pval1, pval2):
     "## -1 +1 ##\n",
   ] + make_diff_prop_val("-", pval1) + make_diff_prop_val("+", pval2)
 
+
+__schema_dir = os.path.join(
+  os.path.dirname(
+    os.path.dirname(
+      os.path.dirname(
+        os.path.dirname(
+          os.path.abspath(__file__))))),
+  "svn", "schema")
+def validate_xml_schema(name: str, lines: Iterable[str]) -> None:
+  source = ''.join(lines)
+
+  if svntest.main.is_xml_schema_validation_enabled():
+    # Use full XML schema validation (requires lxml and rnc2rng packages)
+    schema_name = name + ".rnc"
+    try:
+      from lxml import etree #type:ignore
+      schema_file = os.path.join(__schema_dir, schema_name)
+      schema = etree.RelaxNG(file=schema_file)
+      document = etree.parse(BytesIO(source.encode("utf-8")))
+      if not schema.validate(document):
+        raise SVNXMLSchemaValidationError(schema.error_log)
+    except ImportError:
+      logger.error("XML: Module lxml.etree not found")
+      raise svntest.Failure
+    except Exception as ex:
+      logger.error("XML: " + str(ex))
+      logger.warning("XML:\n" + "\n".join(repr(line) for line in lines))
+      raise
+
+  # Always parse XML using built in XML parser to check structural validity.
+  try:
+    xml.etree.ElementTree.fromstring(source)
+  except Exception as ex:
+    logger.error("XML: " + str(ex))
+    logger.warning("XML:\n" + "\n".join(repr(line) for line in lines))
+    raise

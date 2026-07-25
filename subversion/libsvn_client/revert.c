@@ -50,41 +50,38 @@ struct revert_with_write_lock_baton {
   svn_boolean_t use_commit_times;
   const apr_array_header_t *changelists;
   svn_boolean_t clear_changelists;
+  svn_boolean_t metadata_only;
+  svn_boolean_t added_keep_local;
   svn_client_ctx_t *ctx;
+  svn_ra_session_t **ra_session_p;
 };
 
 /* (Note: All arguments are in the baton above.)
 
-   Attempt to revert LOCAL_ABSPATH.
+   Attempt to revert LOCAL_ABSPATH by calling svn_wc_revert7(), which
+   see for further details.
 
-   If DEPTH is svn_depth_empty, revert just the properties on the
-   directory; else if svn_depth_files, revert the properties and any
-   files immediately under the directory; else if
-   svn_depth_immediates, revert all of the preceding plus properties
-   on immediate subdirectories; else if svn_depth_infinity, revert
-   path and everything under it fully recursively.
-
-   CHANGELISTS is an array of const char * changelist names, used as a
-   restrictive filter on items reverted; that is, don't revert any
-   item unless it's a member of one of those changelists.  If
-   CHANGELISTS is empty (or altogether NULL), no changelist filtering occurs.
-
-   Consult CTX to determine whether or not to revert timestamp to the
-   time of last commit ('use-commit-times = yes').
-
-   If PATH is unversioned, return SVN_ERR_UNVERSIONED_RESOURCE. */
+   If the target isn't versioned, send a 'skip' notification and return
+   no error.
+ */
 static svn_error_t *
 revert(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   struct revert_with_write_lock_baton *b = baton;
   svn_error_t *err;
 
-  err = svn_wc_revert5(b->ctx->wc_ctx,
+  SVN_ERR(svn_client__textbase_sync(b->ra_session_p, b->local_abspath,
+                                    TRUE, TRUE, b->ctx, *b->ra_session_p,
+                                    result_pool, scratch_pool));
+
+  err = svn_wc_revert7(b->ctx->wc_ctx,
                        b->local_abspath,
                        b->depth,
                        b->use_commit_times,
                        b->changelists,
                        b->clear_changelists,
+                       b->metadata_only,
+                       b->added_keep_local,
                        b->ctx->cancel_func, b->ctx->cancel_baton,
                        b->ctx->notify_func2, b->ctx->notify_baton2,
                        scratch_pool);
@@ -98,35 +95,48 @@ revert(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
           || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
         {
           if (b->ctx->notify_func2)
-            (*b->ctx->notify_func2)(
-               b->ctx->notify_baton2,
-               svn_wc_create_notify(b->local_abspath, svn_wc_notify_skip,
-                                    scratch_pool),
-               scratch_pool);
+            {
+              svn_wc_notify_t *notify;
+
+              notify = svn_wc_create_notify(b->local_abspath,
+                                            svn_wc_notify_skip,
+                                            scratch_pool);
+
+              notify->err = err;
+
+              b->ctx->notify_func2(b->ctx->notify_baton2,
+                                   notify, scratch_pool);
+            }
           svn_error_clear(err);
         }
       else
         return svn_error_trace(err);
     }
 
+  SVN_ERR(svn_client__textbase_sync(NULL, b->local_abspath, FALSE, TRUE, b->ctx,
+                                    NULL, scratch_pool, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_client_revert3(const apr_array_header_t *paths,
+svn_client_revert4(const apr_array_header_t *paths,
                    svn_depth_t depth,
                    const apr_array_header_t *changelists,
                    svn_boolean_t clear_changelists,
+                   svn_boolean_t metadata_only,
+                   svn_boolean_t added_keep_local,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  apr_pool_t *subpool;
+  apr_pool_t *iterpool;
   svn_error_t *err = SVN_NO_ERROR;
   int i;
   svn_config_t *cfg;
   svn_boolean_t use_commit_times;
   struct revert_with_write_lock_baton baton;
+  svn_ra_session_t *ra_session;
 
   /* Don't even attempt to modify the working copy if any of the
    * targets look like URLs. URLs are invalid input. */
@@ -148,22 +158,22 @@ svn_client_revert3(const apr_array_header_t *paths,
                               SVN_CONFIG_OPTION_USE_COMMIT_TIMES,
                               FALSE));
 
-  subpool = svn_pool_create(pool);
-
+  iterpool = svn_pool_create(pool);
+  ra_session = NULL;
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       const char *local_abspath, *lock_target;
       svn_boolean_t wc_root;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
       /* See if we've been asked to cancel this operation. */
       if ((ctx->cancel_func)
           && ((err = ctx->cancel_func(ctx->cancel_baton))))
         goto errorful;
 
-      err = svn_dirent_get_absolute(&local_abspath, path, pool);
+      err = svn_dirent_get_absolute(&local_abspath, path, iterpool);
       if (err)
         goto errorful;
 
@@ -172,15 +182,19 @@ svn_client_revert3(const apr_array_header_t *paths,
       baton.use_commit_times = use_commit_times;
       baton.changelists = changelists;
       baton.clear_changelists = clear_changelists;
+      baton.metadata_only = metadata_only;
+      baton.added_keep_local = added_keep_local;
       baton.ctx = ctx;
+      baton.ra_session_p = &ra_session;
 
-      err = svn_wc__is_wcroot(&wc_root, ctx->wc_ctx, local_abspath, pool);
+      err = svn_wc__is_wcroot(&wc_root, ctx->wc_ctx, local_abspath, iterpool);
       if (err)
         goto errorful;
       lock_target = wc_root ? local_abspath
                             : svn_dirent_dirname(local_abspath, pool);
       err = svn_wc__call_with_write_lock(revert, &baton, ctx->wc_ctx,
-                                         lock_target, FALSE, pool, pool);
+                                         lock_target, FALSE,
+                                         pool, iterpool);
       if (err)
         goto errorful;
     }
@@ -196,10 +210,10 @@ svn_client_revert3(const apr_array_header_t *paths,
     if (paths->nelts == 1)
       sleep_path = APR_ARRAY_IDX(paths, 0, const char *);
 
-    svn_io_sleep_for_timestamps(sleep_path, subpool);
+    svn_io_sleep_for_timestamps(sleep_path, iterpool);
   }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return svn_error_trace(err);
 }

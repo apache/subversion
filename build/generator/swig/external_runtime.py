@@ -29,13 +29,12 @@ import os
 import re
 import fileinput
 import filecmp
+import subprocess
 
 if __name__ == "__main__":
   parent_dir = os.path.dirname(os.path.abspath(os.path.dirname(sys.argv[0])))
   sys.path[0:0] = [ parent_dir, os.path.dirname(parent_dir) ]
 import generator.swig
-import generator.util.executable
-_exec = generator.util.executable
 
 class Generator(generator.swig.Generator):
   """Generate external runtime files for SWIG"""
@@ -82,7 +81,7 @@ class Generator(generator.swig.Generator):
         out_file.write(open("%s/runtime.swg" % self.proxy_dir).read())
       out_file.close()
     else:
-      _exec.run("%s -%s -external-runtime %s" % (self.swig_path, lang, out))
+      subprocess.check_call([self.swig_path, "-"+lang, "-external-runtime", out])
 
     # SWIG 1.3.24-27 should include rubyhead.swg in their
     # external runtime, but they don't.

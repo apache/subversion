@@ -1,0 +1,94 @@
+#!/usr/bin/env zsh
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+set -e
+
+# setup
+0=${0:t}; NAME=$0
+svn=${SVN:-svn}
+svnadmin=${SVNADMIN:-svnadmin}
+
+usage() {
+  echo "usage: $NAME -r N:M"
+  echo "  will retrieve all log messages in the range rN:rM, open them in"
+  echo "  \$EDITOR, and commit any edits to them."
+  echo ""
+  echo "  Run this with cwd being a working copy of ^/subversion/trunk."
+  # TODO: We only need the cwd in case SVN_CLIENT__REVKIND_NEEDS_WC() is true
+  #   for N or M.  When N and M are both numeric or HEAD, teach this script
+  #   to disregard its cwd and contact ^/subversion/trunk directly.
+}
+
+# parse argv
+while getopts r: letter; do
+  if [[ $letter == r ]]; then
+    revision_range=$OPTARG
+  else
+    usage >&2
+    exit 1
+  fi
+done
+shift $((OPTIND - 1))
+[[ -n $revision_range ]] || { usage >&2; exit 1; }
+
+# get log messages
+cd "$(mktemp -d)"
+echo "${0}: Temporary directory: ${(q-)PWD}"
+revisions=( ${(f)"$(
+    # We use $OLDPWD rather than a URL in case $revision_range is, say,
+    # "BASE:HEAD".
+    $svn log -q -r $revision_range -- $OLDPWD |
+    grep '^r' | cut -d' ' -f1 | grep '^r[0-9]*$'
+)"} )
+for rN in $revisions; do
+  $svn propget --revprop -r $rN --strict 'svn:log' -- $OLDPWD > ./$rN &
+done
+wait
+
+# set up to detect which ones have changed
+$svnadmin create ./.r
+$svn checkout -q file://$PWD/.r ./
+$svn add -q ./r*
+$svn commit -q -m "Import revisions $revision_range"
+rm -rf ./.r # (!)
+
+# edit
+case $EDITOR in
+  (*vim*) $EDITOR -p ./r*;;
+  (*) $EDITOR ./r*;;
+esac
+
+# prompt for permission to continue
+if $svn status -q | grep -q ''; then
+  $svn status -q
+  read -q "?Commit the above propedits? " || { echo "${0}: exiting"; exit 0; }
+  echo ""
+else
+  echo "${0}: No changes."
+  echo "${0}: You can remove ${(q-)PWD} now."
+  exit 0
+fi
+
+# make propedits
+# TODO: make these changes atomically
+#   'svn propedit' is atomic and could drive a non-interactive $EDITOR, but for
+#   now, we just trust the committer to read commits@.
+targets=( ${(f)"$($svn status -q | grep '^M' | cut -c9-)"} )
+for i in $targets; do
+  $svn propset --revprop -r $i -F ./$i -- 'svn:log' $OLDPWD
+done

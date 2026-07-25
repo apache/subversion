@@ -23,6 +23,9 @@
 
 #include <apr_pools.h>
 #include <apr_general.h>
+#include <apr_md5.h>
+
+#define SVN_DEPRECATED
 
 #include "svn_types.h"
 #include "svn_io.h"
@@ -32,6 +35,7 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_hash.h"
+#include "svn_props.h"
 
 #include "utils.h"
 
@@ -138,7 +142,6 @@ test_node_get_base(const svn_test_opts_t *opts, apr_pool_t *pool)
                                       NULL,
                                       b->wc_ctx, local_abspath,
                                       TRUE /* ignore_enoent */,
-                                      FALSE /* show_hidden */,
                                       b->pool, b->pool));
         SVN_TEST_ASSERT(revision == subtest->base_rev);
         if (SVN_IS_VALID_REVNUM(subtest->base_rev))
@@ -305,6 +308,514 @@ test_externals_parse_erratic(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_legacy_commit1(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_wc_adm_access_t *adm_access;
+  const char *lambda;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "legacy_commit1", opts, pool));
+  SVN_ERR(sbox_add_and_commit_greek_tree(&b));
+
+  SVN_ERR(sbox_wc_copy(&b, "A", "A_copied"));
+
+  lambda = sbox_wc_path(&b, "A_copied/B/lambda");
+
+
+  SVN_ERR(svn_io_remove_file2(lambda, FALSE, pool));
+  SVN_ERR(svn_io_copy_file(sbox_wc_path(&b, "iota"), lambda, FALSE, pool));
+  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, b.wc_abspath, TRUE, -1,
+                           NULL, NULL, pool));
+
+  {
+    svn_wc_status2_t *status;
+
+    SVN_ERR(svn_wc_status2(&status, lambda, adm_access, pool));
+
+    SVN_TEST_ASSERT(status != NULL);
+    SVN_TEST_ASSERT(status->text_status == svn_wc_status_modified);
+    SVN_TEST_ASSERT(status->copied == TRUE);
+  }
+
+  /* Simulate a very old style svn ci . -m "QQQ" on the WC root */
+  SVN_ERR(svn_wc_process_committed4(sbox_wc_path(&b, "A_copied"), adm_access,
+                                    TRUE, 12, "2014-10-01T19:00:50.966679Z",
+                                    "me", NULL, TRUE, TRUE,
+                                    NULL, pool));
+
+  {
+    unsigned char digest[APR_MD5_DIGESTSIZE];
+
+    /* Use the fact that iota has the same checksum to ease committing */
+
+    SVN_ERR(svn_io_file_checksum (digest, lambda, pool));
+
+    SVN_ERR(svn_wc_process_committed4(lambda, adm_access,
+                                      TRUE, 12, "2014-10-01T19:00:50.966679Z",
+                                      "me", NULL, TRUE, TRUE,
+                                      digest, pool));
+  }
+
+  {
+    svn_wc_status2_t *status;
+
+    SVN_ERR(svn_wc_status2(&status, lambda, adm_access, pool));
+
+    /* Node is still modified, as we didn't change the text base! */
+    SVN_TEST_ASSERT(status != NULL);
+    SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+    SVN_TEST_ASSERT(status->copied == FALSE);
+  }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_legacy_commit2(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_wc_adm_access_t *adm_access;
+  const char *lambda;
+  svn_wc_committed_queue_t *queue;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "legacy_commit2", opts, pool));
+  SVN_ERR(sbox_add_and_commit_greek_tree(&b));
+
+  SVN_ERR(sbox_wc_copy(&b, "A", "A_copied"));
+
+  lambda = sbox_wc_path(&b, "A_copied/B/lambda");
+
+  SVN_ERR(svn_io_remove_file2(lambda, FALSE, pool));
+  SVN_ERR(svn_io_copy_file(sbox_wc_path(&b, "iota"), lambda, FALSE, pool));
+
+  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, b.wc_abspath, TRUE, -1,
+                           NULL, NULL, pool));
+
+  {
+    svn_wc_status2_t *status;
+
+    SVN_ERR(svn_wc_status2(&status, lambda, adm_access, pool));
+
+    SVN_TEST_ASSERT(status != NULL);
+    SVN_TEST_ASSERT(status->text_status == svn_wc_status_modified);
+    SVN_TEST_ASSERT(status->copied == TRUE);
+  }
+
+  /* Simulate an old style svn ci . -m "QQQ" on the WC root */
+  queue = svn_wc_committed_queue_create(pool);
+  SVN_ERR(svn_wc_queue_committed(&queue, sbox_wc_path(&b, "A_copied"), adm_access,
+                                 TRUE, NULL, FALSE, FALSE, NULL, pool));
+  {
+    unsigned char digest[APR_MD5_DIGESTSIZE];
+
+    /* Use the fact that iota has the same checksum to ease committing */
+
+    SVN_ERR(svn_io_file_checksum(digest, lambda, pool));
+
+    SVN_ERR(svn_wc_queue_committed(&queue, lambda, adm_access, FALSE, NULL,
+                                   FALSE, FALSE, digest, pool));
+  }
+
+  SVN_ERR(svn_wc_process_committed_queue(queue, adm_access,
+                                         12, "2014-10-01T19:00:50.966679Z",
+                                        "me", pool));
+
+  {
+    svn_wc_status2_t *status;
+
+    SVN_ERR(svn_wc_status2(&status, lambda, adm_access, pool));
+
+    /* Node is still modified, as we didn't change the text base! */
+    SVN_TEST_ASSERT(status != NULL);
+    SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+    SVN_TEST_ASSERT(status->copied == FALSE);
+  }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_internal_file_modified(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_boolean_t modified;
+  const char *iota_path;
+  apr_time_t time;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "internal_file_modified_p",
+                                   opts, pool));
+  SVN_ERR(sbox_add_and_commit_greek_tree(&b));
+
+  iota_path = sbox_wc_path(&b, "iota");
+
+  /* No modification, timestamps match.*/
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  /* Change timestamp on 'iota' and check. */
+  SVN_ERR(svn_io_file_affected_time(&time, iota_path, pool));
+  SVN_ERR(svn_io_set_file_affected_time(time + apr_time_from_sec(1),
+                                        iota_path, pool));
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  /* Modify 'iota' to be different size. */
+  SVN_ERR(sbox_file_write(&b, iota_path, "new iota"));
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  /* Working copy is smart and able to detect changes in files of different
+   * size even if timestamp didn't change. */
+  SVN_ERR(svn_io_set_file_affected_time(time, iota_path, pool));
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_working_file_writer_simple(const svn_test_opts_t *opts,
+                                apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  svn_wc__working_file_writer_t *writer;
+  svn_stream_t *stream;
+  const char *final_abspath;
+  svn_stringbuf_t *actual_content;
+
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir,
+                                    "working_file_writer_simple",
+                                    pool));
+
+  SVN_ERR(svn_wc__working_file_writer_open(&writer, tmp_dir, -1,
+                                           svn_subst_eol_style_none, NULL,
+                                           FALSE, NULL, FALSE, FALSE,
+                                           FALSE,
+                                           pool, pool));
+
+  stream = svn_wc__working_file_writer_get_stream(writer);
+  SVN_ERR(svn_stream_puts(stream, "content"));
+  SVN_ERR(svn_stream_close(stream));
+
+  SVN_ERR(svn_wc__working_file_writer_finalize(NULL, NULL, writer, pool));
+  final_abspath = svn_dirent_join(tmp_dir, "file", pool);
+  SVN_ERR(svn_wc__working_file_writer_install(writer, final_abspath, pool));
+
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content,
+                                   final_abspath,
+                                   pool));
+
+  SVN_TEST_STRING_ASSERT(actual_content->data, "content");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_working_file_writer_eol_repair(const svn_test_opts_t *opts,
+                                    apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  svn_wc__working_file_writer_t *writer;
+  svn_stream_t *stream;
+  const char *final_abspath;
+  svn_stringbuf_t *actual_content;
+
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir,
+                                    "working_file_writer_eol_repair",
+                                    pool));
+
+  SVN_ERR(svn_wc__working_file_writer_open(&writer, tmp_dir, -1,
+                                           svn_subst_eol_style_fixed, "\r\n",
+                                           TRUE /* repair_eol */,
+                                           NULL, FALSE, FALSE,
+                                           FALSE,
+                                           pool, pool));
+
+  stream = svn_wc__working_file_writer_get_stream(writer);
+  SVN_ERR(svn_stream_puts(stream, "content\n\r\n"));
+  SVN_ERR(svn_stream_close(stream));
+
+  SVN_ERR(svn_wc__working_file_writer_finalize(NULL, NULL, writer, pool));
+  final_abspath = svn_dirent_join(tmp_dir, "file", pool);
+  SVN_ERR(svn_wc__working_file_writer_install(writer, final_abspath, pool));
+
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content,
+                                   final_abspath,
+                                   pool));
+
+  SVN_TEST_STRING_ASSERT(actual_content->data, "content\r\n\r\n");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_working_file_writer_eol_inconsistent(const svn_test_opts_t *opts,
+                                          apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  svn_wc__working_file_writer_t *writer;
+  svn_stream_t *stream;
+  apr_hash_t *dirents;
+  svn_error_t *err;
+
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir,
+                                    "working_file_writer_eol_inconsistent",
+                                    pool));
+
+  SVN_ERR(svn_wc__working_file_writer_open(&writer, tmp_dir, -1,
+                                           svn_subst_eol_style_fixed, "\r\n",
+                                           FALSE /* repair_eol */,
+                                           NULL, FALSE, FALSE,
+                                           FALSE,
+                                           pool, pool));
+
+  /* With REPAIR_EOL disabled, expect to see an error when the line ending
+     inconsistency is detected by the stream. */
+  stream = svn_wc__working_file_writer_get_stream(writer);
+  err = svn_stream_puts(stream, "content\n\r\n");
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_IO_INCONSISTENT_EOL);
+
+  SVN_ERR(svn_wc__working_file_writer_close(writer));
+
+  SVN_ERR(svn_io_get_dirents3(&dirents, tmp_dir, TRUE, pool, pool));
+  SVN_TEST_INT_ASSERT(apr_hash_count(dirents), 0);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_internal_file_modified_keywords(const svn_test_opts_t *opts,
+                                     apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_boolean_t modified;
+  const char *iota_path;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "internal_file_modified_keywords",
+                                   opts, pool));
+  SVN_ERR(sbox_add_and_commit_greek_tree(&b));
+
+  iota_path = sbox_wc_path(&b, "iota");
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  /* Set svn:keywords, edit the file.  The file is modified. */
+  SVN_ERR(sbox_wc_propset(&b, SVN_PROP_KEYWORDS, "Revision", iota_path));
+  SVN_ERR(sbox_file_write(&b, iota_path, "$Revision$\n"));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  /* Commit the changes.  The file is not modified. */
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  /* Manually contract the keywords.  The file is modified, but only
+     if we ask for the exact comparison. */
+  SVN_ERR(sbox_file_write(&b, iota_path, "$Revision$\n"));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_internal_file_modified_eol_style(const svn_test_opts_t *opts,
+                                      apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_boolean_t modified;
+  const char *iota_path;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "internal_file_modified_eol_style",
+                                   opts, pool));
+  SVN_ERR(sbox_add_and_commit_greek_tree(&b));
+
+  iota_path = sbox_wc_path(&b, "iota");
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  /* Set svn:eol-style, edit the file.  The file is modified. */
+  SVN_ERR(sbox_wc_propset(&b, SVN_PROP_EOL_STYLE, "CRLF", iota_path));
+  SVN_ERR(sbox_file_write(&b, iota_path, "contents\r\n"));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  /* Commit the changes.  The file is not modified. */
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  /* Manually change the line ending to LF.  The file is modified, but only
+     if we ask for the exact comparison. */
+  SVN_ERR(sbox_file_write(&b, iota_path, "contents\n"));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  /* Manually change the line ending to CR.  The file is modified, but only
+     if we ask for the exact comparison. */
+  SVN_ERR(sbox_file_write(&b, iota_path, "contents\r"));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  /* Change the line ending back to CRLF.  The file is not modified. */
+  SVN_ERR(sbox_file_write(&b, iota_path, "contents\r\n"));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  /* Add an empty line and commit.  The file is not modified. */
+  SVN_ERR(sbox_file_write(&b, iota_path, "contents\r\n\r\n"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  /* Change one of the line endings to LF.  The file is modified, but only
+     if we ask for the exact comparison. */
+  SVN_ERR(sbox_file_write(&b, iota_path, "contents\n\r\n"));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_get_pristine_copy_path(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_boolean_t store_pristine;
+  const char *pristine_path;
+  svn_node_kind_t kind;
+  svn_stringbuf_t *actual_content;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "get_pristine_copy_path", opts, pool));
+
+  SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine,
+                                  b.wc_ctx->db, b.wc_abspath, pool));
+  if (!store_pristine)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "Test assumes a working copy with pristine");
+
+  SVN_ERR(sbox_file_write(&b, "file", "content"));
+  SVN_ERR(sbox_wc_add(&b, "file"));
+
+  SVN_ERR(svn_wc_get_pristine_copy_path(sbox_wc_path(&b, "file"),
+                                        &pristine_path, pool));
+  SVN_ERR(svn_io_check_path(pristine_path, &kind, pool));
+  SVN_TEST_INT_ASSERT(kind, svn_node_none);
+
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  SVN_ERR(svn_wc_get_pristine_copy_path(sbox_wc_path(&b, "file"),
+                                        &pristine_path, pool));
+  SVN_ERR(svn_io_check_path(pristine_path, &kind, pool));
+  SVN_TEST_INT_ASSERT(kind, svn_node_file);
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content, pristine_path, pool));
+  SVN_TEST_STRING_ASSERT(actual_content->data, "content");
+
+  SVN_ERR(sbox_wc_copy(&b, "file", "file2"));
+
+  SVN_ERR(svn_wc_get_pristine_copy_path(sbox_wc_path(&b, "file2"),
+                                        &pristine_path, pool));
+  SVN_ERR(svn_io_check_path(pristine_path, &kind, pool));
+  SVN_TEST_INT_ASSERT(kind, svn_node_file);
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content, pristine_path, pool));
+  SVN_TEST_STRING_ASSERT(actual_content->data, "content");
+
+  return SVN_NO_ERROR;
+}
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -322,6 +833,24 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_wc_parse_externals_description3"),
     SVN_TEST_PASS2(test_externals_parse_erratic,
                    "parse erratic externals definition"),
+    SVN_TEST_OPTS_PASS(test_legacy_commit1,
+                       "test legacy commit1"),
+    SVN_TEST_OPTS_PASS(test_legacy_commit2,
+                       "test legacy commit2"),
+    SVN_TEST_OPTS_PASS(test_internal_file_modified,
+                       "test internal_file_modified"),
+    SVN_TEST_OPTS_PASS(test_working_file_writer_simple,
+                       "working file writer simple"),
+    SVN_TEST_OPTS_PASS(test_working_file_writer_eol_repair,
+                       "working file writer eol repair"),
+    SVN_TEST_OPTS_PASS(test_working_file_writer_eol_inconsistent,
+                       "working file writer eol inconsistent"),
+    SVN_TEST_OPTS_PASS(test_internal_file_modified_keywords,
+                       "test internal_file_modified with keywords"),
+    SVN_TEST_OPTS_PASS(test_internal_file_modified_eol_style,
+                       "test internal_file_modified with eol-style"),
+    SVN_TEST_OPTS_PASS(test_get_pristine_copy_path,
+                       "test svn_wc_get_pristine_copy_path"),
     SVN_TEST_NULL
   };
 

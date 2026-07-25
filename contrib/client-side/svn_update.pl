@@ -31,7 +31,7 @@
 # given file(s) that would require >n minutes, where n is the
 # server's magic timeout (5 min.??), the server will timeout.  This
 # leaves the client/user in an unswell state.  See issue #2048 for
-# details http://subversion.tigris.org/issues/show_bug.cgi?id=2048.
+# details https://issues.apache.org/jira/browse/SVN-2048.
 #
 # One solution is to wrap the 'svn update' command in a script that
 # will perform the update one file at a time.  The problem with

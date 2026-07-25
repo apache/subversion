@@ -498,6 +498,40 @@ svn_fs_fs__dag_get_proplist(apr_hash_t **proplist_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_fs__dag_has_props(svn_boolean_t *has_props,
+                         dag_node_t *node,
+                         apr_pool_t *scratch_pool)
+{
+  node_revision_t *noderev;
+
+  SVN_ERR(get_node_revision(&noderev, node));
+
+  if (! noderev->prop_rep)
+    {
+      *has_props = FALSE; /* Easy out */
+      return SVN_NO_ERROR;
+    }
+
+  if (svn_fs_fs__id_txn_used(&noderev->prop_rep->txn_id))
+    {
+      /* We are in a commit or something. Check actual properties */
+      apr_hash_t *proplist;
+
+      SVN_ERR(svn_fs_fs__get_proplist(&proplist, node->fs,
+                                      noderev, scratch_pool));
+
+      *has_props = proplist ? (0 < apr_hash_count(proplist)) : FALSE;
+    }
+  else
+    {
+      /* Properties are stored as a standard hash stream,
+         always ending with "END\n" (4 bytes) */
+      *has_props = noderev->prop_rep->expanded_size > 4;
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_fs__dag_set_proplist(dag_node_t *node,
@@ -719,8 +753,7 @@ svn_fs_fs__dag_clone_child(dag_node_t **child_p,
       noderev->copyfrom_rev = SVN_INVALID_REVNUM;
 
       noderev->predecessor_id = svn_fs_fs__id_copy(cur_entry->id, pool);
-      if (noderev->predecessor_count != -1)
-        noderev->predecessor_count++;
+      noderev->predecessor_count++;
       noderev->created_path = svn_fspath__join(parent_path, name, pool);
 
       SVN_ERR(svn_fs_fs__create_successor(&new_node_id, fs, cur_entry->id,
@@ -866,14 +899,20 @@ svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
     {
       apr_array_header_t *entries;
       int i;
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
       /* Loop over directory entries */
       SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, node, pool));
       if (entries)
         for (i = 0; i < entries->nelts; ++i)
-          SVN_ERR(svn_fs_fs__dag_delete_if_mutable(fs,
-                        APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *)->id,
-                        pool));
+          {
+            svn_pool_clear(iterpool);
+            SVN_ERR(svn_fs_fs__dag_delete_if_mutable(fs,
+                          APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *)->id,
+                          iterpool));
+          }
+
+      svn_pool_destroy(iterpool);
     }
 
   /* ... then delete the node itself, after deleting any mutable
@@ -1124,10 +1163,10 @@ svn_fs_fs__dag_serialize(void **data,
 
   /* The deserializer will use its own pool. */
   svn_temp_serializer__set_null(context,
-				(const void * const *)&node->node_pool);
+                                (const void * const *)&node->node_pool);
 
   /* serialize other sub-structures */
-  svn_fs_fs__id_serialize(context, (const svn_fs_id_t **)&node->id);
+  svn_fs_fs__id_serialize(context, (const svn_fs_id_t *const *)&node->id);
   svn_fs_fs__id_serialize(context, &node->fresh_root_predecessor_id);
   svn_temp_serializer__add_string(context, &node->created_path);
 
@@ -1227,8 +1266,7 @@ svn_fs_fs__dag_copy(dag_node_t *to_node,
       /* Create a successor with its predecessor pointing at the copy
          source. */
       to_noderev->predecessor_id = svn_fs_fs__id_copy(src_id, pool);
-      if (to_noderev->predecessor_count != -1)
-        to_noderev->predecessor_count++;
+      to_noderev->predecessor_count++;
       to_noderev->created_path =
         svn_fspath__join(svn_fs_fs__dag_get_created_path(to_node), entry,
                      pool);
@@ -1265,34 +1303,58 @@ svn_fs_fs__dag_things_different(svn_boolean_t *props_changed,
                                 apr_pool_t *pool)
 {
   node_revision_t *noderev1, *noderev2;
-  svn_fs_t *fs;
-  svn_boolean_t same;
 
   /* If we have no place to store our results, don't bother doing
      anything. */
   if (! props_changed && ! contents_changed)
     return SVN_NO_ERROR;
 
-  fs = svn_fs_fs__dag_get_fs(node1);
-
   /* The node revision skels for these two nodes. */
   SVN_ERR(get_node_revision(&noderev1, node1));
   SVN_ERR(get_node_revision(&noderev2, node2));
 
-  /* Compare property keys. */
-  if (props_changed != NULL)
+  if (strict)
     {
-      SVN_ERR(svn_fs_fs__prop_rep_equal(&same, fs, noderev1, noderev2,
-                                        strict, pool));
-      *props_changed = !same;
-    }
+      /* In strict mode, compare text and property representations in the
+         svn_fs_contents_different() / svn_fs_props_different() manner.
 
-  /* Compare contents keys. */
-  if (contents_changed != NULL)
+         See the "No-op changes no longer dumped by 'svnadmin dump' in 1.9"
+         discussion (http://svn.haxx.se/dev/archive-2015-09/0269.shtml) and
+         issue #4598 (https://issues.apache.org/jira/browse/SVN-4598). */
+      svn_fs_t *fs = svn_fs_fs__dag_get_fs(node1);
+      svn_boolean_t same;
+
+      /* Compare property keys. */
+      if (props_changed != NULL)
+        {
+          SVN_ERR(svn_fs_fs__prop_rep_equal(&same, fs, noderev1,
+                                            noderev2, pool));
+          *props_changed = !same;
+        }
+
+      /* Compare contents keys. */
+      if (contents_changed != NULL)
+        {
+          SVN_ERR(svn_fs_fs__file_text_rep_equal(&same, fs, noderev1,
+                                                 noderev2, pool));
+          *contents_changed = !same;
+        }
+    }
+  else
     {
-      SVN_ERR(svn_fs_fs__file_text_rep_equal(&same, fs, noderev1, noderev2,
-                                             strict, pool));
-      *contents_changed = !same;
+      /* Otherwise, compare representation keys -- as in Subversion 1.8. */
+
+      /* Compare property keys. */
+      if (props_changed != NULL)
+        *props_changed =
+          !svn_fs_fs__noderev_same_rep_key(noderev1->prop_rep,
+                                           noderev2->prop_rep);
+
+      /* Compare contents keys. */
+      if (contents_changed != NULL)
+        *contents_changed =
+          !svn_fs_fs__noderev_same_rep_key(noderev1->data_rep,
+                                           noderev2->data_rep);
     }
 
   return SVN_NO_ERROR;
@@ -1359,8 +1421,7 @@ svn_fs_fs__dag_update_ancestry(dag_node_t *target,
 
   target_noderev->predecessor_id = source->id;
   target_noderev->predecessor_count = source_noderev->predecessor_count;
-  if (target_noderev->predecessor_count != -1)
-    target_noderev->predecessor_count++;
+  target_noderev->predecessor_count++;
 
   return svn_fs_fs__put_node_revision(target->fs, target->id, target_noderev,
                                       FALSE, pool);

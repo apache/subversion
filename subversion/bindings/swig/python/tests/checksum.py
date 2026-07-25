@@ -29,7 +29,7 @@ class ChecksumTestCases(unittest.TestCase):
         val = svn.core.svn_checksum_create(kind)
         check_val = svn.core.svn_checksum_to_cstring_display(val)
 
-        self.assertTrue(isinstance(check_val, str),
+        self.assertTrue(isinstance(check_val, bytes),
                               "Type of digest not string")
         self.assertEqual(len(check_val), 2*expected_length,
                          "Length of digest does not match kind")

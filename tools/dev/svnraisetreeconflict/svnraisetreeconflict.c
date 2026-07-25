@@ -37,7 +37,6 @@
 #include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
-#include "svn_utf.h"
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_version.h"
@@ -52,7 +51,7 @@
 static svn_error_t *
 version(apr_pool_t *pool)
 {
-  return svn_opt_print_help4(NULL, "svnraisetreeconflict", TRUE, FALSE, FALSE,
+  return svn_opt_print_help5(NULL, "svnraisetreeconflict", TRUE, FALSE, FALSE,
                              NULL, NULL, NULL, NULL, NULL, NULL, pool);
 }
 
@@ -170,7 +169,7 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
 {
   int i = 0;
   svn_wc_conflict_version_t *left, *right;
-  svn_wc_conflict_description3_t *c;
+  svn_wc_conflict_description2_t *c;
   svn_wc_context_t *wc_ctx;
 
   /* Conflict description parameters */
@@ -206,8 +205,8 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
                                          peg_rev1, kind1, pool);
   right = svn_wc_conflict_version_create2(repos_url2, NULL, path_in_repos2,
                                           peg_rev2, kind2, pool);
-  c = svn_wc_conflict_description_create_tree3(wc_abspath, kind,
-                                              operation, left, right, pool);
+  c = svn_wc_conflict_description_create_tree2(wc_abspath, kind,
+                                               operation, left, right, pool);
   c->action = (svn_wc_conflict_action_t)action;
   c->reason = (svn_wc_conflict_reason_t)reason;
 
@@ -302,7 +301,10 @@ check_lib_versions(void)
  * return SVN_NO_ERROR.
  */
 static svn_error_t *
-sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
+sub_main(int *exit_code,
+         int argc,
+         const svn_cmdline__argv_char_t *cmdline_argv[],
+         apr_pool_t *pool)
 {
   apr_getopt_t *os;
   const apr_getopt_option_t options[] =
@@ -313,9 +315,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       {0,             0,  0,  0}
     };
   apr_array_header_t *remaining_argv;
+  const char **argv;
 
   /* Check library versions */
   SVN_ERR(check_lib_versions());
+
+  SVN_ERR(svn_cmdline__get_utf8_argv(&argv, argc, cmdline_argv, pool));
 
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Set the working copy administrative directory name. */
@@ -357,13 +362,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         }
     }
 
-  /* Convert the remaining arguments to UTF-8. */
+  /* Pull the remaining arguments from argv. */
   remaining_argv = apr_array_make(pool, 0, sizeof(const char *));
   while (os->ind < argc)
     {
-      const char *s;
-
-      SVN_ERR(svn_utf_cstring_to_utf8(&s, os->argv[os->ind++], pool));
+      const char *s = apr_pstrdup(pool, os->argv[os->ind++]);
       APR_ARRAY_PUSH(remaining_argv, const char *) = s;
     }
 
@@ -383,7 +386,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 }
 
 int
-main(int argc, const char *argv[])
+SVN_CMDLINE__MAIN(int argc, const svn_cmdline__argv_char_t *argv[])
 {
   apr_pool_t *pool;
   int exit_code = EXIT_SUCCESS;

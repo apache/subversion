@@ -210,13 +210,13 @@ private:
   const bool m_old_format;
   SVN::Pool& m_iterpool;
 };
-} // anoymous namespace
+} // anonymous namespace
 
 
 JNIEXPORT jbyteArray JNICALL
 Java_org_apache_subversion_javahl_util_PropLib_checkNodeProp(
     JNIEnv* jenv, jobject jthis,
-    jstring jname, jbyteArray jvalue, jstring jpath, jobject jkind,
+    jstring jname, jbyteArray jpropval, jstring jpath, jobject jkind,
     jstring jmime_type, jobject jfile_contents,
     jboolean jskip_some_checks)
 {
@@ -228,7 +228,7 @@ Java_org_apache_subversion_javahl_util_PropLib_checkNodeProp(
       SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
 
       const Java::String name_str(env, jname);
-      const Java::ByteArray value(env, jvalue);
+      const Java::ByteArray value(env, jpropval);
       const Java::String path_str(env, jpath);
       const Java::String mime_type_str(env, jmime_type);
       Java::InputStream file_contents(env, jfile_contents);
@@ -291,7 +291,7 @@ Java_org_apache_subversion_javahl_util_PropLib_parseExternals(
                              pool.getPool()));
       }
 
-      Java::MutableList<JavaHL::ExternalItem> items(env, externals->nelts);
+      Java::List<JavaHL::ExternalItem> items(env, externals->nelts);
       for (jint i = 0; i < externals->nelts; ++i)
         {
           // References to the newly created external items are stored
@@ -323,7 +323,7 @@ Java_org_apache_subversion_javahl_util_PropLib_unparseExternals(
     {
       const Java::Env env(jenv);
 
-      const Java::List<JavaHL::ExternalItem> items(env, jitems);
+      const Java::ImmutableList<JavaHL::ExternalItem> items(env, jitems);
       const Java::String parent_dir(env, jparent_dir);
 
       // Using a "global" iteration pool since we don't keep a context

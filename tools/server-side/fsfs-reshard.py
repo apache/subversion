@@ -277,7 +277,7 @@ def shard(path, max_files_per_shard, start, end):
   tmp = path + '.reshard'
   try:
     os.mkdir(tmp)
-  except OSError, e:
+  except OSError as e:
     if e.errno != EEXIST:
       raise
 
@@ -335,7 +335,7 @@ def main():
 
   try:
     max_files_per_shard = int(max_files_per_shard)
-  except ValueError, OverflowError:
+  except ValueError as OverflowError:
     sys.stderr.write("error: maximum files per shard ('%s') is not a valid number.\n" \
       % max_files_per_shard)
     sys.stderr.flush()

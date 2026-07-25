@@ -165,7 +165,7 @@ dav_svn__delete_activity(const dav_svn_repos *repos, const char *activity_id)
   txn_name = read_txn(pathname, repos->pool);
   if (txn_name == NULL)
     {
-      return dav_svn__new_error(repos->pool, HTTP_NOT_FOUND, 0,
+      return dav_svn__new_error(repos->pool, HTTP_NOT_FOUND, 0, 0,
                                 "could not find activity.");
     }
 
@@ -208,9 +208,9 @@ dav_svn__store_activity(const dav_svn_repos *repos,
   activity_contents = apr_psprintf(repos->pool, "%s\n%s\n",
                                    txn_name, activity_id);
 
-  err = svn_io_write_atomic(final_path,
-                            activity_contents, strlen(activity_contents),
-                            NULL /* copy_perms path */, repos->pool);
+  err = svn_io_write_atomic2(final_path,
+                             activity_contents, strlen(activity_contents),
+                             NULL /* copy_perms path */, TRUE, repos->pool);
   if (err)
     {
       svn_error_t *serr = svn_error_quick_wrap(err,
@@ -227,7 +227,7 @@ dav_svn__store_activity(const dav_svn_repos *repos,
 
 
 dav_error *
-dav_svn__create_txn(const dav_svn_repos *repos,
+dav_svn__create_txn(dav_svn_repos *repos,
                     const char **ptxn_name,
                     apr_hash_t *revprops,
                     apr_pool_t *pool)
@@ -248,7 +248,7 @@ dav_svn__create_txn(const dav_svn_repos *repos,
                     svn_string_create(repos->username, pool));
     }
 
-  serr = svn_fs_youngest_rev(&rev, repos->fs, pool);
+  serr = dav_svn__get_youngest_rev(&rev, repos, pool);
   if (serr != NULL)
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

@@ -63,7 +63,7 @@ typedef enum svn_sqlite__mode_e {
 typedef svn_error_t *(*svn_sqlite__func_t)(svn_sqlite__context_t *sctx,
                                            int argc,
                                            svn_sqlite__value_t *values[],
-                                           apr_pool_t *scatch_pool);
+                                           void *baton);
 
 
 /* Step the given statement; if it returns SQLITE_DONE, reset the statement.
@@ -501,6 +501,49 @@ svn_sqlite__with_immediate_transaction(svn_sqlite__db_t *db,
     SVN_ERR(svn_sqlite__finish_savepoint(svn_sqlite__db, svn_sqlite__err));   \
   } while (0)
 
+/* Evaluate the expression EXPR1..EXPR2 within a 'savepoint'.  Savepoints can
+ * be nested.
+ *
+ * Begin a savepoint in DB; evaluate the expression EXPR1, which would
+ * typically be a function call that does some work in DB; if no error occurred,
+ * run EXPR2 and release the savepoint if all expressions evaluated to
+ * SVN_NO_ERROR, otherwise roll back to the savepoint and then release it.
+ */
+#define SVN_SQLITE__WITH_LOCK2(expr1, expr2, db)                              \
+  do {                                                                        \
+    svn_sqlite__db_t *svn_sqlite__db = (db);                                  \
+    svn_error_t *svn_sqlite__err;                                             \
+                                                                              \
+    SVN_ERR(svn_sqlite__begin_savepoint(svn_sqlite__db));                     \
+    svn_sqlite__err = (expr1);                                                \
+    if (!svn_sqlite__err)                                                     \
+      svn_sqlite__err = (expr2);                                              \
+    SVN_ERR(svn_sqlite__finish_savepoint(svn_sqlite__db, svn_sqlite__err));   \
+  } while (0)
+
+/* Evaluate the expression EXPR1..EXPR3 within a 'savepoint'.  Savepoints can
+ * be nested.
+ *
+ * Begin a savepoint in DB; evaluate the expression EXPR1, which would
+ * typically be a function call that does some work in DB; if no error occurred,
+ * run EXPR2; if no error occurred EXPR3; ... and finally release
+ * the savepoint if all expressions evaluated to SVN_NO_ERROR, otherwise
+ * roll back to the savepoint and then release it.
+ */
+#define SVN_SQLITE__WITH_LOCK3(expr1, expr2, expr3, db)                       \
+  do {                                                                        \
+    svn_sqlite__db_t *svn_sqlite__db = (db);                                  \
+    svn_error_t *svn_sqlite__err;                                             \
+                                                                              \
+    SVN_ERR(svn_sqlite__begin_savepoint(svn_sqlite__db));                     \
+    svn_sqlite__err = (expr1);                                                \
+    if (!svn_sqlite__err)                                                     \
+      svn_sqlite__err = (expr2);                                              \
+    if (!svn_sqlite__err)                                                     \
+      svn_sqlite__err = (expr3);                                              \
+    SVN_ERR(svn_sqlite__finish_savepoint(svn_sqlite__db, svn_sqlite__err));   \
+  } while (0)
+
 /* Evaluate the expression EXPR1..EXPR4 within a 'savepoint'.  Savepoints can
  * be nested.
  *
@@ -554,6 +597,15 @@ svn_error_t *
 svn_sqlite__hotcopy(const char *src_path,
                     const char *dst_path,
                     apr_pool_t *scratch_pool);
+
+/* Evaluate the expression EXPR.  If any error is returned, close
+ * the connection in DB. */
+#define SVN_SQLITE__ERR_CLOSE(expr, db) do                            \
+{                                                                     \
+  svn_error_t *svn__err = (expr);                                     \
+  if (svn__err)                                                       \
+    return svn_error_compose_create(svn__err, svn_sqlite__close(db)); \
+} while (0)
 
 #ifdef __cplusplus
 }

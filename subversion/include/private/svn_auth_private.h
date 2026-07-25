@@ -39,7 +39,7 @@ extern "C" {
 
 /** SSL server authority verification credential type.
  *
- * The followin auth parameters are available to the providers:
+ * The following auth parameters are available to the providers:
  *
  * - @c SVN_AUTH_PARAM_SSL_SERVER_FAILURES (@c apr_uint32_t*)
  * - @c SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO
@@ -230,6 +230,16 @@ svn_auth__ssl_client_cert_pw_set(svn_boolean_t *done,
                                  apr_hash_t *parameters,
                                  svn_boolean_t non_interactive,
                                  apr_pool_t *pool);
+
+/* Apply the specified configuration for connecting with SERVER_NAME
+   to the auth baton */
+svn_error_t *
+svn_auth__make_session_auth(svn_auth_baton_t **session_auth_baton,
+                            const svn_auth_baton_t *auth_baton,
+                            apr_hash_t *config,
+                            const char *server_name,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 #if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
 /**

@@ -1087,7 +1087,7 @@ class SvnClientTest < Test::Unit::TestCase
   We haven't yet figured out what to expect in the case of an obstruction,
   but it is no longer an error.  Commenting out this test until that
   decision is made (see issue #3680:
-  http://subversion.tigris.org/issues/show_bug.cgi?id=3680)
+  https://issues.apache.org/jira/browse/SVN-3680)
 
   def test_cleanup
     log = "sample log"
@@ -2243,8 +2243,8 @@ class SvnClientTest < Test::Unit::TestCase
 
       items = nil
       ctx.cp(path, repos_uri2)
-      assert_equal([nil], items.collect {|item| item.wcprop_changes})
-      assert_equal([nil], items.collect {|item| item.incoming_prop_changes})
+      assert_equal([[]], items.collect {|item| item.wcprop_changes})
+      assert_equal([[]], items.collect {|item| item.incoming_prop_changes})
       assert_equal([nil], items.collect {|item| item.outgoing_prop_changes})
     end
   end

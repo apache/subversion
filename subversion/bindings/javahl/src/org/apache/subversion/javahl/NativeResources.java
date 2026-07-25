@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl;
@@ -27,7 +25,7 @@ import org.apache.subversion.javahl.types.Version;
 import org.apache.subversion.javahl.types.RuntimeVersion;
 
 /**
- * Handles activities related to management of native resouces
+ * Handles activities related to management of native resources
  * (e.g. loading of native libraries).
  *
  * Public for backward compat.  This class may disappear in future versions
@@ -141,11 +139,15 @@ public class NativeResources
      */
     private static final void init()
     {
+        final int SVN_VER_MAJOR = 1;
+        final int SVN_VER_MINOR = 16;
+        initNativeLibrary();
         version = new Version();
-        if (!version.isAtLeast(1, 9, 0))
+        if (!version.isAtLeast(SVN_VER_MAJOR, SVN_VER_MINOR, 0))
         {
             throw new LinkageError("Native library version must be at least " +
-                                   "1.9.0, but is only " + version);
+                                   SVN_VER_MAJOR + "." + SVN_VER_MINOR + ".0," +
+                                   "but is only " + version);
         }
 
         runtimeVersion = new RuntimeVersion();
@@ -158,4 +160,11 @@ public class NativeResources
                 " but the run-time version is " + runtimeVersion);
         }
     }
+
+    /**
+     * Initialize the native library layer.
+     * @note This is a no-op in 1.9+, but we need it for ABI
+     *       compatibility with older versions of the native library.
+     */
+    private static native void initNativeLibrary();
 }

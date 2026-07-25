@@ -75,8 +75,15 @@ svn_cl__print_commit_info(const svn_commit_info_t *commit_info,
                           void *baton,
                           apr_pool_t *pool)
 {
+  /* Be very careful with returning errors from this callback as those
+     will be returned as errors from editor->close_edit(...), which may
+     cause callers to assume that the commit itself failed.
+
+     See log message of r1659867 and the svn_ra_get_commit_editor3
+     documentation for details on error scenarios. */
+
   if (SVN_IS_VALID_REVNUM(commit_info->revision))
-    SVN_ERR(svn_cmdline_printf(pool, _("\nCommitted revision %ld%s.\n"),
+    SVN_ERR(svn_cmdline_printf(pool, _("Committed revision %ld%s.\n"),
                                commit_info->revision,
                                commit_info->revision == 42 &&
                                getenv("SVN_I_LOVE_PANGALACTIC_GARGLE_BLASTERS")
@@ -156,6 +163,8 @@ svn_cl__merge_file_externally(const char *base_path,
     arguments[5] = wc_path;
     arguments[6] = NULL;
 
+    /* Presumably apr_filepath_get() returns a valid path, so we don't have
+       to use the safe version of svn_dirent_internal_style() here. */
     SVN_ERR(svn_io_run_cmd(svn_dirent_internal_style(cwd, pool), merge_tool,
                            arguments, &exitcode, NULL, TRUE, NULL, NULL, NULL,
                            pool));
@@ -197,7 +206,7 @@ svn_cl__make_log_msg_baton(void **baton,
                            apr_hash_t *config,
                            apr_pool_t *pool)
 {
-  struct log_msg_baton *lmb = apr_palloc(pool, sizeof(*lmb));
+  struct log_msg_baton *lmb = apr_pcalloc(pool, sizeof(*lmb));
 
   if (opt_state->filedata)
     {
@@ -211,27 +220,30 @@ svn_cl__make_log_msg_baton(void **baton,
                                   _("Log message contains a zero byte"));
         }
       lmb->message = opt_state->filedata->data;
+
+      if (opt_state->encoding)
+        {
+          lmb->message_encoding = opt_state->encoding;
+        }
+      else if (config)
+        {
+          svn_config_t *cfg =
+              svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
+          svn_config_get(cfg, &(lmb->message_encoding),
+                         SVN_CONFIG_SECTION_MISCELLANY,
+                         SVN_CONFIG_OPTION_LOG_ENCODING, NULL);
+        }
+      else
+        lmb->message_encoding = NULL;
     }
   else
     {
       lmb->message = opt_state->message;
+      lmb->message_encoding = "UTF-8";
     }
 
   lmb->editor_cmd = opt_state->editor_cmd;
-  if (opt_state->encoding)
-    {
-      lmb->message_encoding = opt_state->encoding;
-    }
-  else if (config)
-    {
-      svn_config_t *cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
-      svn_config_get(cfg, &(lmb->message_encoding),
-                     SVN_CONFIG_SECTION_MISCELLANY,
-                     SVN_CONFIG_OPTION_LOG_ENCODING,
-                     NULL);
-    }
-
-  lmb->base_dir = base_dir ? base_dir : "";
+  lmb->base_dir = base_dir;
   lmb->tmpfile_left = NULL;
   lmb->config = config;
   lmb->keep_locks = opt_state->no_unlock;
@@ -383,14 +395,11 @@ svn_cl__get_log_message(const char **log_msg,
 
           if (! path)
             path = item->url;
-          else if (! *path)
-            path = ".";
-
-          if (! svn_path_is_url(path) && lmb->base_dir)
+          else if (lmb->base_dir)
             path = svn_dirent_is_child(lmb->base_dir, path, pool);
 
           /* If still no path, then just use current directory. */
-          if (! path)
+          if (! path || !*path)
             path = ".";
 
           if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
@@ -429,7 +438,8 @@ svn_cl__get_log_message(const char **log_msg,
       if (! lmb->non_interactive)
         {
           err = svn_cmdline__edit_string_externally(&msg_string, &lmb->tmpfile_left,
-                                                    lmb->editor_cmd, lmb->base_dir,
+                                                    lmb->editor_cmd,
+                                                    lmb->base_dir ? lmb->base_dir : "",
                                                     msg_string, "svn-commit",
                                                     lmb->config, TRUE,
                                                     lmb->message_encoding,
@@ -560,8 +570,8 @@ svn_cl__error_checked_fputs(const char *string, FILE* stream)
 
   if (fputs(string, stream) == EOF)
     {
-      if (errno)
-        return svn_error_wrap_apr(errno, _("Write error"));
+      if (apr_get_os_error()) /* is errno on POSIX */
+        return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
       else
         return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
     }
@@ -607,6 +617,7 @@ svn_cl__try(svn_error_t *err,
               if (! quiet)
                 svn_handle_warning2(stderr, err, "svn: ");
               svn_error_clear(err);
+              va_end(ap);
               return SVN_NO_ERROR;
             }
         }
@@ -792,12 +803,13 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets,
                                             svn_boolean_t keep_last_origpath_on_truepath_collision,
                                             apr_pool_t *pool)
 {
-  svn_error_t *err = svn_client_args_to_target_array2(targets,
+  svn_error_t *err = svn_client_args_to_target_array3(targets,
                                                       os,
                                                       known_targets,
                                                       ctx,
                                                       keep_last_origpath_on_truepath_collision,
                                                       pool);
+
   if (err)
     {
       if (err->apr_err ==  SVN_ERR_RESERVED_FILENAME_SPECIFIED)
@@ -900,14 +912,17 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
 }
 
 const char *
-svn_cl__node_description(const svn_wc_conflict_version_t *node,
+svn_cl__node_description(const char *repos_root_url,
+                         const char *repos_relpath,
+                         svn_revnum_t peg_rev,
+                         svn_node_kind_t node_kind,
                          const char *wc_repos_root_URL,
                          apr_pool_t *pool)
 {
   const char *root_str = "^";
   const char *path_str = "...";
 
-  if (!node)
+  if (!repos_root_url || !repos_relpath || !SVN_IS_VALID_REVNUM(peg_rev))
     /* Printing "(none)" the harder way to ensure conformity (mostly with
      * translations). */
     return apr_psprintf(pool, "(%s)",
@@ -916,18 +931,18 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
   /* Construct a "caret notation" ^/URL if NODE matches WC_REPOS_ROOT_URL.
    * Otherwise show the complete URL, and if we can't, show dots. */
 
-  if (node->repos_url &&
+  if (repos_root_url &&
       (wc_repos_root_URL == NULL ||
-       strcmp(node->repos_url, wc_repos_root_URL) != 0))
-    root_str = node->repos_url;
+       strcmp(repos_root_url, wc_repos_root_URL) != 0))
+    root_str = repos_root_url;
 
-  if (node->path_in_repos)
-    path_str = node->path_in_repos;
+  if (repos_relpath)
+    path_str = repos_relpath;
 
   return apr_psprintf(pool, "(%s) %s@%ld",
-                      svn_cl__node_kind_str_human_readable(node->node_kind),
+                      svn_cl__node_kind_str_human_readable(node_kind),
                       svn_path_url_add_component2(root_str, path_str, pool),
-                      node->peg_rev);
+                      peg_rev);
 }
 
 svn_error_t *

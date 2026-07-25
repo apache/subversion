@@ -54,19 +54,8 @@
 
 #include "svn_private_config.h"
 
-/* Import context baton.
+/* Import context baton. */
 
-   ### TODO:  Add the following items to this baton:
-      /` import editor/baton. `/
-      const svn_delta_editor_t *editor;
-      void *edit_baton;
-
-      /` Client context baton `/
-      svn_client_ctx_t `ctx;
-
-      /` Paths (keys) excluded from the import (values ignored) `/
-      apr_hash_t *excludes;
-*/
 typedef struct import_ctx_t
 {
   /* Whether any changes were made to the repository */
@@ -84,32 +73,59 @@ typedef struct import_ctx_t
   apr_hash_t *autoprops;
 } import_ctx_t;
 
+typedef struct open_txdelta_stream_baton_t
+{
+  svn_boolean_t need_reset;
+  svn_stream_t *stream;
+} open_txdelta_stream_baton_t;
+
+/* Implements svn_txdelta_stream_open_func_t */
+static svn_error_t *
+open_txdelta_stream(svn_txdelta_stream_t **txdelta_stream_p,
+                    void *baton,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  open_txdelta_stream_baton_t *b = baton;
+
+  if (b->need_reset)
+    {
+      /* Under rare circumstances, we can be restarted and would need to
+       * supply the delta stream again.  In this case, reset the base
+       * stream. */
+      SVN_ERR(svn_stream_reset(b->stream));
+    }
+
+  /* Get the delta stream (delta against the empty string). */
+  svn_txdelta2(txdelta_stream_p, svn_stream_empty(result_pool),
+               b->stream, FALSE, result_pool);
+  b->need_reset = TRUE;
+  return SVN_NO_ERROR;
+}
 
 /* Apply LOCAL_ABSPATH's contents (as a delta against the empty string) to
    FILE_BATON in EDITOR.  Use POOL for any temporary allocation.
    PROPERTIES is the set of node properties set on this file.
 
-   Fill DIGEST with the md5 checksum of the sent file; DIGEST must be
-   at least APR_MD5_DIGESTSIZE bytes long. */
+   Return the resulting checksum in *RESULT_MD5_CHECKSUM_P. */
 
 /* ### how does this compare against svn_wc_transmit_text_deltas2() ??? */
 
 static svn_error_t *
-send_file_contents(const char *local_abspath,
+send_file_contents(svn_checksum_t **result_md5_checksum_p,
+                   const char *local_abspath,
                    void *file_baton,
                    const svn_delta_editor_t *editor,
                    apr_hash_t *properties,
-                   unsigned char *digest,
                    apr_pool_t *pool)
 {
   svn_stream_t *contents;
-  svn_txdelta_window_handler_t handler;
-  void *handler_baton;
   const svn_string_t *eol_style_val = NULL, *keywords_val = NULL;
   svn_boolean_t special = FALSE;
   svn_subst_eol_style_t eol_style;
   const char *eol;
   apr_hash_t *keywords;
+  open_txdelta_stream_baton_t baton = { 0 };
 
   /* If there are properties, look for EOL-style and keywords ones. */
   if (properties)
@@ -121,10 +137,6 @@ send_file_contents(const char *local_abspath,
       if (svn_hash_gets(properties, SVN_PROP_SPECIAL))
         special = TRUE;
     }
-
-  /* Get an editor func that wants to consume the delta stream. */
-  SVN_ERR(editor->apply_textdelta(file_baton, NULL, pool,
-                                  &handler, &handler_baton));
 
   if (eol_style_val)
     svn_subst_eol_style_from_value(&eol_style, &eol, eol_style_val->data);
@@ -179,10 +191,17 @@ send_file_contents(const char *local_abspath,
         }
     }
 
-  /* Send the file's contents to the delta-window handler. */
-  return svn_error_trace(svn_txdelta_send_stream(contents, handler,
-                                                 handler_baton, digest,
-                                                 pool));
+  /* Arrange the stream to calculate the resulting MD5. */
+  contents = svn_stream_checksummed2(contents, result_md5_checksum_p, NULL,
+                                     svn_checksum_md5, TRUE, pool);
+  /* Send the contents. */
+  baton.need_reset = FALSE;
+  baton.stream = svn_stream_disown(contents, pool);
+  SVN_ERR(editor->apply_textdelta_stream(editor, file_baton, NULL,
+                                         open_txdelta_stream, &baton, pool));
+  SVN_ERR(svn_stream_close(contents));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -209,7 +228,7 @@ import_file(const svn_delta_editor_t *editor,
 {
   void *file_baton;
   const char *mimetype = NULL;
-  unsigned char digest[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *result_md5_checksum;
   const char *text_checksum;
   apr_hash_t* properties;
   apr_hash_index_t *hi;
@@ -239,8 +258,8 @@ import_file(const svn_delta_editor_t *editor,
     {
       for (hi = apr_hash_first(pool, properties); hi; hi = apr_hash_next(hi))
         {
-          const char *pname = svn__apr_hash_index_key(hi);
-          const svn_string_t *pval = svn__apr_hash_index_val(hi);
+          const char *pname = apr_hash_this_key(hi);
+          const svn_string_t *pval = apr_hash_this_val(hi);
 
           SVN_ERR(editor->change_file_prop(file_baton, pname, pval, pool));
         }
@@ -256,7 +275,7 @@ import_file(const svn_delta_editor_t *editor,
       notify->content_state = notify->prop_state
         = svn_wc_notify_state_inapplicable;
       notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, pool);
     }
 
   /* If this is a special file, we need to set the svn:special
@@ -273,13 +292,11 @@ import_file(const svn_delta_editor_t *editor,
     }
 
   /* Now, transmit the file contents. */
-  SVN_ERR(send_file_contents(local_abspath, file_baton, editor,
-                             properties, digest, pool));
+  SVN_ERR(send_file_contents(&result_md5_checksum, local_abspath,
+                             file_baton, editor, properties, pool));
 
   /* Finally, close the file. */
-  text_checksum =
-    svn_checksum_to_cstring(svn_checksum__from_digest_md5(digest, pool), pool);
-
+  text_checksum = svn_checksum_to_cstring(result_md5_checksum, pool);
   return svn_error_trace(editor->close_file(file_baton, text_checksum, pool));
 }
 
@@ -313,8 +330,8 @@ get_filtered_children(apr_hash_t **children,
 
   for (hi = apr_hash_first(scratch_pool, dirents); hi; hi = apr_hash_next(hi))
     {
-      const char *base_name = svn__apr_hash_index_key(hi);
-      const svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
+      const char *base_name = apr_hash_this_key(hi);
+      const svn_io_dirent2_t *dirent = apr_hash_this_val(hi);
       const char *local_abspath;
 
       svn_pool_clear(iterpool);
@@ -339,7 +356,7 @@ get_filtered_children(apr_hash_t **children,
               notify->content_state = notify->prop_state
                 = svn_wc_notify_state_inapplicable;
               notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-              (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
+              ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
             }
 
           svn_hash_sets(dirents, base_name, NULL);
@@ -481,7 +498,7 @@ import_children(const char *dir_abspath,
                   notify->content_state = notify->prop_state
                     = svn_wc_notify_state_inapplicable;
                   notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-                  (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
+                  ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
                 }
             }
           else
@@ -570,7 +587,7 @@ import_dir(const svn_delta_editor_t *editor,
         notify->content_state = notify->prop_state
           = svn_wc_notify_state_inapplicable;
         notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-        (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+        ctx->notify_func2(ctx->notify_baton2, notify, pool);
       }
   }
 
@@ -588,23 +605,26 @@ import_dir(const svn_delta_editor_t *editor,
 }
 
 
-/* Recursively import PATH to a repository using EDITOR and
- * EDIT_BATON.  PATH can be a file or directory.
+/* Recursively import LOCAL_ABSPATH to a repository using EDITOR and
+ * EDIT_BATON.  LOCAL_ABSPATH can be a file or directory.
  *
- * DEPTH is the depth at which to import PATH; it behaves as for
- * svn_client_import4().
+ * Sets *UPDATED_REPOSITORY to TRUE when the repository was modified by
+ * a successful commit, otherwise to FALSE.
+ *
+ * DEPTH is the depth at which to import LOCAL_ABSPATH; it behaves as for
+ * svn_client_import5().
  *
  * BASE_REV is the revision to use for the root of the commit. We
  * checked the preconditions against this revision.
  *
  * NEW_ENTRIES is an ordered array of path components that must be
  * created in the repository (where the ordering direction is
- * parent-to-child).  If PATH is a directory, NEW_ENTRIES may be empty
+ * parent-to-child).  If LOCAL_ABSPATH is a directory, NEW_ENTRIES may be empty
  * -- the result is an import which creates as many new entries in the
  * top repository target directory as there are importable entries in
- * the top of PATH; but if NEW_ENTRIES is not empty, its last item is
+ * the top of LOCAL_ABSPATH; but if NEW_ENTRIES is not empty, its last item is
  * the name of a new subdirectory in the repository to hold the
- * import.  If PATH is a file, NEW_ENTRIES may not be empty, and its
+ * import.  If LOCAL_ABSPATH is a file, NEW_ENTRIES may not be empty, and its
  * last item is the name used for the file in the repository.  If
  * NEW_ENTRIES contains more than one item, all but the last item are
  * the names of intermediate directories that are created before the
@@ -632,6 +652,8 @@ import_dir(const svn_delta_editor_t *editor,
  * If CTX->NOTIFY_FUNC is non-null, invoke it with CTX->NOTIFY_BATON for
  * each imported path, passing actions svn_wc_notify_commit_added.
  *
+ * URL is used only in the 'commit_finalizing' notification.
+ *
  * Use POOL for any temporary allocation.
  *
  * Note: the repository directory receiving the import was specified
@@ -640,7 +662,8 @@ import_dir(const svn_delta_editor_t *editor,
  * not necessarily the root.)
  */
 static svn_error_t *
-import(const char *local_abspath,
+import(svn_boolean_t *updated_repository,
+       const char *local_abspath,
        const char *url,
        const apr_array_header_t *new_entries,
        const svn_delta_editor_t *editor,
@@ -662,11 +685,13 @@ import(const char *local_abspath,
   void *root_baton;
   apr_array_header_t *batons = NULL;
   const char *edit_path = "";
-  import_ctx_t *import_ctx = apr_pcalloc(pool, sizeof(*import_ctx));
+  import_ctx_t import_ctx = { FALSE };
   const svn_io_dirent2_t *dirent;
 
-  import_ctx->autoprops = autoprops;
-  SVN_ERR(svn_magic__init(&import_ctx->magic_cookie, ctx->config, pool));
+  *updated_repository = FALSE;
+
+  import_ctx.autoprops = autoprops;
+  SVN_ERR(svn_magic__init(&import_ctx.magic_cookie, ctx->config, pool));
 
   /* Get a root dir baton.  We pass the revnum we used for testing our
      assumptions and obtaining inherited properties. */
@@ -701,7 +726,7 @@ import(const char *local_abspath,
                                         pool, &root_baton));
 
           /* Remember that the repository was modified */
-          import_ctx->repos_changed = TRUE;
+          import_ctx.repos_changed = TRUE;
         }
     }
   else if (dirent->kind == svn_node_file)
@@ -732,7 +757,7 @@ import(const char *local_abspath,
 
       if (!ignores_match)
         SVN_ERR(import_file(editor, root_baton, local_abspath, edit_path,
-                            dirent, import_ctx, ctx, pool));
+                            dirent, &import_ctx, ctx, pool));
     }
   else if (dirent->kind == svn_node_dir)
     {
@@ -752,7 +777,7 @@ import(const char *local_abspath,
                               root_baton, depth, excludes, global_ignores,
                               no_ignore, no_autoprops,
                               ignore_unknown_node_types, filter_callback,
-                              filter_baton, import_ctx, ctx, pool));
+                              filter_baton, &import_ctx, ctx, pool));
 
     }
   else if (dirent->kind == svn_node_none
@@ -774,7 +799,7 @@ import(const char *local_abspath,
         }
     }
 
-  if (import_ctx->repos_changed)
+  if (import_ctx.repos_changed)
     {
       if (ctx->notify_func2)
         {
@@ -785,10 +810,12 @@ import(const char *local_abspath,
           ctx->notify_func2(ctx->notify_baton2, notify, pool);
         }
 
-      return svn_error_trace(editor->close_edit(edit_baton, pool));
+      SVN_ERR(editor->close_edit(edit_baton, pool));
+
+      *updated_repository = TRUE;
     }
-  else
-    return svn_error_trace(editor->abort_edit(edit_baton, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -827,12 +854,15 @@ svn_client_import5(const char *path,
   svn_revnum_t base_rev;
   apr_array_header_t *inherited_props = NULL;
   apr_hash_t *url_props = NULL;
+  svn_boolean_t updated_repository;
 
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                              _("'%s' is not a local path"), path);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+
+  SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
 
   /* Create a new commit item and add it to the array. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
@@ -846,7 +876,9 @@ svn_client_import5(const char *path,
         = apr_array_make(scratch_pool, 1, sizeof(item));
 
       item = svn_client_commit_item3_create(scratch_pool);
-      item->path = apr_pstrdup(scratch_pool, path);
+      item->path = local_abspath;
+      item->url = url;
+      item->kind = kind;
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
       APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
 
@@ -861,8 +893,6 @@ svn_client_import5(const char *path,
           svn_hash_sets(excludes, abs_path, (void *)1);
         }
     }
-
-  SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
 
   SVN_ERR(svn_client_open_ra_session2(&ra_session, url, NULL,
                                       ctx, scratch_pool, iterpool));
@@ -988,20 +1018,23 @@ svn_client_import5(const char *path,
         }
     }
 
-  /* If an error occurred during the commit, abort the edit and return
-     the error.  We don't even care if the abort itself fails.  */
-  if ((err = import(local_abspath, url, new_entries, editor, edit_baton,
-                    depth, base_rev, excludes, autoprops, local_ignores_arr,
-                    global_ignores, no_ignore, no_autoprops,
-                    ignore_unknown_node_types, filter_callback,
-                    filter_baton, ctx, iterpool)))
+  /* If an error occurred during the commit, properly abort the edit.  */
+  err = svn_error_trace(import(&updated_repository,
+                               local_abspath, url, new_entries, editor,
+                               edit_baton, depth, base_rev, excludes,
+                               autoprops, local_ignores_arr, global_ignores,
+                               no_ignore, no_autoprops,
+                               ignore_unknown_node_types, filter_callback,
+                               filter_baton, ctx, iterpool));
+
+  svn_pool_destroy(iterpool);
+
+  if (err || !updated_repository)
     {
       return svn_error_compose_create(
                     err,
-                    editor->abort_edit(edit_baton, iterpool));
+                    editor->abort_edit(edit_baton, scratch_pool));
     }
-
-  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }

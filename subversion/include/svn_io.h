@@ -682,8 +682,15 @@ svn_io_files_contents_three_same_p(svn_boolean_t *same12,
                                    const char *file3,
                                    apr_pool_t *scratch_pool);
 
-/** Create file at utf8-encoded @a file with contents @a contents.
- * @a file must not already exist.
+/** Create a file at utf8-encoded path @a file with the contents given
+ * by the null-terminated string @a contents.
+ *
+ * @a file must not already exist. If an error occurs while writing or
+ * closing the file, attempt to delete the file before returning the error.
+ *
+ * Write the data in 'binary' mode (#APR_FOPEN_BINARY). If @a contents
+ * is @c NULL, create an empty file.
+ *
  * Use @a pool for memory allocations.
  */
 svn_error_t *
@@ -691,26 +698,37 @@ svn_io_file_create(const char *file,
                    const char *contents,
                    apr_pool_t *pool);
 
-/** Create file at utf8-encoded @a file with binary contents @a contents
- * of @a length bytes.  @a file must not already exist.
- * Use @a pool for memory allocations.
+/** Create a file at utf8-encoded path @a file with the contents given
+ * by @a contents of @a length bytes.
+ *
+ * @a file must not already exist. If an error occurs while writing or
+ * closing the file, attempt to delete the file before returning the error.
+ *
+ * Write the data in 'binary' mode (#APR_FOPEN_BINARY). If @a length is
+ * zero, create an empty file; in this case @a contents may be @c NULL.
+ *
+ * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.9.
  */
 svn_error_t *
-svn_io_file_create_binary(const char *file,
-                          const char *contents,
-                          apr_size_t length,
-                          apr_pool_t *pool);
+svn_io_file_create_bytes(const char *file,
+                         const void *contents,
+                         apr_size_t length,
+                         apr_pool_t *scratch_pool);
 
-/** Create empty file at utf8-encoded @a file, which must not already exist.
- * Use @a pool for memory allocations.
+/** Create an empty file at utf8-encoded path @a file.
+ *
+ * @a file must not already exist. If an error occurs while
+ * closing the file, attempt to delete the file before returning the error.
+ *
+ * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.9.
  */
 svn_error_t *
 svn_io_file_create_empty(const char *file,
-                         apr_pool_t *pool);
+                         apr_pool_t *scratch_pool);
 
 /**
  * Lock file at @a lock_file. If @a exclusive is TRUE,
@@ -900,6 +918,17 @@ typedef svn_error_t *(*svn_stream_seek_fn_t)(void *baton,
 typedef svn_error_t *(*svn_stream_data_available_fn_t)(void *baton,
                                               svn_boolean_t *data_available);
 
+/** Readline handler function for a generic stream. @see svn_stream_t and
+ * svn_stream_readline().
+ *
+ * @since New in 1.10.
+ */
+typedef svn_error_t *(*svn_stream_readline_fn_t)(void *baton,
+                                                 svn_stringbuf_t **stringbuf,
+                                                 const char *eol,
+                                                 svn_boolean_t *eof,
+                                                 apr_pool_t *pool);
+
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *
 svn_stream_create(void *baton,
@@ -974,6 +1003,14 @@ void
 svn_stream_set_data_available(svn_stream_t *stream,
                               svn_stream_data_available_fn_t data_available);
 
+/** Set @a stream's readline function to @a readline_fn
+ *
+ * @since New in 1.10.
+ */
+void
+svn_stream_set_readline(svn_stream_t *stream,
+                        svn_stream_readline_fn_t readline_fn);
+
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *
 svn_stream_empty(apr_pool_t *pool);
@@ -981,7 +1018,7 @@ svn_stream_empty(apr_pool_t *pool);
 /** Return a stream allocated in @a pool which forwards all requests
  * to @a stream.  Destruction is explicitly excluded from forwarding.
  *
- * @see http://subversion.apache.org/docs/community-guide/conventions.html#destruction-of-stacked-resources
+ * @see https://subversion.apache.org/docs/community-guide/conventions.html#destruction-of-stacked-resources
  *
  * @since New in 1.4.
  */
@@ -990,10 +1027,10 @@ svn_stream_disown(svn_stream_t *stream,
                   apr_pool_t *pool);
 
 
-/** Create a stream to read the file at @a path. It will be opened using
- * the APR_BUFFERED and APR_BINARY flag, and APR_OS_DEFAULT for the perms.
- * If you'd like to use different values, then open the file yourself, and
- * use the svn_stream_from_aprfile2() interface.
+/** Create a stream to read the file at @a path. It will be opened using the
+ * APR_BUFFERED flag, and APR_OS_DEFAULT for the perms. If you'd like to use
+ * different values, then open the file yourself, and use the
+ * svn_stream_from_aprfile2() interface.
  *
  * The stream will be returned in @a stream, and allocated from @a result_pool.
  * Temporary allocations will be performed in @a scratch_pool.
@@ -1008,11 +1045,11 @@ svn_stream_open_readonly(svn_stream_t **stream,
 
 
 /** Create a stream to write a file at @a path. The file will be *created*
- * using the APR_BUFFERED and APR_BINARY flag, and APR_OS_DEFAULT for the
- * perms. The file will be created "exclusively", so if it already exists,
- * then an error will be thrown. If you'd like to use different values, or
- * open an existing file, then open the file yourself, and use the
- * svn_stream_from_aprfile2() interface.
+ * using the APR_BUFFERED flag, and APR_OS_DEFAULT for the perms. The file
+ * will be created "exclusively", so if it already exists, then an error will
+ * be thrown. If you'd like to use different values, or open an existing file,
+ * then open the file yourself, and use the svn_stream_from_aprfile2()
+ * interface.
  *
  * The stream will be returned in @a stream, and allocated from @a result_pool.
  * Temporary allocations will be performed in @a scratch_pool.
@@ -1084,11 +1121,29 @@ svn_stream_from_aprfile(apr_file_t *file,
                         apr_pool_t *pool);
 
 /** Set @a *in to a generic stream connected to stdin, allocated in
- * @a pool.  The stream and its underlying APR handle will be closed
- * when @a pool is cleared or destroyed.
+ * @a pool.  If @a buffered is set, APR buffering will be enabled.
+ * The stream and its underlying APR handle will be closed when @a pool
+ * is cleared or destroyed.
+ *
+ * @note APR buffering will try to fill the whole internal buffer before
+ *       serving read requests.  This may be inappropriate for interactive
+ *       applications where stdin will not deliver any more data unless
+ *       the application processed the data already received.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_stream_for_stdin2(svn_stream_t **in,
+                      svn_boolean_t buffered,
+                      apr_pool_t *pool);
+
+/** Similar to svn_stream_for_stdin2(), but with buffering being disabled.
  *
  * @since New in 1.7.
+ *
+ * @deprecated Provided for backward compatibility with the 1.9 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_stream_for_stdin(svn_stream_t **in,
                      apr_pool_t *pool);
@@ -1111,19 +1166,30 @@ svn_error_t *
 svn_stream_for_stdout(svn_stream_t **out,
                       apr_pool_t *pool);
 
-/** Set @a *str to a string buffer allocated in @a pool that contains all
- * data from the current position in @a stream to its end.  @a len_hint
- * specifies the initial capacity of the string buffer and may be 0.  The
- * buffer gets automatically resized to fit the actual amount of data being
- * read from @a stream.
+/** Read the contents of @a stream into memory, from its current position
+ * to its end, returning the data in @a *result. This function does not
+ * close the @a stream upon completion.
+ *
+ * @a len_hint gives a hint about the expected length, in bytes, of the
+ * actual data that will be read from the stream. It may be 0, meaning no
+ * hint is being provided. Efficiency in time and/or in space may be
+ * better (and in general will not be worse) when the actual data length
+ * is equal or approximately equal to the length hint.
+ *
+ * The returned memory is allocated in @a result_pool.
+ *
+ * @note The present implementation is efficient when @a len_hint is big
+ * enough (but not vastly bigger than necessary), and also for actual
+ * lengths up to 64 bytes when @a len_hint is 0. Otherwise it can incur
+ * significant time and space overheads. See source code for details.
  *
  * @since New in 1.9.
  */
 svn_error_t *
-svn_stringbuf_from_stream(svn_stringbuf_t **str,
+svn_stringbuf_from_stream(svn_stringbuf_t **result,
                           svn_stream_t *stream,
                           apr_size_t len_hint,
-                          apr_pool_t *pool);
+                          apr_pool_t *result_pool);
 
 /** Return a generic stream connected to stringbuf @a str.  Allocate the
  * stream in @a pool.
@@ -1182,7 +1248,8 @@ svn_stream_compressed(svn_stream_t *stream,
  * The @a stream passed into this function is closed when the created
  * stream is closed.
  *
- * @since New in 1.6.
+ * @since New in 1.6.  Since 1.10, the resulting stream supports reset
+ * via stream_stream_reset().
  */
 svn_stream_t *
 svn_stream_checksummed2(svn_stream_t *stream,
@@ -1206,6 +1273,24 @@ svn_stream_checksummed(svn_stream_t *stream,
                        const unsigned char **write_digest,
                        svn_boolean_t read_all,
                        apr_pool_t *pool);
+
+/** Read the contents of the readable stream @a stream and return its
+ * checksum of type @a kind in @a *checksum.
+ *
+ * The stream will be closed before this function returns (regardless
+ * of the result, or any possible error).
+ *
+ * Use @a scratch_pool for temporary allocations and @a result_pool
+ * to allocate @a *checksum.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_stream_contents_checksum(svn_checksum_t **checksum,
+                             svn_stream_t *stream,
+                             svn_checksum_kind_t kind,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 /** Read from a generic stream until @a buffer is filled upto @a *len or
  * until EOF is reached. @see svn_stream_t
@@ -1265,6 +1350,8 @@ svn_stream_read(svn_stream_t *stream,
  * of reads or a simple seek operation. If the stream implementation has
  * not provided a skip function, this will read from the stream and
  * discard the data.
+ *
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_stream_skip(svn_stream_t *stream,
@@ -1297,6 +1384,22 @@ svn_stream_reset(svn_stream_t *stream);
  */
 svn_boolean_t
 svn_stream_supports_mark(svn_stream_t *stream);
+
+/** Returns @c TRUE if the generic @a stream supports svn_stream_seek().
+ *
+ * @see svn_stream_seek()
+ * @since New in 1.15.
+ */
+svn_boolean_t
+svn_stream_supports_seek(svn_stream_t *stream);
+
+/** Returns @c TRUE if the generic @a stream supports svn_stream_reset().
+ *
+ * @see svn_stream_reset()
+ * @since New in 1.10.
+ */
+svn_boolean_t
+svn_stream_supports_reset(svn_stream_t *stream);
 
 /** Set a @a mark at the current position of a generic @a stream,
  * which can later be sought back to using svn_stream_seek().
@@ -1482,24 +1585,43 @@ svn_stream_contents_same(svn_boolean_t *same,
                          apr_pool_t *pool);
 
 
-/** Read the contents of @a stream into memory, returning the data in
- * @a result. The stream will be closed when it has been successfully and
- * completely read.
+/** Read the contents of @a stream into memory, from its current position
+ * to its end, returning the data in @a *result. The stream will be closed
+ * when it has been successfully and completely read.
+ *
+ * @a len_hint gives a hint about the expected length, in bytes, of the
+ * actual data that will be read from the stream. It may be 0, meaning no
+ * hint is being provided. Efficiency in time and/or in space may be
+ * better (and in general will not be worse) when the actual data length
+ * is equal or approximately equal to the length hint.
  *
  * The returned memory is allocated in @a result_pool, and any temporary
- * allocations are performed in @a scratch_pool.
+ * allocations may be performed in @a scratch_pool.
  *
- * @note due to memory pseudo-reallocation behavior (due to pools), this
- *   can be a memory-intensive operation for large files.
+ * @note The present implementation is efficient when @a len_hint is big
+ * enough (but not vastly bigger than necessary), and also for actual
+ * lengths up to 64 bytes when @a len_hint is 0. Otherwise it can incur
+ * significant time and space overheads. See source code for details.
  *
- * @since New in 1.6
+ * @since New in 1.10
  */
+svn_error_t *
+svn_string_from_stream2(svn_string_t **result,
+                        svn_stream_t *stream,
+                        apr_size_t len_hint,
+                        apr_pool_t *result_pool);
+
+/** Similar to svn_string_from_stream2(), but always passes 0 for
+ * @a len_hint.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.9 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_string_from_stream(svn_string_t **result,
                        svn_stream_t *stream,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
-
 
 /** A function type provided for use as a callback from
  * @c svn_stream_lazyopen_create().
@@ -1533,6 +1655,10 @@ typedef svn_error_t *
  *
  * If the only "access" the returned stream gets is to close it
  * then @a open_func will only be called if @a open_on_close is TRUE.
+ *
+ * Allocate the returned stream in @a result_pool. Also arrange for
+ * @a result_pool to be passed as the @c result_pool parameter to
+ * @a open_func when it is called.
  *
  * @since New in 1.8.
  */
@@ -2151,6 +2277,28 @@ svn_io_file_info_get(apr_finfo_t *finfo,
                      apr_pool_t *pool);
 
 
+/** Set @a *filesize_p to the size of @a file. Use @a pool for temporary
+  * allocations.
+  *
+  * @note Use svn_io_file_info_get() to get more information about
+  * apr_file_t.
+  *
+  * @since New in 1.10
+  */
+svn_error_t *
+svn_io_file_size_get(svn_filesize_t *filesize_p, apr_file_t *file,
+                     apr_pool_t *pool);
+
+/** Fetch the current offset of @a file into @a *offset_p. Use @a pool for
+  * temporary allocations.
+  *
+  * @since New in 1.10
+  */
+svn_error_t *
+svn_io_file_get_offset(apr_off_t *offset_p,
+                       apr_file_t *file,
+                       apr_pool_t *pool);
+
 /** Wrapper for apr_file_read(). */
 svn_error_t *
 svn_io_file_read(apr_file_t *file,
@@ -2201,12 +2349,12 @@ svn_io_file_seek(apr_file_t *file,
  * internal data buffer to @a block_size bytes and to read data aligned to
  * multiples of that value.  The beginning of the block will be returned
  * in @a buffer_start, if that is not NULL.
- * Uses @a pool for temporary allocations.
+ * Uses @a scratch_pool for temporary allocations.
  *
- * @note Due to limitations of the APR API, in particular pre-1.3 APR,
- * the alignment may not be successful.  If you never use any other seek
- * function on @a file, you are, however, virtually guaranteed to get at
- * least 4kByte alignments for all reads.
+ * @note Due to limitations of the APR API, the alignment may not be
+ * successful.  If you never use any other seek function on @a file,
+ * however, you are virtually guaranteed to get at least 4kByte alignment
+ * for all reads.
  *
  * @note Calling this for non-buffered files is legal but inefficient.
  *
@@ -2217,7 +2365,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
                          apr_off_t block_size,
                          apr_off_t *buffer_start,
                          apr_off_t offset,
-                         apr_pool_t *pool);
+                         apr_pool_t *scratch_pool);
 
 /** Wrapper for apr_file_write(). */
 svn_error_t *
@@ -2252,13 +2400,31 @@ svn_io_file_write_full(apr_file_t *file,
  * If @a copy_perms_path is not NULL, copy the permissions applied on @a
  * @a copy_perms_path on the temporary file before renaming.
  *
- * @note This function uses advanced file control operations to flush buffers
- * to disk that aren't always accessible and can be very expensive. Avoid
- * using this function in cases where the file should just work on any
- * network filesystem.
+ * If @a flush_to_disk is non-zero, do not return until the node has
+ * actually been written on the disk.
+ *
+ * @note The flush to disk operation can be very expensive on systems
+ * that implement flushing on all IO layers, like Windows. Please use
+ * @a flush_to_disk flag only for critical data.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_io_write_atomic2(const char *final_path,
+                     const void *buf,
+                     apr_size_t nbytes,
+                     const char *copy_perms_path,
+                     svn_boolean_t flush_to_disk,
+                     apr_pool_t *scratch_pool);
+
+/** Similar to svn_io_write_atomic2(), but with @a flush_to_disk set
+ * to @c TRUE.
  *
  * @since New in 1.9.
+ *
+ * @deprecated Provided for backward compatibility with the 1.9 API
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_write_atomic(const char *final_path,
                     const void *buf,
@@ -2308,9 +2474,26 @@ svn_io_stat(apr_finfo_t *finfo,
  * @a from_path to a new path @a to_path within the same filesystem.
  * In some cases, an existing node at @a to_path will be overwritten.
  *
- * A wrapper for apr_file_rename().  @a from_path and @a to_path are
- * utf8-encoded.
+ * @a from_path and @a to_path are utf8-encoded.  If @a flush_to_disk
+ * is non-zero, do not return until the node has actually been moved on
+ * the disk.
+ *
+ * @note The flush to disk operation can be very expensive on systems
+ * that implement flushing on all IO layers, like Windows. Please use
+ * @a flush_to_disk flag only for critical data.
+ *
+ * @since New in 1.10.
  */
+svn_error_t *
+svn_io_file_rename2(const char *from_path, const char *to_path,
+                    svn_boolean_t flush_to_disk, apr_pool_t *pool);
+
+/** Similar to svn_io_file_rename2(), but with @a flush_to_disk set
+ * to @c FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.9 API
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_file_rename(const char *from_path,
                    const char *to_path,

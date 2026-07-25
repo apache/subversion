@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,11 +17,11 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl.types;
 
+import java.lang.annotation.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -32,9 +31,10 @@ import java.util.Locale;
  */
 public class Revision implements java.io.Serializable
 {
-    // Update the serialVersionUID when there is a incompatible change made to
-    // this class.  See the java documentation for when a change is incompatible.
-    // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+    // Update the serialVersionUID when there is an incompatible change made to
+    // this class.  See the Java documentation (following link or its counter-
+    // part in your specific Java release) for when a change is incompatible.
+    // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
     private static final long serialVersionUID = 1L;
 
     /**
@@ -132,7 +132,7 @@ public class Revision implements java.io.Serializable
     }
 
     /**
-     * Creates a Revision.DateSpec objet
+     * Creates a Revision.DateSpec object
      * @param revisionDate  the date of the new object
      * @return  the new object
      */
@@ -179,6 +179,7 @@ public class Revision implements java.io.Serializable
     /**
      * Marker revision number for no real revision
      */
+    @Native
     public static final int SVN_INVALID_REVNUM = -1;
 
     /**
@@ -276,7 +277,7 @@ public class Revision implements java.io.Serializable
 
         /**
          * Create a revision from a timestamp in milliseconds.
-         * Used by the native implementaiton.
+         * Used by the native implementation.
          */
         private DateSpec(long milliseconds)
         {

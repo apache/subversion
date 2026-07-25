@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,11 +17,12 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl.callback;
 
+import java.util.Date;
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -56,9 +56,10 @@ public interface AuthnCallback
         extends AuthnResult
         implements java.io.Serializable
     {
-        // Update the serialVersionUID when there is a incompatible change made to
-        // this class.  See the java documentation for when a change is incompatible.
-        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        // Update the serialVersionUID when there is an incompatible change made to
+        // this class.  See the Java documentation (following link or its counter-
+        // part in your specific Java release) for when a change is incompatible.
+        // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
         private static final long serialVersionUID = 1L;
 
         /**
@@ -101,9 +102,10 @@ public interface AuthnCallback
         extends AuthnResult
         implements java.io.Serializable
     {
-        // Update the serialVersionUID when there is a incompatible change made to
-        // this class.  See the java documentation for when a change is incompatible.
-        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        // Update the serialVersionUID when there is an incompatible change made to
+        // this class.  See the Java documentation (following link or its counter-
+        // part in your specific Java release) for when a change is incompatible.
+        // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
         private static final long serialVersionUID = 1L;
 
         /**
@@ -151,9 +153,10 @@ public interface AuthnCallback
      */
     public static class SSLServerCertFailures implements java.io.Serializable
     {
-        // Update the serialVersionUID when there is a incompatible change made to
-        // this class.  See the java documentation for when a change is incompatible.
-        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        // Update the serialVersionUID when there is an incompatible change made to
+        // this class.  See the Java documentation (following link or its counter-
+        // part in your specific Java release) for when a change is incompatible.
+        // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
         private static final long serialVersionUID = 1L;
 
         /**
@@ -237,47 +240,22 @@ public interface AuthnCallback
      */
     public static class SSLServerCertInfo implements java.io.Serializable
     {
-        // Update the serialVersionUID when there is a incompatible change made to
-        // this class.  See the java documentation for when a change is incompatible.
-        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        // Update the serialVersionUID when there is an incompatible change made to
+        // this class.  See the Java documentation (following link or its counter-
+        // part in your specific Java release) for when a change is incompatible.
+        // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
         private static final long serialVersionUID = 1L;
 
         /**
-         * @return The primary CN of the certificate.
+         * @return The subject of the certificate.
          */
-        public String getHostname()
+        public String getSubject()
         {
-            return hostname;
+            return subject;
         }
 
         /**
-         * @return The text representation of the certificate fingerprint.
-         */
-        public String getFingerprint()
-        {
-            return fingerprint;
-        }
-
-        /**
-         * @return The text represent representation of the date from
-         *         which the certificate is valid.
-         */
-        public String getValidFrom()
-        {
-            return validFrom;
-        }
-
-        /**
-         * @return The text represent representation of the date after
-         *         which the certificate is no longer valid.
-         */
-        public String getValidUntil()
-        {
-            return validUntil;
-        }
-
-        /**
-         * @return The DN of the certificate issuer.
+         * @return The certificate issuer.
          */
         public String getIssuer()
         {
@@ -285,32 +263,68 @@ public interface AuthnCallback
         }
 
         /**
-         * @return the Base64-encoded DER representation of the certificate.
+         * @return The from which the certificate is valid.
          */
-        public String getDER()
+        public Date getValidFrom()
         {
-            return der;
+            return validFrom;
+        }
+
+        /**
+         * @return The date after which the certificate is no longer valid.
+         */
+        public Date getValidTo()
+        {
+            return validTo;
+        }
+
+        /**
+         * @return The certificate fingerprint.
+         */
+        public byte[] getFingerprint()
+        {
+            return fingerprint;
+        }
+
+        /**
+         * @return A list of host names that the certificate represents.
+         */
+        public List<String> getHostnames()
+        {
+            return hostnames;
+        }
+
+        /**
+         * @return the Base64-encoded raw certificate data.
+         */
+        public String getCert()
+        {
+            return asciiCert;
         }
 
         /* This private constructor is used by the native implementation. */
-        private SSLServerCertInfo(String hostname, String fingerprint,
-                                  String validFrom, String validUntil,
-                                  String issuer, String der)
+        private SSLServerCertInfo(String subject, String issuer,
+                                  long validFrom, long validTo,
+                                  byte[] fingerprint,
+                                  List<String> hostnames,
+                                  String asciiCert)
         {
-            this.hostname = hostname;
-            this.fingerprint = fingerprint;
-            this.validFrom = validFrom;
-            this.validUntil = validUntil;
+            this.subject = subject;
             this.issuer = issuer;
-            this.der = der;
+            this.validFrom = new Date(validFrom);
+            this.validTo = new Date(validTo);
+            this.fingerprint = fingerprint;
+            this.hostnames = hostnames;
+            this.asciiCert = asciiCert;
         }
 
-        private String hostname;
-        private String fingerprint;
-        private String validFrom;
-        private String validUntil;
+        private String subject;
         private String issuer;
-        private String der;
+        private Date validFrom;
+        private Date validTo;
+        private byte[] fingerprint;
+        private List<String> hostnames;
+        private String asciiCert;
     }
 
     /**
@@ -320,9 +334,10 @@ public interface AuthnCallback
         extends AuthnResult
         implements java.io.Serializable
     {
-        // Update the serialVersionUID when there is a incompatible change made to
-        // this class.  See the java documentation for when a change is incompatible.
-        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        // Update the serialVersionUID when there is an incompatible change made to
+        // this class.  See the Java documentation (following link or its counter-
+        // part in your specific Java release) for when a change is incompatible.
+        // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
         private static final long serialVersionUID = 1L;
 
         /**
@@ -382,9 +397,10 @@ public interface AuthnCallback
         extends AuthnResult
         implements java.io.Serializable
     {
-        // Update the serialVersionUID when there is a incompatible change made to
-        // this class.  See the java documentation for when a change is incompatible.
-        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        // Update the serialVersionUID when there is an incompatible change made to
+        // this class.  See the Java documentation (following link or its counter-
+        // part in your specific Java release) for when a change is incompatible.
+        // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
         private static final long serialVersionUID = 1L;
 
         /**
@@ -428,9 +444,10 @@ public interface AuthnCallback
         extends AuthnResult
         implements java.io.Serializable
     {
-        // Update the serialVersionUID when there is a incompatible change made to
-        // this class.  See the java documentation for when a change is incompatible.
-        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        // Update the serialVersionUID when there is an incompatible change made to
+        // this class.  See the Java documentation (following link or its counter-
+        // part in your specific Java release) for when a change is incompatible.
+        // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
         private static final long serialVersionUID = 1L;
 
         /**

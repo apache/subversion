@@ -81,6 +81,8 @@ typedef struct blame_context_t {
 
   svn_stream_t *stream;
 
+  svn_ra_serf__session_t *session;
+
 } blame_context_t;
 
 
@@ -280,7 +282,8 @@ static svn_error_t *
 create_file_revs_body(serf_bucket_t **body_bkt,
                       void *baton,
                       serf_bucket_alloc_t *alloc,
-                      apr_pool_t *pool)
+                      apr_pool_t *pool /* request pool */,
+                      apr_pool_t *scratch_pool)
 {
   serf_bucket_t *buckets;
   blame_context_t *blame_ctx = baton;
@@ -302,9 +305,8 @@ create_file_revs_body(serf_bucket_t **body_bkt,
 
   if (blame_ctx->include_merged_revisions)
     {
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:include-merged-revisions", NULL,
-                                   alloc);
+      svn_ra_serf__add_empty_tag_buckets(buckets, alloc,
+                                         "S:include-merged-revisions", SVN_VA_NULL);
     }
 
   svn_ra_serf__add_tag_buckets(buckets,
@@ -315,6 +317,20 @@ create_file_revs_body(serf_bucket_t **body_bkt,
                                      "S:file-revs-report");
 
   *body_bkt = buckets;
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_ra_serf__request_header_delegate_t */
+static svn_error_t *
+setup_headers(serf_bucket_t *headers,
+              void *baton,
+              apr_pool_t *request_pool,
+              apr_pool_t *scratch_pool)
+{
+  blame_context_t *blame_ctx = baton;
+
+  svn_ra_serf__setup_svndiff_accept_encoding(headers, blame_ctx->session);
+
   return SVN_NO_ERROR;
 }
 
@@ -343,6 +359,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   blame_ctx->start = start;
   blame_ctx->end = end;
   blame_ctx->include_merged_revisions = include_merged_revisions;
+  blame_ctx->session = session;
 
   /* Since Subversion 1.8 we allow retrieving blames backwards. So we can't
      just unconditionally use end_rev as the peg revision as before */
@@ -352,7 +369,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
     peg_rev = start;
 
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                      session, NULL /* conn */,
+                                      session,
                                       NULL /* url */, peg_rev,
                                       pool, pool));
 
@@ -362,15 +379,16 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                                            blame_cdata,
                                            blame_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_type = "text/xml";
   handler->body_delegate = create_file_revs_body;
   handler->body_delegate_baton = blame_ctx;
-  handler->conn = session->conns[0];
-  handler->session = session;
+  handler->custom_accept_encoding = TRUE;
+  handler->header_delegate = setup_headers;
+  handler->header_delegate_baton = blame_ctx;
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 

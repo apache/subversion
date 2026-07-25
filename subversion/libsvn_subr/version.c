@@ -40,11 +40,13 @@ svn_subr_version(void)
 svn_boolean_t svn_ver_compatible(const svn_version_t *my_version,
                                  const svn_version_t *lib_version)
 {
-  /* With normal development builds the matching rules are strict, to
-     avoid inadvertantly using the wrong libraries.  For backward
-     compatibility testing use --disable-full-version-match to
-     configure 1.7 and then the libraries that get built can be used
-     to replace those in 1.6 or earlier builds.  */
+  /* With normal development builds the matching rules are stricter
+     than for release builds, to avoid inadvertently using the wrong
+     libraries.  For backward compatibility testing of development
+     builds one can use --disable-full-version-match to cause a
+     development build to use the release build rules.  This allows
+     the libraries from the newer development build to be used by an
+     older development build. */
 
 #ifndef SVN_DISABLE_FULL_VERSION_MATCH
   if (lib_version->tag[0] != '\0')
@@ -83,6 +85,11 @@ svn_ver_check_list2(const svn_version_t *my_version,
   svn_error_t *err = SVN_NO_ERROR;
   int i;
 
+#ifdef SVN_DISABLE_FULL_VERSION_MATCH
+  /* Force more relaxed check for --disable-full-version-match. */
+  comparator = svn_ver_compatible;
+#endif
+
   for (i = 0; checklist[i].label != NULL; ++i)
     {
       const svn_version_t *lib_version = checklist[i].version_query();
@@ -109,12 +116,13 @@ svn_ver_check_list2(const svn_version_t *my_version,
 
 struct svn_version_extended_t
 {
-  const char *build_date;       /* Compilation date */
-  const char *build_time;       /* Compilation time */
-  const char *build_host;       /* Build canonical host name */
-  const char *copyright;        /* Copyright notice (localized) */
-  const char *runtime_host;     /* Runtime canonical host name */
-  const char *runtime_osname;   /* Running OS release name */
+  const char *build_date;           /* Compilation date */
+  const char *build_time;           /* Compilation time */
+  const char *build_host;           /* Build canonical host name */
+  const char *copyright;            /* Copyright notice (localized) */
+  const char *runtime_host;         /* Runtime canonical host name */
+  const char *runtime_osname;       /* Running OS release name */
+  const char *character_encoding;   /* Encoding of the current locale */
 
   /* Array of svn_version_ext_linked_lib_t describing dependent
      libraries. */
@@ -136,16 +144,17 @@ svn_version_extended(svn_boolean_t verbose,
   info->build_time = __TIME__;
   info->build_host = SVN_BUILD_HOST;
   info->copyright = apr_pstrdup
-    (pool, _("Copyright (C) 2014 The Apache Software Foundation.\n"
+    (pool, _("Copyright (C) 2026 The Apache Software Foundation.\n"
              "This software consists of contributions made by many people;\n"
              "see the NOTICE file for more information.\n"
              "Subversion is open source software, see "
-             "http://subversion.apache.org/\n"));
+             "https://subversion.apache.org/\n"));
 
   if (verbose)
     {
       info->runtime_host = svn_sysinfo__canonical_host(pool);
       info->runtime_osname = svn_sysinfo__release_name(pool);
+      info->character_encoding = svn_sysinfo__character_encoding(pool);
       info->linked_libs = svn_sysinfo__linked_libs(pool);
       info->loaded_libs = svn_sysinfo__loaded_libs(pool);
     }
@@ -188,6 +197,12 @@ const char *
 svn_version_ext_runtime_osname(const svn_version_extended_t *ext_info)
 {
   return ext_info->runtime_osname;
+}
+
+const char *
+svn_version_ext_character_encoding(const svn_version_extended_t *ext_info)
+{
+  return ext_info->character_encoding;
 }
 
 const apr_array_header_t *
@@ -238,7 +253,7 @@ svn_version__parse_version_string(svn_version_t **version_p,
      require that it be present. */
   if (pieces->nelts == 3)
     {
-      const char *piece = APR_ARRAY_IDX(pieces, 2, const char *);
+      char *piece = APR_ARRAY_IDX(pieces, 2, char *);
       char *hyphen = strchr(piece, '-');
       if (hyphen)
         {
@@ -264,7 +279,7 @@ svn_version__parse_version_string(svn_version_t **version_p,
 
 
 svn_boolean_t
-svn_version__at_least(svn_version_t *version,
+svn_version__at_least(const svn_version_t *version,
                       int major,
                       int minor,
                       int patch)

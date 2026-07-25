@@ -1,5 +1,5 @@
 This tracked the remaining TODOs for the 'Test Review' roadmap item for
-1.7's release status (http://subversion.apache.org/roadmap), i.e.:
+1.7's release status (https://subversion.apache.org/roadmap), i.e.:
 
   "Determine which XFail and WIP tests should remain so,
    and which need to be fixed before release."

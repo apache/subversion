@@ -84,7 +84,7 @@ svn_compat_log_revprops_out_string(const svn_string_t **author,
                                    const svn_string_t **message,
                                    apr_hash_t *revprops);
 
-/** Simiar to svn_compat_log_revprops_out_string() but returns C-style strings
+/** Similar to svn_compat_log_revprops_out_string() but returns C-style strings
  * instead of #svn_string_t.
  *
  * @since New in 1.5.

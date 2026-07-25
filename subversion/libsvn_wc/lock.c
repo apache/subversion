@@ -566,10 +566,12 @@ open_single(svn_wc_adm_access_t **adm_access,
     }
   SVN_ERR(err);
 
-  /* The format version must match exactly. Note that wc_db will perform
-     an auto-upgrade if allowed. If it does *not*, then it has decided a
-     manual upgrade is required and it should have raised an error.  */
-  SVN_ERR_ASSERT(wc_format == SVN_WC__VERSION);
+  /* The format version must be in the supported version range. Note
+     that wc_db will perform an auto-upgrade if allowed. If it does
+     *not*, then it has decided a manual upgrade is required and it
+     should have raised an error.  */
+  SVN_ERR_ASSERT(SVN_WC__SUPPORTED_VERSION <= wc_format
+                 && wc_format <= SVN_WC__VERSION);
 
   /* Need to create a new lock */
   SVN_ERR(adm_access_alloc(&lock, path, db, db_provided, write_lock,
@@ -592,7 +594,7 @@ open_single(svn_wc_adm_access_t **adm_access,
    KIND can be NULL.
 
    ### note: this function should go away when we move to a single
-   ### adminstrative area.  */
+   ### administrative area.  */
 static svn_error_t *
 adm_available(svn_boolean_t *available,
               svn_node_kind_t *kind,
@@ -1313,8 +1315,8 @@ do_close(svn_wc_adm_access_t *adm_access,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *abspath = svn__apr_hash_index_key(hi);
-          svn_wc_adm_access_t *child = svn__apr_hash_index_val(hi);
+          const char *abspath = apr_hash_this_key(hi);
+          svn_wc_adm_access_t *child = apr_hash_this_val(hi);
           const char *path = child->path;
 
           if (IS_MISSING(child))

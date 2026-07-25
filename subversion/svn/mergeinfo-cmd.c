@@ -240,7 +240,7 @@ mergeinfo_summary(
 
   target_is_wc = (! svn_path_is_url(target_path_or_url))
                  && (target_revision->kind == svn_opt_revision_unspecified
-                     || target_revision->kind == svn_opt_revision_working 
+                     || target_revision->kind == svn_opt_revision_working
                      || target_revision->kind == svn_opt_revision_base);
   SVN_ERR(svn_client_get_merging_summary(
             &is_reintegration,
@@ -304,10 +304,10 @@ mergeinfo_log(svn_boolean_t finding_merged,
       baton->show_diff = FALSE;
       baton->depth = depth;
       baton->diff_extensions = NULL;
-      baton->merge_stack = NULL; 
+      baton->merge_stack = NULL;
       baton->search_patterns = NULL;
       baton->pool = pool;
-      log_receiver_baton = baton; 
+      log_receiver_baton = baton;
     }
   else
     {

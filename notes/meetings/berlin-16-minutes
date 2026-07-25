@@ -1,0 +1,105 @@
+The Berlin '16 hackathon was held at the elego offices in Berlin, Germany
+on October 10-14.
+
+Tree conflict resolution
+------------------------
+
+Stefan Sperling notes that there are several things about the tree conflict
+resolver that are either missing or require further work:
+
+  (Points with [X] were marked as important on the blackboard.)
+
+1. Recommended resolution option(s)
+
+  Having a reasonable default option may be useful for the users, so that
+  they wouldn't be continuously prompted on how to resolve the conflicts
+  (--accept=recommended).  Another use case is the automatic conflict
+  resolution in a non-interactive environment (buildbot).
+
+  Ivan Zhakov asked whether it makes sense to automatically apply the
+  "recommended" resolution option in case if there's only one "real" option.
+
+2. Improving the move detection heuristic
+
+  There are known cases where the current move detection heuristic doesn't
+  work.  One example would be "cp A B; mv B/foo C/foo".
+
+  ###  What are the known and important cases that we need to handle?
+
+3. Updating incoming moves is not implemented for directories [X]
+
+  ###
+
+  During the discussion of this point, Ivan Zhakov asked if it's possible to
+  extend the tree conflict storage so that all the necessary data would be
+  available to the resolver, and so that it wouldn't have to contact the
+  server during the actual resolution.
+
+4. Incoming add resolution for directories
+
+  There is ongoing work by Stefan Sperling on the "resolve-incoming-add"
+  branch that is aimed to properly handle cases with added directories by
+  using the diff processor.
+
+5. Working copy operations are not atomic
+
+  The problem is that performing things non-atomically may cause problems, for
+  instance, if the resolution process is cancelled by the user.
+
+  Bert Huijben pointed out that the same problem exists if you run a merge.
+
+6. Markup for descriptions, titles, short descriptions for third-party
+   API users [X]
+
+  The issue was initially brought up by Ivan Zhakov.  There are a few minor
+  problems with using the new API in 3rd-party applications -- for instance,
+  currently they may need to somehow deal with the newlines, strip out and
+  transform URLs, etc.  They could benefit from having the details exposed
+  with some kind of a markup (that would separate URLs, ...).  This could
+  give the API users more flexibility when displaying the conflict details
+  and options.
+
+  Another related topic is that currently the API does not expose the
+  localized option titles (like, "Move my file and merge"), and does not
+  expose the short description ("Remote move vs local edit") of the conflict.
+
+7. New resolution options
+
+  We might need a mechanism to add new resolution options in patch releases.
+  Otherwise, new resolution options will only become available to the users
+  with the next minor release.
+
+8. Resolution scripts
+
+  ###
+
+9. More tests [X]
+
+  Currently, we do not test the behavior of interactive conflict resolver
+  in the Python tests, just via the C tests for the API.
+
+  One minor discussed thing was that we could benefit from just using the
+  "trunk/branches/tags" layout in the new tests, instead of using the Greek
+  tree.
+
+10. Issue with multirange merges
+
+  It was pointed out that the switch to the new conflict resolution API
+  might have broken one scenario.  In Subversion 1.9, if a user performs a
+  multirange merge, and merging the first revision range produces conflicts,
+  then resolving every conflict would automatically continue the merge.
+  In trunk, a user would have to manually re-run the merge command.
+
+  It was mentioned that this could be caused by putting the client in charge
+  of the conflict resolution, instead of having a callback-based mechanism.
+
+11. Using the new API requires users of the existing conflict API to
+    completely rewrite the relevant parts of the code
+
+  (Items 10 and 11 were discussed together, but are split for convenience.)
+
+  Another potential issue with making the API user responsible for properly
+  resolving the conflicts when it should be done, is that users of the
+  existing conflict API would need to rewrite their code to benefit from
+  the new resolution options.  And they might need to update the code that
+  handles every operation.

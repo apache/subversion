@@ -356,7 +356,12 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
  *
  * If @a thread_safe is true, and APR is compiled with threads, all
  * accesses to the cache will be protected with a mutex, if the shared
- * @a memcache has also been created with thread_safe flag set.
+ * @a membuffer has also been created with thread_safe flag set.
+ *
+ * If @a short_lived is set, assume that the data stored through this
+ * cache will probably only be needed for a short period of time.
+ * Typically, some UUID is used as part of the prefix in that scenario.
+ * This flag is a mere hint and does not affect functionality.
  *
  * These caches do not support svn_cache__iter.
  */
@@ -369,8 +374,22 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                                   const char *prefix,
                                   apr_uint32_t priority,
                                   svn_boolean_t thread_safe,
+                                  svn_boolean_t short_lived,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
+
+/**
+ * Creates a null-cache instance in @a *cache_p, allocated from
+ * @a result_pool.  The given @c id is the only data stored in it and can
+ * be retrieved through svn_cache__get_info().
+ *
+ * The cache object will immediately evict (reject) any data being added
+ * to it and will always report as empty.
+ */
+svn_error_t *
+svn_cache__create_null(svn_cache__t **cache_p,
+                       const char *id,
+                       apr_pool_t *result_pool);
 
 /**
  * Sets @a handler to be @a cache's error handling routine.  If any
@@ -541,6 +560,15 @@ svn_cache__get_global_membuffer_cache(void);
  */
 svn_cache__info_t *
 svn_cache__membuffer_get_global_info(apr_pool_t *pool);
+
+/**
+ * Remove all current contents from CACHE.
+ *
+ * NOTE:  In a multi-threaded environment, new contents may have been put
+ * into the cache by the time this function returns.
+ */
+svn_error_t *
+svn_cache__membuffer_clear(svn_membuffer_t *cache);
 
 /** @} */
 

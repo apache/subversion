@@ -57,7 +57,9 @@ typedef  int gid_t;
 #if !defined(__cplusplus) && !defined(inline)
 #define inline __inline
 #endif
-typedef long ssize_t;
+#ifndef HAVE_SSIZE_T
+typedef apr_ssize_t ssize_t;
+#endif
 
 /* Don't define iovec when including APR */
 #define APR_IOVEC_DEFINED
@@ -85,8 +87,17 @@ typedef unsigned __int64   uint64_t;
 #undef HAVE_INTTYPES_H
 #endif
 
+/* Visual Studio >= 2015 has timespec defined */
+#if _MSC_VER >= 1900
+#define HAVE_STRUCT_TIMESPEC
+#endif
+
 #ifdef _MSC_VER
 #pragma warning(disable: 4702) /* warning C4702: unreachable code */
+#if SWIG_VERSION < 0x040002
+/* Prevent C4113 "X differs in parameter lists from Y" errors */
+# pragma warning(default : 4113)
+#endif
 #endif
 
 #endif /* defined(SVN_SWIG_RUBY__CUSTOM_RUBY_CONFIG) && defined(_MSC_VER) */

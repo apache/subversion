@@ -99,7 +99,7 @@ verify_uint_stream(const apr_uint64_t *values,
   SVN_TEST_ASSERT(stream);
   SVN_TEST_ASSERT(!svn_packed__next_int_stream(stream));
   SVN_TEST_ASSERT(!svn_packed__first_byte_stream(root));
-  
+
   /* the stream shall contain exactly the items we put into it */
   SVN_TEST_ASSERT(svn_packed__int_count(stream) == count);
   for (i = 0; i < count; ++i)
@@ -222,6 +222,7 @@ test_byte_stream(apr_pool_t *pool)
 
   /* the stream shall contain exactly the items we put into it */
   SVN_TEST_ASSERT(svn_packed__byte_count(stream) == 20);
+  SVN_TEST_ASSERT(svn_packed__byte_block_count(stream) == COUNT);
   for (i = 0; i < COUNT; ++i)
     {
       svn_string_t string;
@@ -356,7 +357,7 @@ pack(const base_record_t *data,
   svn_packed__create_int_substream(base_stream, TRUE, TRUE);   /* large_signed1 */
   svn_packed__create_int_substream(base_stream, FALSE, TRUE);  /* large_signed2 */
   svn_packed__create_int_substream(base_stream, TRUE, FALSE);  /* prime */
-  
+
   for (i = 0; i < count; ++i)
     {
       svn_packed__add_int(base_stream, data[i].counter);
@@ -434,7 +435,7 @@ unpack(apr_size_t *count,
   base_record_t *data;
   *count = svn_packed__int_count(sub_count_stream) / 2;
   data = apr_pcalloc(pool, *count * sizeof(*data));
-  
+
   for (i = 0; i < *count; ++i)
     {
       data[i].counter = (int) svn_packed__get_int(base_stream);

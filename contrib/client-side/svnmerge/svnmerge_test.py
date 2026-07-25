@@ -89,7 +89,7 @@ class TestCase_launch(unittest.TestCase):
     def test_failurecode(self):
         try:
             svnmerge.launch(self.cmd*10)
-        except svnmerge.LaunchError, (ret, cmd, out):
+        except svnmerge.LaunchError as (ret, cmd, out):
             self.assertNotEqual(ret, 0)
             self.assertNotEqual(ret, None)
             self.assert_(out)
@@ -254,7 +254,7 @@ class TestCase_SvnMerge(unittest.TestCase):
                 reset_svnmerge()
 
                 ret = svnmerge.main(args)
-            except SystemExit, e:
+            except SystemExit as e:
                 ret = e.code
         finally:
             sys.stdout = sys.__stdout__
@@ -302,7 +302,7 @@ class TestCase_SvnMerge(unittest.TestCase):
     def launch(self, cmd, **kwargs):
         try:
             out = svnmerge.launch(cmd, split_lines=False)
-        except svnmerge.LaunchError, (ret, cmd, out):
+        except svnmerge.LaunchError as (ret, cmd, out):
             return self._parseoutput(ret, out, **kwargs)
         return self._parseoutput(0, out, **kwargs)
 

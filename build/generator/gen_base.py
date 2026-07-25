@@ -22,6 +22,7 @@
 # gen_base.py -- infrastructure for generating makefiles, dependencies, etc.
 #
 
+import collections
 import os
 import sys
 import glob
@@ -34,6 +35,7 @@ try:
 except ImportError:
   # Python <3.0
   import ConfigParser as configparser
+  configparser.ConfigParser.read_file = configparser.ConfigParser.readfp
 import generator.swig
 
 import getversion
@@ -75,7 +77,7 @@ class GeneratorBase:
 
     # Now read and parse build.conf
     parser = configparser.ConfigParser()
-    parser.readfp(open(fname))
+    parser.read_file(open(fname))
 
     self.conf = build_path(os.path.abspath(fname))
 
@@ -240,12 +242,16 @@ class GeneratorBase:
         os.rename(new_hdrfile, hdrfile)
 
   def write_file_if_changed(self, fname, new_contents):
-    """Rewrite the file if new_contents are different than its current content.
+    """Rewrite the file if NEW_CONTENTS are different than its current content.
 
     If you have your windows projects open and generate the projects
     it's not a small thing for windows to re-read all projects so
     only update those that have changed.
+
+    Under Python >=3, NEW_CONTENTS must be a 'str', not a 'bytes'.
     """
+    if sys.version_info[0] >= 3:
+      new_contents = new_contents.encode()
 
     try:
       old_contents = open(fname, 'rb').read()
@@ -283,7 +289,7 @@ class GeneratorBase:
             '  { %d, "%s" },' % (num, val),
           ])
 
-       # Remove ',' for c89 compatibility
+      # Remove ',' for c89 compatibility
       lines[-1] = lines[-1][0:-1]
 
       lines.extend([
@@ -291,7 +297,14 @@ class GeneratorBase:
           '',
         ])
 
-    write_struct('svn__errno', errno.errorcode.items())
+    # errno names can vary depending on the Python, and possibly the
+    # OS, version and they are not even used by normal release builds
+    # so omit them from the tarball. We always want the struct itself
+    # so that SVN_DEBUG builds still compile and it needs a dummy
+    # entry to avoid a zero-sized array.
+    write_struct('svn__errno',
+                 [(0, "success")] if self.release_mode
+                                  else errno.errorcode.items())
 
     # Fetch and write apr_errno.h codes.
     aprerr = []
@@ -303,17 +316,110 @@ class GeneratorBase:
       key, _, val = line.split()
       aprerr += [(int(val), key)]
     write_struct('svn__apr_errno', aprerr)
+    aprdict = dict(aprerr)
+    del aprerr
 
     ## sanity check
-    intersection = set(errno.errorcode.keys()) & set(dict(aprerr).keys())
+    intersection = set(errno.errorcode.keys()) & set(aprdict.keys())
+    intersection = filter(lambda x: errno.errorcode[x] != aprdict[x],
+                          intersection)
     if self.errno_filter(intersection):
-        print("WARNING: errno intersects APR error codes: %r" % intersection)
+        print("WARNING: errno intersects APR error codes; "
+              "runtime computation of symbolic error names for the following numeric codes might be wrong: "
+              "%r" % (intersection,))
 
     self.write_file_if_changed('subversion/libsvn_subr/errorcode.inc',
                                '\n'.join(lines))
 
   def errno_filter(self, codes):
-    return codes
+    # list() to force the generator under python3
+    return list(codes)
+
+  class FileSectionOptionEnum(object):
+    # These are accessed via getattr() later on
+    file = object()
+    section = object()
+    option = object()
+
+  def _client_configuration_defines(self):
+    """Return an iterator over SVN_CONFIG_* #define's in the "Client
+    configuration files strings" section of svn_config.h."""
+
+    pattern = re.compile(
+      r'^\s*#\s*define\s+'
+      r'(?P<macro>SVN_CONFIG_(?P<kind>CATEGORY|SECTION|OPTION)_[A-Z0-9a-z_]+)'
+    )
+    kind = {
+      'CATEGORY': self.FileSectionOptionEnum.file,
+      'SECTION': self.FileSectionOptionEnum.section,
+      'OPTION': self.FileSectionOptionEnum.option,
+    }
+
+    fname = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])),
+                         'subversion', 'include', 'svn_config.h')
+    lines = iter(open(fname))
+    for line in lines:
+      if "@name Client configuration files strings" in line:
+        break
+    else:
+      raise Exception("Unable to parse svn_config.h")
+
+    for line in lines:
+      if "@{" in line:
+        break
+    else:
+      raise Exception("Unable to parse svn_config.h")
+
+    for line in lines:
+      if "@}" in line:
+        break
+      match = pattern.match(line)
+      if match:
+        yield (
+          match.group('macro'),
+          kind[match.group('kind')],
+        )
+    else:
+      raise Exception("Unable to parse svn_config.h")
+
+  def write_config_keys(self):
+    groupby = collections.defaultdict(list)
+    empty_sections = []
+    previous = (None, None)
+    for macro, kind in self._client_configuration_defines():
+      if kind is previous[1] is self.FileSectionOptionEnum.section:
+        empty_sections.append(previous[0])
+      groupby[kind].append(macro)
+      previous = (macro, kind)
+    else:
+      # If the last (macro, kind) is a section, then it's an empty section.
+      if kind is self.FileSectionOptionEnum.section:
+        empty_sections.append(macro)
+
+    lines = []
+    lines.append('/* This file was generated by build/generator/gen_base.py */')
+    lines.append('')
+
+    for kind in ('file', 'section', 'option'):
+      macros = groupby[getattr(self.FileSectionOptionEnum, kind)]
+      lines.append('static const char *svn__valid_config_%ss[] = {' % (kind,))
+      for macro in macros:
+        lines.append('  %s,' % (macro,))
+      # Remove ',' for c89 compatibility
+      lines[-1] = lines[-1][0:-1]
+      lines.append('};')
+      lines.append('')
+
+    lines.append('static const char *svn__empty_config_sections[] = {');
+    for section in empty_sections:
+      lines.append('  %s,' % (section,))
+    # Remove ',' for c89 compatibility
+    lines[-1] = lines[-1][0:-1]
+    lines.append('};')
+    lines.append('')
+
+    self.write_file_if_changed('subversion/libsvn_subr/config_keys.inc',
+                               '\n'.join(lines))
 
 class DependencyGraph:
   """Record dependencies between build items.
@@ -498,6 +604,7 @@ class TargetLinked(Target):
     self.external_lib = options.get('external-lib')
     self.external_project = options.get('external-project')
     self.msvc_libs = options.get('msvc-libs', '').split()
+    self.msvc_delayload_targets = []
 
   def add_dependencies(self):
     if self.external_lib or self.external_project:
@@ -550,8 +657,6 @@ class TargetExe(TargetLinked):
     self.manpages = options.get('manpages', '')
     self.testing = options.get('testing')
 
-    self.msvc_force_static = options.get('msvc-force-static') == 'yes'
-
   def add_dependencies(self):
     TargetLinked.add_dependencies(self)
 
@@ -598,6 +703,7 @@ class TargetLib(TargetLinked):
     self.link_cmd = options.get('link-cmd', '$(LINK_LIB)')
 
     self.msvc_static = options.get('msvc-static') == 'yes' # is a static lib
+    self.msvc_delayload = options.get('msvc-delayload') == 'yes' # Delay dll load
     self.msvc_fake = options.get('msvc-fake') == 'yes' # has fake target
     self.msvc_export = options.get('msvc-export', '').split()
 
@@ -618,6 +724,22 @@ class TargetApacheMod(TargetLib):
     ### hmm. this is Makefile-specific
     self.compile_cmd = '$(COMPILE_APACHE_MOD)'
     self.link_cmd = '$(LINK_APACHE_MOD)'
+
+class TargetSharedOnlyLib(TargetLib):
+
+  def __init__(self, name, options, gen_obj):
+    TargetLib.__init__(self, name, options, gen_obj)
+
+    self.compile_cmd = '$(COMPILE_SHARED_ONLY_LIB)'
+    self.link_cmd = '$(LINK_SHARED_ONLY_LIB)'
+
+class TargetSharedOnlyCxxLib(TargetLib):
+
+  def __init__(self, name, options, gen_obj):
+    TargetLib.__init__(self, name, options, gen_obj)
+
+    self.compile_cmd = '$(COMPILE_SHARED_ONLY_CXX_LIB)'
+    self.link_cmd = '$(LINK_SHARED_ONLY_CXX_LIB)'
 
 class TargetRaModule(TargetLib):
   pass
@@ -776,49 +898,58 @@ class TargetJava(TargetLinked):
   def __init__(self, name, options, gen_obj):
     TargetLinked.__init__(self, name, options, gen_obj)
     self.link_cmd = options.get('link-cmd')
-    self.packages = options.get('package-roots', '').split()
+    self.package = options.get('package')
     self.jar = options.get('jar')
     self.deps = [ ]
-
-class TargetJavaHeaders(TargetJava):
-  def __init__(self, name, options, gen_obj):
-    TargetJava.__init__(self, name, options, gen_obj)
     self.objext = '.class'
-    self.javah_objext = '.h'
     self.headers = options.get('headers')
     self.classes = options.get('classes')
-    self.package = options.get('package')
-    self.output_dir = self.headers
+    self.native = options.get('native', '')
+    self.output_dir = self.classes
+    self.headers_dir = self.headers
 
   def add_dependencies(self):
     sources = _collect_paths(self.sources, self.path)
+    native = _collect_paths(self.native, self.path)
+
+    class_pkg_list = self.package.split('.')
+    sourcepath = build_path_split(self.path)[:-len(class_pkg_list)]
+    sourcepath = build_path_join(*sourcepath)
 
     for src, reldir in sources:
       if src[-5:] != '.java':
         raise GenError('ERROR: unknown file extension on ' + src)
 
+      sfile = SourceFile(src, reldir)
+      sfile.sourcepath = sourcepath
+
       class_name = build_path_basename(src[:-5])
 
-      class_header = build_path_join(self.headers, class_name + '.h')
-      class_header_win = build_path_join(self.headers,
-                                         self.package.replace(".", "_")
-                                         + "_" + class_name + '.h')
-      class_pkg_list = self.package.split('.')
       class_pkg = build_path_join(*class_pkg_list)
       class_file = ObjectFile(build_path_join(self.classes, class_pkg,
                                               class_name + self.objext),
-                              self.when)
+                              self.compile_cmd, self.when)
       class_file.source_generated = 1
       class_file.class_name = class_name
-      hfile = HeaderFile(class_header, self.package + '.' + class_name,
-                         self.compile_cmd)
-      hfile.filename_win = class_header_win
-      hfile.source_generated = 1
-      self.gen_obj.graph.add(DT_OBJECT, hfile, class_file)
-      self.deps.append(hfile)
 
-      # target (a linked item) depends upon object
-      self.gen_obj.graph.add(DT_LINK, self.name, hfile)
+      self.gen_obj.graph.add(DT_OBJECT, class_file, sfile)
+      self.gen_obj.graph.add(DT_LINK, self.name, class_file)
+      self.deps.append(class_file)
+
+      if (src, reldir) in native:
+        class_header = build_path_join(self.headers, class_name + '.h')
+        class_header_win = build_path_join(self.headers,
+                                           self.package.replace(".", "_")
+                                           + "_" + class_name + '.h')
+        hfile = HeaderFile(class_header, self.package + '.' + class_name,
+                           self.compile_cmd)
+        hfile.filename_win = class_header_win
+        hfile.source_generated = 1
+        self.gen_obj.graph.add(DT_OBJECT, hfile, sfile)
+        self.deps.append(hfile)
+
+        # target (a linked item) depends upon object
+        self.gen_obj.graph.add(DT_LINK, self.name, hfile)
 
 
     # collect all the paths where stuff might get built
@@ -826,65 +957,8 @@ class TargetJavaHeaders(TargetJava):
     ### the sources. "what dir are you going to put yourself into?"
     self.gen_obj.target_dirs.append(self.path)
     self.gen_obj.target_dirs.append(self.classes)
-    self.gen_obj.target_dirs.append(self.headers)
-    for pattern in self.sources.split():
-      dirname = build_path_dirname(pattern)
-      if dirname:
-        self.gen_obj.target_dirs.append(build_path_join(self.path, dirname))
-
-    self.gen_obj.graph.add(DT_INSTALL, self.name, self)
-
-class TargetJavaClasses(TargetJava):
-  def __init__(self, name, options, gen_obj):
-    TargetJava.__init__(self, name, options, gen_obj)
-    self.objext = '.class'
-    self.lang = 'java'
-    self.classes = options.get('classes')
-    self.output_dir = self.classes
-
-  def add_dependencies(self):
-    sources = []
-    for p in self.path.split():
-      sources.extend(_collect_paths(self.sources, p))
-
-    for src, reldir in sources:
-      if src[-5:] == '.java':
-        objname = src[:-5] + self.objext
-
-        # As .class files are likely not generated into the same
-        # directory as the source files, the object path may need
-        # adjustment.  To this effect, take "target_ob.classes" into
-        # account.
-        dirs = build_path_split(objname)
-        sourcedirs = dirs[:-1]  # Last element is the .class file name.
-        while sourcedirs:
-          if sourcedirs.pop() in self.packages:
-            sourcepath = build_path_join(*sourcedirs)
-            objname = build_path_join(self.classes, *dirs[len(sourcedirs):])
-            break
-        else:
-          raise GenError('Unable to find Java package root in path "%s"' % objname)
-      else:
-        raise GenError('ERROR: unknown file extension on "' + src + '"')
-
-      ofile = ObjectFile(objname, self.compile_cmd, self.when)
-      sfile = SourceFile(src, reldir)
-      sfile.sourcepath = sourcepath
-
-      # object depends upon source
-      self.gen_obj.graph.add(DT_OBJECT, ofile, sfile)
-
-      # target (a linked item) depends upon object
-      self.gen_obj.graph.add(DT_LINK, self.name, ofile)
-
-      # Add the class file to the dependency tree for this target
-      self.deps.append(ofile)
-
-    # collect all the paths where stuff might get built
-    ### we should collect this from the dependency nodes rather than
-    ### the sources. "what dir are you going to put yourself into?"
-    self.gen_obj.target_dirs.extend(self.path.split())
-    self.gen_obj.target_dirs.append(self.classes)
+    if self.headers:
+      self.gen_obj.target_dirs.append(self.headers)
     for pattern in self.sources.split():
       dirname = build_path_dirname(pattern)
       if dirname:
@@ -931,8 +1005,9 @@ _build_types = {
   'ra-module': TargetRaModule,
   'fs-module': TargetFsModule,
   'apache-mod': TargetApacheMod,
-  'javah' : TargetJavaHeaders,
-  'java' : TargetJavaClasses,
+  'shared-only-lib': TargetSharedOnlyLib,
+  'shared-only-cxx-lib': TargetSharedOnlyCxxLib,
+  'java' : TargetJava,
   'i18n' : TargetI18N,
   'sql-header' : TargetSQLHeader,
   }
@@ -1196,7 +1271,8 @@ class IncludeDependencyInfo:
     Return a dictionary with included full file names as keys and None as
     values."""
     hdrs = { }
-    for line in fileinput.input(fname):
+
+    for line in fileinput.FileInput(fname, openhook=fileinput.hook_encoded("utf-8")):
       match = self._re_include.match(line)
       if not match:
         continue
@@ -1208,6 +1284,12 @@ class IncludeDependencyInfo:
       if os.sep.join(['libsvn_subr', 'error.c']) in fname \
            and 'errorcode.inc' == include_param:
         continue # generated by GeneratorBase.write_errno_table
+      if os.sep.join(['libsvn_subr', 'cmdline.c']) in fname \
+           and 'config_keys.inc' == include_param:
+        continue # generated by GeneratorBase.write_config_keys
+      if os.sep.join(['tests', 'libsvn_subr', 'adler32-test.c']) in fname \
+           and native_path('../../libsvn_subr/adler32.c') == include_param:
+        continue # adler32-test.c inludes the source file on purpose
       elif direct_possibility_fname in domain_fnames:
         self._upd_dep_hash(hdrs, direct_possibility_fname, type_code)
       elif (len(domain_fnames) == 1

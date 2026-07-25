@@ -228,7 +228,8 @@ test_utf_cstring_to_utf8_ex2(apr_pool_t *pool)
       const char *from_page;
   } tests[] = {
       {"ascii text\n", "ascii text\n", "unexistent-page"},
-      {"Edelwei\xdf", "Edelwei\xc3\x9f", "ISO-8859-1"}
+      {"Edelwei\xdf", "Edelwei\xc3\x9f", "ISO-8859-1"},
+      {"abc\xF0\x9F\x98\x80", "abc\xF0\x9F\x98\x80", "UTF-8"}
   };
 
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
@@ -268,7 +269,8 @@ test_utf_cstring_from_utf8_ex2(apr_pool_t *pool)
       const char *to_page;
   } tests[] = {
       {"ascii text\n", "ascii text\n", "unexistent-page"},
-      {"Edelwei\xc3\x9f", "Edelwei\xdf", "ISO-8859-1"}
+      {"Edelwei\xc3\x9f", "Edelwei\xdf", "ISO-8859-1"},
+      {"abc\xF0\x9F\x98\x80", "abc\xF0\x9F\x98\x80", "UTF-8"}
   };
 
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
@@ -664,9 +666,16 @@ test_utf_fuzzy_escape(apr_pool_t *pool)
   SVN_TEST_ASSERT(0 == strcmp(fuzzy, "Subversi{U+03BF}n"));
 
   fuzzy = svn_utf__fuzzy_escape(invalid, sizeof(invalid) - 1, pool);
-  /*fprintf(stderr, "%s\n", fuzzy);*/
+
+  /* utf8proc 1.1.15 produces {U?FDD1} while 2.x produces {U+FDD1} */
   SVN_TEST_ASSERT(0 == strcmp(fuzzy,
                               "Not Unicode: {U?FDD1};"
+                              "Out of range: ?\\F4?\\90?\\80?\\81;"
+                              "Not UTF-8: ?\\E6;"
+                              "Null byte: \\0;")
+                  ||
+                  0 == strcmp(fuzzy,
+                              "Not Unicode: {U+FDD1};"
                               "Out of range: ?\\F4?\\90?\\80?\\81;"
                               "Not UTF-8: ?\\E6;"
                               "Null byte: \\0;"));
@@ -737,6 +746,578 @@ test_utf_is_normalized(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+test_utf_conversions(apr_pool_t *pool)
+{
+  static const struct cvt_test_t
+  {
+    svn_boolean_t sixteenbit;
+    svn_boolean_t bigendian;
+    apr_size_t sourcelen;
+    const char *source;
+    const char *result;
+    svn_boolean_t counted;
+  } tests[] = {
+
+#define UTF_32_LE FALSE, FALSE
+#define UTF_32_BE FALSE, TRUE
+#define UTF_16_LE TRUE, FALSE
+#define UTF_16_BE TRUE, TRUE
+
+    /* Normal character conversion */
+    { UTF_32_LE, 4, "t\0\0\0" "e\0\0\0" "s\0\0\0" "t\0\0\0" "\0\0\0\0", "test", FALSE },
+    { UTF_32_BE, 4, "\0\0\0t" "\0\0\0e" "\0\0\0s" "\0\0\0t" "\0\0\0\0", "test", FALSE },
+    { UTF_16_LE, 4, "t\0" "e\0" "s\0" "t\0" "\0\0", "test", FALSE },
+    { UTF_16_BE, 4, "\0t" "\0e" "\0s" "\0t" "\0\0", "test", FALSE },
+
+    /* Valid surrogate pairs */
+    { UTF_16_LE, 2, "\x00\xD8" "\x00\xDC" "\0\0", "\xf0\x90\x80\x80", FALSE }, /* U+010000 */
+    { UTF_16_LE, 2, "\x34\xD8" "\x1E\xDD" "\0\0", "\xf0\x9d\x84\x9e", FALSE }, /* U+01D11E */
+    { UTF_16_LE, 2, "\xFF\xDB" "\xFD\xDF" "\0\0", "\xf4\x8f\xbf\xbd", FALSE }, /* U+10FFFD */
+
+    { UTF_16_BE, 2, "\xD8\x00" "\xDC\x00" "\0\0", "\xf0\x90\x80\x80", FALSE }, /* U+010000 */
+    { UTF_16_BE, 2, "\xD8\x34" "\xDD\x1E" "\0\0", "\xf0\x9d\x84\x9e", FALSE }, /* U+01D11E */
+    { UTF_16_BE, 2, "\xDB\xFF" "\xDF\xFD" "\0\0", "\xf4\x8f\xbf\xbd", FALSE }, /* U+10FFFD */
+
+    /* Swapped, single and trailing surrogate pairs */
+    { UTF_16_LE, 4, "*\0" "\x00\xDC" "\x00\xD8" "*\0\0\0", "*\xed\xb0\x80" "\xed\xa0\x80*", FALSE },
+    { UTF_16_LE, 3, "*\0" "\x1E\xDD" "*\0\0\0", "*\xed\xb4\x9e*", FALSE },
+    { UTF_16_LE, 3, "*\0" "\xFF\xDB" "*\0\0\0", "*\xed\xaf\xbf*", FALSE },
+    { UTF_16_LE, 1, "\x1E\xDD" "\0\0", "\xed\xb4\x9e", FALSE },
+    { UTF_16_LE, 1, "\xFF\xDB" "\0\0", "\xed\xaf\xbf", FALSE },
+
+    { UTF_16_BE, 4, "\0*" "\xDC\x00" "\xD8\x00" "\0*\0\0", "*\xed\xb0\x80" "\xed\xa0\x80*", FALSE },
+    { UTF_16_BE, 3, "\0*" "\xDD\x1E" "\0*\0\0", "*\xed\xb4\x9e*", FALSE },
+    { UTF_16_BE, 3, "\0*" "\xDB\xFF" "\0*\0\0", "*\xed\xaf\xbf*", FALSE },
+    { UTF_16_BE, 1, "\xDD\x1E" "\0\0", "\xed\xb4\x9e", FALSE },
+    { UTF_16_BE, 1, "\xDB\xFF" "\0\0", "\xed\xaf\xbf", FALSE },
+
+    /* Counted strings with NUL characters */
+    { UTF_16_LE, 3, "x\0" "\0\0" "y\0" "*\0", "x\0y", TRUE },
+    { UTF_32_BE, 3, "\0\0\0x" "\0\0\0\0" "\0\0\0y" "\0\0\0*", "x\0y", TRUE },
+
+#undef UTF_32_LE
+#undef UTF_32_BE
+#undef UTF_16_LE
+#undef UTF_16_BE
+
+    { 0 }
+  };
+
+  const struct cvt_test_t *tc;
+  const svn_string_t *result;
+  apr_size_t maxlen = 0;
+
+  /* To assure proper alignment of the source string, it needs to be copied
+     into an array of the appropriate type before calling
+     svn_utf__utf{16,32}_to_utf8. */
+  apr_uint16_t *source16;
+  apr_int32_t *source32;
+
+  for (tc = tests; tc->source; ++tc)
+    if (tc->sourcelen > maxlen)
+      maxlen = tc->sourcelen;
+  maxlen++;
+
+  source16 = apr_pcalloc(pool, maxlen * sizeof(*source16));
+  source32 = apr_pcalloc(pool, maxlen * sizeof(*source32));
+
+  for (tc = tests; tc->source; ++tc)
+    {
+      if (tc->sixteenbit)
+        {
+          memset(source16, 0, maxlen * sizeof(*source16));
+          memcpy(source16, tc->source, (tc->sourcelen + 1) * sizeof(*source16));
+          SVN_ERR(svn_utf__utf16_to_utf8(&result, source16,
+                                         tc->counted ? tc->sourcelen : SVN_UTF__UNKNOWN_LENGTH,
+                                         tc->bigendian, pool, pool));
+        }
+      else
+        {
+          memset(source32, 0, maxlen * sizeof(*source32));
+          memcpy(source32, tc->source, (tc->sourcelen + 1) * sizeof(*source32));
+          SVN_ERR(svn_utf__utf32_to_utf8(&result, source32,
+                                         tc->counted ? tc->sourcelen : SVN_UTF__UNKNOWN_LENGTH,
+                                         tc->bigendian, pool, pool));
+        }
+      if (tc->counted)
+        SVN_ERR_ASSERT(0 == memcmp(result->data, tc->result, tc->sourcelen));
+      else
+        SVN_ERR_ASSERT(0 == strcmp(result->data, tc->result));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+test_utf_normalize(apr_pool_t *pool)
+{
+  /* Normalized: NFC */
+  static const char nfc[] =
+    "\xe1\xb9\xa8"              /* S with dot above and below */
+    "\xc5\xaf"                  /* u with ring */
+    "\xe1\xb8\x87"              /* b with macron below */
+    "\xe1\xb9\xbd"              /* v with tilde */
+    "\xe1\xb8\x9d"              /* e with breve and cedilla */
+    "\xc8\x91"                  /* r with double grave */
+    "\xc5\xa1"                  /* s with caron */
+    "\xe1\xb8\xaf"              /* i with diaeresis and acute */
+    "\xe1\xbb\x9d"              /* o with grave and hook */
+    "\xe1\xb9\x8b";             /* n with circumflex below */
+
+  /* Normalized: NFD */
+  static const char nfd[] =
+    "S\xcc\xa3\xcc\x87"         /* S with dot above and below */
+    "u\xcc\x8a"                 /* u with ring */
+    "b\xcc\xb1"                 /* b with macron below */
+    "v\xcc\x83"                 /* v with tilde */
+    "e\xcc\xa7\xcc\x86"         /* e with breve and cedilla */
+    "r\xcc\x8f"                 /* r with double grave */
+    "s\xcc\x8c"                 /* s with caron */
+    "i\xcc\x88\xcc\x81"         /* i with diaeresis and acute */
+    "o\xcc\x9b\xcc\x80"         /* o with grave and hook */
+    "n\xcc\xad";                /* n with circumflex below */
+
+  /* Mixed, denormalized */
+  static const char mixup[] =
+    "S\xcc\x87\xcc\xa3"         /* S with dot above and below */
+    "\xc5\xaf"                  /* u with ring */
+    "b\xcc\xb1"                 /* b with macron below */
+    "\xe1\xb9\xbd"              /* v with tilde */
+    "e\xcc\xa7\xcc\x86"         /* e with breve and cedilla */
+    "\xc8\x91"                  /* r with double grave */
+    "s\xcc\x8c"                 /* s with caron */
+    "\xe1\xb8\xaf"              /* i with diaeresis and acute */
+    "o\xcc\x80\xcc\x9b"         /* o with grave and hook */
+    "\xe1\xb9\x8b";             /* n with circumflex below */
+
+  /* Invalid UTF-8 */
+  static const char invalid[] =
+    "\xe1\xb9\xa8"              /* S with dot above and below */
+    "\xc5\xaf"                  /* u with ring */
+    "\xe1\xb8\x87"              /* b with macron below */
+    "\xe1\xb9\xbd"              /* v with tilde */
+    "\xe1\xb8\x9d"              /* e with breve and cedilla */
+    "\xc8\x91"                  /* r with double grave */
+    "\xc5\xa1"                  /* s with caron */
+    "\xe1\xb8\xaf"              /* i with diaeresis and acute */
+    "\xe6"                      /* Invalid byte */
+    "\xe1\xb9\x8b";             /* n with circumflex below */
+
+  const char *result;
+  svn_membuf_t buf;
+
+  svn_membuf__create(&buf, 0, pool);
+  SVN_ERR(svn_utf__normalize(&result, nfc, strlen(nfc), &buf));
+  SVN_TEST_STRING_ASSERT(result, nfc);
+  SVN_ERR(svn_utf__normalize(&result, nfd, strlen(nfd), &buf));
+  SVN_TEST_STRING_ASSERT(result, nfc);
+  SVN_ERR(svn_utf__normalize(&result, mixup, strlen(mixup), &buf));
+  SVN_TEST_STRING_ASSERT(result, nfc);
+
+  SVN_TEST_ASSERT_ERROR(svn_utf__normalize(&result, invalid, strlen(invalid),
+                                           &buf),
+                        SVN_ERR_UTF8PROC_ERROR);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+test_utf_xfrm(apr_pool_t *pool)
+{
+  const char *str;
+  const char *result;
+  svn_membuf_t buf;
+
+  svn_membuf__create(&buf, 0, pool);
+
+  /* ASCII string */
+  str = "Subversion";
+  SVN_ERR(svn_utf__xfrm(&result, str, strlen(str), FALSE, FALSE, &buf));
+  SVN_TEST_STRING_ASSERT(result, "Subversion");
+  SVN_ERR(svn_utf__xfrm(&result, str, strlen(str), TRUE, FALSE, &buf));
+  SVN_TEST_STRING_ASSERT(result, "subversion");
+  SVN_ERR(svn_utf__xfrm(&result, str, strlen(str), FALSE, TRUE, &buf));
+  SVN_TEST_STRING_ASSERT(result, "Subversion");
+  SVN_ERR(svn_utf__xfrm(&result, str, strlen(str), TRUE, TRUE, &buf));
+  SVN_TEST_STRING_ASSERT(result, "subversion");
+
+  /* M (u with diaeresis) (sharp s) en */
+  str = "M" "\xc3\xbc" "\xc3\x9f" "en";
+  SVN_ERR(svn_utf__xfrm(&result, str, strlen(str), FALSE, FALSE, &buf));
+  SVN_TEST_STRING_ASSERT(result, "M" "\xc3\xbc" "\xc3\x9f" "en");
+  SVN_ERR(svn_utf__xfrm(&result, str, strlen(str), TRUE, FALSE, &buf));
+  SVN_TEST_STRING_ASSERT(result, "m" "\xc3\xbc" "ssen");
+  SVN_ERR(svn_utf__xfrm(&result, str, strlen(str), FALSE, TRUE, &buf));
+  SVN_TEST_STRING_ASSERT(result, "Mu" "\xc3\x9f" "en");
+  SVN_ERR(svn_utf__xfrm(&result, str, strlen(str), TRUE, TRUE, &buf));
+  SVN_TEST_STRING_ASSERT(result, "mussen");
+
+  /* Na (i with diaeresis) vet (e with acute), decomposed */
+  str = "Nai" "\xcc\x88" "vete" "\xcc\x81";
+  SVN_ERR(svn_utf__xfrm(&result, str, strlen(str), FALSE, FALSE, &buf));
+  SVN_TEST_STRING_ASSERT(result, "Na" "\xc3\xaf" "vet" "\xc3\xa9");
+  SVN_ERR(svn_utf__xfrm(&result, str, strlen(str), TRUE, FALSE, &buf));
+  SVN_TEST_STRING_ASSERT(result, "na" "\xc3\xaf" "vet" "\xc3\xa9");
+  SVN_ERR(svn_utf__xfrm(&result, str, strlen(str), FALSE, TRUE, &buf));
+  SVN_TEST_STRING_ASSERT(result, "Naivete");
+  SVN_ERR(svn_utf__xfrm(&result, str, strlen(str), TRUE, TRUE, &buf));
+  SVN_TEST_STRING_ASSERT(result, "naivete");
+
+  /* (I with dot above) stanbul */
+  str = "\xc4\xb0" "stanbul";
+  SVN_ERR(svn_utf__xfrm(&result, str, strlen(str), FALSE, FALSE, &buf));
+  SVN_TEST_STRING_ASSERT(result, "\xc4\xb0" "stanbul");
+
+  /* The Latin Capital Letter I with Dot Above (0130) should fold into
+     Latin Small Letter I (0069) with Combining Dot Above (0307) per full
+     mapping in http://www.unicode.org/Public/UNIDATA/CaseFolding.txt */
+  SVN_ERR(svn_utf__xfrm(&result, str, strlen(str), TRUE, FALSE, &buf));
+  SVN_TEST_STRING_ASSERT(result, "i" "\xcc\x87" "stanbul");
+  SVN_ERR(svn_utf__xfrm(&result, str, strlen(str), FALSE, TRUE, &buf));
+  SVN_TEST_STRING_ASSERT(result, "Istanbul");
+  SVN_ERR(svn_utf__xfrm(&result, str, strlen(str), TRUE, TRUE, &buf));
+  SVN_TEST_STRING_ASSERT(result, "istanbul");
+
+  /* Invalid UTF-8 */
+  str = "a" "\xe6" "bc";
+  SVN_TEST_ASSERT_ERROR(svn_utf__xfrm(&result, str, strlen(str),
+                                      FALSE, FALSE, &buf),
+                        SVN_ERR_UTF8PROC_ERROR);
+  SVN_TEST_ASSERT_ERROR(svn_utf__xfrm(&result, str, strlen(str),
+                                      TRUE, FALSE, &buf),
+                        SVN_ERR_UTF8PROC_ERROR);
+  SVN_TEST_ASSERT_ERROR(svn_utf__xfrm(&result, str, strlen(str),
+                                      FALSE, TRUE, &buf),
+                        SVN_ERR_UTF8PROC_ERROR);
+  SVN_TEST_ASSERT_ERROR(svn_utf__xfrm(&result, str, strlen(str),
+                                      TRUE, TRUE, &buf),
+                        SVN_ERR_UTF8PROC_ERROR);
+
+  return SVN_NO_ERROR;
+}
+
+/* Test data for width and trimming tests. */
+static const char *fat_emojis =
+  "\xf0\x9f\xa5\xba"         /* three emojis, each two columns wide */
+  "\xf0\x9f\x91\x89"
+  "\xf0\x9f\x91\x88";
+static const char *mixup =
+  "S\xcc\x87\xcc\xa3"         /* S with dot above and below */
+  "\xc5\xaf"                  /* u with ring */
+  "b\xcc\xb1"                 /* b with macron below */
+  "\xe1\xb9\xbd"              /* v with tilde */
+  "e\xcc\xa7\xcc\x86"         /* e with breve and cedilla */
+  "\xc8\x91"                  /* r with double grave */
+  "s\xcc\x8c"                 /* s with caron */
+  "\xe1\xb8\xaf"              /* i with diaeresis and acute */
+  "o\xcc\x80\xcc\x9b"         /* o with grave and hook */
+  "\xe1\xb9\x8b";             /* n with circumflex below */
+static const char *invalid = "a" "\xe6" "bc";
+static const char *bom = "\xEF\xBB\xBF" "abc";
+
+static svn_error_t *
+test_utf8_width(apr_pool_t *pool)
+{
+  apr_size_t length = 1578706; /* Magic number used to check... */
+
+  SVN_TEST_INT_ASSERT(svn_utf_cstring_utf8_width(invalid), -1);
+  SVN_TEST_INT_ASSERT(svn_utf__cstring_width(&length, invalid), -1);
+  SVN_TEST_INT_ASSERT(length, 1578706); /* ...that 'length' was not changed. */
+
+  SVN_TEST_INT_ASSERT(svn_utf_cstring_utf8_width(""), 0);
+  SVN_TEST_INT_ASSERT(svn_utf__cstring_width(&length, ""), 0);
+  SVN_TEST_INT_ASSERT(length, 0);
+
+  SVN_TEST_INT_ASSERT(svn_utf_cstring_utf8_width("abc123"), 6);
+  SVN_TEST_INT_ASSERT(svn_utf__cstring_width(&length, "abc123"), 6);
+  SVN_TEST_INT_ASSERT(length, 6);
+
+  SVN_TEST_INT_ASSERT(svn_utf_cstring_utf8_width(fat_emojis), 6);
+  SVN_TEST_INT_ASSERT(svn_utf__cstring_width(&length, fat_emojis), 6);
+  SVN_TEST_INT_ASSERT(length, strlen(fat_emojis));
+
+  SVN_TEST_INT_ASSERT(svn_utf_cstring_utf8_width(mixup), 10);
+  SVN_TEST_INT_ASSERT(svn_utf__cstring_width(&length, mixup), 10);
+  SVN_TEST_INT_ASSERT(length, strlen(mixup));
+
+  SVN_TEST_INT_ASSERT(svn_utf_cstring_utf8_width(bom), 3);
+  SVN_TEST_INT_ASSERT(svn_utf__cstring_width(&length, bom), 3);
+  SVN_TEST_INT_ASSERT(length, strlen(bom));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_utf8_trim_right(apr_pool_t *pool)
+{
+  apr_ssize_t width;
+  const char *start, *end;
+
+  /* Invalid and empty */
+  width = svn_utf__cstring_trim_right(&start, &end, invalid, 1);
+  SVN_TEST_INT_ASSERT(width, -1);
+
+  width = svn_utf__cstring_trim_right(&start, &end, invalid, 0);
+  SVN_TEST_INT_ASSERT(width, 0);
+  SVN_TEST_ASSERT(start == end);
+
+  width = svn_utf__cstring_trim_right(&start, &end, "", 1);
+  SVN_TEST_INT_ASSERT(width, 0);
+  SVN_TEST_ASSERT(start == end);
+
+  /* ASCII */
+  width = svn_utf__cstring_trim_right(&start, &end, "abc123", 10);
+  SVN_TEST_INT_ASSERT(width, 6);
+  SVN_TEST_INT_ASSERT(*start, 'a');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, 6);
+
+  width = svn_utf__cstring_trim_right(&start, &end, "abc123", 6);
+  SVN_TEST_INT_ASSERT(width, 6);
+  SVN_TEST_INT_ASSERT(*start, 'a');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, 6);
+
+  width = svn_utf__cstring_trim_right(&start, &end, "abc123", 3);
+  SVN_TEST_INT_ASSERT(width, 3);
+  SVN_TEST_INT_ASSERT(*start, 'a');
+  SVN_TEST_INT_ASSERT(*end, '1');
+  SVN_TEST_INT_ASSERT(end - start, 3);
+
+  /* Accented Latin */
+  width = svn_utf__cstring_trim_right(&start, &end, mixup, 15);
+  SVN_TEST_INT_ASSERT(width, 10);
+  SVN_TEST_INT_ASSERT(*start, 'S');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, strlen(mixup));
+
+  width = svn_utf__cstring_trim_right(&start, &end, mixup, 10);
+  SVN_TEST_INT_ASSERT(width, 10);
+  SVN_TEST_INT_ASSERT(*start, 'S');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, strlen(mixup));
+
+  width = svn_utf__cstring_trim_right(&start, &end, mixup, 7);
+  SVN_TEST_INT_ASSERT(width, 7);
+  SVN_TEST_INT_ASSERT(*start, 'S');
+  SVN_TEST_INT_ASSERT(*end, '\xe1');
+  SVN_TEST_INT_ASSERT(end - start, 23);
+
+  /* Emoji (two colmns wide glyphs) */
+  width = svn_utf__cstring_trim_right(&start, &end, fat_emojis, 10);
+  SVN_TEST_INT_ASSERT(width, 6);
+  SVN_TEST_INT_ASSERT(*start, '\xf0');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, strlen(fat_emojis));
+
+  width = svn_utf__cstring_trim_right(&start, &end, fat_emojis, 6);
+  SVN_TEST_INT_ASSERT(width, 6);
+  SVN_TEST_INT_ASSERT(*start, '\xf0');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, strlen(fat_emojis));
+
+  width = svn_utf__cstring_trim_right(&start, &end, fat_emojis, 4);
+  SVN_TEST_INT_ASSERT(width, 4);
+  SVN_TEST_INT_ASSERT(*start, '\xf0');
+  SVN_TEST_INT_ASSERT(*end, '\xf0');
+  SVN_TEST_INT_ASSERT(end - start, 8);
+
+  width = svn_utf__cstring_trim_right(&start, &end, fat_emojis, 3);
+  SVN_TEST_INT_ASSERT(width, 2);
+  SVN_TEST_INT_ASSERT(*start, '\xf0');
+  SVN_TEST_INT_ASSERT(*end, '\xf0');
+  SVN_TEST_INT_ASSERT(end - start, 4);
+
+  /* Byte order mark */
+  width = svn_utf__cstring_trim_right(&start, &end, bom, 5);
+  SVN_TEST_INT_ASSERT(width, 3);
+  SVN_TEST_INT_ASSERT(*start, '\xef');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, strlen(bom));
+
+  width = svn_utf__cstring_trim_right(&start, &end, bom, 3);
+  SVN_TEST_INT_ASSERT(width, 3);
+  SVN_TEST_INT_ASSERT(*start, '\xef');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, strlen(bom));
+
+  width = svn_utf__cstring_trim_right(&start, &end, bom, 2);
+  SVN_TEST_INT_ASSERT(width, 2);
+  SVN_TEST_INT_ASSERT(*start, '\xef');
+  SVN_TEST_INT_ASSERT(*end, 'c');
+  SVN_TEST_INT_ASSERT(end - start, 5);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_utf8_trim_left(apr_pool_t *pool)
+{
+  apr_ssize_t width;
+  const char *start, *end;
+
+  /* Invalid and empty */
+  width = svn_utf__cstring_trim_left(&start, &end, invalid, 1);
+  SVN_TEST_INT_ASSERT(width, -1);
+
+  width = svn_utf__cstring_trim_left(&start, &end, invalid, 0);
+  SVN_TEST_INT_ASSERT(width, 0);
+  SVN_TEST_ASSERT(start == end);
+
+  width = svn_utf__cstring_trim_left(&start, &end, "", 1);
+  SVN_TEST_INT_ASSERT(width, 0);
+  SVN_TEST_ASSERT(start == end);
+
+  /* ASCII */
+  width = svn_utf__cstring_trim_left(&start, &end, "abc123", 10);
+  SVN_TEST_INT_ASSERT(width, 6);
+  SVN_TEST_INT_ASSERT(*start, 'a');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, 6);
+
+  width = svn_utf__cstring_trim_left(&start, &end, "abc123", 6);
+  SVN_TEST_INT_ASSERT(width, 6);
+  SVN_TEST_INT_ASSERT(*start, 'a');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, 6);
+
+  width = svn_utf__cstring_trim_left(&start, &end, "abc123", 3);
+  SVN_TEST_INT_ASSERT(width, 3);
+  SVN_TEST_INT_ASSERT(*start, '1');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, 3);
+
+  /* Accented Latin */
+  width = svn_utf__cstring_trim_left(&start, &end, mixup, 15);
+  SVN_TEST_INT_ASSERT(width, 10);
+  SVN_TEST_INT_ASSERT(*start, 'S');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, strlen(mixup));
+
+  width = svn_utf__cstring_trim_left(&start, &end, mixup, 10);
+  SVN_TEST_INT_ASSERT(width, 10);
+  SVN_TEST_INT_ASSERT(*start, 'S');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, strlen(mixup));
+
+  width = svn_utf__cstring_trim_left(&start, &end, mixup, 6);
+  SVN_TEST_INT_ASSERT(width, 6);
+  SVN_TEST_INT_ASSERT(*start, 'e');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, 21);
+
+  /* Emoji (two colmns wide glyphs) */
+  width = svn_utf__cstring_trim_left(&start, &end, fat_emojis, 10);
+  SVN_TEST_INT_ASSERT(width, 6);
+  SVN_TEST_INT_ASSERT(*start, '\xf0');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, strlen(fat_emojis));
+
+  width = svn_utf__cstring_trim_left(&start, &end, fat_emojis, 6);
+  SVN_TEST_INT_ASSERT(width, 6);
+  SVN_TEST_INT_ASSERT(*start, '\xf0');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, strlen(fat_emojis));
+
+  width = svn_utf__cstring_trim_left(&start, &end, fat_emojis, 4);
+  SVN_TEST_INT_ASSERT(width, 4);
+  SVN_TEST_INT_ASSERT(*start, '\xf0');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, 8);
+
+  width = svn_utf__cstring_trim_left(&start, &end, fat_emojis, 3);
+  SVN_TEST_INT_ASSERT(width, 2);
+  SVN_TEST_INT_ASSERT(*start, '\xf0');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, 4);
+
+  /* Byte order mark */
+  width = svn_utf__cstring_trim_left(&start, &end, bom, 5);
+  SVN_TEST_INT_ASSERT(width, 3);
+  SVN_TEST_INT_ASSERT(*start, '\xef');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, strlen(bom));
+
+  width = svn_utf__cstring_trim_left(&start, &end, bom, 3);
+  SVN_TEST_INT_ASSERT(width, 3);
+  SVN_TEST_INT_ASSERT(*start, '\xef');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, strlen(bom));
+
+  width = svn_utf__cstring_trim_left(&start, &end, bom, 2);
+  SVN_TEST_INT_ASSERT(width, 2);
+  SVN_TEST_INT_ASSERT(*start, 'b');
+  SVN_TEST_INT_ASSERT(*end, '\0');
+  SVN_TEST_INT_ASSERT(end - start, 2);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_utf8_align(apr_pool_t *pool)
+{
+  /* Invalid */
+  SVN_TEST_STRING_ASSERT(svn_utf__cstring_align_left(invalid, 5, pool),
+                         "\xef\xbf\xbd" "\xef\xbf\xbd"
+                         "\xef\xbf\xbd" "\xef\xbf\xbd"
+                         " ");
+  SVN_TEST_STRING_ASSERT(svn_utf__cstring_align_left(invalid, 3, pool),
+                         "\xef\xbf\xbd" "\xef\xbf\xbd" "\xef\xbf\xbd");
+  SVN_TEST_STRING_ASSERT(
+      svn_utf__cstring_align_right_trim_left(invalid, 5, pool),
+      " "
+      "\xef\xbf\xbd" "\xef\xbf\xbd"
+      "\xef\xbf\xbd" "\xef\xbf\xbd");
+  SVN_TEST_STRING_ASSERT(
+      svn_utf__cstring_align_right_trim_left(invalid, 3, pool),
+      "\xef\xbf\xbd" "\xef\xbf\xbd" "\xef\xbf\xbd");
+
+  /* ASCII */
+  SVN_TEST_STRING_ASSERT(svn_utf__cstring_align_left("abc", 5, pool),
+                         "abc  ");
+  SVN_TEST_STRING_ASSERT(svn_utf__cstring_align_left("abc", 2, pool),
+                         "ab");
+  SVN_TEST_STRING_ASSERT(svn_utf__cstring_align_right_trim_left("abc", 5, pool),
+                         "  abc");
+  SVN_TEST_STRING_ASSERT(svn_utf__cstring_align_right_trim_left("abc", 2, pool),
+                         "bc");
+
+  /* two byte symbols */
+  SVN_TEST_STRING_ASSERT(
+      svn_utf__cstring_align_left("\xc5\xaf\xc5\xa1", 4, pool),
+      "\xc5\xaf\xc5\xa1  ");
+  SVN_TEST_STRING_ASSERT(
+      svn_utf__cstring_align_left("\xc5\xaf\xc5\xa1", 1, pool),
+      "\xc5\xaf");
+  SVN_TEST_STRING_ASSERT(
+      svn_utf__cstring_align_right_trim_left("\xc5\xaf\xc5\xa1", 4, pool),
+      "  \xc5\xaf\xc5\xa1");
+  SVN_TEST_STRING_ASSERT(
+      svn_utf__cstring_align_right_trim_left("\xc5\xaf\xc5\xa1", 1, pool),
+      "\xc5\xa1");
+
+  /* an emoji */
+  SVN_TEST_STRING_ASSERT(
+      svn_utf__cstring_align_right_trim_left("\xf0\x9f\xa5\xba", 2, pool),
+      "\xf0\x9f\xa5\xba");
+  SVN_TEST_STRING_ASSERT(
+      svn_utf__cstring_align_right_trim_left("\xf0\x9f\xa5\xba", 3, pool),
+      " \xf0\x9f\xa5\xba");
+
+  /* The emoji FACE WITH PLEADING EYES is two columns wide but we only
+     have space for one column. Since we can't split the emoji in half,
+     we can't display it, either. */
+  SVN_TEST_STRING_ASSERT(
+      svn_utf__cstring_align_right_trim_left("\xf0\x9f\xa5\xba", 1, pool),
+      " ");
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -761,6 +1342,20 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_utf__fuzzy_escape"),
     SVN_TEST_PASS2(test_utf_is_normalized,
                    "test svn_utf__is_normalized"),
+    SVN_TEST_PASS2(test_utf_conversions,
+                   "test svn_utf__utf{16,32}_to_utf8"),
+    SVN_TEST_PASS2(test_utf_normalize,
+                   "test svn_utf__normalize"),
+    SVN_TEST_PASS2(test_utf_xfrm,
+                   "test svn_utf__xfrm"),
+    SVN_TEST_PASS2(test_utf8_width,
+                   "test svn_utf_cstring_utf8_width"),
+    SVN_TEST_PASS2(test_utf8_trim_right,
+                   "test grapheme-aware right trim"),
+    SVN_TEST_PASS2(test_utf8_trim_left,
+                   "test grapheme-aware left trim"),
+    SVN_TEST_PASS2(test_utf8_align,
+                   "test utf8 alignment"),
     SVN_TEST_NULL
   };
 

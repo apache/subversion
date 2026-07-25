@@ -33,5 +33,6 @@ class SvnUtilTest < Test::Unit::TestCase
     assert_equal("Abc", Svn::Util.to_ruby_class_name("abc"))
     assert_equal("AbcDef", Svn::Util.to_ruby_class_name("abc_def"))
     assert_equal("AbcDef", Svn::Util.to_ruby_class_name("ABC_DEF"))
+    assert_equal("XFoo", Svn::Util.to_ruby_class_name("_foo"))
   end
 end

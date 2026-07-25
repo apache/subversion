@@ -262,7 +262,7 @@ terminal_puts(const char *string, terminal_handle_t *terminal,
 
 /* These codes can be returned from terminal_getc instead of a character. */
 #define TERMINAL_NONE  0x80000               /* no character read, retry */
-#define TERMINAL_DEL   (TERMINAL_NONE + 1)   /* the input was a deleteion */
+#define TERMINAL_DEL   (TERMINAL_NONE + 1)   /* the input was a deletion */
 #define TERMINAL_EOL   (TERMINAL_NONE + 2)   /* end of input/end of line */
 #define TERMINAL_EOF   (TERMINAL_NONE + 3)   /* end of file during input */
 
@@ -814,6 +814,8 @@ plaintext_prompt_helper(svn_boolean_t *may_save_plaintext,
   const char *config_path = NULL;
   terminal_handle_t *terminal;
 
+  *may_save_plaintext = FALSE; /* de facto API promise */
+
   if (pb)
     SVN_ERR(svn_config_get_user_config_path(&config_path, pb->config_dir,
                                             SVN_CONFIG_CATEGORY_SERVERS, pool));
@@ -826,18 +828,7 @@ plaintext_prompt_helper(svn_boolean_t *may_save_plaintext,
 
   do
     {
-      svn_error_t *err = prompt(&answer, prompt_string, FALSE, pb, pool);
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_CANCELLED)
-            {
-              svn_error_clear(err);
-              *may_save_plaintext = FALSE;
-              return SVN_NO_ERROR;
-            }
-          else
-            return err;
-        }
+      SVN_ERR(prompt(&answer, prompt_string, FALSE, pb, pool));
       if (apr_strnatcasecmp(answer, _("yes")) == 0 ||
           apr_strnatcasecmp(answer, _("y")) == 0)
         {

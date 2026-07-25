@@ -145,8 +145,8 @@ cstringType = gdb.lookup_type('char').pointer()
 apr_hash_count = InferiorFunction('apr_hash_count')
 apr_hash_first = InferiorFunction('apr_hash_first')
 apr_hash_next = InferiorFunction('apr_hash_next')
-svn__apr_hash_index_key = InferiorFunction('svn__apr_hash_index_key')
-svn__apr_hash_index_val = InferiorFunction('svn__apr_hash_index_val')
+apr_hash_this_key = InferiorFunction('apr_hash_this_key')
+apr_hash_this_val = InferiorFunction('apr_hash_this_val')
 
 def children_of_apr_hash(hash_p, value_type=None):
     """Iterate over an 'apr_hash_t *' GDB value, in the way required for a
@@ -156,9 +156,9 @@ def children_of_apr_hash(hash_p, value_type=None):
     """
     hi = apr_hash_first(0, hash_p)
     while (hi):
-        k = svn__apr_hash_index_key(hi).reinterpret_cast(cstringType)
+        k = apr_hash_this_key(hi).reinterpret_cast(cstringType)
         if value_type:
-            val = svn__apr_hash_index_val(hi).reinterpret_cast(value_type)
+            val = apr_hash_this_val(hi).reinterpret_cast(value_type)
         else:
             val = '...'
         try:

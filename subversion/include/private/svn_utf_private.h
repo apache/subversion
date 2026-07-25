@@ -93,6 +93,10 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
                                                const char *,
                                                apr_pool_t *));
 
+/* Get the actual name of the character that will be used when
+ * SVN_APR_LOCALE_CHARSET is provided.
+ * Allocate result in POOL. */
+const char *svn_utf__locale_encoding(apr_pool_t *pool);
 
 #if defined(WIN32)
 /* On Windows: Convert the UTF-8 string SRC to UTF-16.
@@ -116,7 +120,7 @@ svn_utf__win32_utf16_to_utf8(const char **result,
 
 
 /* A constant used for many length parameters in the utf8proc wrappers
- * to indicate that the length of a string is unknonw. */
+ * to indicate that the length of a string is unknown. */
 #define SVN_UTF__UNKNOWN_LENGTH ((apr_size_t) -1)
 
 
@@ -150,6 +154,40 @@ svn_utf__normalize(const char **result,
                    const char *str, apr_size_t len,
                    svn_membuf_t *buf);
 
+/* Transform the UTF-8 string to a shape suitable for comparison with
+ * strcmp(). The transformation is defined by CASE_INSENSITIVE and
+ * ACCENT_INSENSITIVE arguments. If CASE_INSENSITIVE is non-zero,
+ * remove case distinctions from the string. If ACCENT_INSENSITIVE
+ * is non-zero, remove diacritical marks from the string.
+ *
+ * Use BUF as a temporary storage. If LEN is SVN_UTF__UNKNOWN_LENGTH,
+ * assume STR is null-terminated; otherwise, consider the string only
+ * up to the given length. Place the transformed string in *RESULT, which
+ * shares storage with BUF and is valid only until the next time BUF is
+ * modified.
+ *
+ * A returned error may indicate that STRING contains invalid UTF-8 or
+ * invalid Unicode codepoints.
+ */
+svn_error_t *
+svn_utf__xfrm(const char **result,
+              const char *str, apr_size_t len,
+              svn_boolean_t case_insensitive,
+              svn_boolean_t accent_insensitive,
+              svn_membuf_t *buf);
+
+/* Return TRUE if S matches any of the const char * glob patterns in
+ * PATTERNS.
+ *
+ * S will internally be normalized to lower-case and accents removed
+ * using svn_utf__xfrm.  To get a match, the PATTERNS must have been
+ * normalized accordingly before calling this function.
+ */
+svn_boolean_t
+svn_utf__fuzzy_glob_match(const char *str,
+                          const apr_array_header_t *patterns,
+                          svn_membuf_t *buf);
+
 /* Check if STRING is a valid, NFC-normalized UTF-8 string.  Note that
  * a FALSE return value may indicate that STRING is not valid UTF-8 at
  * all.
@@ -159,7 +197,24 @@ svn_utf__normalize(const char **result,
 svn_boolean_t
 svn_utf__is_normalized(const char *string, apr_pool_t *scratch_pool);
 
-/* Pattern matching similar to the the SQLite LIKE and GLOB
+/* Encode an UCS-4 string to UTF-8, placing the result into BUFFER.
+ * While utf8proc does have a similar function, it does more checking
+ * and processing than we want here; this function does not attempt
+ * any normalizations but just encodes the individual code points.
+ * The encoded string will always be NUL-terminated.
+ *
+ * Return the length of the result (excluding the NUL terminator) in
+ * *result_length.
+ *
+ * A returned error indicates that a codepoint is invalid.
+ */
+svn_error_t *
+svn_utf__encode_ucs4_string(svn_membuf_t *buffer,
+                            const apr_int32_t *ucs4str,
+                            apr_size_t length,
+                            apr_size_t *result_length);
+
+/* Pattern matching similar to the SQLite LIKE and GLOB
  * operators. PATTERN, KEY and ESCAPE must all point to UTF-8
  * strings. Furthermore, ESCAPE, if provided, must be a character from
  * the ASCII subset.
@@ -187,9 +242,123 @@ svn_utf__glob(svn_boolean_t *match,
               svn_membuf_t *string_buf,
               svn_membuf_t *temp_buf);
 
-/* Return the version of the wrapped utf8proc library. */
+/* Return the compiled version of the wrapped utf8proc library. */
 const char *
-svn_utf__utf8proc_version(void);
+svn_utf__utf8proc_compiled_version(void);
+
+/* Return the runtime version of the wrapped utf8proc library. */
+const char *
+svn_utf__utf8proc_runtime_version(void);
+
+/* Convert an UTF-16 (or UCS-2) string to UTF-8, returning the pointer
+ * in RESULT. If BIG_ENDIAN is set, then UTF16STR is big-endian;
+ * otherwise, it's little-endian.
+ *
+ * If UTF16LEN is SVN_UTF__UNKNOWN_LENGTH, then UTF16STR must be
+ * terminated with a zero; otherwise, it is the number of 16-bit codes
+ * to convert, and the source string may contain NUL values.
+ *
+ * Allocate RESULT in RESULT_POOL and use SCRATCH_POOL for
+ * intermediate allocation.
+ *
+ * This function combines UTF-16 surrogate pairs into single code
+ * points, but will leave single lead or trail surrogates unchanged.
+ */
+svn_error_t *
+svn_utf__utf16_to_utf8(const svn_string_t **result,
+                       const apr_uint16_t *utf16str,
+                       apr_size_t utf16len,
+                       svn_boolean_t big_endian,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
+/* Convert an UTF-32 string to UTF-8, returning the pointer in
+ * RESULT. If BIG_ENDIAN is set, then UTF32STR is big-endian;
+ * otherwise, it's little-endian.
+ *
+ * If UTF32LEN is SVN_UTF__UNKNOWN_LENGTH, then UTF32STR must be
+ * terminated with a zero; otherwise, it is the number of 32-bit codes
+ * to convert, and the source string may contain NUL values.
+ *
+ * Allocate RESULT in RESULT_POOL and use SCRATCH_POOL for
+ * intermediate allocation.
+ */
+svn_error_t *
+svn_utf__utf32_to_utf8(const svn_string_t **result,
+                       const apr_int32_t *utf32str,
+                       apr_size_t utf32len,
+                       svn_boolean_t big_endian,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
+/* Return the display width of the UTF-8 string CSTR, or -1 if the string is
+ * not valid. If LENGTH is not NULL, set *LENGTH to the byte-wise length
+ * of CSTR; this the same as the value returned by strlen(CSTR).
+ */
+apr_ssize_t
+svn_utf__cstring_width(apr_size_t *length, const char *cstr);
+
+/* Trims the UTF-8 string CSTR to at most MAX_WIDTH visible Unicode glyphs,
+ * removing excess graphemes from the trailing (right) end of the string.
+ * Returns the display width of the trimmed substring, which can be less than
+ * MAX_WIDTH, and sets *STARTP and *ENDP to the start and one-past-the-end
+ * of the trimmed substring of CSTR.
+ *
+ * If CSTR is not a valid UTF-8 string, the returned value will be -1.
+ */
+apr_ssize_t
+svn_utf__cstring_trim_right(const char **startp,
+                            const char **endp,
+                            const char *cstr,
+                            apr_size_t max_width);
+
+/* Trims the UTF-8 string CSTR to at most MAX_WIDTH visible Unicode glyphs,
+ * removing excess graphemes from the leading (left) end of the string.
+ * Returns the display width of the trimmed substring, which can be less than
+ * MAX_WIDTH, and sets *STARTP and *ENDP to the start and one-past-the-end
+ * of the trimmed substring of CSTR.
+ *
+ * If CSTR is not a valid UTF-8 string, the returned value will be -1.
+ */
+apr_ssize_t
+svn_utf__cstring_trim_left(const char **startp,
+                           const char **endp,
+                           const char *cstr,
+                           apr_size_t max_width);
+
+/* Return a new string with a copy of CSTR allocated in POOL aligned to
+ * the right side with spaces. This function takes UTF-8 multibyte encoding
+ * and wcwidth into account. The new string will have exactly as many
+ * printable characters as fit into MAX_WIDTH. Glyphs from CSTR will be
+ * trimmed from the LEFT.
+ *
+ * If MAX_WIDTH is too narrow for even a single glyph, only spaces will be
+ * returned (for example, a two-column emoji doesn't fit into one column).
+ *
+ * If CSTR is not valid UTF-8, return up to four replacement characters
+ * (U+FFFD) aligned to the right
+ */
+char *
+svn_utf__cstring_align_right_trim_left(const char *cstr,
+                                       apr_size_t max_width,
+                                       apr_pool_t *pool);
+
+/* Return a new string with a copy of CSTR allocated in POOL aligned to
+ * the left side with spaces. This function takes UTF-8 multibyte encoding and
+ * wcwidth into an account. The new string will have exactly as many
+ * printable characters as fit into MAX_WIDTH. Glyphs from CSTR will be
+ * trimmed from the RIGHT.
+x *
+ * If MAX_WIDTH is too narrow for even a single glyph, only spaces will be
+ * returned (for example, a two-column emoji doesn't fit into one column).
+ *
+ * If CSTR is not valid UTF-8, return up to four replacement characters
+ * (U+FFFD) aligned to the left
+ */
+char *
+svn_utf__cstring_align_left(const char *cstr,
+                            apr_size_t max_width,
+                            apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

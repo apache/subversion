@@ -23,12 +23,7 @@
 #
 
 import os
-try:
-  # Python >=2.5
-  from hashlib import md5 as hashlib_md5
-except ImportError:
-  # Python <2.5
-  from md5 import md5 as hashlib_md5
+from hashlib import md5 as hashlib_md5
 import sys
 import fnmatch
 import re
@@ -70,7 +65,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     # On Windows we create svn_private_config.h in the output directory since
     # r1370526.
-    # 
+    #
     # Without this replacement all projects include a not-existing file,
     # which makes the MSBuild calculation to see whether a project is changed
     # far more expensive than necessary.
@@ -84,14 +79,15 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     # Print list of identified libraries
     printed = []
-    for lib in sorted(self._libraries.values(), key = lambda s: s.name):
+    for lib in sorted(self._libraries.values(),
+                      key = lambda s: (s.internal, s.name)):
       if lib.name in printed:
-        continue 
+        continue
       printed.append(lib.name)
-      print('Found %s %s' % (lib.name, lib.version))
-
-    if 'db' not in self._libraries:
-      print('BDB not found, BDB fs will not be built')
+      if lib.internal:
+        print('Using bundled %s %s' % (lib.name, lib.version))
+      else:
+        print('Found %s %s' % (lib.name, lib.version))
 
     #Make some files for the installer so that we don't need to
     #require sed or some other command to do it
@@ -132,7 +128,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     # VC 2002 and VC 2003 only allow a single platform per project file
     if subdir == 'vcnet-vcproj':
       if self.vcproj_version != '7.00' and self.vcproj_version != '7.10':
-        self.platforms = ['Win32','x64']
+        self.platforms = ['Win32', 'x64', 'ARM64']
 
     #Here we can add additional modes to compile for
     self.configs = ['Debug','Release']
@@ -161,6 +157,13 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     ### but we need to fix it. we can wrap the apr UUID functions, or
     ### implement this from scratch using the algorithms described in
     ### http://www.webdav.org/specs/draft-leach-uuids-guids-01.txt
+
+    # Ensure data is in byte representation.  If it doesn't have an encode
+    # attribute, assume it is already in the correct form.
+    try:
+      data = data.encode('utf8')
+    except AttributeError:
+      pass
 
     myhash = hashlib_md5(data).hexdigest()
 
@@ -221,7 +224,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     if 'java_sdk' not in self._libraries:
       install_targets = [x for x in install_targets
                                      if not (isinstance(x, gen_base.TargetJava)
-                                             or isinstance(x, gen_base.TargetJavaHeaders)
                                              or x.name == '__JAVAHL__'
                                              or x.name == '__JAVAHL_TESTS__'
                                              or x.name == 'libsvnjavahl')]
@@ -238,21 +240,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
           else:
             dll_targets.append(self.create_dll_target(target))
     install_targets.extend(dll_targets)
-
-    # Fix up targets that can't be linked to libraries
-    if not self.disable_shared:
-      for target in install_targets:
-        if isinstance(target, gen_base.TargetExe) and target.msvc_force_static:
-
-          # Make direct dependencies of all the indirect dependencies
-          linked_deps = {}
-          self.get_linked_win_depends(target, linked_deps)
-
-          for lk in linked_deps.keys():
-            if not isinstance(lk, gen_base.TargetLib) or not lk.msvc_export:
-              self.graph.add(gen_base.DT_LINK, target.name, lk)
-            else:
-              self.graph.remove(gen_base.DT_LINK, target.name, lk)
 
     for target in install_targets:
       target.project_guid = self.makeguid(target.name)
@@ -279,6 +266,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                                   'msvc-name' : dep.name + "_dll" },
                                 self)
     target.msvc_export = dep.msvc_export
+    target.msvc_delayload = dep.msvc_delayload
 
     # move the description from the static library target to the dll.
     target.desc = dep.desc
@@ -287,6 +275,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     # The dependency should now be static.
     dep.msvc_export = None
     dep.msvc_static = True
+    dep.msvc_delayload = False
 
     # Remove the 'lib' prefix, so that the static library will be called
     # svn_foo.lib
@@ -334,11 +323,9 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     sources = [ ]
 
     javac_exe = "javac"
-    javah_exe = "javah"
     jar_exe = "jar"
     if self.jdk_path:
       javac_exe = os.path.join(self.jdk_path, "bin", javac_exe)
-      javah_exe = os.path.join(self.jdk_path, "bin", javah_exe)
       jar_exe = os.path.join(self.jdk_path, "bin", jar_exe)
 
     if not isinstance(target, gen_base.TargetProject):
@@ -347,25 +334,13 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
         ctarget = None
         cdesc = None
         cignore = None
-        if isinstance(target, gen_base.TargetJavaHeaders):
-          classes = self.path(target.classes)
-          if self.junit_path is not None:
-            classes = "%s;%s" % (classes, self.junit_path)
-
-          headers = self.path(target.headers)
-          classname = target.package + "." + source.class_name
-
-          cbuild = "%s -verbose -force -classpath %s -d %s %s" \
-                   % (self.quote(javah_exe), self.quote(classes),
-                      self.quote(headers), classname)
-
-          ctarget = self.path(object.filename_win)
-          cdesc = "Generating %s" % (object.filename_win)
-
-        elif isinstance(target, gen_base.TargetJavaClasses):
+        if isinstance(target, gen_base.TargetJava):
           classes = targetdir = self.path(target.classes)
           if self.junit_path is not None:
             classes = "%s;%s" % (classes, self.junit_path)
+          headers = ''
+          if target.headers is not None:
+            headers = '-h %s' % self.quote(self.path(target.headers))
 
           sourcepath = self.path(source.sourcepath)
 
@@ -375,17 +350,21 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
             per_project_flags += "-Xlint:-deprecation -Xlint:-dep-ann" \
                                  " -Xlint:-rawtypes"
 
-          cbuild = ("%s -g -Xlint -Xlint:-options " +
-                    per_project_flags +
-                    " -target 1.5 -source 1.5 -classpath "
+          cbuild = ("%s -g -Xlint -Xlint:-options %s %s "
+                    " -target 1.8 -source 1.8 -classpath "
                     " %s -d %s "
                     " -sourcepath %s $(InputPath)") \
-                   % tuple(map(self.quote, (javac_exe, classes,
-                                            targetdir, sourcepath)))
+                   % (self.quote(javac_exe), per_project_flags, headers,
+                      self.quote(classes), self.quote(targetdir),
+                      self.quote(sourcepath))
 
 
-          ctarget = self.path(object.filename)
-          cdesc = "Compiling %s" % (source)
+          if isinstance(object, gen_base.HeaderFile):
+            ctarget = self.path(object.filename_win)
+            cdesc = "Generating %s" % (object.filename_win)
+          else:
+            ctarget = self.path(object.filename)
+            cdesc = "Compiling %s" % (source)
 
         rsrc = self.path(str(source))
         if quote_path and '-' in rsrc:
@@ -405,7 +384,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                                    custom_desc=cdesc, ignored = cignore,
                                    extension=os.path.splitext(rsrc)[1]))
 
-    if isinstance(target, gen_base.TargetJavaClasses) and target.jar:
+    if isinstance(target, gen_base.TargetJava) and target.jar:
       classdir = self.path(target.classes)
       jarfile = msvc_path_join(classdir, target.jar)
       cbuild = "%s cf %s -C %s %s" \
@@ -509,9 +488,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     return name[0] + '.pdb'
 
   def get_output_dir(self, target):
-    if isinstance(target, gen_base.TargetJavaHeaders):
-      return msvc_path("../" + target.headers)
-    elif isinstance(target, gen_base.TargetJavaClasses):
+    if isinstance(target, gen_base.TargetJava):
       return msvc_path("../" + target.classes)
     else:
       return msvc_path(target.path)
@@ -553,9 +530,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
             and target.external_project):
       return None
 
-    if target.external_project[:5] == 'serf/' and 'serf' in self._libraries:
-      path = self.serf_path + target.external_project[4:]
-    elif target.external_project.find('/') != -1:
+    if target.external_project.find('/') != -1:
       path = target.external_project
     else:
       path = os.path.join(self.projfilesdir, target.external_project)
@@ -584,7 +559,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     # This section parses those dependencies and adds them to the dependency list
     # for this target.
     if name.startswith('javahl') or name == 'libsvnjavahl':
-      for dep in re.findall('\$\(([^\)]*)_DEPS\)', target.add_deps):
+      for dep in re.findall(r'\$\(([^\)]*)_DEPS\)', target.add_deps):
         dep = dep.replace('_', '-')
         depends.extend(self.sections[dep].get_targets())
 
@@ -608,14 +583,13 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       for dep, (is_proj, is_lib, is_static) in dep_dict.items():
         if is_proj:
           deps.append(dep)
-    elif mode == FILTER_LIBS:
+    elif mode == FILTER_LIBS or mode == FILTER_EXTERNALLIBS:
       for dep, (is_proj, is_lib, is_static) in dep_dict.items():
         if is_static or (is_lib and not is_proj):
-          deps.append(dep)
-    elif mode == FILTER_EXTERNALLIBS:
-      for dep, (is_proj, is_lib, is_static) in dep_dict.items():
-        if is_static or (is_lib and not is_proj):
-          deps.append(dep)
+          # Filter explicit msvc libraries of optional dependencies
+          if (dep.name in self._libraries
+              or dep.name not in self._optional_libraries):
+            deps.append(dep)
     else:
       raise NotImplementedError
 
@@ -739,7 +713,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
       if dep.external_lib:
-        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+        for elib in re.findall(r'\$\(SVN_([^)]*)_LIBS\)', dep.external_lib):
           external_lib = elib.lower()
 
         if external_lib in self._libraries:
@@ -754,17 +728,22 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     if target.name.endswith('svn_subr'):
       fakedefines.append("SVN_USE_WIN32_CRASHHANDLER")
+      fakedefines.append(self.quote_define('SVN_WIN32_CRASHREPORT_EMAIL="users@subversion.apache.org"'))
 
     return fakedefines
+
+  def quote_define(self, value):
+    "Properly quote special characters in a define (if needed)"
+    return value
 
   def get_win_includes(self, target, cfg='Release'):
     "Return the list of include directories for target"
 
     fakeincludes = [ "subversion/include" ]
-                     
+
     for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
       if dep.external_lib:
-        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+        for elib in re.findall(r'\$\(SVN_([^)]*)_LIBS\)', dep.external_lib):
           external_lib = elib.lower()
 
         if external_lib in self._libraries:
@@ -791,13 +770,17 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       else:
         lang_subdir = target.lang
 
+      if target.lang == "python":
+        lib = self._libraries['py3c']
+        fakeincludes.extend(lib.include_dirs)
+
       # After the language specific includes include the generic libdir,
       # to allow overriding a generic with a per language include
       fakeincludes.append(os.path.join(self.swig_libdir, lang_subdir))
       fakeincludes.append(self.swig_libdir)
 
-    if 'cxxhl' in target.name:
-      fakeincludes.append("subversion/bindings/cxxhl/include")
+    if 'svnxx' in target.name:
+      fakeincludes.append("subversion/bindings/cxx/include")
 
     return gen_base.unique(map(self.apath, fakeincludes))
 
@@ -835,7 +818,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     for dep in self.get_win_depends(target, FILTER_LIBS):
       if dep.external_lib:
-        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+        for elib in re.findall(r'\$\(SVN_([^)]*)_LIBS\)', dep.external_lib):
           external_lib = elib.lower()
 
           if external_lib not in self._libraries:
@@ -889,7 +872,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       nondeplibs.extend(dep.msvc_libs)
 
       if dep.external_lib:
-        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+        for elib in re.findall(r'\$\(SVN_([^)]*)_LIBS\)', dep.external_lib):
 
           external_lib = elib.lower()
 
@@ -940,7 +923,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
       if dep.external_lib:
-        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+        for elib in re.findall(r'\$\(SVN_([^)]*)_LIBS\)', dep.external_lib):
           external_lib = elib.lower()
 
         if external_lib in self._libraries:

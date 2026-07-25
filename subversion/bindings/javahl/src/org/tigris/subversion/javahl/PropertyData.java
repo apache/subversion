@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.tigris.subversion.javahl;
@@ -54,7 +52,7 @@ public class PropertyData
      */
     private SVNClientInterface client;
 
-    /**
+    /*
      * Standard subversion known properties
      */
 
@@ -80,7 +78,7 @@ public class PropertyData
     public static final String KEYWORDS = "svn:keywords";
 
     /**
-     * flag if the file should be made excutable during retrieval
+     * flag if the file should be made executable during retrieval
      */
     public static final String EXECUTABLE = "svn:executable";
 

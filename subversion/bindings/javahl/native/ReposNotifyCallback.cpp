@@ -69,12 +69,12 @@ ReposNotifyCallback::onNotify(const svn_repos_notify_t *wcNotify,
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ReposNotifyCallback");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/ReposNotifyCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         return;
 
       mid = env->GetMethodID(clazz, "onNotify",
-                             "(L"JAVA_PACKAGE"/ReposNotifyInformation;)V");
+                             "(" JAVAHL_ARG("/ReposNotifyInformation;") ")V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         return;
 

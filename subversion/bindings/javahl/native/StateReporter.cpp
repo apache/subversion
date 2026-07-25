@@ -38,21 +38,19 @@ StateReporter::StateReporter()
   : m_valid(false),
     m_raw_reporter(NULL),
     m_report_baton(NULL),
-    m_editor(NULL),
+    m_editor(),
     m_target_revision(SVN_INVALID_REVNUM)
 {}
 
 StateReporter::~StateReporter()
-{
-  delete m_editor;
-}
+{}
 
 StateReporter*
 StateReporter::getCppObject(jobject jthis)
 {
   static jfieldID fid = 0;
   jlong cppAddr = SVNBase::findCppAddrForJObject(jthis, &fid,
-      JAVA_PACKAGE"/remote/StateReporter");
+      JAVAHL_CLASS("/remote/StateReporter"));
   return (cppAddr == 0 ? NULL : reinterpret_cast<StateReporter*>(cppAddr));
 }
 
@@ -65,7 +63,7 @@ StateReporter::dispose(jobject jthis)
     abortReport();
 
   static jfieldID fid = 0;
-  SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/remote/StateReporter");
+  SVNBase::dispose(jthis, &fid, JAVAHL_CLASS("/remote/StateReporter"));
 }
 
 namespace {
@@ -83,7 +81,7 @@ StateReporter::setPath(jstring jpath, jlong jrevision, jobject jdepth,
   //DEBUG:fprintf(stderr, "  (n) StateReporter::setPath()\n");
 
   if (!m_valid) { throw_reporter_inactive(); return; }
-  
+
   JNIStringHolder lock_token(jlock_token);
   if (JNIUtil::isJavaExceptionThrown())
     return;
@@ -179,12 +177,12 @@ StateReporter::abortReport()
 
 void
 StateReporter::set_reporter_data(const svn_ra_reporter3_t* raw_reporter,
-                                   void* report_baton,
-                                   EditorProxy* editor)
+                                 void* report_baton,
+                                 EditorProxy::UniquePtr editor)
 {
   //DEBUG:fprintf(stderr, "  (n) StateReporter::set_reporter_data()\n");
 
-  m_editor = editor;
+  m_editor = JavaHL::cxx::move(editor);
   m_raw_reporter = raw_reporter;
   m_report_baton = report_baton;
   m_valid = true;

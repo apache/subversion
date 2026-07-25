@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,9 +17,10 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 package org.tigris.subversion.javahl;
+
+import org.tigris.subversion.javahl.NativeException;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -3055,18 +3055,19 @@ public class BasicTests extends SVNTests
         }
     }
 
-    /**
+    /*
+      This is currently commented out, because we don't have an XFail method
+      for JavaHL.  The resolution is pending the result of issue #3680:
+      https://issues.apache.org/jira/browse/SVN-3680
+
+   / **
      * Test tolerance of unversioned obstructions when adding paths with
      * {@link org.tigris.subversion.javahl.SVNClient#checkout()},
      * {@link org.tigris.subversion.javahl.SVNClient#update()}, and
      * {@link org.tigris.subversion.javahl.SVNClient#doSwitch()}
      * @throws IOException
      * @throws SubversionException
-     */
-    /*
-      This is currently commented out, because we don't have an XFail method
-      for JavaHL.  The resolution is pending the result of issue #3680:
-      http://subversion.tigris.org/issues/show_bug.cgi?id=3680
+     * /
     public void testObstructionTolerance()
             throws SubversionException, IOException
     {
@@ -3318,6 +3319,17 @@ public class BasicTests extends SVNTests
             assertEquals("revprops check", revprops.get(key),
                          fetchedProps.get(key));
           }
+    }
+
+    /**
+     * Test getMessage in NativeException.
+     * @throws Throwable
+     */
+    public void testGetMessage() throws Throwable
+    {
+	/* NativeException with a null message previously threw a NullPointerException */
+	assertEquals("", new NativeException(null, null, 0).getMessage());
+	assertEquals("messagesvn: source: (apr_err=0)", new NativeException("message", "source", 0).getMessage());
     }
 
     /**

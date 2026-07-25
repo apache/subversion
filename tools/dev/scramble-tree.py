@@ -60,12 +60,7 @@ try:
 except AttributeError:
   my_getopt = getopt.getopt
 import random
-try:
-  # Python >=2.5
-  from hashlib import md5 as hashlib_md5
-except ImportError:
-  # Python <2.5
-  from md5 import md5 as hashlib_md5
+from hashlib import md5 as hashlib_md5
 import base64
 
 

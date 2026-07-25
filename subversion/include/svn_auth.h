@@ -628,12 +628,12 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 #define SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO SVN_AUTH_PARAM_PREFIX \
   "ssl:cert-info"
 
-/** This provides a pointer to a @c svn_config_t containting the config
+/** This provides a pointer to a @c svn_config_t containing the config
  * category. */
 #define SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG SVN_AUTH_PARAM_PREFIX \
   "config-category-config"
 
-/** This provides a pointer to a @c svn_config_t containting the servers
+/** This provides a pointer to a @c svn_config_t containing the servers
  * category. */
 #define SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS SVN_AUTH_PARAM_PREFIX \
   "config-category-servers"
@@ -884,7 +884,7 @@ svn_auth_get_platform_specific_client_providers(
  * @note An administrative password reset may invalidate the account's
  * secret key. This function will detect that situation and behave as
  * if the password were not cached at all.
- * @deprecated Provided for backwards compatibility with the 1.8 API.  Use 
+ * @deprecated Provided for backwards compatibility with the 1.8 API.  Use
  * svn_auth_get_platform_specific_provider with provider_name of "windows"
  * and provider_type of "simple".
  */
@@ -1012,11 +1012,13 @@ typedef svn_error_t *(*svn_auth_gnome_keyring_unlock_prompt_func_t)(
 
 /** @brief The pointer to function which prompts user for GNOME Keyring
  * password.
- * The type of this pointer should be svn_auth_gnome_keyring_unlock_prompt_func_t. */
+ * The type of this pointer should be svn_auth_gnome_keyring_unlock_prompt_func_t.
+ * @deprecated Only used by old libgnome-keyring implementation. */
 #define SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC "gnome-keyring-unlock-prompt-func"
 
 /** @brief The baton which is passed to
- * @c *SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC. */
+ * @c *SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC.
+ * @deprecated Only used by old libgnome-keyring implementation. */
 #define SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON "gnome-keyring-unlock-prompt-baton"
 
 #if (!defined(DARWIN) && !defined(WIN32)) || defined(DOXYGEN)
@@ -1037,7 +1039,7 @@ svn_auth_gnome_keyring_version(void);
  * This is like svn_client_get_simple_provider(), except that the
  * password is stored in GNOME Keyring.
  *
- * If the GNOME Keyring is locked the provider calls
+ * If the GNOME Keyring is locked the old libgnome-keyring provider calls
  * @c *SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC in order to unlock
  * the keyring.
  *

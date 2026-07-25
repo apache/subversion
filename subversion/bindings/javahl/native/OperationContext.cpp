@@ -43,7 +43,7 @@
 
 OperationContext::OperationContext(SVN::Pool &pool)
   : m_config(NULL),
-    m_prompter(NULL),
+    m_prompter(),
     m_cancelOperation(0),
     m_pool(&pool),
     m_jctx(NULL),
@@ -189,7 +189,7 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
     }
   else
     {
-      // Not using hte native credentials store, start with an empty
+      // Not using the native credentials store, start with an empty
       // providers array.
       providers = apr_array_make(pool, 0, sizeof(svn_auth_provider_object_t *));
     }
@@ -253,7 +253,7 @@ OperationContext::password(const char *pi_password)
 void
 OperationContext::setPrompt(Prompter::UniquePtr prompter)
 {
-  m_prompter = prompter;
+  m_prompter = JavaHL::cxx::move(prompter);
 }
 
 void
@@ -311,7 +311,7 @@ Prompter::UniquePtr OperationContext::clonePrompter() const
 {
   if (m_prompter.get())
     return m_prompter->clone();
-  return Prompter::UniquePtr(NULL);
+  return Prompter::UniquePtr();
 }
 
 void OperationContext::setTunnelCallback(jobject jtunnelcb)
@@ -358,6 +358,9 @@ OperationContext::checkCancel(void *cancelBaton)
   OperationContext *that = static_cast<OperationContext *>(cancelBaton);
   if (that->isCancelledOperation())
     return svn_error_create(SVN_ERR_CANCELLED, NULL, _("Operation cancelled"));
+  else if (JNIUtil::isJavaExceptionThrown())
+    return svn_error_create(SVN_ERR_CANCELLED, JNIUtil::wrapJavaException(),
+                            _("Operation cancelled"));
   else
     return SVN_NO_ERROR;
 }
@@ -385,13 +388,13 @@ OperationContext::progress(apr_off_t progressVal, apr_off_t total, void *baton,
         POP_AND_RETURN_NOTHING();
 
       mid = env->GetMethodID(clazz, "onProgress",
-          "(L"JAVA_PACKAGE"/ProgressEvent;)V");
+                             "(" JAVAHL_ARG("/ProgressEvent;") ")V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         POP_AND_RETURN_NOTHING();
     }
 
   static jmethodID midCT = 0;
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/ProgressEvent");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/ProgressEvent"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
@@ -440,16 +443,16 @@ OperationContext::notifyConfigLoad()
   static jmethodID onload_mid = 0;
   if (0 == onload_mid)
     {
-      jclass cls = env->FindClass(JAVA_PACKAGE"/callback/ConfigEvent");
+      jclass cls = env->FindClass(JAVAHL_CLASS("/callback/ConfigEvent"));
       if (JNIUtil::isJavaExceptionThrown())
         return;
       onload_mid = env->GetMethodID(cls, "onLoad",
-                                    "(L"JAVA_PACKAGE"/ISVNConfig;)V");
+                                    "(" JAVAHL_ARG("/ISVNConfig;") ")V");
       if (JNIUtil::isJavaExceptionThrown())
         return;
     }
 
-  jclass cfg_cls = env->FindClass(JAVA_PACKAGE"/util/ConfigImpl");
+  jclass cfg_cls = env->FindClass(JAVAHL_CLASS("/util/ConfigImpl"));
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -489,6 +492,8 @@ public:
       request_out(NULL),
       response_in(NULL),
       response_out(NULL),
+      jrequest(NULL),
+      jresponse(NULL),
       jclosecb(NULL)
     {
       status = apr_file_pipe_create_ex(&request_in, &request_out,
@@ -509,6 +514,8 @@ public:
   apr_file_t *response_in;
   apr_file_t *response_out;
   apr_status_t status;
+  jobject jrequest;
+  jobject jresponse;
   jobject jclosecb;
 };
 
@@ -520,16 +527,37 @@ jobject create_Channel(const char *class_name, JNIEnv *env, apr_file_t *fd)
   jmethodID ctor = env->GetMethodID(cls, "<init>", "(J)V");
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
-  return env->NewObject(cls, ctor, reinterpret_cast<jlong>(fd));
+  jobject channel = env->NewObject(cls, ctor, reinterpret_cast<jlong>(fd));
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  return env->NewGlobalRef(channel);
 }
 
 jobject create_RequestChannel(JNIEnv *env, apr_file_t *fd)
 {
-  return create_Channel(JAVA_PACKAGE"/util/RequestChannel", env, fd);
+  return create_Channel(JAVAHL_CLASS("/util/RequestChannel"), env, fd);
 }
 jobject create_ResponseChannel(JNIEnv *env, apr_file_t *fd)
 {
-  return create_Channel(JAVA_PACKAGE"/util/ResponseChannel", env, fd);
+  return create_Channel(JAVAHL_CLASS("/util/ResponseChannel"), env, fd);
+}
+void close_TunnelChannel(JNIEnv* env, jobject channel)
+{
+  // Usually after this function, the memory will be freed behind
+  // 'TunnelChannel.nativeChannel'. Ask Java side to forget it. This is the
+  // only way to avoid a JVM crash when 'TunnelAgent' tries to read/write,
+  // not knowing that 'TunnelChannel' is already closed in native side.
+  static jmethodID mid = 0;
+  if (0 == mid)
+    {
+      jclass cls;
+      SVN_JNI_CATCH_VOID(
+        cls = env->FindClass(JAVAHL_CLASS("/util/TunnelChannel")));
+      SVN_JNI_CATCH_VOID(mid = env->GetMethodID(cls, "syncClose", "()V"));
+    }
+
+  SVN_JNI_CATCH_VOID(env->CallVoidMethod(channel, mid));
+  env->DeleteGlobalRef(channel);
 }
 } // anonymous namespace
 
@@ -545,7 +573,7 @@ OperationContext::checkTunnel(void *tunnel_baton, const char *tunnel_name)
   static jmethodID mid = 0;
   if (0 == mid)
     {
-      jclass cls = env->FindClass(JAVA_PACKAGE"/callback/TunnelAgent");
+      jclass cls = env->FindClass(JAVAHL_CLASS("/callback/TunnelAgent"));
       if (JNIUtil::isJavaExceptionThrown())
         return false;
       mid = env->GetMethodID(cls, "checkTunnel",
@@ -587,10 +615,10 @@ OperationContext::openTunnel(svn_stream_t **request, svn_stream_t **response,
 
   JNIEnv *env = JNIUtil::getEnv();
 
-  jobject jrequest = create_RequestChannel(env, tc->request_in);
+  tc->jrequest = create_RequestChannel(env, tc->request_in);
   SVN_JNI_CATCH(, SVN_ERR_BASE);
 
-  jobject jresponse = create_ResponseChannel(env, tc->response_out);
+  tc->jresponse = create_ResponseChannel(env, tc->response_out);
   SVN_JNI_CATCH(, SVN_ERR_BASE);
 
   jstring jtunnel_name = JNIUtil::makeJString(tunnel_name);
@@ -605,7 +633,7 @@ OperationContext::openTunnel(svn_stream_t **request, svn_stream_t **response,
   static jmethodID mid = 0;
   if (0 == mid)
     {
-      jclass cls = env->FindClass(JAVA_PACKAGE"/callback/TunnelAgent");
+      jclass cls = env->FindClass(JAVAHL_CLASS("/callback/TunnelAgent"));
       SVN_JNI_CATCH(, SVN_ERR_BASE);
       SVN_JNI_CATCH(
           mid = env->GetMethodID(
@@ -615,40 +643,82 @@ OperationContext::openTunnel(svn_stream_t **request, svn_stream_t **response,
               "Ljava/lang/String;"
               "Ljava/lang/String;"
               "Ljava/lang/String;I)"
-              "L"JAVA_PACKAGE"/callback/TunnelAgent$CloseTunnelCallback;"),
+              JAVAHL_ARG("/callback/TunnelAgent$CloseTunnelCallback;")),
           SVN_ERR_BASE);
     }
 
   jobject jtunnelcb = jobject(tunnel_baton);
-  SVN_JNI_CATCH(
-      tc->jclosecb = env->CallObjectMethod(
-          jtunnelcb, mid, jrequest, jresponse,
-          jtunnel_name, juser, jhostname, jint(port)),
-      SVN_ERR_BASE);
+  tc->jclosecb = env->CallObjectMethod(
+    jtunnelcb, mid, tc->jrequest, tc->jresponse,
+    jtunnel_name, juser, jhostname, jint(port));
+  svn_error_t* openTunnelError = JNIUtil::checkJavaException(SVN_ERR_BASE);
+  if (SVN_NO_ERROR != openTunnelError)
+    {
+      // OperationContext::closeTunnel() will never be called, clean up here.
+      // This also prevents a JVM native crash, see comment in
+      // close_TunnelChannel().
+      *close_baton = 0;
+      tc->jclosecb = 0;
+      OperationContext::closeTunnel(tc, 0);
+      SVN_ERR(openTunnelError);
+    }
+
+  if (tc->jclosecb)
+    {
+      tc->jclosecb = env->NewGlobalRef(tc->jclosecb);
+      SVN_JNI_CATCH(, SVN_ERR_BASE);
+    }
 
   return SVN_NO_ERROR;
 }
 
-void
-OperationContext::closeTunnel(void *tunnel_context, void *)
+void callCloseTunnelCallback(JNIEnv* env, jobject jclosecb)
 {
-  TunnelContext* tc = static_cast<TunnelContext*>(tunnel_context);
-  jobject jclosecb = tc->jclosecb;
-  delete tc;
-
-  if (!jclosecb)
-    return;
-
-  JNIEnv *env = JNIUtil::getEnv();
-
   static jmethodID mid = 0;
   if (0 == mid)
     {
       jclass cls;
       SVN_JNI_CATCH_VOID(
           cls= env->FindClass(
-              JAVA_PACKAGE"/callback/TunnelAgent$CloseTunnelCallback"));
+              JAVAHL_CLASS("/callback/TunnelAgent$CloseTunnelCallback")));
       SVN_JNI_CATCH_VOID(mid = env->GetMethodID(cls, "closeTunnel", "()V"));
     }
   SVN_JNI_CATCH_VOID(env->CallVoidMethod(jclosecb, mid));
+  env->DeleteGlobalRef(jclosecb);
+}
+
+void
+OperationContext::closeTunnel(void *tunnel_context, void *)
+{
+  TunnelContext* tc = static_cast<TunnelContext*>(tunnel_context);
+  jobject jrequest = tc->jrequest;
+  jobject jresponse = tc->jresponse;
+  jobject jclosecb = tc->jclosecb;
+
+  // Note that this closes other end of the pipe, which cancels and
+  // prevents further read/writes in 'TunnelAgent'
+  delete tc;
+
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Cleanup is important, otherwise TunnelAgent may crash when
+  // accessing freed native objects. For this reason, cleanup is done
+  // despite a pending exception. If more exceptions occur, they are
+  // stashed as well in order to complete all cleanup steps.
+  StashException ex(env);
+
+  if (jclosecb)
+    callCloseTunnelCallback(env, jclosecb);
+
+  if (jrequest)
+    {
+      ex.stashException();
+      close_TunnelChannel(env, jrequest);
+    }
+
+  if (jresponse)
+    {
+      ex.stashException();
+      close_TunnelChannel(env, jresponse);
+    }
 }

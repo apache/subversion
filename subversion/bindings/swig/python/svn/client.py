@@ -2,7 +2,7 @@
 # client.py: public Python interface for client components
 #
 # Subversion is a tool for revision control.
-# See http://subversion.apache.org for more information.
+# See https://subversion.apache.org for more information.
 #
 ######################################################################
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -24,8 +24,8 @@
 ######################################################################
 
 from libsvn.client import *
-from svn.core import _unprefix_names
+from svn.core import _unprefix_names, _as_list
 _unprefix_names(locals(), 'svn_client_')
 _unprefix_names(locals(), 'SVN_CLIENT_')
-__all__ = filter(lambda x: x.lower().startswith('svn_'), locals().keys())
+__all__ = [x for x in _as_list(locals()) if x.lower().startswith('svn_')]
 del _unprefix_names

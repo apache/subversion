@@ -26,6 +26,7 @@
 
 
 #include <apr.h>
+#include <assert.h>
 
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
 #include <apr_fnmatch.h>
@@ -64,7 +65,7 @@ membuf_create(void **data, apr_size_t *size,
  * this function does nothing.
  *
  * If *SIZE is 0, the allocated buffer size will be MINIMUM_SIZE
- * rounded up to the nearest APR alignment boundary. Otherwse, *SIZE
+ * rounded up to the nearest APR alignment boundary. Otherwise, *SIZE
  * will be multiplied by a power of two such that the result is
  * greater or equal to MINIMUM_SIZE. The pointer to the new buffer
  * will be returned in *DATA, and its size in *SIZE.
@@ -239,7 +240,9 @@ svn_string_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
   new_string->data = data;
   new_string->len = size;
 
-  memcpy(data, bytes, size);
+  /* If SIZE is 0, NULL is valid for BYTES. */
+  if (size)
+    memcpy(data, bytes, size);
 
   /* Null termination is the convention -- even if we suspect the data
      to be binary, it's not up to us to decide, it's the caller's
@@ -298,8 +301,9 @@ svn_string_isempty(const svn_string_t *str)
 svn_string_t *
 svn_string_dup(const svn_string_t *original_string, apr_pool_t *pool)
 {
-  return (svn_string_ncreate(original_string->data,
-                             original_string->len, pool));
+  return (original_string ? svn_string_ncreate(original_string->data,
+                                               original_string->len, pool)
+                          : NULL);
 }
 
 
@@ -392,7 +396,10 @@ svn_stringbuf_t *
 svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
 {
   svn_stringbuf_t *strbuf = svn_stringbuf_create_ensure(size, pool);
-  memcpy(strbuf->data, bytes, size);
+
+  /* If SIZE is 0, NULL is valid for BYTES. */
+  if (size)
+    memcpy(strbuf->data, bytes, size);
 
   /* Null termination is the convention -- even if we suspect the data
      to be binary, it's not up to us to decide, it's the caller's
@@ -472,7 +479,7 @@ svn_stringbuf_set(svn_stringbuf_t *str, const char *value)
 {
   apr_size_t amt = strlen(value);
 
-  svn_stringbuf_ensure(str, amt);
+  membuf_ensure((void**) &str->data, &str->blocksize, amt + 1, str->pool);
   memcpy(str->data, value, amt + 1);
   str->len = amt;
 }
@@ -480,9 +487,7 @@ svn_stringbuf_set(svn_stringbuf_t *str, const char *value)
 void
 svn_stringbuf_setempty(svn_stringbuf_t *str)
 {
-  if (str->len > 0)
-    str->data[0] = '\0';
-
+  str->data[0] = '\0';
   str->len = 0;
 }
 
@@ -498,6 +503,27 @@ svn_stringbuf_chop(svn_stringbuf_t *str, apr_size_t nbytes)
   str->data[str->len] = '\0';
 }
 
+void
+svn_stringbuf_leftchop(svn_stringbuf_t *str, apr_size_t nbytes)
+{
+  if (str->len == 0)
+    return;
+
+  if (nbytes >= str->len)
+    {
+      str->len = 0;
+      *str->data = '\0';
+    }
+  else
+    {
+      /* Note: This will irretrievably waste nbytes of space in the
+         stringbuf's pool, but unlike the alternative of memmoving the
+         data, it's a constant-time operation. */
+      str->data += nbytes;
+      str->len -= nbytes;
+      str->blocksize -= nbytes;
+    }
+}
 
 svn_boolean_t
 svn_stringbuf_isempty(const svn_stringbuf_t *str)
@@ -589,6 +615,10 @@ svn_stringbuf_appendbytes(svn_stringbuf_t *str, const char *bytes,
   apr_size_t total_len;
   void *start_address;
 
+  if (!count)
+    /* Allow BYTES to be NULL by avoiding passing it to memcpy. */
+    return;
+
   total_len = str->len + count;  /* total size needed */
 
   /* svn_stringbuf_ensure adds 1 for null terminator. */
@@ -641,23 +671,22 @@ svn_stringbuf_insert(svn_stringbuf_t *str,
                      const char *bytes,
                      apr_size_t count)
 {
+  /* For COUNT==0, we allow BYTES to be NULL. It's a no-op in that case. */
+  if (count == 0)
+    return;
+
+  /* special case: BYTES overlaps with this string -> copy the source */
   if (bytes + count > str->data && bytes < str->data + str->blocksize)
-    {
-      /* special case: BYTES overlaps with this string -> copy the source */
-      const char *temp = apr_pstrndup(str->pool, bytes, count);
-      svn_stringbuf_insert(str, pos, temp, count);
-    }
-  else
-    {
-      if (pos > str->len)
-        pos = str->len;
+    bytes = apr_pmemdup(str->pool, bytes, count);
 
-      svn_stringbuf_ensure(str, str->len + count);
-      memmove(str->data + pos + count, str->data + pos, str->len - pos + 1);
-      memcpy(str->data + pos, bytes, count);
+  if (pos > str->len)
+    pos = str->len;
 
-      str->len += count;
-    }
+  svn_stringbuf_ensure(str, str->len + count);
+  memmove(str->data + pos + count, str->data + pos, str->len - pos + 1);
+  memcpy(str->data + pos, bytes, count);
+
+  str->len += count;
 }
 
 void
@@ -667,7 +696,7 @@ svn_stringbuf_remove(svn_stringbuf_t *str,
 {
   if (pos > str->len)
     pos = str->len;
-  if (pos + count > str->len)
+  if (count > str->len - pos)
     count = str->len - pos;
 
   memmove(str->data + pos, str->data + pos + count, str->len - pos - count + 1);
@@ -681,32 +710,100 @@ svn_stringbuf_replace(svn_stringbuf_t *str,
                       const char *bytes,
                       apr_size_t new_count)
 {
+  /* For COUNT==0, we allow BYTES to be NULL.
+   * In that case, this is just a substring removal. */
+  if (new_count == 0)
+    {
+      svn_stringbuf_remove(str, pos, old_count);
+      return;
+    }
+
+  /* special case: BYTES overlaps with this string -> copy the source */
   if (bytes + new_count > str->data && bytes < str->data + str->blocksize)
+    bytes = apr_pmemdup(str->pool, bytes, new_count);
+
+  if (pos > str->len)
+    pos = str->len;
+  if (old_count > str->len - pos)
+    old_count = str->len - pos;
+
+  if (old_count < new_count)
     {
-      /* special case: BYTES overlaps with this string -> copy the source */
-      const char *temp = apr_pstrndup(str->pool, bytes, new_count);
-      svn_stringbuf_replace(str, pos, old_count, temp, new_count);
+      apr_size_t delta = new_count - old_count;
+      svn_stringbuf_ensure(str, str->len + delta);
     }
-  else
+
+  if (old_count != new_count)
+    memmove(str->data + pos + new_count, str->data + pos + old_count,
+            str->len - pos - old_count + 1);
+
+  memcpy(str->data + pos, bytes, new_count);
+  str->len += new_count - old_count;
+}
+
+
+apr_size_t
+svn_stringbuf_replace_all(svn_stringbuf_t *str,
+                          const char *to_find,
+                          const char *replacement)
+{
+  apr_size_t replacements = 0;
+
+  apr_size_t current = 0;
+  apr_size_t original_length = str->len;
+
+  apr_size_t to_copy;
+  apr_size_t to_find_len;
+  apr_size_t replacement_len;
+  apr_size_t new_length;
+
+  /* Early exit. */
+  const char *pos = strstr(str->data, to_find);
+  if (pos == NULL)
+    return 0;
+
+  to_find_len = strlen(to_find);
+  replacement_len = strlen(replacement);
+
+  /* We will store the new contents behind the NUL terminator of the current
+   * data and track the total length in STR->LEN to make the reallocation
+   * code preserve both bits.  However, we need to keep the NUL between them
+   * to make strstr stop at that boundary. */
+  ++str->len;
+
+  /* Find all occurrences of TO_FIND, copy the bits in between to the target,
+   * separated by REPLACEMENT. */
+  for ( ; pos; pos = strstr(str->data + current, to_find), ++replacements)
     {
-      if (pos > str->len)
-        pos = str->len;
-      if (pos + old_count > str->len)
-        old_count = str->len - pos;
+      to_copy = pos - str->data - current;
+      svn_stringbuf_ensure(str, str->len + to_copy + replacement_len);
 
-      if (old_count < new_count)
-        {
-          apr_size_t delta = new_count - old_count;
-          svn_stringbuf_ensure(str, str->len + delta);
-        }
+      if (to_copy)
+        memcpy(str->data + str->len, str->data + current, to_copy);
+      current += to_copy + to_find_len;
 
-      if (old_count != new_count)
-        memmove(str->data + pos + new_count, str->data + pos + old_count,
-                str->len - pos - old_count + 1);
-
-      memcpy(str->data + pos, bytes, new_count);
-      str->len += new_count - old_count;
+      str->len += to_copy;
+      memcpy(str->data + str->len, replacement, replacement_len);
+      str->len += replacement_len;
     }
+
+  /* Copy remainder. */
+  to_copy = original_length - current;
+  if (to_copy)
+    {
+      svn_stringbuf_ensure(str, str->len + to_copy);
+      memcpy(str->data + str->len, str->data + current, to_copy);
+      str->len += to_copy;
+    }
+
+  /* Move new contents to the start of the buffer and terminate it. */
+  new_length = str->len - original_length - 1;
+  memmove(str->data, str->data + original_length + 1, new_length);
+  str->len = new_length;
+  str->data[new_length] = 0;
+
+  /* Done. */
+  return replacements;
 }
 
 
@@ -738,13 +835,18 @@ svn_stringbuf_first_non_whitespace(const svn_stringbuf_t *str)
 void
 svn_stringbuf_strip_whitespace(svn_stringbuf_t *str)
 {
-  /* Find first non-whitespace character */
-  apr_size_t offset = svn_stringbuf_first_non_whitespace(str);
+  /* Skip (hide) whitespace at the beginning of the string. */
+  if (svn_ctype_isspace(str->data[0]))
+    {
+      /* Find first non-whitespace character */
+      apr_size_t offset = string_first_non_whitespace(str->data + 1,
+                                                      str->len - 1) + 1;
 
-  /* Go ahead!  Waste some RAM, we've got pools! :)  */
-  str->data += offset;
-  str->len -= offset;
-  str->blocksize -= offset;
+      /* Go ahead!  Waste some RAM, we've got pools! :)  */
+      str->data += offset;
+      str->len -= offset;
+      str->blocksize -= offset;
+    }
 
   /* Now that we've trimmed the front, trim the end, wasting more RAM. */
   while ((str->len > 0) && svn_ctype_isspace(str->data[str->len - 1]))
@@ -800,7 +902,7 @@ svn_cstring_split_append(apr_array_header_t *array,
         }
 
       if (p[0] != '\0')
-        APR_ARRAY_PUSH(array, const char *) = p;
+        APR_ARRAY_PUSH(array, char *) = p;
 
       p = svn_cstring_tokenize(sep_chars, &pats);
     }
@@ -857,7 +959,7 @@ char *
 svn_cstring_tokenize(const char *sep, char **str)
 {
     char *token;
-    const char * next;
+    char *next;
     char csep;
 
     /* check parameters */
@@ -887,8 +989,8 @@ svn_cstring_tokenize(const char *sep, char **str)
       }
     else
       {
-        *(char *)next = '\0';
-        *str = (char *)next + 1;
+        *next = '\0';
+        *str = next + 1;
       }
 
     return token;
@@ -919,9 +1021,10 @@ int svn_cstring_count_newlines(const char *msg)
 }
 
 char *
-svn_cstring_join(const apr_array_header_t *strings,
-                 const char *separator,
-                 apr_pool_t *pool)
+svn_cstring_join2(const apr_array_header_t *strings,
+                  const char *separator,
+                  svn_boolean_t trailing_separator,
+                  apr_pool_t *pool)
 {
   svn_stringbuf_t *new_str = svn_stringbuf_create_empty(pool);
   size_t sep_len = strlen(separator);
@@ -930,9 +1033,14 @@ svn_cstring_join(const apr_array_header_t *strings,
   for (i = 0; i < strings->nelts; i++)
     {
       const char *string = APR_ARRAY_IDX(strings, i, const char *);
+      if (i > 0)
+        svn_stringbuf_appendbytes(new_str, separator, sep_len);
       svn_stringbuf_appendbytes(new_str, string, strlen(string));
-      svn_stringbuf_appendbytes(new_str, separator, sep_len);
     }
+
+  if (strings->nelts > 0 && trailing_separator)
+    svn_stringbuf_appendbytes(new_str, separator, sep_len);
+
   return new_str->data;
 }
 
@@ -1068,16 +1176,6 @@ svn__strtoul(const char* buffer, const char** end)
   return result;
 }
 
-long
-svn__strtol(const char* buffer, const char** end)
-{
-  if (*buffer == '-')
-    return -(long)svn__strtoul(buffer+1, end);
-  else
-    return (long)svn__strtoul(buffer, end);
-}
-
-
 /* "Precalculated" itoa values for 2 places (including leading zeros).
  * For maximum performance, make sure all table entries are word-aligned.
  */
@@ -1174,7 +1272,7 @@ svn__i64toa(char * dest, apr_int64_t number)
     return svn__ui64toa(dest, (apr_uint64_t)number);
 
   *dest = '-';
-  return svn__ui64toa(dest + 1, (apr_uint64_t)(0-number)) + 1;
+  return svn__ui64toa(dest + 1, 0 - (apr_uint64_t)number) + 1;
 }
 
 static void
@@ -1297,7 +1395,7 @@ svn__base36toui64(const char **next, const char *source)
 }
 
 
-unsigned int
+apr_size_t
 svn_cstring__similarity(const char *stra, const char *strb,
                         svn_membuf_t *buffer, apr_size_t *rlcs)
 {
@@ -1309,7 +1407,7 @@ svn_cstring__similarity(const char *stra, const char *strb,
   return svn_string__similarity(&stringa, &stringb, buffer, rlcs);
 }
 
-unsigned int
+apr_size_t
 svn_string__similarity(const svn_string_t *stringa,
                        const svn_string_t *stringb,
                        svn_membuf_t *buffer, apr_size_t *rlcs)
@@ -1398,9 +1496,9 @@ svn_string__similarity(const svn_string_t *stringa,
 
   /* Return similarity ratio rounded to 4 significant digits */
   if (total)
-    return(unsigned int)((2000 * lcs + total/2) / total);
+    return ((2 * SVN_STRING__SIM_RANGE_MAX * lcs + total/2) / total);
   else
-    return 1000;
+    return SVN_STRING__SIM_RANGE_MAX;
 }
 
 apr_size_t
@@ -1409,20 +1507,6 @@ svn_cstring__match_length(const char *a,
                           apr_size_t max_len)
 {
   apr_size_t pos = 0;
-
-#if SVN_UNALIGNED_ACCESS_IS_OK
-
-  /* Chunky processing is so much faster ...
-   *
-   * We can't make this work on architectures that require aligned access
-   * because A and B will probably have different alignment. So, skipping
-   * the first few chars until alignment is reached is not an option.
-   */
-  for (; pos + sizeof(apr_size_t) <= max_len; pos += sizeof(apr_size_t))
-    if (*(const apr_size_t*)(a + pos) != *(const apr_size_t*)(b + pos))
-      break;
-
-#endif
 
   for (; pos < max_len; ++pos)
     if (a[pos] != b[pos])
@@ -1438,22 +1522,6 @@ svn_cstring__reverse_match_length(const char *a,
 {
   apr_size_t pos = 0;
 
-#if SVN_UNALIGNED_ACCESS_IS_OK
-
-  /* Chunky processing is so much faster ...
-   *
-   * We can't make this work on architectures that require aligned access
-   * because A and B will probably have different alignment. So, skipping
-   * the first few chars until alignment is reached is not an option.
-   */
-  for (pos = sizeof(apr_size_t); pos <= max_len; pos += sizeof(apr_size_t))
-    if (*(const apr_size_t*)(a - pos) != *(const apr_size_t*)(b - pos))
-      break;
-
-  pos -= sizeof(apr_size_t);
-
-#endif
-
   /* If we find a mismatch at -pos, pos-1 characters matched.
    */
   while (++pos <= max_len)
@@ -1465,4 +1533,17 @@ svn_cstring__reverse_match_length(const char *a,
   return max_len;
 }
 
+const char *
+svn_cstring_skip_prefix(const char *str, const char *prefix)
+{
+  apr_size_t len = strlen(prefix);
 
+  if (strncmp(str, prefix, len) == 0)
+    {
+      return str + len;
+    }
+  else
+    {
+      return NULL;
+    }
+}

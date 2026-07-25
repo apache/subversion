@@ -28,6 +28,8 @@
 #include "svn_pools.h"
 #include "svn_utf.h"
 
+#include "private/svn_string_private.h"
+
 /* Used to terminate lines in large multi-line string literals. */
 #define NL APR_EOL_STR
 
@@ -173,13 +175,15 @@ three_way_merge(const char *base_filename1,
   actual = svn_stringbuf_create_empty(pool);
   ostream = svn_stream_from_stringbuf(actual, pool);
 
-  SVN_ERR(svn_diff_mem_string_output_merge2
+  SVN_ERR(svn_diff_mem_string_output_merge3
           (ostream, diff, original, modified, latest,
            apr_psprintf(pool, "||||||| %s", base_filename1),
            apr_psprintf(pool, "<<<<<<< %s", base_filename2),
            apr_psprintf(pool, ">>>>>>> %s", base_filename3),
            NULL, /* separator */
-           style, pool));
+           style,
+           NULL, NULL, /* cancel */
+           pool));
 
   SVN_ERR(svn_stream_close(ostream));
   if (strcmp(actual->data, expected) != 0)
@@ -199,14 +203,16 @@ three_way_merge(const char *base_filename1,
                            APR_OS_DEFAULT, pool));
 
   ostream = svn_stream_from_aprfile2(output, FALSE, pool);
-  SVN_ERR(svn_diff_file_output_merge2(
+  SVN_ERR(svn_diff_file_output_merge3(
               ostream, diff,
               filename1, filename2, filename3,
               apr_psprintf(pool, "||||||| %s", base_filename1),
               apr_psprintf(pool, "<<<<<<< %s", base_filename2),
               apr_psprintf(pool, ">>>>>>> %s", base_filename3),
               NULL, /* separator */
-              style, pool));
+              style,
+              NULL, NULL, /* cancel */
+              pool));
   SVN_ERR(svn_stream_close(ostream));
   SVN_ERR(svn_stringbuf_from_file2(&actual, merge_name, pool));
   if (strcmp(actual->data, expected))
@@ -2067,15 +2073,13 @@ test_three_way_merge_conflict_styles(apr_pool_t *pool)
 }
 
 
-#define MAKE_STRING(cstr) { (cstr), sizeof((cstr))-1 }
-
 static svn_error_t *
 test_diff4(apr_pool_t *pool)
 {
   svn_diff_t *diff;
   svn_stream_t *actual, *expected;
   svn_boolean_t same;
-  static svn_string_t B2 = MAKE_STRING(
+  static svn_string_t B2 = SVN__STATIC_STRING(
     "int main (int argc, char **argv)\n"
     "{\n"
     "  /* line minus-five of context */\n"
@@ -2090,7 +2094,7 @@ test_diff4(apr_pool_t *pool)
     "  /* line plus-four of context */\n"
     "  /* line plus-five of context */\n"
     "}\n");
-  static svn_string_t B2new = MAKE_STRING(
+  static svn_string_t B2new = SVN__STATIC_STRING(
     "int main (int argc, char **argv)\n"
     "{\n"
     "  /* line minus-five of context */\n"
@@ -2105,7 +2109,7 @@ test_diff4(apr_pool_t *pool)
     "  /* line plus-four of context */\n"
     "  /* line plus-five of context */\n"
     "}\n");
-  static svn_string_t T1 = MAKE_STRING(
+  static svn_string_t T1 = SVN__STATIC_STRING(
     "int main (int argc, char **argv)\n"
     "{\n"
     "  /* line minus-five of context */\n"
@@ -2120,7 +2124,7 @@ test_diff4(apr_pool_t *pool)
     "  /* line plus-four of context */\n"
     "  /* line plus-five of context */\n"
     "}\n");
-  static svn_string_t T2 = MAKE_STRING(
+  static svn_string_t T2 = SVN__STATIC_STRING(
     "#include <stdio.h>\n"
     "\n"
     "int main (int argc, char **argv)\n"
@@ -2137,7 +2141,7 @@ test_diff4(apr_pool_t *pool)
     "  /* line plus-four of context */\n"
     "  /* line plus-five of context */\n"
     "}\n");
-  static svn_string_t T3 = MAKE_STRING(
+  static svn_string_t T3 = SVN__STATIC_STRING(
     "#include <stdio.h>\n"
     "\n"
     "int main (int argc, char **argv)\n"
@@ -2948,6 +2952,119 @@ two_way_issue_3362_v2(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+three_way_double_add(apr_pool_t *pool)
+{
+  SVN_ERR(three_way_merge("doubleadd1", "doubleadd2", "doubleadd3",
+                          "A\n"
+                          "B\n"
+                          "C\n"
+                          "J\n"
+                          "K\n"
+                          "L",
+
+                          "A\n"
+                          "B\n"
+                          "C\n"
+                          "D\n" /* New line 1a */
+                          "E\n" /* New line 2a */
+                          "F\n" /* New line 3a*/
+                          "J\n"
+                          "K\n"
+                          "L",
+
+                          "A\n"
+                          "B\n"
+                          "O\n" /* Change C to O */
+                          "P\n" /* New line 1b */
+                          "Q\n" /* New line 2b */
+                          "R\n" /* New line 3b */
+                          "J\n"
+                          "K\n"
+                          "L",
+
+                          /* With s/C/O/ we expect something like this,
+                             but the current (1.9/trunk) result is a
+                             succeeded merge to a combined result.
+
+                             ### I'm guessing this result needs tweaks before it
+                                 will be a PASS. */
+                          "A\n"
+                          "B\n"
+                          "<<<<<<< doubleadd2\n"
+                          "C\n"
+                          "D\n" /* New line 1a */
+                          "E\n" /* New line 2a */
+                          "F\n" /* New line 3a*/
+                          "=======\n"
+                          "O\n"
+                          "P\n" /* New line 1b */
+                          "Q\n" /* New line 2b */
+                          "R\n" /* New line 3b */
+                          ">>>>>>> doubleadd3\n"
+                          "J\n"
+                          "K\n"
+                          "L",
+                          NULL,
+                          svn_diff_conflict_display_modified_original_latest,
+                          pool));
+
+  SVN_ERR(three_way_merge("doubleadd1", "doubleadd2", "doubleadd3",
+                          "A\n"
+                          "B\n"
+                          "C\n"
+                          "J\n"
+                          "K\n"
+                          "L",
+
+                          "A\n"
+                          "B\n"
+                          "C\n"
+                          "D\n" /* New line 1a */
+                          "E\n" /* New line 2a */
+                          "F\n" /* New line 3a*/
+                          "K\n"
+                          "L",
+
+                          "A\n"
+                          "B\n"
+                          "O\n" /* Change C to O */
+                          "P\n" /* New line 1b */
+                          "Q\n" /* New line 2b */
+                          "R\n" /* New line 3b */
+                          "J\n"
+                          "K\n"
+                          "L",
+
+                          /* With s/C/O/ we expect something like this,
+                          but the current (1.9/trunk) result is a
+                          succeeded merge to a combined result.
+
+                          ### I'm guessing this result needs tweaks before it
+                          will be a PASS. */
+                          "A\n"
+                          "B\n"
+                          "<<<<<<< doubleadd2\n"
+                          "C\n"
+                          "D\n" /* New line 1a */
+                          "E\n" /* New line 2a */
+                          "F\n" /* New line 3a*/
+                          "=======\n"
+                          "O\n"
+                          "P\n" /* New line 1b */
+                          "Q\n" /* New line 2b */
+                          "R\n" /* New line 3b */
+                          "J\n"
+                          ">>>>>>> doubleadd3\n"
+                          "K\n"
+                          "L",
+                          NULL,
+                          svn_diff_conflict_display_modified_original_latest,
+                          pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -2990,6 +3107,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "2-way issue #3362 test v1"),
     SVN_TEST_PASS2(two_way_issue_3362_v2,
                    "2-way issue #3362 test v2"),
+    SVN_TEST_XFAIL2(three_way_double_add,
+                   "3-way merge, double add"),
     SVN_TEST_NULL
   };
 

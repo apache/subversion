@@ -1,0 +1,277 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+# cmake.yml -- Configuration for CMake GitHub Action workflow.
+#
+
+name: CMake
+
+on:
+  push:
+    branches: ["*"]
+    paths-ignore:
+      - 'doc/**'
+      - 'notes/**'
+      - CHANGES
+      - COMMITTERS
+      - INSTALL
+      - STATUS
+      - README
+  pull_request:
+    branches: ["*"]
+    paths-ignore:
+      - 'doc/**'
+      - 'notes/**'
+      - CHANGES
+      - COMMITTERS
+      - INSTALL
+      - STATUS
+      - README
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows, shared, x64, with tests
+            os: windows-2022
+            build_shared: ON
+            cmake_generator: Ninja
+            vcpkg_triplet: x64-windows
+            arch: x64
+            run_tests: true
+          - name: Windows, shared, x64, vs2022, with tests
+            os: windows-2022
+            build_shared: ON
+            cmake_generator: 'Visual Studio 17 2022'
+            vcpkg_triplet: x64-windows
+            arch: x64
+            run_tests: true
+          - name: Windows, shared, x86
+            os: windows-2022
+            build_shared: ON
+            cmake_generator: Ninja
+            vcpkg_triplet: x86-windows
+            arch: x86
+          - name: Windows, static, x64, with tests
+            os: windows-2022
+            build_shared: OFF
+            cmake_generator: Ninja
+            vcpkg_triplet: x64-windows-static-md
+            arch: x64
+            run_tests: true
+          - name: Linux, shared, with tests
+            os: ubuntu-latest
+            cmake_generator: Ninja
+            build_shared: ON
+            run_tests: true
+            extra_config_opts: >
+              -DSVN_ENABLE_AUTH_KWALLET=ON
+              -DSVN_ENABLE_AUTH_GNOME_KEYRING=ON
+              -DSVN_ENABLE_SASL=ON
+              -DSVN_ENABLE_LIBMAGIC=ON
+            extra_packages: >
+              libkf5wallet-dev
+              libkf5coreaddons-dev
+              libkf5i18n-dev
+              libdbus-1-dev
+              qtbase5-dev
+              libsecret-1-dev
+              python3-lxml
+              python3-rnc2rng
+              libsasl2-dev
+              libmagic-dev
+          - name: Mac OS
+            os: macos-latest
+            build_shared: ON
+            cmake_generator: Ninja
+            run_tests: true
+
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.name }}
+
+    env:
+      CMAKE_GENERATOR: ${{ matrix.cmake_generator }}
+
+    steps:
+      - name: Prepare Environment (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          $root = &(Join-Path ${env:ProgramFiles(x86)} "\Microsoft Visual Studio\Installer\vswhere.exe") -property installationpath -latest
+          Import-Module (Join-Path $root "Common7\Tools\Microsoft.VisualStudio.DevShell.dll")
+          Enter-VsDevShell -VsInstallPath $root -DevCmdArguments "-arch=${{ matrix.arch }}"
+
+          ls env: | foreach { "$($_.Name)=$($_.Value)" >> $env:GITHUB_ENV }
+
+      - name: Get vcpkg sha (Windows, vcpkg)
+        if: runner.os == 'Windows'
+        id: vcpkg-sha
+        run: |
+          cd C:\vcpkg
+          $sha = git rev-parse HEAD
+          echo "sha=$sha" >> $env:GITHUB_OUTPUT
+
+      - name: Restore vcpkg archives (Windows, vcpkg)
+        if: runner.os == 'Windows'
+        uses: actions/cache/restore@v5
+        with:
+          path: vcpkg-archives
+          key: vcpkg/${{ runner.os }}/${{ matrix.vcpkg_triplet }}/${{ steps.vcpkg-sha.outputs.sha }}
+          restore-keys: vcpkg/${{ runner.os }}/${{ matrix.vcpkg_triplet }}/
+
+      - name: Install dependencies (Windows, vcpkg)
+        if: runner.os == 'Windows'
+        env:
+          VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\vcpkg-archives
+        run: |
+          if (-not (Test-Path $env:VCPKG_DEFAULT_BINARY_CACHE)) {
+            New-Item $env:VCPKG_DEFAULT_BINARY_CACHE -ItemType Directory | Out-Null
+          }
+          C:\vcpkg\vcpkg.exe install --triplet ${{ matrix.vcpkg_triplet }} `
+            apr apr-util serf expat zlib sqlite3 gettext[tools] pdcurses
+
+          "CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $env:GITHUB_ENV
+
+      - name: Save vcpkg archives (Windows, vcpkg)
+        if: runner.os == 'Windows'
+        uses: actions/cache/save@v5
+        with:
+          path: vcpkg-archives
+          key: vcpkg/${{ runner.os }}/${{ matrix.vcpkg_triplet }}/${{ steps.vcpkg-sha.outputs.sha }}
+
+      - name: Install dependencies (Windows, python)
+        if: runner.os == 'Windows'
+        run: python -m pip -v --disable-pip-version-check install lxml==6.1.0 rnc2rng==2.7.0
+
+      - name: Install dependencies (Linux, apt-get)
+        if: runner.os == 'Linux'
+        run: >
+          sudo apt-get update &&
+          sudo apt-get install
+          libtool
+          libtool-bin
+          libapr1-dev
+          libaprutil1-dev
+          libserf-dev
+          libexpat1-dev
+          zlib1g-dev
+          libsqlite3-dev
+          apache2-dev
+          gettext
+          libncurses-dev
+          ninja-build
+          ${{ matrix.extra_packages }}
+
+      - name: Install dependencies (Mac OS, homebrew)
+        if: runner.os == 'macOS'
+        run: |
+          $packages = @('apr', 'apr-util', 'expat', 'sqlite', 'apache-serf',
+                        'gettext', 'ncurses')
+          brew install ninja apache2 swig $packages
+          $PKG_CONFIG_PATH = `
+            $packages | `
+            % { "$(& brew --prefix $_)/lib/pkgconfig" } | `
+            Join-String -Separator ':'
+          "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"  >> $env:GITHUB_ENV
+
+      - name: Install dependencies (Mac OS, python)
+        if: runner.os == 'macOS'
+        run: python -m pip -v --disable-pip-version-check install lxml==6.1.0 rnc2rng==2.7.0
+
+      - name: Set platform-specific values
+        id: platform
+        run: |
+          $PYTHON_ROOT=$(python -c 'import pathlib, sys; print(str(pathlib.Path(sys.executable).resolve().parent.parent))')
+          "python_root=$PYTHON_ROOT" >> "$env:GITHUB_OUTPUT"
+
+      - name: Use LF for Git checkout
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - uses: actions/checkout@v6
+
+      - name: Checkout py3c (Linux and macOS)
+        if:  runner.os == 'Linux' || runner.os == 'macOS'
+        uses: actions/checkout@v6
+        with:
+          repository: encukou/py3c
+          ref: v1.4
+          path: py3c
+
+      - name: gen-make
+        run: python ./gen-make.py -t cmake
+
+      - name: Configure CMake
+        run: >
+          cmake -B out
+          -DBUILD_SHARED_LIBS=${{ matrix.build_shared }}
+          -DSVN_ENABLE_TESTS=ON
+          -DSVN_ENABLE_RA_SERF=ON
+          -DSVN_ENABLE_NLS=ON
+          -DSVN_ENABLE_APACHE_MODULES=${{ runner.os != 'Windows' && 'ON' || 'OFF' }}
+          -DSVN_ENABLE_TUI=ON
+          -DSVN_ENABLE_SWIG_PERL=${{ runner.os != 'Windows' && 'ON' || 'OFF' }}
+          -DSVN_ENABLE_SWIG_PERL_MAN_PAGES=${{ runner.os != 'Windows' && 'ON' || 'OFF' }}
+          -DSVN_ENABLE_SWIG_PYTHON=${{ runner.os != 'Windows' && 'ON' || 'OFF' }}
+          -DSVN_ENABLE_SWIG_RUBY=${{ runner.os != 'Windows' && 'ON' || 'OFF' }}
+          -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/installdir
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
+          -DSVN_TEST_CONFIGURE_FOR_PARALLEL=ON
+          -DSVN_TEST_CHECK_XML_SCHEMA=ON
+          -DPython3_ROOT_DIR="${{ steps.platform.outputs.python_root }}"
+          -DPython3_FIND_REGISTRY=NEVER
+          -DPython3_FIND_STRATEGY=LOCATION
+          -DPython3_FIND_UNVERSIONED_NAMES=FIRST
+          -DPY3C_INCLUDE_DIR=${{ github.workspace }}/py3c/include
+          ${{ matrix.extra_config_opts }}
+
+      - name: Build CMake
+        run: cmake --build out --config Release
+
+      - name: Run all tests
+        id: run_all_tests
+        if: matrix.run_tests
+        working-directory: out
+        run: ctest --output-on-failure --verbose -C Release --parallel 16
+
+      - name: Test shelf2
+        if: matrix.run_tests
+        working-directory: out
+        env:
+          SVN_EXPERIMENTAL_COMMANDS: shelf2
+        run: ctest -R shelf2 --verbose -C Release
+
+      - name: Test shelf3
+        if: matrix.run_tests
+        working-directory: out
+        env:
+          SVN_EXPERIMENTAL_COMMANDS: shelf3
+        run: ctest -R shelf3 --verbose -C Release
+
+      - name: Install
+        run: cmake --install out --config Release

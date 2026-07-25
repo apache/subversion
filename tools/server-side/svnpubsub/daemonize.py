@@ -16,14 +16,23 @@
 #
 # ---------------------------------------------------------------------------
 #
-# This software lives at:
-#    http://gstein.googlecode.com/svn/trunk/python/daemonize.py
+# This code is no longer maintained "upstream", so consider this module
+# a "friendly fork" and is canonical for Apache Subversion's purposes.
+#
+# Use of systemd's single-process mechanism and re-launching of a daemon
+# can greatly simplify daemon coding/management. A possibly-svn-relevant
+# example can be found at:
+#   https://github.com/apache/infrastructure-svnauthz
+#
+# Historical locations for this module were found on svn.webdav.org,
+# gstein.googlecode.com, and (most recently) gstein.svn.beanstalkapp.com.
 #
 
 import os
 import signal
 import sys
 import time
+import stat
 import multiprocessing  # requires Python 2.6
 
 
@@ -51,11 +60,11 @@ class Daemon(object):
   def daemonize_exit(self):
     try:
       result = self.daemonize()
-    except (ChildFailed, DaemonFailed), e:
+    except (ChildFailed, DaemonFailed) as e:
       # duplicate the exit code
       sys.exit(e.code)
     except (ChildTerminatedAbnormally, ChildForkFailed,
-            DaemonTerminatedAbnormally, DaemonForkFailed), e:
+            DaemonTerminatedAbnormally, DaemonForkFailed) as e:
       sys.stderr.write('ERROR: %s\n' % e)
       sys.exit(1)
     except ChildResumedIncorrectly:
@@ -83,7 +92,7 @@ class Daemon(object):
     p = multiprocessing.Process(target=self._first_child,
                                 args=(child_is_ready, child_completed))
     p.start()
-    
+
     # Wait for the child to finish setting things up (in case we need
     # to communicate with it). It will only exit when ready.
     ### use a timeout here! (parameterized, of course)
@@ -122,7 +131,7 @@ class Daemon(object):
     # perform the second fork
     try:
       pid = os.fork()
-    except OSError, e:
+    except OSError as e:
       ### this won't make it to the parent process
       raise DaemonForkFailed(e.errno, e.strerror)
 
@@ -179,7 +188,8 @@ class Daemon(object):
           os.remove(self.pidfile)
         except OSError:
           pass
-        fd = os.open(self.pidfile, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0444)
+        fd = os.open(self.pidfile, os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                     stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
         os.write(fd, '%d\n' % pid)
         os.close(fd)
 
@@ -260,13 +270,13 @@ class _Detacher(Daemon):
   def run(self):
     self.target(*self.args, **self.kwargs)
 
-    
+
 def run_detached(target, *args, **kwargs):
   """Simple function to run TARGET as a detached daemon.
-  
+
   The additional arguments/keywords will be passed along. This function
   does not return -- sys.exit() will be called as appropriate.
-  
+
   (capture SystemExit if logging/reporting is necessary)
   ### if needed, a variant of this func could be written to not exit
   """

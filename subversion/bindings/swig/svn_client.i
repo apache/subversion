@@ -21,15 +21,16 @@
  * svn_client.i: SWIG interface file for svn_client.h
  */
 
+%include svn_global.swg
+
 #if defined(SWIGPYTHON)
-%module(package="libsvn") client
+%module(package="libsvn", moduleimport=SVN_PYTHON_MODULEIMPORT) client
 #elif defined(SWIGPERL)
 %module "SVN::_Client"
 #elif defined(SWIGRUBY)
 %module "svn::ext::client"
 #endif
 
-%include svn_global.swg
 %import core.i
 %import svn_delta.i
 %import svn_wc.i
@@ -49,7 +50,8 @@
 %apply const char *MAY_BE_NULL {
     const char *native_eol,
     const char *comment,
-    const char *relative_to_dir
+    const char *relative_to_dir,
+    const char *wri_abspath
 };
 
 #ifdef SWIGRUBY
@@ -119,7 +121,7 @@
     ppitem = (svn_client_proplist_item_t **)(*$1)->elts;
     for (i = 0; i < nelts; ++i, ++ppitem) {
         PyObject *item = PyTuple_New(2);
-        PyObject *name = PyString_FromStringAndSize((*ppitem)->node_name->data,
+        PyObject *name = PyBytes_FromStringAndSize((*ppitem)->node_name->data,
                                                     (*ppitem)->node_name->len);
         PyObject *hash = svn_swig_py_prophash_to_dict((*ppitem)->prop_hash);
 
@@ -168,13 +170,6 @@
                   svn_swig_py_get_commit_log_func,
                   ,
                   svn_swig_rb_get_commit_log_func)
-#endif
-
-#ifdef SWIGRUBY
-%callback_typemap(svn_cancel_func_t cancel_func, void *cancel_baton,
-                  ,
-                  ,
-                  svn_swig_rb_cancel_func)
 #endif
 
 %callback_typemap(svn_client_blame_receiver_t receiver, void *receiver_baton,
@@ -246,6 +241,33 @@ Callback: svn_client_diff_summarize_func_t
                   svn_swig_rb_changelist_receiver)
 #endif
 
+ /* -----------------------------------------------------------------------
+    Callback: svn_client_status_func_t
+    svn_client_status*()
+    svn_client__shelf_save_new_version3()
+ */
+
+#ifdef SWIGPYTHON
+%callback_typemap(svn_client_status_func_t status_func,
+                  void *status_baton,
+                  svn_swig_py_client_status_func,
+                  ,
+                  )
+
+%callback_typemap_maybenull(svn_client_status_func_t shelved_func,
+                            void *shelved_baton,
+                            svn_swig_py_client_status_func,
+                            ,
+                            )
+
+%callback_typemap_maybenull(svn_client_status_func_t not_shelved_func,
+                            void *not_shelved_baton,
+                            svn_swig_py_client_status_func,
+                            ,
+                            )
+#endif
+
+
 /* -----------------------------------------------------------------------
    We use 'svn_wc_status_t *' in some custom code, but it isn't in the
    API anywhere. Thus, SWIG doesn't generate a typemap entry for it. by
@@ -300,8 +322,9 @@ Callback: svn_client_diff_summarize_func_t
  */
 #ifdef SWIGPERL
 %typemap(in) apr_hash_t *config {
-  $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
-                                         svn_swig_pl_make_pool ((SV *)NULL));
+  apr_pool_t *pool = svn_swig_pl_make_pool ((SV *)NULL);
+  SPAGAIN;
+  $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *", pool);
 }
 
 %typemap(out) apr_hash_t *config {
@@ -448,13 +471,13 @@ Callback: svn_client_diff_summarize_func_t
     self = apr_palloc(pool, sizeof(*self));
     self->path = path ? apr_pstrdup(pool, path) : NULL;
 
-    revision = apr_palloc(pool, sizeof(revision));
+    revision = apr_palloc(pool, sizeof(*revision));
     revision->kind = rev->kind;
     revision->value.number = rev->value.number;
     revision->value.date = rev->value.date;
     self->revision = revision;
 
-    peg_revision = apr_palloc(pool, sizeof(peg_revision));
+    peg_revision = apr_palloc(pool, sizeof(*peg_revision));
     peg_revision->kind = peg_rev->kind;
     peg_revision->value.number = peg_rev->value.number;
     peg_revision->value.date = peg_rev->value.date;
