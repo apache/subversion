@@ -42,10 +42,19 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/**
+ * To indicate charset names of the current locale
+ */
 #define SVN_APR_LOCALE_CHARSET APR_LOCALE_CHARSET
-#define SVN_APR_DEFAULT_CHARSET APR_DEFAULT_CHARSET
 
 /**
+ * Indicates the charset of the sourcecode at compile time names.  This is
+ * useful if there are literal strings in the source code which must
+ * be translated according to the charset of the source code.
+ */
+#define SVN_APR_DEFAULT_CHARSET APR_DEFAULT_CHARSET
+
+  /**
  * Initialize the UTF-8 encoding/decoding routines.
  * Allocate cached translation handles in a subpool of @a pool.
  *

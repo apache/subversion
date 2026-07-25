@@ -2641,8 +2641,7 @@ def xml_unsafe_author(sbox):
 
 @Issue(4415)
 @Issue(4919)
-@XFail(lambda: (svntest.main.is_bad_xml_fatal()
-                and not svntest.main.is_ra_type_dav()))
+@XFail(lambda: (not svntest.main.is_ra_type_dav()))
 def xml_unsafe_author2(sbox):
   "svn:author with XML unsafe chars 2"
 
@@ -2857,7 +2856,7 @@ def tmpfile_name_matches_prop_type(sbox):
   svntest.actions.run_and_verify_svn(
     None,
     '.*' + re.escape(non_editor) + r'.*svn-revprop-r1\.tmp.*',
-    'propedit', '--revprop', 
+    'propedit', '--revprop',
     '--editor-cmd', non_editor,
     '-r1', 'svn:log',
     sbox.repo_url)
@@ -2865,7 +2864,7 @@ def tmpfile_name_matches_prop_type(sbox):
   svntest.actions.run_and_verify_svn(
     None,
     '.*' + re.escape(non_editor) + r'.*svn-prop\.tmp.*',
-    'propedit', 
+    'propedit',
     '--editor-cmd', non_editor,
     'ignored-propname',
     sbox.ospath('A/mu'))

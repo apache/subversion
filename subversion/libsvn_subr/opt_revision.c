@@ -159,6 +159,21 @@ static char *parse_one_rev(svn_opt_revision_t *revision, char *str,
     return NULL;
 }
 
+svn_error_t *
+svn_opt_parse_one_revision(svn_opt_revision_t *revision,
+                           const char *arg,
+                           apr_pool_t *scratch_pool)
+{
+  /* copy because parse_one_rev() will mess up the string */
+  char *str = apr_pstrdup(scratch_pool, arg);
+  char *end = parse_one_rev(revision, str, scratch_pool);
+
+  if (! end || *end != '\0')
+    return svn_error_createf(SVN_ERR_OPT_REVISION_PARSE_ERROR, NULL,
+                             "Error parsing revision argument '%s'", arg);
+
+  return SVN_NO_ERROR;
+}
 
 int
 svn_opt_parse_revision(svn_opt_revision_t *start_revision,

@@ -26,6 +26,7 @@
 #include "svn_io.h"
 #include "svn_subst.h"
 #include "svn_base64.h"
+#include "svn_hash.h"
 #include <apr_general.h>
 
 #include "private/svn_io_private.h"
@@ -375,7 +376,7 @@ test_stream_seek_translated(apr_pool_t *pool)
 
   keywords = apr_hash_make(pool);
   keyword_val = svn_string_create("my keyword was expanded", pool);
-  apr_hash_set(keywords, "MyKeyword", APR_HASH_KEY_STRING, keyword_val);
+  svn_hash_sets(keywords, "MyKeyword", keyword_val);
   stringbuf = svn_stringbuf_create("One$MyKeyword$Two", pool);
   stream = svn_stream_from_stringbuf(stringbuf, pool);
   translated_stream = svn_subst_stream_translated(stream, APR_EOL_STR,

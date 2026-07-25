@@ -116,12 +116,13 @@ svn_ver_check_list2(const svn_version_t *my_version,
 
 struct svn_version_extended_t
 {
-  const char *build_date;       /* Compilation date */
-  const char *build_time;       /* Compilation time */
-  const char *build_host;       /* Build canonical host name */
-  const char *copyright;        /* Copyright notice (localized) */
-  const char *runtime_host;     /* Runtime canonical host name */
-  const char *runtime_osname;   /* Running OS release name */
+  const char *build_date;           /* Compilation date */
+  const char *build_time;           /* Compilation time */
+  const char *build_host;           /* Build canonical host name */
+  const char *copyright;            /* Copyright notice (localized) */
+  const char *runtime_host;         /* Runtime canonical host name */
+  const char *runtime_osname;       /* Running OS release name */
+  const char *character_encoding;   /* Encoding of the current locale */
 
   /* Array of svn_version_ext_linked_lib_t describing dependent
      libraries. */
@@ -143,7 +144,7 @@ svn_version_extended(svn_boolean_t verbose,
   info->build_time = __TIME__;
   info->build_host = SVN_BUILD_HOST;
   info->copyright = apr_pstrdup
-    (pool, _("Copyright (C) 2025 The Apache Software Foundation.\n"
+    (pool, _("Copyright (C) 2026 The Apache Software Foundation.\n"
              "This software consists of contributions made by many people;\n"
              "see the NOTICE file for more information.\n"
              "Subversion is open source software, see "
@@ -153,6 +154,7 @@ svn_version_extended(svn_boolean_t verbose,
     {
       info->runtime_host = svn_sysinfo__canonical_host(pool);
       info->runtime_osname = svn_sysinfo__release_name(pool);
+      info->character_encoding = svn_sysinfo__character_encoding(pool);
       info->linked_libs = svn_sysinfo__linked_libs(pool);
       info->loaded_libs = svn_sysinfo__loaded_libs(pool);
     }
@@ -195,6 +197,12 @@ const char *
 svn_version_ext_runtime_osname(const svn_version_extended_t *ext_info)
 {
   return ext_info->runtime_osname;
+}
+
+const char *
+svn_version_ext_character_encoding(const svn_version_extended_t *ext_info)
+{
+  return ext_info->character_encoding;
 }
 
 const apr_array_header_t *
@@ -245,7 +253,7 @@ svn_version__parse_version_string(svn_version_t **version_p,
      require that it be present. */
   if (pieces->nelts == 3)
     {
-      const char *piece = APR_ARRAY_IDX(pieces, 2, const char *);
+      char *piece = APR_ARRAY_IDX(pieces, 2, char *);
       char *hyphen = strchr(piece, '-');
       if (hyphen)
         {

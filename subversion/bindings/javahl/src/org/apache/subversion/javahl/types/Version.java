@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl.types;
@@ -38,6 +36,15 @@ public class Version
     static
     {
         NativeResources.loadNativeLibrary();
+    }
+
+    /**
+     * Return a Version instance for the given version numbers.
+     * @since 1.15
+     */
+    public static Version getInstance(int major, int minor, int patch)
+    {
+        return new VersionNumber(major, minor, patch);
     }
 
     /**
@@ -72,8 +79,8 @@ public class Version
     public native int getPatch();
 
     /**
-     * @return Whether the JavaHL native library version is at least
-     * of <code>major.minor.patch</code> level.
+     * @return Whether the version is at least
+     * <code>major.minor.patch</code>.
      */
     public boolean isAtLeast(int major, int minor, int patch)
     {
@@ -86,6 +93,18 @@ public class Version
     }
 
     /**
+     * @return Whether version is at least <code>other</code>.
+     * @since 1.15
+     */
+    public boolean isAtLeast(Version other)
+    {
+        return isAtLeast(other.getMajor(),
+                         other.getMinor(),
+                         other.getPatch());
+    }
+
+
+    /**
      * @return Some text further describing the library version
      * (e.g. <code>" (r1234)"</code>, <code>" (Alpha 1)"</code>,
      * <code>" (dev build)"</code>, etc.).
@@ -94,7 +113,7 @@ public class Version
 
     /**
      * @return Some text further describing the library version
-     * (e.g. "r1234", "Alpha 1", "dev build", etc.).
+     * (e.g. "-r1234", "-alpha1", "-dev", etc.).
      */
     private native String getNumberTag();
 }

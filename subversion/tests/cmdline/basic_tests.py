@@ -40,6 +40,7 @@ XFail = svntest.testcase.XFail_deco
 Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
+RequireUtf8 = svntest.testcase.RequireUtf8_deco
 Item = wc.StateItem
 
 # Generic UUID-matching regular expression
@@ -115,11 +116,10 @@ def basic_status(sbox):
 
 #----------------------------------------------------------------------
 
-def basic_commit(sbox):
-  "basic commit command"
-
+def _basic_commit_common(sbox, expected_error=[], *args):
   sbox.build()
   wc_dir = sbox.wc_dir
+  svntest.main.use_editor('prepend_foo')
 
   # Make a couple of local mods to files
   mu_path = sbox.ospath('A/mu')
@@ -128,20 +128,48 @@ def basic_commit(sbox):
   svntest.main.file_append(rho_path, 'new appended text for rho')
 
   # Created expected output tree for 'svn ci'
-  expected_output = wc.State(wc_dir, {
-    'A/mu' : Item(verb='Sending'),
-    'A/D/G/rho' : Item(verb='Sending'),
+  if expected_error:
+    expected_output = []
+  else:
+    expected_output = wc.State(wc_dir, {
+      'A/mu' : Item(verb='Sending'),
+      'A/D/G/rho' : Item(verb='Sending'),
     })
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu and rho should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
+  if expected_error:
+    expected_status.tweak('A/mu', 'A/D/G/rho', status='M ')
+  else:
+    expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
 
-  svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status)
+  prepend_wc_dir_name = len(args) > 0
+  append_log_message = not (len(args) or expected_error)
+  svntest.actions.run_and_verify_commit2(wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         prepend_wc_dir_name,
+                                         append_log_message,
+                                         expected_error,
+                                         *args)
 
+def basic_commit(sbox):
+  "basic commit command"
+
+  return _basic_commit_common(sbox)
+
+def basic_commit_use_editor(sbox):
+  "basic commit using editor"
+
+  # Note: svn's stdin is not a terminal, so it defaults to non-interactive.
+  return _basic_commit_common(sbox,
+                              "svn: E205001: .* editor .* non-interactive.*")
+
+def basic_commit_use_editor_force_interactive(sbox):
+  "basic commit using editor and force-interactive"
+
+  return _basic_commit_common(sbox, [], '--force-interactive')
 
 #----------------------------------------------------------------------
 
@@ -3281,7 +3309,7 @@ def keep_local_reverted_properly(sbox):
   svntest.main.run_svn(None, 'revert', *targets)
 
   # Check that the modifications are absent
-  # 
+  #
   # alpha and beta are still scheduled for deletion because 'revert' doesn't
   # recurse by default.
   expected_disk = svntest.main.greek_state.copy()
@@ -3329,22 +3357,60 @@ def argv_with_best_fit_chars(sbox):
       yield chr(c), mbcs
 
   count = 0
-  expected_stderr = svntest.verify.RegexListOutput(
-    [r'^"foo.+bar": unknown command\.\n$', '\n'], match_all=True)
+  # The argument is accepted as utf-8, but the output to the pipe is applied
+  # best-fit encoding conversion.
   for wc, mbcs in iter_bestfit_chars():
     count += 1
     logger.info('Code page %r - U+%04x -> 0x%s', codepage, ord(wc), mbcs.hex())
     if mbcs == b'"':
+      expected_stderr = r'^"foo" "bar": unknown command'
       svntest.actions.run_and_verify_svn2(None, expected_stderr, 0, 'help',
                                           'foo{0} {0}bar'.format(wc))
     elif mbcs == b'\\':
+      expected_stderr = r'^"foo\\" \\"bar": unknown command'
       svntest.actions.run_and_verify_svn2(None, expected_stderr, 0, 'help',
                                           'foo{0}" {0}"bar'.format(wc))
     elif mbcs == b' ':
+      expected_stderr = r'^"foo bar": unknown command'
       svntest.actions.run_and_verify_svn2(None, expected_stderr, 0, 'help',
                                           'foo{0}bar'.format(wc))
   if count == 0:
     raise svntest.Skip('No best fit characters in code page %r' % codepage)
+
+@RequireUtf8
+def unicode_arguments_test(sbox: svntest.sandbox.Sandbox):
+  """test unicode arguments"""
+
+  UNICODE_TEST_STRING = '\U0001f449\U0001f448'
+  sbox.build(read_only=False, empty=True)
+
+  unicode_item = sbox.ospath(UNICODE_TEST_STRING)
+  test_item = sbox.ospath("test")
+
+  svntest.actions.run_and_verify_svn2(None, [], 0, "mkdir", unicode_item)
+  svntest.actions.run_and_verify_svn2(None, [], 0, "mkdir", test_item)
+  svntest.actions.run_and_verify_svn2(None, [], 0, "propset",
+                                      "name", UNICODE_TEST_STRING, unicode_item)
+  svntest.actions.run_and_verify_svn2(None, [], 0, "ci", sbox.wc_dir,
+                                      "-m", UNICODE_TEST_STRING,
+                                      "--with-revprop",
+                                      "revprop=" + UNICODE_TEST_STRING)
+
+  expected_disk = wc.State("", {
+    UNICODE_TEST_STRING: Item(props={ "name": UNICODE_TEST_STRING }),
+    "test"             : Item(),
+  })
+
+  svntest.actions.verify_disk(sbox.wc_dir, expected_disk, check_props=True)
+  os.chdir(sbox.wc_dir)
+  svntest.actions.run_and_verify_log_xml(
+    expected_revprops=[{
+      "svn:author": "jrandom",
+      "svn:date": "",
+      "svn:log": UNICODE_TEST_STRING,
+      "revprop": UNICODE_TEST_STRING
+    }],
+    args=["-r1", "--with-all-revprops"])
 
 
 ########################################################################
@@ -3355,6 +3421,8 @@ test_list = [ None,
               basic_checkout,
               basic_status,
               basic_commit,
+              basic_commit_use_editor,
+              basic_commit_use_editor_force_interactive,
               basic_update,
               basic_mkdir_url,
               basic_mkdir_url_with_parents,
@@ -3424,6 +3492,7 @@ test_list = [ None,
               filtered_ls_top_level_path,
               keep_local_reverted_properly,
               argv_with_best_fit_chars,
+              unicode_arguments_test,
              ]
 
 if __name__ == '__main__':

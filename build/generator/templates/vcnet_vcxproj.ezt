@@ -96,7 +96,10 @@
       <TargetMachine>[is platforms "X64"]MachineX64[else][is platforms "ARM64"]MachineARM64[else]MachineX86[end][end]</TargetMachine>
 [is configs.name "Debug"]      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
 [end]    </Lib>
-[end][end][end]  </ItemDefinitionGroup>
+[end][end][end][is config_type "Application"]    <Manifest>
+      <AdditionalManifestFiles>..\compatibility.manifest</AdditionalManifestFiles>
+    </Manifest>
+[end]  </ItemDefinitionGroup>
 [end][end][if-any target.desc]  <ItemGroup>
     <ResourceCompile Include="..\svn.rc" />
   </ItemGroup>

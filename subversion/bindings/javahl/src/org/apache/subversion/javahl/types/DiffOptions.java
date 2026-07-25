@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl.types;
@@ -32,19 +30,22 @@ public class DiffOptions
     public enum Flag
     {
         /** Ignore all white space */
-        IgnoreWhitespace  (1),
+        IgnoreWhitespace  (0x01),
 
         /** Ignore changes in amount of white space */
-        IgnoreSpaceChange (2),
+        IgnoreSpaceChange (0x02),
 
         /** Ignore changes in EOL style */
-        IgnoreEOLStyle    (4),
+        IgnoreEOLStyle    (0x04),
 
         /** Show C function name */
-        ShowFunction      (8),
+        ShowFunction      (0x08),
 
         /** Use git's extended diff format */
-        GitFormat        (16);
+        GitFormat        (0x10),
+
+        /** Show 'svn:mergeinfo' in human-readable form */
+        FormatMergeinfo  (0x20);
 
         final int value;
 
@@ -95,6 +96,12 @@ public class DiffOptions
     public boolean getGitFormat()
     {
         return (0 != (flags & Flag.GitFormat.value));
+    }
+
+    /** @return whether FormatMergeinfo is enabled */
+    public boolean getFormatMergeinfo()
+    {
+        return (0 != (flags & Flag.FormatMergeinfo.value));
     }
 
     private final int flags;

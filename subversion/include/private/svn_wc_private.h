@@ -39,6 +39,7 @@
 
 #include "svn_subst.h"
 #include "svn_types.h"
+#include "svn_version.h"
 #include "svn_wc.h"
 #include "private/svn_diff_tree.h"
 
@@ -2200,9 +2201,26 @@ svn_wc__format_from_version(int *format,
  *
  * ### It's not ideal to encode this sort of knowledge in this low-level
  * library.  On the other hand, it doesn't need to be updated often and
- * should be easily found when it does need to be updated.  */
+ * should be easily found when it does need to be updated.
+ *
+ * ### However, it's even less ideal to have this sort of knowledge
+ * in two places, both libsvn_wc and libsvn_client. Therefores, since
+ * libsvn_wc needs this info, we'll keep it there.
+ */
 const char *
 svn_wc__version_string_from_format(int wc_format);
+
+/* As above, but return a tuple containing the string and an
+   svn_version_t. If the returned tuple has a NULL string, the
+   format is not known. */
+typedef struct svn_wc__version_info svn_wc__version_info_t;
+struct svn_wc__version_info
+{
+  const char *text;
+  svn_version_t version;
+};
+const svn_wc__version_info_t *
+svn_wc__version_info_from_format(int wc_format);
 
 /**
  * Return true iff @a format is a supported format.

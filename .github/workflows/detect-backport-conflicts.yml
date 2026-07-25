@@ -24,9 +24,7 @@ name: backportbot
 
 on:
   push:
-    branches: ["1.14.x"]
-  pull_request:
-    branches: ["1.14.x"]
+    branches: ["1.14.x", "1.15.x"]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -43,10 +41,13 @@ jobs:
           sudo apt-get update &&
           sudo apt-get install
           subversion
-          
+
+      - name: Obtain tools/dist
+        run: svn export https://svn.apache.org/repos/asf/subversion/trunk/tools/dist tools-dist
+
       - name: Checkout backport branch
-        run: svn co https://svn.apache.org/repos/asf/subversion/branches/1.14.x
+        run: svn co https://svn.apache.org/repos/asf/subversion/branches/${{ github.ref_name }} branch-wc
 
       - name: Detect conflicting backports
-        run: cd 1.14.x && ./tools/dist/detect-conflicting-backports.py
+        run: cd branch-wc && ../tools-dist/detect-conflicting-backports.py
 

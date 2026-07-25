@@ -656,7 +656,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %typemap(in, noblock=1) apr_pool_t * {
   /* Verify that the user supplied a valid pool */
   if ($input != Py_None && $input != _global_py_pool) {
-    SWIG_Python_TypeError(SWIG_TypePrettyName($descriptor), $input);
+    SWIG_Error(SWIG_TypeError,  "a '$type' is expected");
     SWIG_arg_fail($svn_argnum);
     SWIG_fail;
   }

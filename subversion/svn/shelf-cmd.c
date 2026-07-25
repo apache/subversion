@@ -72,9 +72,8 @@ get_next_argument(const char **arg,
   apr_array_header_t *args;
 
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, scratch_pool));
-  SVN_ERR(svn_utf_cstring_to_utf8(arg,
-                                  APR_ARRAY_IDX(args, 0, const char *),
-                                  result_pool));
+  *arg = apr_pstrdup(result_pool, APR_ARRAY_IDX(args, 0, const char *));
+
   return SVN_NO_ERROR;
 }
 

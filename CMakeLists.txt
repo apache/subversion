@@ -19,6 +19,37 @@
 # CMakeLists.txt -- configuration file for CMake build system
 #
 
+# CMAKE_MINIMUM_REQUIRED should be the first directive in the file:
+# https://cmake.org/cmake/help/latest/command/cmake_minimum_required.html
+
+# Information about bundled CMake versions in different distributions and
+# toolsets:
+# - Visual Studio 2017     (supported until Apr 2027): CMake 3.6
+# - Visual Studio 2019     (supported until Apr 2029): CMake 3.20
+# - Visual Studio 2022     (supported until Jan 2032): CMake 3.31
+# - Visual Studio 2026     (supported until Nov 2028): CMake 4.3
+# - Debian 11 "bullseye"   (supported until Aug 2026): CMake 3.18
+# - Debian 12 "bookworm"   (supported until Jun 2028): CMake 3.25
+# - Debian 13 "trixie"     (supported until Aug 2030): CMake 3.31
+# - Ubuntu 22.04 LTS       (supported until May 2027): CMake 3.22
+# - Ubuntu 24.04 LTS       (supported until May 2029): CMake 3.28
+# - Ubuntu 26.04 LTS       (supported until May 2031): CMake 4.2
+# - RHEL 8                 (supported until May 2029): CMake 3.26
+# - RHEL 9                 (supported until May 2032): CMake 3.31
+# - RHEL 10                (supported until May 2035): CMake 3.31
+cmake_minimum_required(VERSION 3.14)
+
+# CMP0092: MSVC warning flags are not in CMAKE_<LANG>_FLAGS by default.
+if(POLICY CMP0092)
+  cmake_policy(SET CMP0092 NEW)
+endif()
+
+# Enable support for MSVC runtime library selection by abstraction
+# if supported by CMake.
+if(POLICY CMP0091)
+  cmake_policy(SET CMP0091 NEW)
+endif()
+
 function(read_version path var major minor patch)
   get_filename_component(path ${path} ABSOLUTE)
 
@@ -32,35 +63,12 @@ function(read_version path var major minor patch)
     string(REGEX REPLACE ".*${minor} +([0-9]+).*" "\\1" VER_MINOR ${VERSION_STRINGS})
     string(REGEX REPLACE ".*${patch} +([0-9]+).*" "\\1" VER_PATCH ${VERSION_STRINGS})
 
+    set(${major} "${VER_MAJOR}" PARENT_SCOPE)
+    set(${minor} "${VER_MINOR}" PARENT_SCOPE)
+    set(${patch} "${VER_PATCH}" PARENT_SCOPE)
     set(${var} "${VER_MAJOR}.${VER_MINOR}.${VER_PATCH}" PARENT_SCOPE)
   endif()
 endfunction()
-
-cmake_minimum_required(VERSION 3.12)
-
-# CMP0092: MSVC warning flags are not in CMAKE_<LANG>_FLAGS by default.
-if(POLICY CMP0092)
-  cmake_policy(SET CMP0092 NEW)
-endif()
-
-# CMP0078: UseSWIG generates standard target names.
-if(POLICY CMP0078)
-  cmake_policy(SET CMP0078 NEW)
-else()
-  # Otherwise, setup this behavior manually.
-  set(UseSWIG_TARGET_NAME_PREFERENCE STANDARD)
-endif()
-
-# CMP0086: UseSWIG honors SWIG_MODULE_NAME via -module flag.
-if(POLICY CMP0086)
-  cmake_policy(SET CMP0086 NEW)
-endif()
-
-# Enable support for MSVC runtime library selection by abstraction
-# if supported by CMake.
-if(POLICY CMP0091)
-  cmake_policy(SET CMP0091 NEW)
-endif()
 
 read_version(
   "subversion/include/svn_version.h" SVN_VERSION
@@ -84,22 +92,41 @@ option(SVN_ENABLE_TESTS "Build Subversion test-suite" OFF)
 option(SVN_TEST_EXPAND "Expand tests; This will slow-down configuration, but you will have an ability to run any subtest" OFF)
 option(SVN_TEST_CONFIGURE_FOR_PARALLEL "Configures tests for parallel run execution" OFF)
 set(SVN_TEST_COMMAND_ARGUMENTS "" CACHE STRING "Additional command line options to be passed to run_tests.py")
+option(SVN_TEST_CHECK_XML_SCHEMA "Enable extended XML schema validation" OFF)
+option(SVN_TEST_CLEANUP "Clean up directories for successful tests" ON)
 option(SVN_ENABLE_APACHE_MODULES "Build modules for Apache HTTPD" OFF)
 
-option(SVN_ENABLE_SWIG_PERL "Enable Subversion SWIG bindings for Perl" OFF)
-option(SVN_ENABLE_SWIG_PYTHON "Enable Subversion SWIG bindings into Python" OFF)
-option(SVN_ENABLE_SWIG_RUBY "Enable Subversion SWIG bindings into Ruby" OFF)
+include(GNUInstallDirs)
+option(SVN_ENABLE_SWIG_PERL "Enable Subversion Perl bindings Perl" OFF)
+option(SVN_ENABLE_SWIG_PERL_MAN_PAGES "Enable man pages for Subversion Perl bindings" OFF)
+option(SVN_ENABLE_SWIG_PYTHON "Enable Subversion Python bindings" OFF)
+option(SVN_ENABLE_SWIG_RUBY "Enable Subversion Ruby bindings" OFF)
+set(SVN_SWIG_PERL_SITEARCH "${CMAKE_INSTALL_LIBDIR}/svn-perl"
+  CACHE PATH "Path to install Subversion Perl bindings for sitearch")
+set(SVN_SWIG_PERL_MAN3DIR "${CMAKE_INSTALL_MANDIR}/man3"
+  CACHE PATH "Path to install Subversion Perl bindings for man3dir")
+set(SVN_SWIG_PYTHON_SITELIB "${CMAKE_INSTALL_LIBDIR}/svn-python"
+  CACHE PATH "Path to install Subversion Python bindings for sitelib")
+set(SVN_SWIG_PYTHON_SITEARCH "${CMAKE_INSTALL_LIBDIR}/svn-python"
+  CACHE PATH "Path to install Subversion Python bindings for sitearch")
+set(SVN_SWIG_RUBY_SITELIB "${CMAKE_INSTALL_LIBDIR}/svn-ruby"
+  CACHE PATH "Path to install Subversion Ruby bindings for sitelib")
+set(SVN_SWIG_RUBY_SITEARCH "${CMAKE_INSTALL_LIBDIR}/svn-ruby"
+  CACHE PATH "Path to install Subversion Ruby bindings for sitearch")
 
 # Enable modules and features
 option(SVN_ENABLE_RA_LOCAL "Enable Subversion Local Repository Access Library" ON)
-option(SVN_ENABLE_RA_SERF "Enable Subversion HTTP/WebDAV Protocol Repository Access Library" OFF)
+option(SVN_ENABLE_RA_SERF "Enable Subversion HTTP/WebDAV Protocol Repository Access Library" ON)
 option(SVN_ENABLE_RA_SVN "Enable Subversion SVN Protocol Repository Access Library" ON)
 option(SVN_ENABLE_FS_FS "Enable Subversion FSFS Repository Filesystem Library" ON)
 option(SVN_ENABLE_FS_X "Enable Subversion FSX Repository Filesystem Library" ON)
 option(SVN_ENABLE_FS_BASE "Enable Subversion Filesystem Base Library (NOT IMPLEMENTED and DEPRECATED)" OFF)
 option(SVN_ENABLE_NLS "Enable gettext functionality" OFF)
+option(SVN_ENABLE_TUI "Enable TUI applications (requires ncurses)" OFF)
 option(SVN_ENABLE_AUTH_KWALLET "Enable KWallet auth library" OFF)
 option(SVN_ENABLE_AUTH_GNOME_KEYRING "Enable GNOME Keyring for auth credentials" OFF)
+option(SVN_ENABLE_SASL "Enable Cyrus SASL v2" OFF)
+option(SVN_ENABLE_LIBMAGIC "Enable libmagic filetype detection library")
 cmake_dependent_option(SVN_ENABLE_AUTH_GPG_AGENT "Enable GPG Agent support" OFF "WIN32" ON)
 
 option(SVN_INSTALL_PRIVATE_H "Install private header files." OFF)
@@ -111,10 +138,16 @@ cmake_dependent_option(SVN_BUILD_SHARED_RA "Build shared RA modules" ON "BUILD_S
 option(SVN_DEBUG "Enables specific features for developer builds" OFF)
 cmake_dependent_option(SVN_USE_WIN32_CRASHHANDLER "Enables WIN32 crash handler." ON "WIN32" OFF)
 option(SVN_USE_DSO "Defined if svn should try to load DSOs" OFF)
+set(SVN_CHECKSUM_BACKEND "apr" CACHE STRING "Checksum backend to use (possible values are 'apr', 'openssl', 'bcrypt', 'xdigest')" )
+set_property(CACHE SVN_CHECKSUM_BACKEND PROPERTY STRINGS "apr" "openssl" "bcrypt" "xdigest")
 set(SVN_SOVERSION "0" CACHE STRING "Subversion library ABI version")
 mark_as_advanced(SVN_SOVERSION)
 
-# Dependecies
+# Check whether we have pkg-config executable or not; Silence any messages.
+find_package(PkgConfig QUIET)
+cmake_dependent_option(SVN_USE_PKG_CONFIG "Use pkg-config for the dependencies" ON "PKG_CONFIG_FOUND" OFF)
+
+# Dependencies
 option(SVN_USE_INTERNAL_LZ4 "Use internal version of lz4" ON)
 option(SVN_USE_INTERNAL_UTF8PROC "Use internal version of utf8proc" ON)
 option(SVN_SQLITE_USE_AMALGAMATION "Use sqlite amalgamation" OFF)
@@ -181,17 +214,6 @@ if (SVN_ENABLE_FS_X)
   )
 endif()
 
-if(SVN_ENABLE_AUTH_KWALLET)
-  if(NOT BUILD_SHARED_LIBS)
-    message(SEND_ERROR "SVN_ENABLE_AUTH_KWALLET is not supported in static build.")
-  endif()
-
-  add_private_config_definition(
-    "Defined if KWallet support is enabled"
-    "SVN_HAVE_KWALLET" "1"
-  )
-endif()
-
 if(SVN_ENABLE_AUTH_GPG_AGENT)
   add_private_config_definition(
     "Is GPG Agent support enabled?"
@@ -219,7 +241,8 @@ add_private_config_definition(
   "SVN_SOVERSION" "${SVN_SOVERSION}"
 )
 
-if (SVN_ENABLE_TESTS)
+if (SVN_ENABLE_TESTS OR SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR
+    SVN_ENABLE_SWIG_RUBY)
   enable_testing()
 endif()
 
@@ -236,36 +259,349 @@ else()
 endif()
 
 if(SVN_ENABLE_FS_BASE)
-  message(FATAL_ERROR "SVN_ENABLE_FS_BASE is NOT implemented and deprecated.")
+  message(SEND_ERROR "SVN_ENABLE_FS_BASE is NOT implemented and deprecated.")
 endif()
 
 if(BUILD_SHARED_LIBS OR SVN_BUILD_SHARED_FS OR SVN_BUILD_SHARED_RA)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
+if (SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
+  find_package(SWIG REQUIRED)
+  include(UseSWIG)
+
+  set(SWIG_INCLUDE_DIRECTORIES
+    ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig
+    ${CMAKE_CURRENT_SOURCE_DIR}/subversion/include
+
+    ${CMAKE_CURRENT_BINARY_DIR}/subversion/bindings/swig/proxy
+    ${CMAKE_CURRENT_BINARY_DIR}
+  )
+
+  if(SVN_ENABLE_SWIG_PYTHON)
+    if(SWIG_VERSION VERSION_LESS "3.0.10")
+      message(SEND_ERROR
+        "Subversion Python bindings require SWIG 3.0.10 or newer")
+    elseif(SWIG_VERSION VERSION_LESS "4.0.0")
+      set(SVN_SWIG_PY_OPTS "-py3;-nofastunpack;-modern")
+    elseif(SWIG_VERSION VERSION_LESS "4.1.0")
+      set(SVN_SWIG_PY_OPTS "-py3;-nofastunpack")
+    else()
+      set(SVN_SWIG_PY_OPTS "-nofastunpack")
+    endif()
+  endif()
+
+  if(SVN_ENABLE_SWIG_PERL)
+    set(SVN_SWIG_PL_OPTS "-nopm;-noproxy")
+  endif()
+
+  if(SVN_ENABLE_SWIG_RUBY)
+    if(SWIG_VERSION VERSION_EQUAL "4.2.0")
+      message(WARNING
+        "Ruby bindings cannot be built with swig 4.2.0, see "
+        "https://github.com/swig/swig/issues/2751")
+    elseif(SWIG_VERSION VERSION_EQUAL "3.0.8")
+      message(WARNING
+        "Ruby bindings are known not to support swig 3.0.8, see https://"
+        "subversion.apache.org/docs/release-notes/1.11#ruby-swig-issue-602")
+    endif()
+    set(SVN_SWIG_RB_OPTS)
+  endif()
+endif()
+
+if (MSVC)
+  # Setup warning level
+  add_compile_options(/W4)
+
+  # Disable warning
+  add_compile_options(/wd4100)
+  add_compile_options(/wd4127)
+  add_compile_options(/wd4206)
+  add_compile_options(/wd4512)
+  add_compile_options(/wd4701)
+  add_compile_options(/wd4706)
+  add_compile_options(/wd4800)
+
+  # Treat some criticial warnings as error
+  add_compile_options(/we4002)
+  add_compile_options(/we4003)
+  add_compile_options(/we4013)
+  add_compile_options(/we4020)
+  add_compile_options(/we4022)
+  add_compile_options(/we4024)
+  add_compile_options(/we4028)
+  add_compile_options(/we4029)
+  add_compile_options(/we4030)
+  add_compile_options(/we4031)
+  add_compile_options(/we4033)
+  add_compile_options(/we4047)
+  add_compile_options(/we4089)
+  add_compile_options(/we4113)
+  add_compile_options(/we4133)
+  add_compile_options(/we4204)
+  add_compile_options(/we4700)
+  add_compile_options(/we4715)
+  add_compile_options(/we4789)
+
+  add_compile_definitions(
+    "_CRT_SECURE_NO_DEPRECATE"
+    "_CRT_NONSTDC_NO_DEPRECATE"
+    "_CRT_SECURE_NO_WARNINGS"
+  )
+else()
+  # Assume that all compilers except MSVC are GCC-compatible and support
+  # the -W syntax
+
+  include(CheckCompilerFlag)
+  # Adds flags if one is supported by the compiler
+  function(SVN_CFLAGS_ADD_IFELSE flag)
+    set(variable "HAVE_FLAG_${flag}")
+    check_compiler_flag(C ${flag} ${variable})
+    if (${${variable}})
+      add_compile_options("${flag}")
+    endif()
+  endfunction()
+
+  # Add flags that all versions of GCC (should) support
+  add_compile_options(-Wpointer-arith)
+  add_compile_options(-Wwrite-strings)
+  add_compile_options(-Wshadow)
+  add_compile_options(-Wformat=2)
+  add_compile_options(-Wunused)
+  add_compile_options(-Wstrict-prototypes)
+  add_compile_options(-Wmissing-prototypes)
+  add_compile_options(-Wmissing-declarations)
+  add_compile_options(-Wno-multichar)
+  add_compile_options(-Wredundant-decls)
+  add_compile_options(-Wnested-externs)
+  add_compile_options(-Winline)
+  add_compile_options(-Wno-long-long)
+  add_compile_options(-Wbad-function-cast)
+
+  # Add each of the following flags only if the C compiler accepts it.
+  SVN_CFLAGS_ADD_IFELSE(-Werror=implicit-function-declaration)
+  SVN_CFLAGS_ADD_IFELSE(-Werror=declaration-after-statement)
+  SVN_CFLAGS_ADD_IFELSE(-Wextra-tokens)
+  SVN_CFLAGS_ADD_IFELSE(-Wnewline-eof)
+  SVN_CFLAGS_ADD_IFELSE(-Wshorten-64-to-32)
+  SVN_CFLAGS_ADD_IFELSE(-Wold-style-definition)
+  SVN_CFLAGS_ADD_IFELSE(-Wno-system-headers)
+  SVN_CFLAGS_ADD_IFELSE(-Wno-format-nonliteral)
+  SVN_CFLAGS_ADD_IFELSE(-Wmissing-variable-declarations)
+  SVN_CFLAGS_ADD_IFELSE(-Wno-unused-const-variable)
+endif()
+
 # Setup modules path
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/build/cmake")
 
-### APR
+function(target_exports target_name)
+  if (WIN32)
+    set(filter_names
+      # svn_config_enumerator_t looks like (to our regex) a
+      # function declaration for svn_boolean_t
+      "svn_boolean_t"
+      # Not available on Windows
+      "svn_auth_get_keychain_simple_provider"
+      "svn_auth_get_keychain_ssl_client_cert_pw_provider"
+      "svn_auth_get_gnome_keyring_simple_provider"
+      "svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider"
+      "svn_auth_get_kwallet_simple_provider"
+      "svn_auth_get_kwallet_ssl_client_cert_pw_provider"
+      "svn_auth_gnome_keyring_version"
+      "svn_auth_kwallet_version"
+      "svn_auth_get_gpg_agent_simple_provider"
+      "svn_auth_gpg_agent_version"
+      # Unavailable in release mode
+      "svn_fs_base__trail_debug"
+    )
 
-find_package(APR REQUIRED)
-add_library(external-apr ALIAS apr::apr)
+    set(def_file_path ${CMAKE_BINARY_DIR}/${target_name}.def)
+    set(headers)
 
-### APR-Util
+    foreach(file ${ARGN})
+      list(APPEND headers "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
+    endforeach()
 
-find_package(APRUtil REQUIRED)
-add_library(external-aprutil ALIAS apr::aprutil)
+    add_custom_command(
+      OUTPUT "${def_file_path}"
+      DEPENDS ${headers}
+      COMMAND ${CMAKE_COMMAND}
+              "-DEXPORT_HEADER_FILE_PATHS=${headers}"
+              "-DEXPORT_DEF_FILE_PATH=${def_file_path}"
+              "-DEXPORT_BLACKLIST=${filter_names}"
+              -P "${CMAKE_CURRENT_SOURCE_DIR}/build/cmake/extractor.cmake"
+      WORKING_DIRECTORY "${SERF_SOURCE_DIR}"
+    )
+
+    target_sources("${target_name}" PRIVATE "${def_file_path}")
+  endif()
+endfunction()
+
+function(svn_create_alias_target name target)
+  get_target_property(imported ${target} IMPORTED)
+  if(imported)
+    get_target_property(global ${target} IMPORTED_GLOBAL)
+    if(NOT global)
+      set_target_properties(${target} PROPERTIES IMPORTED_GLOBAL TRUE)
+    endif()
+  endif()
+  add_library(${name} ALIAS ${target})
+endfunction()
+
+if (NOT EXISTS "${CMAKE_SOURCE_DIR}/build/cmake/targets.cmake")
+  message(SEND_ERROR
+    "The 'build/cmake/targets.cmake' file does NOT exist. "
+    "Use the following command to generate it:\n"
+    "  python gen-make.py -t cmake"
+  )
+endif()
+
+### Intl
+
+if(SVN_ENABLE_NLS)
+  # Note: when installing these dependencies with vcpkg, you will need to
+  # install 'gettext' package with 'tools' feature. Use the following command
+  # for this: `./vcpkg install gettext[tools]`. This package contains both,
+  # Gettext and Intl dependencies.
+  find_package(Gettext REQUIRED)
+  find_package(Intl REQUIRED)
+
+  # If using CMake of version < 3.20, FindIntl would not define IMPORTED target.
+  # https://cmake.org/cmake/help/latest/module/FindIntl.html
+  if(NOT TARGET Intl::Intl)
+    add_library(Intl::Intl INTERFACE IMPORTED)
+    include_directories("${Intl_INCLUDE_DIRS}")
+    set_target_properties(Intl::Intl PROPERTIES
+      INTERFACE_LINK_LIBRARIES "${Intl_LIBRARIES}"
+    )
+  endif()
+
+  svn_create_alias_target(external-intl Intl::Intl)
+
+  add_private_config_definition(
+    "Define to 1 if translation of program messages to the user's native language is requested."
+    "ENABLE_NLS" "1"
+  )
+
+  if (NOT WIN32)
+    add_private_config_definition(
+      "Defined to be the path to the installed locale dirs"
+      "SVN_LOCALE_DIR" "\"${CMAKE_INSTALL_PREFIX}/share/locale\""
+    )
+  endif()
+
+  file(GLOB SVN_PO_FILES "subversion/po/*.po")
+  set(SVN_MO_FILES)
+
+  foreach(po_file ${SVN_PO_FILES})
+    get_filename_component(lang ${po_file} NAME_WLE)
+    set(mo_file "${CMAKE_BINARY_DIR}/${lang}.mo")
+
+    add_custom_command(
+      DEPENDS
+        "${po_file}"
+      OUTPUT
+        "${mo_file}"
+      COMMAND
+        "${GETTEXT_MSGFMT_EXECUTABLE}" -c -o ${mo_file} ${po_file}
+    )
+    list(APPEND SVN_MO_FILES ${mo_file})
+    install(
+      FILES "${mo_file}"
+      DESTINATION "share/locale/${lang}/LC_MESSAGES"
+      RENAME "subversion.mo"
+    )
+  endforeach()
+
+  add_custom_target(locale ALL SOURCES ${SVN_MO_FILES})
+else()
+  # Declare empty target for Intl if we don't use it.
+  add_library(external-intl INTERFACE)
+endif()
+
+# Link all targets with Intl library. The 'external-intl' target is always,
+# even if we don't use NLS functionality.
+#
+# Following the CMake documentation [1], the link_libraries affects only on
+# the targets declared later, so it should be here.
+#
+# [1] https://cmake.org/cmake/help/latest/command/link_libraries.html
+#     -- "Link libraries to all targets added later."
+link_libraries(external-intl)
+
+### Httpd
+
+if(SVN_ENABLE_APACHE_MODULES)
+  find_package(Httpd REQUIRED)
+  svn_create_alias_target(external-libhttpd httpd::httpd)
+  svn_create_alias_target(external-mod_dav httpd::mod_dav)
+endif()
+
+add_library(ra-libs INTERFACE)
+add_library(fs-libs INTERFACE)
+
+include("build/cmake/targets.cmake")
+
+# Require pkg-config if we are going to use it, to show the `Found PkgConfig`
+# meassge and insure it has actually been found. (yea, this invokes the module
+# for second time, but we are guaranteed to from it to not perform actual look
+# for the path due to the cache. It's fine to include the same modules for
+# multiple times).
+if(SVN_USE_PKG_CONFIG)
+  find_package(PkgConfig REQUIRED)
+endif()
+
+### APR and APR-Util
+
+if(SVN_USE_PKG_CONFIG)
+  pkg_search_module(apr REQUIRED IMPORTED_TARGET apr-2 apr-1)
+  svn_create_alias_target(external-apr PkgConfig::apr)
+
+  if(APR_VERSION VERSION_LESS 2.0.0)
+    # apr-1
+    pkg_check_modules(aprutil-1 REQUIRED IMPORTED_TARGET apr-util-1)
+    svn_create_alias_target(external-aprutil PkgConfig::aprutil-1)
+    set(SVN_APR_MAJOR_VERSION 1)
+  else()
+    # apr-2
+    svn_create_alias_target(external-aprutil PkgConfig::apr)
+    set(SVN_APR_MAJOR_VERSION 2)
+  endif()
+else()
+  find_package(APR REQUIRED)
+  svn_create_alias_target(external-apr apr::apr)
+
+  if(APR_VERSION VERSION_LESS 2.0.0)
+    find_package(APRUtil REQUIRED)
+    svn_create_alias_target(external-aprutil apr::aprutil)
+  else()
+    svn_create_alias_target(external-aprutil apr::apr)
+  endif()
+endif()
 
 ### ZLIB
 
-find_package(ZLIB REQUIRED)
-add_library(external-zlib ALIAS ZLIB::ZLIB)
+if(SVN_USE_PKG_CONFIG)
+  pkg_check_modules(zlib REQUIRED IMPORTED_TARGET zlib)
+  svn_create_alias_target(external-zlib PkgConfig::zlib)
+  set(SVN_ZLIB_LIBS ${zlib_LDFLAGS})
+else()
+  find_package(ZLIB REQUIRED)
+  svn_create_alias_target(external-zlib ZLIB::ZLIB)
+endif()
 
 ### EXPAT
 
-find_package(EXPAT REQUIRED)
-add_library(external-xml ALIAS EXPAT::EXPAT)
+if(SVN_USE_PKG_CONFIG)
+  pkg_check_modules(expat REQUIRED IMPORTED_TARGET expat)
+  svn_create_alias_target(external-xml PkgConfig::expat)
+  set(SVN_XML_LIBS ${expat_LDFLAGS})
+else()
+  find_package(EXPAT REQUIRED)
+  svn_create_alias_target(external-xml EXPAT::EXPAT)
+endif()
 
 ### LZ4
 
@@ -277,9 +613,13 @@ if(SVN_USE_INTERNAL_LZ4)
     "subversion/libsvn_subr/lz4/lz4internal.h" lz4_VERSION
     LZ4_VERSION_MAJOR LZ4_VERSION_MINOR LZ4_VERSION_RELEASE
   )
+elseif(SVN_USE_PKG_CONFIG)
+  pkg_check_modules(lz4 REQUIRED IMPORTED_TARGET liblz4)
+  svn_create_alias_target(external-lz4 PkgConfig::lz4)
+  set(SVN_LZ4_LIBS ${lz4_LDFLAGS})
 else()
   find_package(lz4 CONFIG REQUIRED)
-  add_library(external-lz4 ALIAS lz4::lz4)
+  svn_create_alias_target(external-lz4 lz4::lz4)
 endif()
 
 ### UTF8PROC
@@ -292,25 +632,40 @@ if(SVN_USE_INTERNAL_UTF8PROC)
     "subversion/libsvn_subr/utf8proc/utf8proc_internal.h" UTF8PROC_VERSION
     UTF8PROC_VERSION_MAJOR UTF8PROC_VERSION_MINOR UTF8PROC_VERSION_PATCH
   )
+elseif(SVN_USE_PKG_CONFIG)
+  pkg_check_modules(utf8proc REQUIRED IMPORTED_TARGET libutf8proc)
+  svn_create_alias_target(external-utf8proc PkgConfig::utf8proc)
+  set(SVN_UTF8PROC_LIBS ${utf8proc_LDFLAGS})
 else()
   find_package(UTF8PROC REQUIRED)
-  add_library(external-utf8proc ALIAS UTF8PROC::UTF8PROC)
+  svn_create_alias_target(external-utf8proc UTF8PROC::UTF8PROC)
 endif()
 
 ### SQLite3
 
 if(SVN_SQLITE_USE_AMALGAMATION)
   find_package(SQLiteAmalgamation REQUIRED)
-  add_library(external-sqlite ALIAS SQLite::SQLite3Amalgamation)
+  svn_create_alias_target(external-sqlite SQLite::SQLite3Amalgamation)
+elseif(SVN_USE_PKG_CONFIG)
+  pkg_check_modules(sqlite3 REQUIRED IMPORTED_TARGET sqlite3)
+  svn_create_alias_target(external-sqlite PkgConfig::sqlite3)
 else()
   # It should be not required.
   find_package(SQLite3)
 
   if(SQLite3_FOUND)
-    add_library(external-sqlite ALIAS SQLite::SQLite3)
+    # Support for CMake < 4.3
+    # In prior versions of cmake, the sqlite targets were exported in the
+    # SQLite namespace.
+    if(TARGET SQLite3::SQLite3)
+      set(SVN_SQLITE_TARGET SQLite3::SQLite3)
+    else()
+      set(SVN_SQLITE_TARGET SQLite::SQLite3)
+    endif()
+    svn_create_alias_target(external-sqlite ${SVN_SQLITE_TARGET})
   else()
     find_package(SQLiteAmalgamation REQUIRED)
-    add_library(external-sqlite ALIAS SQLite::SQLite3Amalgamation)
+    svn_create_alias_target(external-sqlite SQLite::SQLite3Amalgamation)
 
     # Is implicitness an actual problem? This warning could be removed
     # if it isn't.
@@ -323,34 +678,81 @@ endif()
 
 ### Serf
 if (SVN_ENABLE_RA_SERF)
-  find_package(Serf REQUIRED)
-  add_library(external-serf ALIAS Serf::Serf)
+  if(SVN_USE_PKG_CONFIG)
+    pkg_search_module(serf IMPORTED_TARGET REQUIRED serf-2 serf-1>=1.3.4)
+    svn_create_alias_target(external-serf PkgConfig::serf)
+  else()
+    find_package(Serf 1.3.4 REQUIRED)
+    svn_create_alias_target(external-serf Serf::Serf)
+  endif()
+endif()
+
+if (SVN_CHECKSUM_BACKEND STREQUAL "apr")
+  add_library(external-checksum-libs INTERFACE)
+  add_private_config_definition(
+    "Defined if svn should use APR to compute checksums."
+    "SVN_CHECKSUM_BACKEND_APR" "1"
+  )
+elseif (SVN_CHECKSUM_BACKEND STREQUAL "openssl")
+  find_package(OpenSSL REQUIRED)
+  svn_create_alias_target(external-checksum-libs OpenSSL::Crypto)
+  add_private_config_definition(
+    "Defined if svn should use OpenSSL to compute checksums."
+    "SVN_CHECKSUM_BACKEND_OPENSSL" "1"
+  )
+elseif (SVN_CHECKSUM_BACKEND STREQUAL "bcrypt")
+  if (NOT WIN32)
+    message(SEND_ERROR "BCrypt checksum backend is only available on Win32 platform.")
+  endif()
+
+  add_library(external-checksum-libs INTERFACE)
+  target_link_libraries(external-checksum-libs INTERFACE Bcrypt.lib)
+
+  add_private_config_definition(
+    "Defined if svn should use BCrypt to compute checksums."
+    "SVN_CHECKSUM_BACKEND_BCRYPT" "1"
+  )
+elseif (SVN_CHECKSUM_BACKEND STREQUAL "xdigest")
+  if (SVN_USE_PKG_CONFIG)
+    pkg_check_modules(xdigest REQUIRED IMPORTED_TARGET xdigest)
+    svn_create_alias_target(external-checksum-libs PkgConfig::xdigest)
+  else()
+    find_package(XDIGEST REQUIRED)
+    svn_create_alias_target(external-checksum-libs XDIGEST::XDIGEST)
+  endif()
+
+  add_private_config_definition(
+    "Defined if svn should use xdigest to compute checksums."
+    "SVN_CHECKSUM_BACKEND_XDIGEST" "1"
+  )
+else()
+  message(SEND_ERROR
+    "Invalid value of SVN_CHECKSUM_BACKEND: '${SVN_CHECKSUM_BACKEND}'. "
+    "Possible options are 'apr', 'openssl', 'bcrypt', 'xdigest'."
+  )
 endif()
 
 ### Python
 
 if(SVN_ENABLE_SWIG_PYTHON)
-  find_package(Python REQUIRED COMPONENTS
-      Interpreter
-      Development.Embed
-  )
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
+  else()
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+  endif()
 elseif(SVN_ENABLE_TESTS)
-  find_package(Python REQUIRED COMPONENTS
+  find_package(Python3 REQUIRED COMPONENTS
       Interpreter
   )
-endif()
-
-### Httpd
-
-if(SVN_ENABLE_APACHE_MODULES)
-  find_package(Httpd REQUIRED)
-  add_library(external-libhttpd ALIAS httpd::httpd)
-  add_library(external-mod_dav ALIAS httpd::mod_dav)
 endif()
 
 ### KWallet
 
 if(SVN_ENABLE_AUTH_KWALLET)
+  if(NOT BUILD_SHARED_LIBS)
+    message(SEND_ERROR "SVN_ENABLE_AUTH_KWALLET is not supported in static build.")
+  endif()
+
   find_package(KF5Wallet REQUIRED)
   find_package(KF5CoreAddons REQUIRED)
   find_package(KF5I18n REQUIRED)
@@ -366,6 +768,12 @@ if(SVN_ENABLE_AUTH_KWALLET)
     dbus-1
   )
   target_compile_definitions(external-kwallet INTERFACE SVN_HAVE_KF5)
+
+  add_private_config_definition(
+    "Defined if KWallet support is enabled"
+    "SVN_HAVE_KWALLET" "1"
+  )
+
 endif()
 
 ### GNOME Keyring
@@ -373,9 +781,12 @@ endif()
 if(SVN_ENABLE_AUTH_GNOME_KEYRING)
   add_library(external-gnome-keyring INTERFACE)
 
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(libsecret-1 REQUIRED IMPORTED_TARGET libsecret-1)
-  target_link_libraries(external-gnome-keyring INTERFACE PkgConfig::libsecret-1)
+  if(SVN_USE_PKG_CONFIG OR PKG_CONFIG_FOUND)
+    pkg_check_modules(libsecret-1 REQUIRED IMPORTED_TARGET libsecret-1)
+    target_link_libraries(external-gnome-keyring INTERFACE PkgConfig::libsecret-1)
+  else()
+    message(SEND_ERROR "GNOME Keyring requires pkg-config")
+  endif()
 
   add_private_config_definition(
     "Is libsecret support enabled?"
@@ -383,20 +794,55 @@ if(SVN_ENABLE_AUTH_GNOME_KEYRING)
   )
 endif()
 
-if(SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
-  find_package(SWIG REQUIRED)
-  include(${SWIG_USE_FILE})
+if (SVN_ENABLE_TUI)
+  add_library(external-ncurses INTERFACE)
 
-  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/subversion/bindings/swig/proxy")
+  if(SVN_USE_PKG_CONFIG)
+    pkg_check_modules(ncurses REQUIRED IMPORTED_TARGET ncurses)
+    target_link_libraries(external-ncurses INTERFACE PkgConfig::ncurses)
+    set(SVN_NCURSES_LIBS ${ncurses_LDFLAGS})
+  else()
+    find_package(CURSES REQUIRED)
+    target_link_libraries(external-ncurses INTERFACE CURSES::CURSES)
+  endif()
+endif()
 
-  set(SWIG_INCLUDE_DIRECTORIES
-    ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig
-    ${CMAKE_CURRENT_SOURCE_DIR}/subversion/include
+add_library(external-sasl INTERFACE)
+if (SVN_ENABLE_SASL)
+  if(SVN_USE_PKG_CONFIG)
+    pkg_check_modules(libsasl2 REQUIRED IMPORTED_TARGET libsasl2>=2.0.0)
+    target_link_libraries(external-sasl INTERFACE PkgConfig::libsasl2)
+    set(SVN_SASL_LIBS ${libsasl2_LDFLAGS})
+  else()
+    find_package(SASL 2.0.0 REQUIRED)
+    target_link_libraries(external-sasl INTERFACE SASL::SASL)
+  endif()
 
-    ${CMAKE_CURRENT_BINARY_DIR}/subversion/bindings/swig/proxy
-    ${CMAKE_CURRENT_BINARY_DIR}
+  add_private_config_definition(
+    "Defined if Cyrus SASL v2 is present on the system"
+    "SVN_HAVE_SASL" "1"
   )
+endif()
+
+add_library(external-magic INTERFACE)
+if (SVN_ENABLE_LIBMAGIC)
+  if(SVN_USE_PKG_CONFIG)
+    pkg_check_modules(libmagic REQUIRED IMPORTED_TARGET libmagic)
+    target_link_libraries(external-magic INTERFACE PkgConfig::libmagic)
+    set(SVN_MAGIC_LIBS ${libmagic_LDFLAGS})
+  else()
+    find_package(MAGIC REQUIRED)
+    target_link_libraries(external-magic INTERFACE MAGIC::MAGIC)
+  endif()
+
+  add_private_config_definition(
+    "Defined if libmagic support is enabled"
+    "SVN_HAVE_LIBMAGIC" "1"
+  )
+endif()
+
+if(SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
+  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/subversion/bindings/swig/proxy")
 
   add_library(external-swig INTERFACE)
 
@@ -444,25 +890,90 @@ function(swig_target_external_runtime target lang)
   target_sources(${target} INTERFACE ${swig_runtime_path})
 endfunction()
 
+function(test_prepend_builddir_to_path name)
+  file(TO_NATIVE_PATH "${CMAKE_CURRENT_BINARY_DIR}" dir)
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.22")
+    set_property(TEST ${name} APPEND PROPERTY ENVIRONMENT_MODIFICATION
+      "PATH=path_list_prepend:${dir}"
+    )
+  else()
+    if(WIN32)
+      # Replace <;> with <\;> to prevent conversion to a list
+      string(REPLACE ";" "\\;" value "PATH=${dir};$ENV{PATH}")
+    else()
+      set(value "PATH=${dir}:$ENV{PATH}")
+    endif()
+    set_property(TEST ${name} APPEND PROPERTY ENVIRONMENT "${value}")
+  endif()
+endfunction()
+
 if(SVN_ENABLE_SWIG_PYTHON)
   find_package(PY3C REQUIRED)
 
   add_library(external-python INTERFACE)
   target_link_libraries(external-python INTERFACE
-    Python::Python
+    Python3::Module
     Python::py3c
   )
   target_include_directories(external-python INTERFACE
     ${SWIG_INCLUDE_DIRECTORIES}
     ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/libsvn_swig_py
   )
-
   swig_target_external_runtime(external-python python)
+
+  add_custom_command(TARGET libsvn_swig_py POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+      "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/svn"
+      "${CMAKE_CURRENT_BINARY_DIR}/swig-python/svn"
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+      "${CMAKE_CURRENT_BINARY_DIR}/swig-python/libsvn"
+    COMMAND ${CMAKE_COMMAND} -E copy
+      "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/__init__.py"
+      "${CMAKE_CURRENT_BINARY_DIR}/swig-python/libsvn/__init__.py"
+  )
+  install(
+    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/svn/"
+    DESTINATION "${SVN_SWIG_PYTHON_SITELIB}/svn"
+    FILES_MATCHING
+      PATTERN "__pycache__" EXCLUDE
+      PATTERN "*.py"
+  )
+  install(
+    DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swig-python/libsvn/"
+    DESTINATION "${SVN_SWIG_PYTHON_SITEARCH}/libsvn"
+    FILES_MATCHING
+      PATTERN "__pycache__" EXCLUDE
+      PATTERN "*.py"
+  )
+  install(CODE [==[
+    execute_process(
+      COMMAND
+        "${Python3_EXECUTABLE}" -m compileall -q
+        "${SVN_SWIG_PYTHON_SITELIB}/svn"
+        "${SVN_SWIG_PYTHON_SITEARCH}/libsvn"
+    )
+  ]==])
+
+  add_test(
+    NAME swig-python
+    COMMAND
+      "${Python3_EXECUTABLE}"
+      ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/tests/run_all.py
+      --verbose
+    WORKING_DIRECTORY
+      "${CMAKE_CURRENT_BINARY_DIR}/swig-python"
+  )
+  if(WIN32 OR CYGWIN)
+    test_prepend_builddir_to_path(swig-python)
+  endif()
 endif()
 
 if(SVN_ENABLE_SWIG_PERL)
   find_package(Perl REQUIRED)
   find_package(PerlLibs REQUIRED)
+  if(SVN_ENABLE_SWIG_PERL_MAN_PAGES)
+    find_program(POD2MAN_EXECUTABLE NAMES pod2man REQUIRED)
+  endif()
 
   separate_arguments(PERL_EXTRA_C_FLAGS)
 
@@ -472,100 +983,110 @@ if(SVN_ENABLE_SWIG_PERL)
     ${SWIG_INCLUDE_DIRECTORIES}
     ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/perl/libsvn_swig_perl
   )
-  target_compile_definitions(external-perl INTERFACE "__inline__=__inline")
-  target_compile_options(external-perl INTERFACE ${PERL_EXTRA_C_FLAGS})
+  target_compile_options(external-perl INTERFACE
+    $<$<C_COMPILER_ID:MSVC>:/FIswigutil_pl__pre_perl.h>
+    ${PERL_EXTRA_C_FLAGS}
+  )
   target_link_libraries(external-perl INTERFACE ${PERL_LIBRARY})
-
   swig_target_external_runtime(external-perl perl)
+
+  set(SVN_SWIG_PERL_PM_FILES)
+  file(GLOB SVN_SWIG_PERL_PM_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/perl/native/*.pm")
+  add_custom_command(TARGET libsvn_swig_perl POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+      "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib/SVN"
+      "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/man"
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${SVN_SWIG_PERL_PM_FILES}
+      "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib/SVN"
+  )
+  if(SVN_ENABLE_SWIG_PERL_MAN_PAGES)
+    foreach(name ${SVN_SWIG_PERL_PM_FILES})
+      get_filename_component(name ${name} NAME_WLE)
+      add_custom_command(TARGET libsvn_swig_perl POST_BUILD
+        COMMAND ${POD2MAN_EXECUTABLE} --section=3pm
+          "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/perl/native/${name}.pm"
+          "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/man/SVN::${name}.3pm"
+      )
+    endforeach()
+  endif()
+
+  install(
+    DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib/SVN/"
+    DESTINATION "${SVN_SWIG_PERL_SITEARCH}/SVN"
+    FILES_MATCHING PATTERN "*.pm"
+  )
+  if(SVN_ENABLE_SWIG_PERL_MAN_PAGES)
+    install(
+      DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/man/"
+      DESTINATION "${SVN_SWIG_PERL_MAN3DIR}"
+      FILES_MATCHING PATTERN "*.3pm"
+    )
+  endif()
+
+  add_test(
+    NAME swig-perl
+    COMMAND
+      ${PERL_EXECUTABLE}
+      "-I${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib"
+      -MTest::Harness
+      -e
+      "$Test::Harness::verbose = 1; runtests(glob('t/*.t'))"
+    WORKING_DIRECTORY
+      ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/perl/native
+  )
+  if(WIN32 OR CYGWIN)
+    test_prepend_builddir_to_path(swig-perl)
+  endif()
 endif()
 
 if(SVN_ENABLE_SWIG_RUBY)
   find_package(Ruby REQUIRED)
 
   add_library(external-ruby IMPORTED INTERFACE)
+  if(NOT DEFINED Ruby_INCLUDE_DIRS)  # < 3.18
+    set(Ruby_INCLUDE_DIRS ${RUBY_INCLUDE_DIRS})
+  endif()
   target_include_directories(external-ruby INTERFACE
     ${Ruby_INCLUDE_DIRS}
     ${SWIG_INCLUDE_DIRECTORIES}
     ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/ruby/libsvn_swig_ruby
   )
-  target_compile_definitions(external-ruby INTERFACE HAVE_RB_ERRINFO)
+  target_compile_options(external-ruby INTERFACE
+    $<$<C_COMPILER_ID:MSVC>:/FIswigutil_rb__pre_ruby.h>
+  )
+  target_compile_definitions(external-ruby INTERFACE
+    HAVE_RB_ERRINFO
+    $<$<BOOL:${WIN32}>:SVN_SWIG_RUBY__CUSTOM_RUBY_CONFIG>
+  )
   target_link_libraries(external-ruby INTERFACE ${Ruby_LIBRARY})
-
   swig_target_external_runtime(external-ruby ruby)
+
+  install(
+    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/ruby/svn/"
+    DESTINATION "${SVN_SWIG_RUBY_SITELIB}/svn"
+    FILES_MATCHING PATTERN "*.rb"
+  )
+
+  add_test(
+    NAME swig-ruby
+    COMMAND
+      "${Ruby_EXECUTABLE}"
+      "-I${CMAKE_CURRENT_BINARY_DIR}/swig-ruby"
+      "-I${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/ruby"
+      test/run-test.rb
+      --collector=dir
+      --verbose=v
+    WORKING_DIRECTORY
+      ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/ruby
+  )
+  set_property(TEST swig-ruby APPEND PROPERTY ENVIRONMENT
+    "SVN_TEST_SWIG_RUBY=ctest"
+  )
+  # svnserve in the build directory is launched by the tests
+  test_prepend_builddir_to_path(swig-ruby)
 endif()
-
-function(target_exports target_name)
-  if (WIN32)
-    set(filter_names
-      # svn_config_enumerator_t looks like (to our regex) a
-      # function declaration for svn_boolean_t
-      "svn_boolean_t"
-      # Not available on Windows
-      "svn_auth_get_keychain_simple_provider"
-      "svn_auth_get_keychain_ssl_client_cert_pw_provider"
-      "svn_auth_get_gnome_keyring_simple_provider"
-      "svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider"
-      "svn_auth_get_kwallet_simple_provider"
-      "svn_auth_get_kwallet_ssl_client_cert_pw_provider"
-      "svn_auth_gnome_keyring_version"
-      "svn_auth_kwallet_version"
-      "svn_auth_get_gpg_agent_simple_provider"
-      "svn_auth_gpg_agent_version"
-      # Unavailable in release mode
-      "svn_fs_base__trail_debug"
-    )
-
-    set(def_file_path ${CMAKE_BINARY_DIR}/${target_name}.def)
-
-    # see build/generator/extractor.py
-    set(func_regex "(^|\n)((([A-Za-z0-9_]+|[*]) )+[*]?)?((svn|apr)_[A-Za-z0-9_]+)[ \t\r\n]*\\(")
-
-    set(defs)
-    foreach(file ${ARGN})
-      file(READ ${file} contents)
-      string(REGEX MATCHALL "${func_regex}" funcs ${contents})
-
-      foreach(func_string ${funcs})
-        string(REGEX MATCH "[A-Za-z0-9_]+[ \t\r\n]*\\($" func_name ${func_string})
-        string(REGEX REPLACE "[ \t\r\n]*\\($" "" func_name ${func_name})
-        list(APPEND defs "${func_name}")
-      endforeach()
-
-      get_filename_component(filename ${file} NAME)
-      if(${filename} STREQUAL "svn_ctype.h")
-        # See libsvn_subr/ctype.c for an explanation why we use CONSTANT and not
-        # DATA, even though it causes an LNK4087 warning!
-        list(APPEND defs "svn_ctype_table = svn_ctype_table_internal CONSTANT")
-      elseif(${filename} STREQUAL "svn_wc_private.h")
-        # svn_wc__internal_walk_children() is now internal to libsvn_wc
-        # but entries-dump.c still calls it
-        list(APPEND defs "svn_wc__internal_walk_children")
-      endif()
-    endforeach()
-
-    list(SORT defs)
-    list(REMOVE_DUPLICATES defs)
-
-    set(def_file_content "EXPORTS\n")
-    foreach(def ${defs})
-      list(FIND filter_names "${def}" skip)
-      if(skip LESS 0)
-        string(APPEND def_file_content "${def}\n")
-      endif()
-    endforeach()
-
-    if(EXISTS "${def_file_path}")
-      file(READ "${def_file_path}" old_file_content)
-    else()
-      set(old_file_content "NOT_EXISTS")
-    endif()
-    if(NOT ${old_file_content} STREQUAL ${def_file_content})
-      file(WRITE "${def_file_path}" ${def_file_content})
-    endif()
-
-    target_sources("${target_name}" PRIVATE "${def_file_path}")
-  endif()
-endfunction()
 
 ### Checks
 
@@ -594,6 +1115,8 @@ macro(autocheck_symbol_exists SYMBOL FILE VARIABLE)
   endif()
 endmacro()
 
+autocheck_symbol_exists("snprintf" "stdio.h" HAVE_SNPRINTF)
+
 autocheck_include_files("elf.h" HAVE_ELF_H)
 autocheck_include_files("inttypes.h" HAVE_INTTYPES_H)
 autocheck_include_files("stdbool.h" HAVE_STDBOOL_H)
@@ -618,6 +1141,10 @@ if (HAVE_UNISTD_H)
   autocheck_symbol_exists("readlink" "unistd.h" HAVE_READLINK)
   autocheck_symbol_exists("getpid" "unistd.h" HAVE_GETPID)
 endif()
+
+set(CMAKE_REQUIRED_LIBRARIES external-zlib)
+autocheck_symbol_exists("adler32_z" "zlib.h" SVN_ZLIB_HAS_ADLER32_Z)
+unset(CMAKE_REQUIRED_LIBRARIES)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
@@ -647,123 +1174,6 @@ if(APPLE)
   add_compile_definitions("DARWIN")
 endif()
 
-if (MSVC)
-  # Setup warning level
-  add_compile_options(/W4)
-
-  # Disable warning
-  add_compile_options(/wd4100)
-  add_compile_options(/wd4127)
-  add_compile_options(/wd4206)
-  add_compile_options(/wd4512)
-  add_compile_options(/wd4701)
-  add_compile_options(/wd4706)
-  add_compile_options(/wd4800)
-
-  # Treat some criticial warnings as error
-  add_compile_options(/we4002)
-  add_compile_options(/we4003)
-  add_compile_options(/we4013)
-  add_compile_options(/we4020)
-  add_compile_options(/we4022)
-  add_compile_options(/we4024)
-  add_compile_options(/we4028)
-  add_compile_options(/we4029)
-  add_compile_options(/we4030)
-  add_compile_options(/we4031)
-  add_compile_options(/we4033)
-  add_compile_options(/we4047)
-  add_compile_options(/we4089)
-  add_compile_options(/we4113)
-  add_compile_options(/we4133)
-  add_compile_options(/we4204)
-  add_compile_options(/we4700)
-  add_compile_options(/we4715)
-  add_compile_options(/we4789)
-
-  add_compile_definitions(
-    "_CRT_SECURE_NO_DEPRECATE"
-    "_CRT_NONSTDC_NO_DEPRECATE"
-    "_CRT_SECURE_NO_WARNINGS"
-  )
-endif()
-
-if (NOT EXISTS "${CMAKE_SOURCE_DIR}/build/cmake/targets.cmake")
-  message(FATAL_ERROR
-    "The 'build/cmake/targets.cmake' file does NOT exist. "
-    "Use the following command to generate it:\n"
-    "  python gen-make.py -t cmake"
-  )
-endif()
-
-add_library(ra-libs INTERFACE)
-add_library(fs-libs INTERFACE)
-
-if(SVN_ENABLE_NLS)
-  # Note: when installing these dependecies with vcpkg, you will need to
-  # install 'gettext' package with 'tools' feature. Use the following command
-  # for this: `./vcpkg install gettext[tools]`. This package contains both,
-  # Gettext and Intl dependecies.
-  find_package(Gettext REQUIRED)
-  find_package(Intl REQUIRED)
-
-  # If using CMake of version < 3.20, FindIntl would not define IMPORTED target.
-  # https://cmake.org/cmake/help/latest/module/FindIntl.html
-  if(NOT TARGET Intl::Intl)
-    add_library(Intl::Intl INTERFACE IMPORTED)
-    set_target_properties(Intl::Intl PROPERTIES
-      INTERFACE_INCLUDE_DIRECTORIES "${Intl_INCLUDE_DIRS}"
-      INTERFACE_LINK_LIBRARIES "${Intl_LIBRARIES}"
-    )
-  endif()
-
-  add_library(external-intl ALIAS Intl::Intl)
-
-  add_private_config_definition(
-    "Define to 1 if translation of program messages to the user's native language is requested."
-    "ENABLE_NLS" "1"
-  )
-
-  add_custom_target(locale ALL)
-
-  file(GLOB SVN_PO_FILES "subversion/po/*.po")
-
-  foreach(po_file ${SVN_PO_FILES})
-    get_filename_component(lang ${po_file} NAME_WLE)
-    set(mo_file "${CMAKE_BINARY_DIR}/${lang}.mo")
-
-    add_custom_command(
-      DEPENDS
-        "${po_file}"
-      OUTPUT
-        "${mo_file}"
-      COMMAND
-        "${GETTEXT_MSGFMT_EXECUTABLE}" -c -o ${mo_file} ${po_file}
-    )
-
-    target_sources(locale PRIVATE ${mo_file})
-
-    install(
-      FILES "${mo_file}"
-      DESTINATION "share/locale/${lang}/LC_MESSAGES"
-      RENAME "subversion.mo"
-    )
-  endforeach()
-else()
-  # Declare empty target for Intl if we don't use it.
-  add_library(external-intl INTERFACE)
-endif()
-
-# Link all targets with Intl library. The 'external-intl' target is always,
-# even if we don't use NLS functionality.
-#
-# Following the CMake documentation [1], the link_libraries affects only on
-# the targets declared later, so it should be here.
-#
-# [1] https://cmake.org/cmake/help/latest/command/link_libraries.html
-#     -- "Link libraries to all targets added later."
-link_libraries(external-intl)
-
 # Build shared libraries and theirs implibs with 'lib' prefix, for example
 # libsvn_subr-1.[lib|a] and libsvn_subr-1.[dll|so]
 set(CMAKE_SHARED_LIBRARY_PREFIX "lib")
@@ -773,28 +1183,11 @@ set(CMAKE_IMPORT_LIBRARY_PREFIX "lib")
 # (just svn_subr-1.[lib|a])
 set(CMAKE_STATIC_LIBRARY_PREFIX "")
 
-include("build/cmake/targets.cmake")
-
 if(SVN_ENABLE_TESTS)
   find_package(Python3 COMPONENTS Interpreter REQUIRED)
   set(run_tests_script "${CMAKE_CURRENT_SOURCE_DIR}/build/run_tests.py")
   set(list_tests_script "${CMAKE_CURRENT_SOURCE_DIR}/build/list_tests.py")
   set(test_base_dir "${CMAKE_CURRENT_BINARY_DIR}/Testing")
-
-  # Create the virtual environment for Python tests.
-  execute_process(
-    COMMAND
-      "${Python3_EXECUTABLE}" "${run_tests_script}"
-      --create-python-venv "${test_base_dir}"
-      ${CMAKE_CURRENT_SOURCE_DIR}
-      OUTPUT_VARIABLE command_output
-      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-      RESULT_VARIABLE command_result
-  )
-  if (command_result)
-    message(FATAL_ERROR "run_tests.py --create-python-venv failed.")
-  endif()
-  string(STRIP "${command_output}" python3_test_executable)
 
   function(add_py_test name prog)
     if(SVN_TEST_CONFIGURE_FOR_PARALLEL)
@@ -805,20 +1198,31 @@ if(SVN_ENABLE_TESTS)
 
     file(MAKE_DIRECTORY "${test_root}/subversion/tests/cmdline")
 
+    set(test_args
+      --bin ${binary_dir}
+      --tools-bin ${binary_dir}
+      --verbose
+      --log-to-stdout
+      --set-log-level=WARNING
+    )
+    if(SVN_TEST_CLEANUP)
+      list(APPEND test_args --cleanup)
+    endif()
+    if(SVN_TEST_CHECK_XML_SCHEMA)
+      list(APPEND test_args --check-xml-schema)
+    endif()
+    list(APPEND test_args
+      ${SVN_TEST_COMMAND_ARGUMENTS}
+      ${CMAKE_CURRENT_SOURCE_DIR}
+      ${test_root}
+      "${prog}"
+    )
+
     add_test(
       NAME
         "${name}"
       COMMAND
-        "${python3_test_executable}" "${run_tests_script}"
-        --bin ${binary_dir}
-        --tools-bin ${binary_dir}
-        --verbose
-        --log-to-stdout
-        --set-log-level=WARNING
-        ${SVN_TEST_COMMAND_ARGUMENTS}
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${test_root}
-        "${prog}"
+        "${Python3_EXECUTABLE}" "${run_tests_script}" ${test_args}
       WORKING_DIRECTORY
         ${test_root}
     )
@@ -841,7 +1245,7 @@ if(SVN_ENABLE_TESTS)
     )
 
     if (command_result)
-      message(FATAL_ERROR "list_tests.py failed.")
+      message(SEND_ERROR "list_tests.py failed.")
     endif()
 
     string(REGEX MATCHALL "[^\n\r]+" tests_list "${tests_list_output}")
@@ -874,6 +1278,40 @@ if(SVN_ENABLE_TESTS)
   endif()
 endif()
 
+if (SVN_USE_PKG_CONFIG)
+  file(GLOB pc_files "${CMAKE_CURRENT_SOURCE_DIR}/subversion/libsvn_*/*.pc.in")
+
+  # setup template variables
+  set(PACKAGE_VERSION ${SVN_VERSION})
+  set(prefix "${CMAKE_INSTALL_PREFIX}")
+  set(exec_prefix "\${prefix}")
+  set(libdir "\${exec_prefix}/lib")
+  set(includedir "\${prefix}/include")
+
+  foreach (input_file ${pc_files})
+    get_filename_component(name ${input_file} NAME_WLE)
+    set(output_file "${CMAKE_CURRENT_BINARY_DIR}/${name}")
+
+    # @ONLY to remove ${variable} syntax that overlaps with pkg-config
+    # variables
+    configure_file(${input_file} ${output_file} @ONLY)
+
+    install(
+      FILES ${output_file}
+      DESTINATION "lib/pkgconfig"
+    )
+
+    unset(output_file)
+    unset(name)
+  endforeach()
+
+  unset(PACKAGE_VERSION)
+  unset(prefix)
+  unset(exec_prefix)
+  unset(libdir)
+  unset(includedir)
+endif()
+
 if (SVN_ENABLE_SVNXX)
   target_include_directories(libsvnxx PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/cxx/include"
@@ -887,20 +1325,6 @@ if(SVN_USE_WIN32_CRASHHANDLER)
   )
 endif()
 
-if(SVN_ENABLE_SWIG_PYTHON)
-  add_custom_command(TARGET libsvn_swig_py POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-      "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/svn"
-      "$<TARGET_FILE_DIR:libsvn_swig_py>/PythonPackages/svn"
-  )
-
-  add_custom_command(TARGET libsvn_swig_py POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-      "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/__init__.py"
-      "$<TARGET_FILE_DIR:libsvn_swig_py>/PythonPackages/libsvn/__init__.py"
-  )
-endif()
-
 string(TOLOWER "${CMAKE_HOST_SYSTEM_PROCESSOR}-${CMAKE_HOST_SYSTEM_NAME}" SVN_BUILD_HOST)
 string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}" SVN_BUILD_TARGET)
 
@@ -911,10 +1335,14 @@ configure_file(
 
 message(STATUS "Configuration summary:")
 message(STATUS "  Version ......................... : ${SVN_VERSION}")
+message(STATUS "  C compiler ...................... : ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}")
 message(STATUS "  Build type ...................... : ${CMAKE_BUILD_TYPE}")
 message(STATUS "    Build shared libraries ........ : ${BUILD_SHARED_LIBS}")
 message(STATUS "    Build shared FS Modues ........ : ${SVN_BUILD_SHARED_FS}")
 message(STATUS "    Build shared RA Modues ........ : ${SVN_BUILD_SHARED_RA}")
+message(STATUS "    Build TUI applications ........ : ${SVN_ENABLE_TUI}")
+message(STATUS "    Use pkg-config dependencies ... : ${SVN_USE_PKG_CONFIG}")
+message(STATUS "    Checksum Backend .............. : ${SVN_CHECKSUM_BACKEND}")
 message(STATUS "  FS modules:")
 message(STATUS "    Enable FSFS ................... : ${SVN_ENABLE_FS_FS}")
 message(STATUS "    Enable FSX .................... : ${SVN_ENABLE_FS_X}")
@@ -926,6 +1354,9 @@ message(STATUS "  Auth providers:")
 message(STATUS "    Enable KWallet integration .... : ${SVN_ENABLE_AUTH_KWALLET}")
 message(STATUS "    Enable Gnome Keyring .......... : ${SVN_ENABLE_AUTH_GNOME_KEYRING}")
 message(STATUS "    Enable GPG Agent support ...... : ${SVN_ENABLE_AUTH_GPG_AGENT}")
+message(STATUS "    Enable Cyrus SASL v2 .......... : ${SVN_ENABLE_SASL}")
+message(STATUS "  Optionsal features:")
+message(STATUS "    Enable libmagic ............... : ${SVN_ENABLE_LIBMAGIC}")
 message(STATUS "  Optional modules and targets:")
 message(STATUS "    Build Apache Modules .......... : ${SVN_ENABLE_APACHE_MODULES}")
 message(STATUS "    Build programs ................ : ${SVN_ENABLE_PROGRAMS}")

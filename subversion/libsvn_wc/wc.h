@@ -174,16 +174,16 @@ extern "C" {
  *
  * @see svn_wc__max_supported_format()
  */
+/* IMPORTANT: Update SVN_WC__VERSIONS_ALSO_RAN (below)
+              and svntest.main.wc_format()
+              whenever you change this value! */
 #define SVN_WC__VERSION 32
 
 /* The minimum WC version supported by the client.
  *
  * @see svn_wc__min_supported_format()
  */
-/* IMPORTANT: Update the implementation of svn_client_default_wc_version()
-              and svn_client_get_wc_formats_supported()
-              and svntest.main.wc_format()
-              whenever you change this value! */
+/* IMPORTANT: See IMPORTANT at SVN_WC__VERSION (above). */
 #define SVN_WC__SUPPORTED_VERSION 31
 
 /* The default WC version that the Subversion library should create

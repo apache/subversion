@@ -38,6 +38,8 @@
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>   /* For getpid() */
+#elif WIN32
+#include <process.h>  /* For getpid() */
 #endif
 
 struct logger_t

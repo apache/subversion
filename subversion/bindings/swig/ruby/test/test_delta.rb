@@ -108,7 +108,7 @@ class SvnDeltaTest < Test::Unit::TestCase
     target = StringIO.new(t)
     stream = Svn::Delta::TextDeltaStream.new(source, target)
 
-    result = ""
+    result = String.new
     offset = 0
     stream.each do |window|
       result << window.apply_instructions(s[offset, window.sview_len])
@@ -120,7 +120,7 @@ class SvnDeltaTest < Test::Unit::TestCase
   def test_push_target
     source = StringIO.new("abcde")
     target_content = "ZZZ" * 100
-    data = ""
+    data = String.new
     finished = false
     handler = Proc.new do |window|
       if window
@@ -145,7 +145,7 @@ class SvnDeltaTest < Test::Unit::TestCase
     stream = Svn::Delta::TextDeltaStream.new(source, target)
 
     apply_source = StringIO.new(source_text)
-    apply_result = StringIO.new("")
+    apply_result = StringIO.new(String.new)
 
     handler, digest = Svn::Delta.apply(apply_source, apply_result)
     assert_nil(digest)
@@ -197,7 +197,7 @@ class SvnDeltaTest < Test::Unit::TestCase
     assert_equal(target_text, window.new_data)
 
     finished = false
-    data = ""
+    data = String.new
     stream = Svn::Delta.parse_svndiff do |window|
       if window
         data << window.new_data

@@ -251,26 +251,14 @@ const svn_version_t *
 svn_client_wc_version_from_format(int wc_format,
                                   apr_pool_t *result_pool)
 {
-  static const svn_version_t
-    version_1_0  = { 1, 0, 0, NULL },
-    version_1_4  = { 1, 4, 0, NULL },
-    version_1_5  = { 1, 5, 0, NULL },
-    version_1_6  = { 1, 6, 0, NULL },
-    version_1_7  = { 1, 7, 0, NULL },
-    version_1_8  = { 1, 8, 0, NULL },
-    version_1_15 = { 1, 15, 0, NULL };
+  const svn_wc__version_info_t *const version_info =
+    svn_wc__version_info_from_format(wc_format);
 
-  switch (wc_format)
-    {
-      case  4: return &version_1_0;
-      case  8: return &version_1_4;
-      case  9: return &version_1_5;
-      case 10: return &version_1_6;
-      case 29: return &version_1_7;
-      case 31: return &version_1_8;
-      case 32: return &version_1_15;
-    }
-  return NULL;
+  /* NOTE: This can be the "null" version "0.0.0" and that's an
+           unrecoverable programming error. */
+  SVN_ERR_ASSERT_NO_RETURN(version_info->text != NULL);
+
+  return &version_info->version;
 }
 
 const int *
@@ -288,10 +276,13 @@ svn_client_get_wc_formats_supported(apr_pool_t *result_pool)
 const svn_version_t *
 svn_client_oldest_wc_version(apr_pool_t *result_pool)
 {
-  /* NOTE: For consistency, always return the version of the client
-     that first introduced the format. */
-  static const svn_version_t version = { 1, 8, 0, NULL };
-  return &version;
+  const svn_wc__version_info_t *const version_info =
+    svn_wc__version_info_from_format(SVN_WC__SUPPORTED_VERSION);
+
+  /* See note in svn_client_wc_version_from_format(), above. */
+  SVN_ERR_ASSERT_NO_RETURN(version_info->text != NULL);
+
+  return &version_info->version;
 }
 
 svn_error_t *
@@ -302,7 +293,7 @@ svn_client_default_wc_version(const svn_version_t **version_p,
 {
   svn_config_t *config;
   const char *value;
-  svn_version_t *version;
+  const svn_version_t *version;
 
   if (ctx->config)
     config = svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG);
@@ -315,17 +306,19 @@ svn_client_default_wc_version(const svn_version_t **version_p,
                  NULL);
   if (value)
     {
-      SVN_ERR(svn_version__parse_version_string(&version, value, result_pool));
+      svn_version_t *mutable;
+      SVN_ERR(svn_version__parse_version_string(&mutable, value, result_pool));
+      version = mutable;
     }
   else
     {
-      /* NOTE: For consistency, always return the version of the client
-         that first introduced the format. */
-      version = apr_pcalloc(result_pool, sizeof(*version));
-      version->major = 1;
-      version->minor = 8;
-      version->patch = 0;
-      version->tag = NULL;
+      const svn_wc__version_info_t *const version_info =
+        svn_wc__version_info_from_format(SVN_WC__SUPPORTED_VERSION);
+
+      /* See note in svn_client_wc_version_from_format(), above. */
+      SVN_ERR_ASSERT(version_info->text != NULL);
+
+      version = &version_info->version;
     }
 
   *version_p = version;
@@ -335,19 +328,25 @@ svn_client_default_wc_version(const svn_version_t **version_p,
 const svn_version_t *
 svn_client_latest_wc_version(apr_pool_t *result_pool)
 {
-  /* NOTE: For consistency, always return the version of the client
-     that first introduced the format. */
-  static const svn_version_t version = { 1, 15, 0, NULL };
-  return &version;
+  const svn_wc__version_info_t *const version_info =
+    svn_wc__version_info_from_format(SVN_WC__VERSION);
+
+  /* See note in svn_client_wc_version_from_format(), above. */
+  SVN_ERR_ASSERT_NO_RETURN(version_info->text != NULL);
+
+  return &version_info->version;
 }
 
 const svn_version_t *
 svn_client__compatible_wc_version_optional_pristine(apr_pool_t *result_pool)
 {
-  /* NOTE: For consistency, always return the version of the client
-     that first introduced the format. */
-  static const svn_version_t version = { 1, 15, 0, NULL };
-  return &version;
+  const svn_wc__version_info_t *const version_info =
+    svn_wc__version_info_from_format(SVN_WC__HAS_OPTIONAL_PRISTINE);
+
+  /* See note in svn_client_wc_version_from_format(), above. */
+  SVN_ERR_ASSERT_NO_RETURN(version_info->text != NULL);
+
+  return &version_info->version;
 }
 
 /* Helper for upgrade_externals_from_properties: upgrades one external ITEM

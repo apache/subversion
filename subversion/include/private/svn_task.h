@@ -47,7 +47,7 @@ extern "C" {
  * consists of two functions.  The first is the "process function" that
  * should perform the bulk of the work, may be executed in some worker
  * thread and may produce some result.
- * 
+ *
  * The latter is later passed into the second function, the "output function".
  * This one is called in the main thread and strictly in post-order wrt.
  * the position of the respective task within the tree.  However, a task
@@ -56,9 +56,9 @@ extern "C" {
  * code.  Such partial outputs can be handed in whenever a new sub-task
  * is being added and the output function will be called on them right
  * before handling the output of the respective sub-task.
- * 
+ *
  * Both, process and output functions, may add further sub-tasks as needed.
- * 
+ *
  * Errors are detected in strictly in post-order, with only the first one
  * being returned from the task runner.  In particular, it may not be the
  * first error that occurs timewise but only the first one encountered when
@@ -154,7 +154,7 @@ typedef svn_error_t *(*svn_task__thread_context_constructor_t)(
  * Construct the root of the task tree and start processing from there.
  * This is the main API function and the only one to be called outside any
  * task callback.
- * 
+ *
  * Employ up to @a thread_count worker threads, depending on APR threading
  * support and processing needs.  If the @a thread_count is set to 1 or if
  * APR does not support multithreading, all tasks will be processed in the

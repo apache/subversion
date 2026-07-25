@@ -7,29 +7,16 @@ F1. Auto-merge bot; the nightly svn-role commits.
 
 F2. Conflicts detector bot; the backportbot GitHub Action.
 
-And two interactive functions¹:
+And two interactive functions:
 
 F3. Reviewing STATUS nominations and casting votes.
 
 F4. Adding new entries to STATUS.
 
-
-
 The scripts are:
 
-backport.pl:
-    oldest script, implements [F1], [F2], and [F3].  Deprecated, not used
-    in production.
-
-nominate.pl:
-    Symlink to backport.pl.  Implements [F4].  (The script inspects its argv[0].)
-
-backport_tests_pl.py:
-    Regression tests for backport.pl.
-
-
 backport/*.py:
-    New Python-based library implementation of STATUS parsing (status.py),
+    Python-based library implementation of STATUS parsing (status.py),
     of merging nominated revisions (merger.py) and some WC helper functions
     (wc.py).  Colloquially referred to as 'backport.py', even though there is
     no script by that name.  Written in Python 3.
@@ -37,7 +24,7 @@ backport/*.py:
     The modules include their unit tests, see 'python3 -munittest
     backport.status' and 'python3 -munittest backport.merger'.  However,
     changes to these files should be tested both by the unit tests and by the
-    backport_tests_py.py blackbox/regression tests.
+    backport_tests.py blackbox/regression tests.
 
 detect-conflicting-backports.py:
     Implementation of [F2] using backport.py.  Used by GitHub Actions, see
@@ -54,36 +41,19 @@ manage-backports.py:
 nominate-backport.py:
     Implementation of [F4] using backport.py.
 
-backport_tests_py.py:
-    Regression tests for detect-conflicting-backports.py and merge-approved-backports.py
-
-
 backport_tests.py:
-    Common part of backport_tests_pl.py and backport_tests_py.py.  Uses the
-    svntest framework (../../subversion/tests/cmdline/svntest/), which is
-    written in Python 2.
-
-    Note that backport_tests.py and backport/*.py are written in different
-    languages, so they never 'import' each other.  backport_tests.py invokes
-    detect-conflicting-backports.py, merge-approved-backports.py, and
-    backport.pl in the same manner: through subprocess.check_call().
+    Regression tests for detect-conflicting-backports.py and merge-approved-backports.py
+    Uses the svntest framework (../../subversion/tests/cmdline/svntest/).
 
 backport_tests_data/backport*.dump:
     Expected output files for backport_tests.py; see the BackportTest
     decorator in backport_tests.py.
 
-
 All scripts can be run with '--help' to display their usage messages.
 
-backport.pl is considered deprecated since backport.py is better architected
-and is written in a language that many more active developers are comfortable
-with.  The unattended jobs [F1] and [F2] have been converted to using
-backport.py.  Since interactive versions of [F3] and [F4] are now available
-based on backport.py, backport.pl will be removed in Subversion 1.16.
-
+Previously there was a Perl based script backport.pl implementing the same
+features. It unmaintained and removed in Subversion 1.15.x, replaced by the
+above scripts.
 
 TODO: document that "Notes: ... --accept=foo ..." is parsed, see backport_tests.py #3.
 
-
-¹ For backport.pl's interactive features, see:
-<http://mail-archives.apache.org/mod_mbox/subversion-dev/201503.mbox/%3c20150304225114.GD2036@tarsus.local2%3e>

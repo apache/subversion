@@ -1624,22 +1624,46 @@ upgrade_to_wcng(void **dir_baton,
   return SVN_NO_ERROR;
 }
 
+static const svn_wc__version_info_t
+  version_info_null = {   NULL , { 0, 0,  0, NULL }},
+  version_info_1_0  = {"<=1.3",  { 1, 0,  0, NULL }},
+  version_info_1_4  = {  "1.4",  { 1, 4,  0, NULL }},
+  version_info_1_5  = {  "1.5",  { 1, 5,  0, NULL }},
+  version_info_1_6  = {  "1.6",  { 1, 6,  0, NULL }},
+  version_info_1_7  = {  "1.7",  { 1, 7,  0, NULL }},
+  version_info_1_8  = {  "1.8",  { 1, 8,  0, NULL }},
+  version_info_1_15 = {  "1.15", { 1, 15, 0, NULL }};
+
+const svn_wc__version_info_t *
+svn_wc__version_info_from_format(int wc_format)
+{
+
+  switch (wc_format)
+    {
+      case 4: return &version_info_1_0;
+      case 8: return &version_info_1_4;
+      case 9: return &version_info_1_5;
+      case 10: return &version_info_1_6;
+      case SVN_WC__WC_NG_VERSION: return &version_info_1_7;
+      case 29: return &version_info_1_7;
+      case 31: return &version_info_1_8;
+      case 32: return &version_info_1_15;
+    }
+  return &version_info_null;
+}
+
 const char *
 svn_wc__version_string_from_format(int wc_format)
 {
-  switch (wc_format)
-    {
-      case 4: return "<=1.3";
-      case 8: return "1.4";
-      case 9: return "1.5";
-      case 10: return "1.6";
-      case SVN_WC__WC_NG_VERSION: return "1.7";
-      case 29: return "1.7";
-      case 31: return "1.8";
-      case 32: return "1.15";
-    }
+  const svn_wc__version_info_t *const version_info =
+    svn_wc__version_info_from_format(wc_format);
+
+  if (version_info->text != NULL)
+    return version_info->text;
+
   return _("(unreleased development version)");
 }
+
 
 svn_error_t *
 svn_wc__format_from_version(int *format,

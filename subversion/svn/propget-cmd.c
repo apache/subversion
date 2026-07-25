@@ -335,7 +335,6 @@ svn_cl__propget(apr_getopt_t *os,
   /* PNAME is first argument */
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
   pname = APR_ARRAY_IDX(args, 0, const char *);
-  SVN_ERR(svn_utf_cstring_to_utf8(&pname, pname, pool));
   if (! svn_prop_name_is_valid(pname))
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                              _("'%s' is not a valid Subversion property name"),

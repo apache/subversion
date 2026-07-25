@@ -259,8 +259,6 @@ class TestHarness:
       cmdline.append('--tools-bin=%s' % self.opts.tools_bin)
     if self.opts.svn_bin is not None:
       cmdline.append('--bin=%s' % self.opts.svn_bin)
-    if self.opts.venv_base is not None:
-      cmdline.append('--python-venv=%s' % self.opts.venv_base)
     if self.opts.url is not None:
       cmdline.append('--url=%s' % self.opts.url)
     if self.opts.fs_type is not None:
@@ -317,6 +315,8 @@ class TestHarness:
       cmdline.append('--valgrind=%s' % self.opts.valgrind)
     if self.opts.valgrind_opts is not None:
       cmdline.append('--valgrind-opts=%s' % self.opts.valgrind_opts)
+    if self.opts.check_xml_schema is not None:
+      cmdline.append('--check-xml-schema')
 
     self.py_test_cmdline = cmdline
 
@@ -330,15 +330,6 @@ class TestHarness:
       svntest = importlib.import_module('svntest')
       svntest.main.parse_options(cmdline, optparse.SUPPRESS_USAGE)
       svntest.testcase.TextColors.disable()
-      dependency_path = svntest.main.ensure_dependencies()
-
-      # We have to update PYTHONPATH, otherwise the whole setting up of a
-      # virtualenv and installing dependencies will happen for every test case.
-      if dependency_path:
-        python_path = os.environ.get("PYTHONPATH")
-        python_path = (dependency_path if not python_path
-                       else "%s:%s" % (dependency_path, python_path))
-        os.environ["PYTHONPATH"] = python_path
     finally:
       os.chdir(old_cwd)
 
@@ -679,7 +670,7 @@ class TestHarness:
 
     xml_error_list = [x for x in log_lines if x[:8] == 'E: XML: ']
     if xml_error_list:
-      print('There were some XML validation errors, checking' + self.logfile)
+      print('There were some XML validation errors, checking ' + self.logfile)
       for x in sorted(set(xml_error_list)):
         sys.stdout.write(x[3:])
 
@@ -1041,13 +1032,6 @@ def create_parser():
                     help='Use the svn binaries installed in this path')
   parser.add_option('--tools-bin', action='store', dest='tools_bin',
                     help='Use the svn tools installed in this path')
-  parser.add_option('--create-python-venv', action='store', dest='create_venv',
-                    help=('Create the Python virtual environment inside this'
-                          ' path and install the dependencies used by the'
-                          ' test suite, then exit. Do not run any tests.'))
-  parser.add_option('--python-venv', action='store', dest='venv_base',
-                    help=('Use the virtual environment inside this path to'
-                          ' find the dependencies used by the test suite.'))
   parser.add_option('--fsfs-sharding', action='store', type='int',
                     help='Default shard size (for fsfs)')
   parser.add_option('--fsfs-packing', action='store_true',
@@ -1107,19 +1091,14 @@ def create_parser():
                     help='programs to run under valgrind')
   parser.add_option('--valgrind-opts', action='store',
                     help='options to pass valgrind')
+  parser.add_option('--check-xml-schema', action='store_true',
+                    help='Enable extended XML schema validation')
 
   parser.set_defaults(set_log_level=None)
   return parser
 
 def main():
   (opts, args) = create_parser().parse_args(sys.argv[1:])
-  if opts.create_venv:
-    main_create_venv(opts, args)
-    sys.exit(0)
-
-  # Normal mode: don't create a virtual environment, run tests or whatever
-  # else was requested instead. Create the virtual environment on demand.
-  assert not opts.create_venv
 
   if len(args) < 3:
     print("{}: at least three positional arguments required; got {!r}".format(
@@ -1141,25 +1120,6 @@ def main():
   failed = th.run(programs)
   if failed:
     sys.exit(1)
-
-def main_create_venv(opts, args):
-  # Environment creation mode: create the requested virtual environment,
-  # install required dependencies and exit.
-  assert opts.create_venv
-
-  if len(args) < 1:
-    print("{}: at least one positional argument required; got {!r}".format(
-      os.path.basename(sys.argv[0]), args
-    ))
-    sys.exit(2)
-  abs_srcdir = args[0]
-
-  sys.path.insert(0, os.path.join(abs_srcdir, "subversion", "tests", "cmdline"))
-  svntest = importlib.import_module("svntest")
-  svntest.main.venv_base = opts.create_venv
-  venv_dir = svntest.main.venv_path()
-  python_prog, _ = svntest.main.create_python_venv(venv_dir, quiet=True)
-  print(python_prog)
 
 
 # Run main if not imported as a module

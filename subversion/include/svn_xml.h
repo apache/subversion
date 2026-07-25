@@ -33,7 +33,6 @@
 
 #include "svn_types.h"
 #include "svn_string.h"
-#include "svn_io.h" /* for svn_stream_t */
 
 #ifdef __cplusplus
 extern "C" {
@@ -191,22 +190,6 @@ svn_xml_make_parser(void *baton,
 void
 svn_xml_free_parser(svn_xml_parser_t *svn_parser);
 
-
-/** Create a stream that wraps the XML parser described at @a parser.
- *
- * The stream produced will implement 'write' and 'close' methods. It
- * will push the data to the parser on write operation, and flush it on
- * close.
- *
- * This stream can be used as a generic writable stream, so the callers
- * may pipe any data there, for example, using the svn_stream_copy3
- * function, in case of a file source.
- *
- * @since New in 1.15.
- */
-svn_stream_t *
-svn_xml_make_parse_stream(svn_xml_parser_t *parser,
-                          apr_pool_t *result_pool);
 
 
 /** Push @a len bytes of xml data in @a buf at @a svn_parser.

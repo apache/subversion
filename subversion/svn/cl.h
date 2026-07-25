@@ -173,7 +173,7 @@ typedef struct svn_cl__opt_state_t
   /* Was --no-unlock specified? */
   svn_boolean_t no_unlock;
 
-  const char *message;           /* log message (not converted to UTF-8) */
+  const char *message;           /* log message */
   svn_boolean_t force;           /* be more forceful, as in "svn rm -f ..." */
   svn_boolean_t force_log;       /* force validity of a suspect log msg file */
   svn_boolean_t incremental;     /* yield output suitable for concatenation */
@@ -185,7 +185,7 @@ typedef struct svn_cl__opt_state_t
   svn_stringbuf_t *filedata;     /* contents of file used as option data
                                     (not converted to UTF-8) */
   const char *encoding;          /* the locale/encoding of 'message' and of
-                                    'filedata' (not converted to UTF-8) */
+                                    'filedata' */
   svn_boolean_t help;            /* print usage message */
   const char *auth_username;     /* auth username */
   const char *auth_password;     /* auth password */

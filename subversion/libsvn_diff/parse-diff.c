@@ -1545,12 +1545,12 @@ static svn_error_t *
 git_start(enum parse_state *new_state, char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  const char *old_path_start;
+  char *old_path_start;
   char *old_path_end;
-  const char *new_path_start;
+  char *new_path_start;
   const char *new_path_end;
   char *new_path_marker;
-  const char *old_path_marker;
+  char *old_path_marker;
 
   /* ### Add handling of escaped paths
    * http://www.kernel.org/pub/software/scm/git/docs/git-diff.html:

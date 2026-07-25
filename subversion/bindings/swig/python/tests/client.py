@@ -534,7 +534,7 @@ class SubversionClientTestCase(unittest.TestCase):
     target_prop = b'local_prop_test'
     prop_val1 = b'foo'
 
-    co_rev = client.checkout3(self.repos_uri, path, head, head, 
+    co_rev = client.checkout3(self.repos_uri, path, head, head,
                               core.svn_depth_infinity, True, True,
                               self.client_ctx)
 
@@ -559,7 +559,7 @@ class SubversionClientTestCase(unittest.TestCase):
     self.assertEqual(props, { target_path : prop_val2 })
 
     # Using str(unicode) and check if it uses 'utf-8' codecs on Python 3
-    # (or Python 2, only if its default encoding is 'utf-8') 
+    # (or Python 2, only if its default encoding is 'utf-8')
     if utils.IS_PY3 or utils.is_defaultencoding_utf8():
       # prop_val3 = '(checkmark)UNICODE'
       prop_val3_str = (u'\u2705\U0001F1FA\U0001F1F3\U0001F1EE'

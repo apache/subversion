@@ -218,34 +218,22 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
   return SVN_NO_ERROR;
 }
 
-
-/* Note: This is substantially copied into svn_client_args_to_target_array() in
+/* Note: This is substantially copied into svn_client___target_array() in
  * order to move to libsvn_client while maintaining backward compatibility. */
 svn_error_t *
-svn_opt__args_to_target_array(apr_array_header_t **targets_p,
-                              apr_getopt_t *os,
+svn_opt__process_target_array(apr_array_header_t **targets_p,
+                              apr_array_header_t *input_targets,
                               const apr_array_header_t *known_targets,
                               apr_pool_t *pool)
 {
   int i;
   svn_error_t *err = SVN_NO_ERROR;
-  apr_array_header_t *input_targets =
-    apr_array_make(pool, DEFAULT_ARRAY_SIZE, sizeof(const char *));
   apr_array_header_t *output_targets =
     apr_array_make(pool, DEFAULT_ARRAY_SIZE, sizeof(const char *));
 
-  /* Step 1:  create a master array of targets that are in UTF-8
-     encoding, and come from concatenating the targets left by apr_getopt,
-     plus any extra targets (e.g., from the --targets switch.) */
-
-  for (; os->ind < os->argc; os->ind++)
-    {
-      /* The apr_getopt targets are still in native encoding. */
-      const char *raw_target = os->argv[os->ind];
-      SVN_ERR(svn_utf_cstring_to_utf8
-              ((const char **) apr_array_push(input_targets),
-               raw_target, pool));
-    }
+  /* Step 1:  create a master array of targets, and come from concatenating
+     the targets left by apr_getopt, plus any extra targets (e.g., from the
+     --targets switch.) */
 
   if (known_targets)
     {
@@ -332,8 +320,23 @@ svn_opt__args_to_target_array(apr_array_header_t **targets_p,
 }
 
 svn_error_t *
-svn_opt_parse_revprop(apr_hash_t **revprop_table_p, const char *revprop_spec,
-                      apr_pool_t *pool)
+svn_opt_args_to_target_array4(apr_array_header_t **targets_p,
+                              apr_getopt_t *os,
+                              const apr_array_header_t *known_targets,
+                              apr_pool_t *pool)
+{
+  apr_array_header_t *utf8_input_targets;
+
+  SVN_ERR(svn_opt_parse_all_args(&utf8_input_targets, os, pool));
+
+  return svn_error_trace(svn_opt__process_target_array(
+      targets_p, utf8_input_targets, known_targets, pool));
+}
+
+svn_error_t *
+svn_opt_parse_revprop2(apr_hash_t **revprop_table_p,
+                       const char *revprop_spec,
+                       apr_pool_t *pool)
 {
   const char *sep, *propname;
   svn_string_t *propval;
@@ -349,12 +352,11 @@ svn_opt_parse_revprop(apr_hash_t **revprop_table_p, const char *revprop_spec,
   if (sep)
     {
       propname = apr_pstrndup(pool, revprop_spec, sep - revprop_spec);
-      SVN_ERR(svn_utf_cstring_to_utf8(&propname, propname, pool));
       propval = svn_string_create(sep + 1, pool);
     }
   else
     {
-      SVN_ERR(svn_utf_cstring_to_utf8(&propname, revprop_spec, pool));
+      propname = apr_pstrdup(pool, revprop_spec);
       propval = svn_string_create_empty(pool);
     }
 

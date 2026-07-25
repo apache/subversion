@@ -385,7 +385,7 @@ class SvnFsTest < Test::Unit::TestCase
                                                   path_in_repos)
       end
 
-      data = ''
+      data = String.new
       stream.each{|w| data << w.new_data}
       assert_equal(normalize_line_break(expected), data)
 

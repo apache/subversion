@@ -22,6 +22,7 @@
 
 #include <apr.h>
 
+#include "private/svn_xml_private.h"
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_xml.h"
@@ -343,7 +344,7 @@ test_xml_parse_stream(apr_pool_t *pool)
   b.buf = svn_stringbuf_create_empty(pool);
   b.parser = svn_xml_make_parser(&b, strbuf_start_elem, strbuf_end_elem,
                                  strbuf_cdata, pool);
-  stream = svn_xml_make_parse_stream(b.parser, pool);
+  stream = svn_xml__make_parse_stream(b.parser, pool);
 
   SVN_ERR(svn_stream_puts(stream, xml));
   SVN_ERR(svn_stream_close(stream));
@@ -366,7 +367,7 @@ test_xml_parse_stream_invalid_xml(apr_pool_t *pool)
   b.buf = svn_stringbuf_create_empty(pool);
   b.parser = svn_xml_make_parser(&b, strbuf_start_elem, strbuf_end_elem,
                                  strbuf_cdata, pool);
-  stream = svn_xml_make_parse_stream(b.parser, pool);
+  stream = svn_xml__make_parse_stream(b.parser, pool);
 
   err = svn_error_compose_create(svn_stream_puts(stream, xml),
                                  svn_stream_close(stream));

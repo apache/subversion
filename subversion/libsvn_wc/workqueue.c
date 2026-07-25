@@ -584,11 +584,11 @@ run_file_install(work_item_baton_t *wqb,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool));
- 
+
   if (keywords_propval)
     {
       const char *url;
-                                           
+
       /* Handle special statuses (e.g. added) */
       if (!repos_relpath)
         SVN_ERR(svn_wc__db_read_repos_info(NULL, &repos_relpath,

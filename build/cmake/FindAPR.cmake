@@ -23,22 +23,42 @@ find_path(APR_INCLUDE_DIR
   NAMES apr.h
   PATH_SUFFIXES
     include
+    include/apr-2
+    include/apr-2.0
     include/apr-1
     include/apr-1.0
 )
 
+if (APR_INCLUDE_DIR AND EXISTS ${APR_INCLUDE_DIR}/apr_version.h)
+  file(
+    STRINGS "${APR_INCLUDE_DIR}/apr_version.h" VERSION_STRINGS
+    REGEX "#define (APR_MAJOR_VERSION|APR_MINOR_VERSION|APR_PATCH_VERSION)"
+  )
+
+  string(REGEX REPLACE ".*APR_MAJOR_VERSION +([0-9]+).*" "\\1" APR_MAJOR_VERSION ${VERSION_STRINGS})
+  string(REGEX REPLACE ".*APR_MINOR_VERSION +([0-9]+).*" "\\1" APR_MINOR_VERSION ${VERSION_STRINGS})
+  string(REGEX REPLACE ".*APR_PATCH_VERSION +([0-9]+).*" "\\1" APR_PATCH_VERSION ${VERSION_STRINGS})
+else()
+  # Default version to 1.0.0 if not found.
+  set(APR_MAJOR_VERSION 1)
+  set(APR_MINOR_VERSION 0)
+  set(APR_PATCH_VERSION 0)
+endif()
+
+set(APR_VERSION "${APR_MAJOR_VERSION}.${APR_MINOR_VERSION}.${APR_PATCH_VERSION}")
+
 find_library(APR_LIBRARY_SHARED
-  NAMES libapr-1
+  NAMES libapr-${APR_MAJOR_VERSION}
   PATH_SUFFIXES lib
 )
 
 find_library(APR_LIBRARY_STATIC
-  NAMES apr-1
+  NAMES apr-${APR_MAJOR_VERSION}
   PATH_SUFFIXES lib
 )
 
 find_file(APR_DLL
-  NAMES libapr-1.dll
+  NAMES libapr-${APR_MAJOR_VERSION}.dll
   PATH_SUFFIXES bin
 )
 
@@ -53,19 +73,6 @@ if(APR_LIBRARY_SHARED)
   set(APR_LIBRARY ${APR_LIBRARY_SHARED})
 elseif(APR_LIBRARY_STATIC)
   set(APR_LIBRARY ${APR_LIBRARY_STATIC})
-endif()
-
-if (APR_INCLUDE_DIR AND EXISTS ${APR_INCLUDE_DIR}/apr_version.h)
-  file(
-    STRINGS "${APR_INCLUDE_DIR}/apr_version.h" VERSION_STRINGS
-    REGEX "#define (APR_MAJOR_VERSION|APR_MINOR_VERSION|APR_PATCH_VERSION)"
-  )
-
-  string(REGEX REPLACE ".*APR_MAJOR_VERSION +([0-9]+).*" "\\1" APR_MAJOR_VERSION ${VERSION_STRINGS})
-  string(REGEX REPLACE ".*APR_MINOR_VERSION +([0-9]+).*" "\\1" APR_MINOR_VERSION ${VERSION_STRINGS})
-  string(REGEX REPLACE ".*APR_PATCH_VERSION +([0-9]+).*" "\\1" APR_PATCH_VERSION ${VERSION_STRINGS})
-
-  set(APR_VERSION "${APR_MAJOR_VERSION}.${APR_MINOR_VERSION}.${APR_PATCH_VERSION}")
 endif()
 
 include(FindPackageHandleStandardArgs)

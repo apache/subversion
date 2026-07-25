@@ -44,7 +44,6 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_opt.h"
-#include "svn_utf.h"
 #include "svn_auth.h"
 #include "svn_hash.h"
 #include "svn_version.h"
@@ -684,12 +683,11 @@ sub_main(int *exit_code,
   os->interleave = 1;
   while (1)
     {
-      const char *opt_arg;
       const char *utf8_opt_arg;
 
       /* Parse the next option. */
       apr_status_t apr_err = apr_getopt_long(os, svnconflict_options, &opt_id,
-                                             &opt_arg);
+                                             &utf8_opt_arg);
       if (APR_STATUS_IS_EOF(apr_err))
         break;
       else if (apr_err)
@@ -711,18 +709,15 @@ sub_main(int *exit_code,
         opt_state.version = TRUE;
         break;
       case opt_auth_username:
-        SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.auth_username,
-                                        opt_arg, pool));
+        opt_state.auth_username = apr_pstrdup(pool, utf8_opt_arg);
         break;
       case opt_auth_password:
-        SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.auth_password,
-                                        opt_arg, pool));
+        opt_state.auth_password = apr_pstrdup(pool, utf8_opt_arg);
         break;
       case opt_auth_password_from_stdin:
         read_pass_from_stdin = TRUE;
         break;
       case opt_config_dir:
-        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         SVN_ERR(svn_dirent_internal_style_safe(&opt_state.config_dir, NULL,
                                                utf8_opt_arg, pool, pool));
         break;
@@ -732,7 +727,6 @@ sub_main(int *exit_code,
                    apr_array_make(pool, 1,
                                   sizeof(svn_cmdline__config_argument_t*));
 
-        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         SVN_ERR(svn_cmdline__parse_config_option(opt_state.config_options,
                                                  utf8_opt_arg, "svnconflict: ",
                                                  pool));
@@ -782,10 +776,8 @@ sub_main(int *exit_code,
         }
       else
         {
-          const char *first_arg;
+          const char *first_arg = os->argv[os->ind++];
 
-          SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
-                                          pool));
           subcommand = svn_opt_get_canonical_subcommand3(svnconflict_cmd_table,
                                                          first_arg);
           if (subcommand == NULL)

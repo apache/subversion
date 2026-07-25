@@ -105,8 +105,40 @@ typedef enum action_code_t {
   ACTION_PROPSETF,
   ACTION_PROPDEL,
   ACTION_PUT,
-  ACTION_RM
+  ACTION_RM,
+  ACTION_HELP
 } action_code_t;
+
+/* Parses action_code_t from @a action_string into @a action. */
+static svn_error_t *
+action_code_from_word(action_code_t *action, const char *action_string,
+                      apr_pool_t *pool)
+{
+  if (!strcmp(action_string, "mv"))
+    *action = ACTION_MV;
+  else if (!strcmp(action_string, "cp"))
+    *action = ACTION_CP;
+  else if (!strcmp(action_string, "mkdir"))
+    *action = ACTION_MKDIR;
+  else if (!strcmp(action_string, "rm"))
+    *action = ACTION_RM;
+  else if (!strcmp(action_string, "put"))
+    *action = ACTION_PUT;
+  else if (!strcmp(action_string, "propset"))
+    *action = ACTION_PROPSET;
+  else if (!strcmp(action_string, "propsetf"))
+    *action = ACTION_PROPSETF;
+  else if (!strcmp(action_string, "propdel"))
+    *action = ACTION_PROPDEL;
+  else if (!strcmp(action_string, "?") || !strcmp(action_string, "h") ||
+           !strcmp(action_string, "help"))
+    *action = ACTION_HELP;
+  else
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             "'%s' is not an action\n", action_string);
+
+  return SVN_NO_ERROR;
+}
 
 /* Return the portion of URL that is relative to ANCHOR (URI-decoded). */
 static const char *
@@ -244,6 +276,8 @@ read_propvalue_file(const svn_string_t **value_p,
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   SVN_ERR(svn_stringbuf_from_file2(&value, filename, scratch_pool));
+  SVN_ERR(svn_utf_stringbuf_to_utf8(&value, value, scratch_pool));
+
   *value_p = svn_string_create_from_buf(value, pool);
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
@@ -541,7 +575,7 @@ sub_main(int *exit_code,
   /* Check library versions */
   SVN_ERR(check_lib_versions());
 
-  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
+  SVN_ERR(svn_cmdline__get_utf8_argv(&argv, argc, cmdline_argv, pool));
 
   /* Initialize the RA library. */
   SVN_ERR(svn_ra_initialize(pool));
@@ -554,10 +588,9 @@ sub_main(int *exit_code,
   while (1)
     {
       int opt;
-      const char *arg;
       const char *opt_arg;
 
-      apr_status_t status = apr_getopt_long(opts, options, &opt, &arg);
+      apr_status_t status = apr_getopt_long(opts, options, &opt, &opt_arg);
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
@@ -569,40 +602,35 @@ sub_main(int *exit_code,
       switch(opt)
         {
         case 'm':
-          SVN_ERR(svn_utf_cstring_to_utf8(&message, arg, pool));
+          message = apr_pstrdup(pool, opt_arg);
           break;
         case 'F':
-          {
-            const char *filename;
-            SVN_ERR(svn_utf_cstring_to_utf8(&filename, arg, pool));
-            SVN_ERR(svn_stringbuf_from_file2(&filedata, filename, pool));
-            SVN_ERR(svn_utf_stringbuf_to_utf8(&filedata, filedata, pool));
-          }
+          SVN_ERR(svn_stringbuf_from_file2(&filedata, opt_arg, pool));
+          SVN_ERR(svn_utf_stringbuf_to_utf8(&filedata, filedata, pool));
           break;
         case 'u':
-          username = apr_pstrdup(pool, arg);
+          username = apr_pstrdup(pool, opt_arg);
           break;
         case 'p':
-          password = apr_pstrdup(pool, arg);
+          password = apr_pstrdup(pool, opt_arg);
           break;
         case password_from_stdin_opt:
           read_pass_from_stdin = TRUE;
           break;
         case 'U':
-          SVN_ERR(svn_utf_cstring_to_utf8(&root_url, arg, pool));
-          if (! svn_path_is_url(root_url))
+          if (! svn_path_is_url(opt_arg))
             return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                     "'%s' is not a URL\n", root_url);
-          root_url = sanitize_url(root_url, pool);
+                                     "'%s' is not a URL\n", opt_arg);
+          root_url = sanitize_url(opt_arg, pool);
           break;
         case 'r':
-          SVN_ERR(svn_opt_parse_revnum(&base_revision, arg));
+          SVN_ERR(svn_opt_parse_revnum(&base_revision, opt_arg));
           break;
         case with_revprop_opt:
-          SVN_ERR(svn_opt_parse_revprop(&revprops, arg, pool));
+          SVN_ERR(svn_opt_parse_revprop2(&revprops, opt_arg, pool));
           break;
         case 'X':
-          SVN_ERR(svn_utf_cstring_to_utf8(&extra_args_file, arg, pool));
+          extra_args_file = apr_pstrdup(pool, opt_arg);
           break;
         case non_interactive_opt:
           non_interactive = TRUE;
@@ -614,7 +642,6 @@ sub_main(int *exit_code,
           trust_unknown_ca = TRUE;
           break;
         case trust_server_cert_failures_opt:
-          SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, arg, pool));
           SVN_ERR(svn_cmdline__parse_trust_options(
                       &trust_unknown_ca,
                       &trust_cn_mismatch,
@@ -624,10 +651,9 @@ sub_main(int *exit_code,
                       opt_arg, pool));
           break;
         case config_dir_opt:
-          SVN_ERR(svn_utf_cstring_to_utf8(&config_dir, arg, pool));
+          config_dir = apr_pstrdup(pool, opt_arg);
           break;
         case config_inline_opt:
-          SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, arg, pool));
           SVN_ERR(svn_cmdline__parse_config_option(config_options, opt_arg,
                                                    "svnmucc: ",
                                                    pool));
@@ -677,19 +703,12 @@ sub_main(int *exit_code,
     }
 
 
-  /* Copy the rest of our command-line arguments to an array,
-     UTF-8-ing them along the way. */
-  action_args = apr_array_make(pool, opts->argc, sizeof(const char *));
-  while (opts->ind < opts->argc)
-    {
-      const char *arg;
-
-      SVN_ERR(svn_utf_cstring_to_utf8(&arg, opts->argv[opts->ind++], pool));
-      APR_ARRAY_PUSH(action_args, const char *) = arg;
-    }
+  /* Copy the rest of our command-line arguments to an array. */
+  SVN_ERR(svn_opt_parse_all_args(&action_args, opts, pool));
 
   /* If there are extra arguments in a supplementary file, tack those
-     on, too (again, in UTF8 form). */
+     on, too (also converting them to UTF8 form, since files could be
+     encoded unproperly). */
   if (extra_args_file)
     {
       svn_stringbuf_t *contents, *contents_utf8;
@@ -769,32 +788,14 @@ sub_main(int *exit_code,
       struct action *action = apr_pcalloc(pool, sizeof(*action));
 
       /* First, parse the action. */
-      if (! strcmp(action_string, "mv"))
-        action->action = ACTION_MV;
-      else if (! strcmp(action_string, "cp"))
-        action->action = ACTION_CP;
-      else if (! strcmp(action_string, "mkdir"))
-        action->action = ACTION_MKDIR;
-      else if (! strcmp(action_string, "rm"))
-        action->action = ACTION_RM;
-      else if (! strcmp(action_string, "put"))
-        action->action = ACTION_PUT;
-      else if (! strcmp(action_string, "propset"))
-        action->action = ACTION_PROPSET;
-      else if (! strcmp(action_string, "propsetf"))
-        action->action = ACTION_PROPSETF;
-      else if (! strcmp(action_string, "propdel"))
-        action->action = ACTION_PROPDEL;
-      else if (! strcmp(action_string, "?") || ! strcmp(action_string, "h")
-               || ! strcmp(action_string, "help"))
+      SVN_ERR(action_code_from_word(&action->action, action_string, pool));
+
+      if (action->action == ACTION_HELP)
         {
           help(stdout, pool);
           return SVN_NO_ERROR;
         }
-      else
-        return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                 "'%s' is not an action\n",
-                                 action_string);
+
       if (++i == action_args->nelts)
         return insufficient();
 
@@ -866,9 +867,9 @@ sub_main(int *exit_code,
               && svn_prop_needs_translation(action->prop_name))
             {
               svn_string_t *translated_value;
-              SVN_ERR_W(svn_subst_translate_string2(&translated_value, NULL,
-                                                    NULL, action->prop_value,
-                                                    NULL, FALSE, pool, pool),
+              SVN_ERR_W(svn_subst_translate_string2(
+                            &translated_value, NULL, NULL, action->prop_value,
+                            "UTF-8", FALSE, pool, pool),
                         "Error normalizing property value");
               action->prop_value = translated_value;
             }
@@ -937,7 +938,7 @@ sub_main(int *exit_code,
   if (! actions->nelts)
     {
       *exit_code = EXIT_FAILURE;
-      help(stderr, pool);
+      usage(pool);
       return SVN_NO_ERROR;
     }
 

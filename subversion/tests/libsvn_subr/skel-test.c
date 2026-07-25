@@ -26,6 +26,7 @@
 #include <stdio.h>
 
 #include <apr.h>
+#include <apr_strings.h> /* for apr_snprintf */
 
 #include "svn_pools.h"
 #include "svn_string.h"
@@ -33,6 +34,7 @@
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
+#include "svn_private_config.h"
 
 
 /* Some utility functions.  */
@@ -307,21 +309,17 @@ put_explicit_length(svn_stringbuf_t *str,
                     apr_size_t len,
                     char sep)
 {
-  char *buf = malloc(len + 100);
-  apr_size_t length_len;
+  char buf[100];
 
   if (! skel_is_space(sep))
     abort();
 
   /* Generate the length and separator character.  */
-  sprintf(buf, "%"APR_SIZE_T_FMT"%c", len, sep);
-  length_len = strlen(buf);
+  apr_snprintf(buf, sizeof(buf), "%" APR_SIZE_T_FMT "%c", len, sep);
+  svn_stringbuf_appendcstr(str, buf);
 
   /* Copy in the real data (which may contain nulls).  */
-  memcpy(buf + length_len, data, len);
-
-  svn_stringbuf_appendbytes(str, buf, length_len + len);
-  free(buf);
+  svn_stringbuf_appendbytes(str, data, len);
 }
 
 

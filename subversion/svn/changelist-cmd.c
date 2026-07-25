@@ -55,8 +55,6 @@ svn_cl__changelist(apr_getopt_t *os,
       apr_array_header_t *args;
       SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
       changelist_name = APR_ARRAY_IDX(args, 0, const char *);
-      SVN_ERR(svn_utf_cstring_to_utf8(&changelist_name,
-                                      changelist_name, pool));
     }
 
   /* Parse the remaining arguments as paths. */

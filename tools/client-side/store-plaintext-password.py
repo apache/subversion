@@ -54,7 +54,8 @@ def _read_one_datum(fd, letter):
 
     LETTER identifies the first letter, as a bytes object.
     """
-    assert letter in {b'K', b'V'}
+    if letter not in {b'K', b'V'}:
+        raise ValueError('Expected letter K or V, got {}'.format(letter))
 
     # Read the letter and the space
     readletter = fd.read(1)
@@ -84,8 +85,10 @@ def hash_read(fd):
 
     Return a dict mapping bytes to bytes.
     """
-    assert 'b' in fd.mode
-    assert TERMINATOR[0] not in {b'K', b'V'}
+    if 'b' not in fd.mode:
+        raise ValueError('File descriptor must be opened in binary mode')
+    if TERMINATOR[0] in {b'K', b'V'}:
+        raise ValueError('TERMINATOR conflicts with hash format letters')
 
     ret = {}
     while True:
@@ -108,7 +111,8 @@ def outputHash(fd, hash):
     The keys and values must have datatype 'bytes' and strings must be
     encoded using utf-8.
     """
-    assert 'b' in fd.mode
+    if 'b' not in fd.mode:
+        raise ValueError('File descriptor must be opened in binary mode')
 
     for key, val in hash.items():
         fd.write(b'K ' + bytes(str(len(key)), 'utf-8') + b'\n')
@@ -149,8 +153,16 @@ def main():
     parser.add_argument('-u', '--user', help='Set username')
     args = parser.parse_args()
 
-    # The file name is the md5encoding of the realm
-    m = hashlib.md5()
+    # Create a hashlib.md5 object using usedforsecurity if available
+    def md5_compat(usedforsecurity=False):
+        try:
+            return hashlib.md5(usedforsecurity=usedforsecurity)
+        except TypeError:
+            # Python <= 3.8
+            return hashlib.md5(data)
+
+    # The file name is the md5 encoding of the realm
+    m = md5_compat(usedforsecurity=False)
     m.update(args.realm.encode('utf-8'))
     authfileName = os.path.join(os.path.expanduser('~/.subversion/auth/svn.simple/'), m.hexdigest())
 

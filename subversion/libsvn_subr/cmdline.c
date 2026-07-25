@@ -1239,7 +1239,7 @@ svn_cmdline__be_interactive(svn_boolean_t *non_interactive,
    * be interactive if stdin is a terminal.
    * If --force-interactive was passed, always be interactive. */
   if (!force_interactive && !*non_interactive)
-    *non_interactive = svn_cmdline__stdin_is_a_terminal();
+    *non_interactive = !svn_cmdline__stdin_is_a_terminal();
 
   if (force_interactive)
     *non_interactive = FALSE;
@@ -1409,21 +1409,34 @@ svn_cmdline__win32_get_cstring_argv(const char **cstring_argv_p[],
       const wchar_t *arg = argv[i];
       char *cstring_arg;
       int rv;
+      BOOL used_default_char;
 
       /* Passing -1 for the string length guarantees that the returned length
          will account for a terminating null character. */
-      rv = WideCharToMultiByte(CP_ACP, 0, arg, -1, NULL, 0, NULL, NULL);
+      rv = WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, arg, -1,
+                               NULL, 0, NULL, &used_default_char);
       if (rv <= 0)
         {
           return svn_error_wrap_apr(apr_get_os_error(),
                                     _("Conversion from UTF-16 failed"));
         }
+      else if (used_default_char)
+        {
+          return svn_error_wrap_apr(APR_FROM_OS_ERROR(ERROR_NO_UNICODE_TRANSLATION),
+                                    _("Conversion from UTF-16 failed"));
+        }
 
       cstring_arg = apr_palloc(result_pool, rv);
-      rv = WideCharToMultiByte(CP_ACP, 0, arg, -1, cstring_arg, rv, NULL, NULL);
+      rv = WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, arg, -1,
+                               cstring_arg, rv, NULL, &used_default_char);
       if (rv <= 0)
         {
           return svn_error_wrap_apr(apr_get_os_error(),
+                                    _("Conversion from UTF-16 failed"));
+        }
+      else if (used_default_char)
+        {
+          return svn_error_wrap_apr(APR_FROM_OS_ERROR(ERROR_NO_UNICODE_TRANSLATION),
                                     _("Conversion from UTF-16 failed"));
         }
 
@@ -1436,6 +1449,33 @@ svn_cmdline__win32_get_cstring_argv(const char **cstring_argv_p[],
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_cmdline__win32_get_utf8_argv(const char **utf8_argv_p[],
+                                 int argc,
+                                 const wchar_t *argv[],
+                                 apr_pool_t *result_pool)
+{
+  apr_array_header_t *utf8_argv;
+  int i;
+
+  utf8_argv = apr_array_make(result_pool, argc + 1, sizeof(const char *));
+
+  for (i = 0; i < argc; i++)
+    {
+      const char *utf8_arg;
+
+      SVN_ERR(svn_utf__win32_utf16_to_utf8(&utf8_arg, argv[i],
+                                           NULL, result_pool));
+
+      APR_ARRAY_PUSH(utf8_argv, const char *) = utf8_arg;
+    }
+
+  APR_ARRAY_PUSH(utf8_argv, const char *) = NULL;
+
+  *utf8_argv_p = (const char **)utf8_argv->elts;
+  return SVN_NO_ERROR;
+}
+
 #endif
 
 svn_error_t *
@@ -1445,5 +1485,31 @@ svn_cmdline__default_get_cstring_argv(const char **cstring_argv_p[],
                                       apr_pool_t *result_pool)
 {
   *cstring_argv_p = argv;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cmdline__default_get_utf8_argv(const char **utf8_argv_p[],
+                                   int argc,
+                                   const char *argv[],
+                                   apr_pool_t *result_pool)
+{
+  apr_array_header_t *utf8_argv;
+  int i;
+
+  utf8_argv = apr_array_make(result_pool, argc + 1, sizeof(const char *));
+
+  for (i = 0; i < argc; i++)
+    {
+      const char *utf8_arg;
+
+      SVN_ERR(svn_utf_cstring_to_utf8(&utf8_arg, argv[i], result_pool));
+
+      APR_ARRAY_PUSH(utf8_argv, const char *) = utf8_arg;
+    }
+
+  APR_ARRAY_PUSH(utf8_argv, const char *) = NULL;
+
+  *utf8_argv_p = (const char **)utf8_argv->elts;
   return SVN_NO_ERROR;
 }

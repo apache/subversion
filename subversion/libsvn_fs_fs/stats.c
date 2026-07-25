@@ -22,6 +22,7 @@
 
 #include "svn_dirent_uri.h"
 #include "svn_fs.h"
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_sorts.h"
 
@@ -338,15 +339,14 @@ add_change(svn_fs_fs__stats_t *stats,
         extension = "(none)";
 
       /* get / auto-insert entry for this extension */
-      info = apr_hash_get(stats->by_extension, extension, APR_HASH_KEY_STRING);
+      info = svn_hash_gets(stats->by_extension, extension);
       if (info == NULL)
         {
           apr_pool_t *pool = apr_hash_pool_get(stats->by_extension);
           info = apr_pcalloc(pool, sizeof(*info));
           info->extension = apr_pstrdup(pool, extension);
 
-          apr_hash_set(stats->by_extension, info->extension,
-                       APR_HASH_KEY_STRING, info);
+          svn_hash_sets(stats->by_extension, info->extension, info);
         }
 
       /* update per-extension histogram */

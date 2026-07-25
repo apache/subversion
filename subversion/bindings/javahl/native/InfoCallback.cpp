@@ -90,7 +90,7 @@ InfoCallback::singleInfo(const char *path,
         POP_AND_RETURN(SVN_NO_ERROR);
     }
 
-  jobject jinfo2 = CreateJ::Info(path, info);
+  jobject jinfo2 = CreateJ::Info(path, info, pool);
   if (jinfo2 == NULL || JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 

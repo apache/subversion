@@ -205,8 +205,14 @@ svn_subr__win32_xlate_to_stringbuf(svn_subr__win32_xlate_t *handle,
     return APR_SUCCESS;
   }
 
-  retval = MultiByteToWideChar(handle->from_page_id, 0, src_data, src_length,
-                               NULL, 0);
+  /* Use ERROR_INVALID_PARAMETER in case of integer overflow:
+     MultiByteToWideChar() returns ERROR_INVALID_PARAMETER in case source
+     string is longer than 2GB and cbMultiByte is -1 (use strlen). */
+  if (src_length > INT_MAX)
+    return APR_FROM_OS_ERROR(ERROR_INVALID_PARAMETER);
+
+  retval = MultiByteToWideChar(handle->from_page_id, 0, src_data,
+                               (int)src_length, NULL, 0);
   if (retval == 0)
     return apr_get_os_error();
 
@@ -222,11 +228,15 @@ svn_subr__win32_xlate_to_stringbuf(svn_subr__win32_xlate_t *handle,
       wide_str = apr_palloc(pool, wide_size * sizeof(WCHAR));
     }
 
-  retval = MultiByteToWideChar(handle->from_page_id, 0, src_data, src_length,
-                               wide_str, wide_size);
+  retval = MultiByteToWideChar(handle->from_page_id, 0, src_data,
+                               (int)src_length, wide_str, wide_size);
 
   if (retval == 0)
     return apr_get_os_error();
+
+  /* Theoretically the actual size can be different from the estimated
+     size. */
+  wide_size = retval;
 
   retval = WideCharToMultiByte(handle->to_page_id, 0, wide_str, wide_size,
                                NULL, 0, NULL, NULL);
@@ -237,15 +247,41 @@ svn_subr__win32_xlate_to_stringbuf(svn_subr__win32_xlate_t *handle,
   /* Ensure that buffer is enough to hold result string and termination
      character. */
   *dest = svn_stringbuf_create_ensure(retval + 1, pool);
-  (*dest)->len = retval;
 
   retval = WideCharToMultiByte(handle->to_page_id, 0, wide_str, wide_size,
-                               (*dest)->data, (*dest)->len, NULL, NULL);
+                               (*dest)->data, retval, NULL, NULL);
   if (retval == 0)
     return apr_get_os_error();
 
+  /* The data in svn_stringbuf_t is always NUL terminated string. */
+  (*dest)->data[retval] = '\0';
   (*dest)->len = retval;
   return APR_SUCCESS;
+}
+
+const char *
+svn_subr__win32_xlate_locale_encoding(apr_pool_t *pool)
+{
+  CPINFOEXW cpinfo = { 0 };
+
+  if (GetCPInfoExW(CP_THREAD_ACP, 0, &cpinfo))
+    {
+      DWORD codepage = cpinfo.CodePage;
+      if (codepage == CP_UTF8)
+        {
+          return "UTF-8";
+        }
+      else
+        {
+          return apr_psprintf(pool, "CP%u", (unsigned int)cpinfo.CodePage);
+        }
+    }
+  else
+    {
+      /* Fallback to apr_os_default_encoding() like
+       * apr_os_locale_encoding(). */
+      return apr_os_default_encoding(pool);
+    }
 }
 
 #else  /* !WIN32 */

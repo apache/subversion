@@ -54,6 +54,7 @@ SVN_SERF_LIBS = @SVN_SERF_LIBS@
 SVN_SQLITE_LIBS = @SVN_SQLITE_LIBS@
 SVN_XML_LIBS = @SVN_XML_LIBS@
 SVN_ZLIB_LIBS = @SVN_ZLIB_LIBS@
+SVN_NCURSES_LIBS = @SVN_NCURSES_LIBS@
 SVN_LZ4_LIBS = @SVN_LZ4_LIBS@
 SVN_UTF8PROC_LIBS = @SVN_UTF8PROC_LIBS@
 SVN_MACOS_PLIST_LIBS = @SVN_MACOS_PLIST_LIBS@
@@ -72,6 +73,7 @@ gpg_agent_libdir = @libdir@
 kwallet_libdir = @libdir@
 serf_libdir = @libdir@
 bindir = @bindir@
+tuidir = @bindir@
 includedir = @includedir@
 mandir = @mandir@
 srcdir = @srcdir@
@@ -138,7 +140,7 @@ INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_KWALLET_INCLUDES@ @SVN_MAGIC_INCLUDES@ \
            @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ @SVN_SQLITE_INCLUDES@ \
            @SVN_XML_INCLUDES@ @SVN_ZLIB_INCLUDES@ @SVN_LZ4_INCLUDES@ \
-           @SVN_UTF8PROC_INCLUDES@
+           @SVN_UTF8PROC_INCLUDES@ @SVN_NCURSES_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
@@ -165,12 +167,10 @@ SWIG_RB_TEST_VERBOSE = @SWIG_RB_TEST_VERBOSE@
 SWIG_RB_RI_DATADIR = $(DESTDIR)$(datadir)/ri/$(RUBY_MAJOR).$(RUBY_MINOR)/site
 SWIG_RB_ERRMSG = @SWIG_RB_ERRMSG@
 
-CTYPESGEN = @CTYPESGEN@
-CTYPES_PYTHON_SRC_DIR = $(abs_srcdir)/subversion/bindings/ctypes-python
-
 JAVAHL_JAR=subversion/bindings/javahl/svn-javahl.jar
 JAVAHL_INCLUDES= @JNI_INCLUDES@ -I$(abs_builddir)/subversion/bindings/javahl/include
 
+SVN_BUILD_SVNBROWSE = @SVN_BUILD_SVNBROWSE@
 SVN_BUILD_SVNXX = @SVN_BUILD_SVNXX@
 SVN_BUILD_SVNXX_TESTS = @SVN_BUILD_SVNXX_TESTS@
 SVNXX_INCLUDES = -I$(abs_srcdir)/subversion/bindings/cxx/include
@@ -214,6 +214,10 @@ LT_COMPILE_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX) $(LT_CFL
 LT_COMPILE_CXX_NOWARN = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX_NOWARN) $(LT_CFLAGS)
 # Execute a command that loads libraries from the build dir
 LT_EXECUTE = $(LIBTOOL) $(LTFLAGS) --mode=execute `for f in $(abs_builddir)/subversion/*/*.la; do echo -dlopen $$f; done`
+
+# special compilation for files in optional binary targets
+COMPILE_OPTIONAL = $(LT_COMPILE) -o $@ -c
+COMPILE_OPTIONAL_CXX = $(LT_COMPILE_CXX) -o $@ -c
 
 # special compilation for files destined for mod_dav_svn
 COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CMODEFLAGS) $(CPPFLAGS) $(CFLAGS) $(CMAINTAINERFLAGS) $(LT_CFLAGS) $(APACHE_INCLUDES) $(INCLUDES) -o $@ -c -shared
@@ -323,6 +327,7 @@ INSTALL_GNOME_KEYRING_LIB = $(INSTALL_LIB)
 INSTALL_KWALLET_LIB = $(INSTALL_LIB)
 INSTALL_SERF_LIB = $(INSTALL_LIB)
 INSTALL_BIN = $(LIBTOOL) --mode=install $(INSTALL)
+INSTALL_TUI = $(INSTALL_BIN)
 INSTALL_CONTRIB = $(LIBTOOL) --mode=install $(INSTALL)
 INSTALL_TOOLS = $(LIBTOOL) --mode=install $(INSTALL)
 INSTALL_INCLUDE = $(INSTALL) -m 644
@@ -378,8 +383,6 @@ SWIG_RB_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig/ruby
 JAVAHL_MANIFEST_IN = $(abs_srcdir)/subversion/bindings/javahl/Manifest.in
 JAVAHL_MANIFEST = subversion/bindings/javahl/Manifest
 INSTALL_EXTRA_JAVAHL_JAVA=\
-	sed s/%bundleVersion/$(PACKAGE_VERSION)/ $(JAVAHL_MANIFEST_IN) > $(JAVAHL_MANIFEST); \
-	$(JAR) cfm $(JAVAHL_JAR) $(JAVAHL_MANIFEST) -C subversion/bindings/javahl/classes org; \
 	$(INSTALL_DATA) $(JAVAHL_JAR) $(DESTDIR)$(javahl_javadir);
 
 INSTALL_EXTRA_JAVAHL_LIB=@INSTALL_EXTRA_JAVAHL_LIB@
@@ -457,7 +460,7 @@ fast-clean: doc-clean
           fi                                                         \
         done
 	echo $(CLEAN_FILES) | xargs rm -f --
-	for d in $(CTYPES_PYTHON_SRC_DIR) $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) \
+	for d in $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) \
 		$(abs_srcdir)/build $(top_srcdir)/subversion/tests/cmdline; \
 	do \
 	  test -e $$d || continue; \
@@ -524,20 +527,26 @@ clean-javahl:
 	rm -f $(libsvnjavahl_PATH)/*.lo
 	rm -f $(libsvnjavahl_PATH)/*.o
 
-check-tigris-javahl: javahl-compat
-	@FIX_JAVAHL_LIB@
-	$(TEST_SHLIB_VAR_JAVAHL) \
-	$(JAVA) -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_compat_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.cleanup=$(JAVAHL_CLEANUP)" "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
+JAVAHL_CHECK_FLAGS = @JAVAHL_CHECK_FLAGS@ -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" "-Dtest.cleanup=$(JAVAHL_CLEANUP)" "-Dtest.tests=$(JAVAHL_TESTS)" -classpath "$(JAVAHL_JAR):$(javahl_tests_CLASSPATH)"
 
-check-apache-javahl: javahl
-	@FIX_JAVAHL_LIB@
-	$(TEST_SHLIB_VAR_JAVAHL) \
-	$(JAVA) -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.cleanup=$(JAVAHL_CLEANUP)" "-Dtest.tests=$(JAVAHL_TESTS)" org.apache.subversion.javahl.RunTests
+$(JAVAHL_JAR): $(JAVAHL_MANIFEST_IN) $(javahl_callback_java_OBJECTS) $(javahl_compat_java_OBJECTS) $(javahl_compat_tests_OBJECTS) $(javahl_java_OBJECTS) $(javahl_remote_java_OBJECT) $(javahl_tests_OBJECTS) $(javahl_types_java_OBJECTS) $(javahl_util_java_OBJECTS)
+	sed s/%bundleVersion/$(PACKAGE_VERSION)/ $(JAVAHL_MANIFEST_IN) > $(JAVAHL_MANIFEST) && \
+	$(JAR) cfm $(JAVAHL_JAR) $(JAVAHL_MANIFEST) -C subversion/bindings/javahl/classes org
 
-check-deprecated-authn-javahl: javahl
+check-tigris-javahl: javahl-compat $(JAVAHL_JAR)
 	@FIX_JAVAHL_LIB@
 	$(TEST_SHLIB_VAR_JAVAHL) \
-	$(JAVA) -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.cleanup=$(JAVAHL_CLEANUP)" "-Dtest.tests=$(JAVAHL_TESTS)" "-Dtest.authn.deprecated=true" org.apache.subversion.javahl.RunTests
+	$(JAVA) $(JAVAHL_CHECK_FLAGS) org.tigris.subversion.javahl.RunTests
+
+check-apache-javahl: javahl $(JAVAHL_JAR)
+	@FIX_JAVAHL_LIB@
+	$(TEST_SHLIB_VAR_JAVAHL) \
+	$(JAVA) $(JAVAHL_CHECK_FLAGS) org.apache.subversion.javahl.RunTests
+
+check-deprecated-authn-javahl: javahl $(JAVAHL_JAR)
+	@FIX_JAVAHL_LIB@
+	$(TEST_SHLIB_VAR_JAVAHL) \
+	$(JAVA) $(JAVAHL_CHECK_FLAGS) "-Dtest.authn.deprecated=true" org.apache.subversion.javahl.RunTests
 
 check-javahl: check-apache-javahl
 
@@ -639,6 +648,9 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(VALGRIND_OPTS)" != ""; then                             \
 	    flags="--valgrind-opts $(VALGRIND_OPTS) $$flags";                \
 	  fi;                                                                \
+	  if test "$(CHECK_XML_SCHEMA)" != ""; then                          \
+	    flags="--check-xml-schema $$flags";                              \
+	  fi;                                                                \
 	  LD_LIBRARY_PATH='$(auth_plugin_dirs):$(LD_LIBRARY_PATH)'           \
 	  $(PYTHON) $(top_srcdir)/build/run_tests.py                         \
 	            --config-file $(top_srcdir)/subversion/tests/tests.conf  \
@@ -659,7 +671,7 @@ davcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod mod_dontdothat
 # run make check.
 davautocheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod mod_dontdothat
 	@# Takes MODULE_PATH, USE_HTTPV1 and SVN_PATH_AUTHZ in the environment.
-	@APXS=$(APXS) MAKE=$(MAKE) $(SHELL) $(top_srcdir)/subversion/tests/cmdline/davautocheck.sh
+	@APXS=$(APXS) MAKE=$(MAKE) PYTHON=$(PYTHON) $(SHELL) $(top_srcdir)/subversion/tests/cmdline/davautocheck.sh
 
 # First, run:
 #   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
@@ -876,12 +888,12 @@ install-man:
 install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
-clean-bindings: clean-swig clean-ctypes-python clean-javahl
+clean-bindings: clean-swig clean-javahl
 
 extraclean-bindings: clean-swig extraclean-swig-headers \
 			extraclean-swig-py extraclean-swig-rb \
 			extraclean-swig-pl \
-			clean-ctypes-python clean-javahl \
+			clean-javahl \
 
 clean-swig: clean-swig-headers clean-swig-py clean-swig-rb clean-swig-pl
 	@rm -f .swig_checked
@@ -1022,29 +1034,6 @@ extraclean-swig-rb: clean-swig-rb
 
 install-swig-rb-doc:
 	$(RDOC) --all --ri --op "$(SWIG_RB_RI_DATADIR)" "$(SWIG_RB_SRC_DIR)/svn"
-
-# ctypes-python make targets
-ctypes-python: local-all
-	$(SHELL) $(abs_srcdir)/build/run_ctypesgen.sh "$(LT_EXECUTE)" "$(CPPFLAGS)" "$(EXTRA_CTYPES_LDFLAGS)" "$(PYTHON)" "$(CTYPESGEN)" "$(abs_srcdir)" "$(abs_builddir)" "$(libdir)" "$(SVN_APR_CONFIG)" "$(SVN_APRUTIL_CONFIG)" "$(CPP)"
-
-install-ctypes-python: ctypes-python
-	cd $(CTYPES_PYTHON_SRC_DIR); \
-	  $(PYTHON) setup.py install --prefix="$(DESTDIR)$(prefix)"
-
-check-ctypes-python: ctypes-python
-	cd $(CTYPES_PYTHON_SRC_DIR); \
-	  $(LT_EXECUTE) $(PYTHON) test/run_all.py
-
-# If any of those files exists, run ctypes' 'setup.py clean'.  We don't run
-# it otherwise because it spams stdout+stderr; see r1479326.
-clean-ctypes-python:
-	cd $(CTYPES_PYTHON_SRC_DIR);            \
-	  for b in build csvn/core/functions.py svn_all.py svn_all2.py ; do \
-	    if [ -e "$$b" ] ; then              \
-	      $(PYTHON) setup.py clean --all;   \
-	      break;                            \
-	    fi;                                 \
-	  done
 
 # manually describe a dependency, which we won't otherwise detect
 subversion/libsvn_wc/wc-queries.h: $(abs_srcdir)/subversion/libsvn_wc/wc-metadata.sql

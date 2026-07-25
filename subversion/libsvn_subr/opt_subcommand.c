@@ -491,6 +491,9 @@ svn_opt__print_version_info(const char *pgm_name,
                                      svn_version_ext_runtime_osname(info)));
         }
 
+      SVN_ERR(svn_cmdline_printf(pool, _("  - character encoding: %s\n"),
+                                 svn_version_ext_character_encoding(info)));
+
       libs = svn_version_ext_linked_libs(info);
       if (libs && libs->nelts)
         {

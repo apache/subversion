@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # py:encoding=utf-8
 #
-#  backport_tests.py:  Test backport.pl or backport.py
+#  backport_tests.py:  Test backport.py
 #
 #  Subversion is a tool for revision control.
 #  See https://subversion.apache.org for more information.
@@ -37,12 +37,6 @@
 # ### temporarily until we switch over to backport.py and remove backport.pl.
 # ###
 # ### See svntest.testcase.FunctionTestCase.get_sandbox_name().
-try:
-  run_backport, run_conflicter
-except NameError:
-  raise Exception("Failure: %s should not be run directly, or the wrapper "
-                  "does not define both run_backport() and run_conflicter()"
-                  % __file__)
 
 # General modules
 import contextlib
@@ -50,6 +44,29 @@ import functools
 import os
 import re
 import sys
+
+def run_backport(sbox, error_expected=False):
+  "Run the backport.py auto-merger."
+  args = [
+      '/usr/bin/env',
+      'SVN=' + svntest.main.svn_binary,
+      'python3', os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                              'merge-approved-backports.py')),
+  ]
+  with chdir(sbox.ospath('branch')):
+    return svntest.main.run_command(args[0], error_expected, False, *(args[1:]))
+
+def run_conflicter(sbox, error_expected=False):
+  "Run the backport.py conflicts detector."
+  args = [
+      '/usr/bin/env',
+      'SVN=' + svntest.main.svn_binary,
+      'python3',
+      os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                   'detect-conflicting-backports.py')),
+  ]
+  with chdir(sbox.ospath('branch')):
+    return svntest.main.run_command(args[0], error_expected, False, *(args[1:]))
 
 @contextlib.contextmanager
 def chdir(dir):

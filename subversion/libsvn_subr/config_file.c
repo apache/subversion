@@ -610,7 +610,7 @@ svn_config__sys_config_path(const char **path_p,
   {
     char folder[B_PATH_NAME_LENGTH];
 
-    status_t error = find_directory(B_COMMON_SETTINGS_DIRECTORY, -1, false,
+    status_t error = find_directory(B_SYSTEM_SETTINGS_DIRECTORY, -1, false,
                                     folder, sizeof(folder));
     if (error)
       return SVN_NO_ERROR;
@@ -807,6 +807,7 @@ svn_config__parse_stream(svn_stream_t *stream,
           SVN_ERR(open_section(ctx, &stop));
           if (stop)
             return SVN_NO_ERROR;
+          ++(ctx->line);
           break;
 
         case '#':               /* Comment */

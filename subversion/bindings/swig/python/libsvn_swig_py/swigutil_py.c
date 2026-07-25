@@ -513,7 +513,7 @@ void svn_swig_py_svn_exception(svn_error_t *error_chain)
 
   /* First, we create the exception... */
   svn_swig_py_build_svn_exception(&exc_class, &exc_ob, error_chain);
-  
+
   /* ...then, we raise it.  If got only an exception class but no
      instance, we'll raise the class without an instance. */
   if (exc_class != NULL)
@@ -523,7 +523,7 @@ void svn_swig_py_svn_exception(svn_error_t *error_chain)
           PyErr_SetObject(exc_class, exc_ob);
           Py_DECREF(exc_ob);
         }
-      else 
+      else
         {
           PyErr_SetNone(exc_class);
         }

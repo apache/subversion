@@ -1533,6 +1533,15 @@ def process_output_for_commit(output, error_re_string):
 def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
                           expected_stderr=[],
                           *args):
+  """Like run_and_verify_commit2(), but a log message will always
+  be appended to the command-line arguments."""
+  return run_and_verify_commit2(wc_dir_name, output_tree, status_tree,
+                                False, True, expected_stderr, *args)
+
+def run_and_verify_commit2(wc_dir_name, output_tree, status_tree,
+                           prepend_wc_dir_name=False, append_log_message=True,
+                           expected_stderr=[],
+                           *args):
   """Commit and verify results within working copy WC_DIR_NAME,
   sending ARGS to the commit subcommand.
 
@@ -1540,6 +1549,13 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
   optional STATUS_TREE is given, then 'svn status' output will
   be compared.  (This is a good way to check that revision numbers
   were bumped.)
+
+  Set PREPEND_WC_DIR_NAME to True to always prepend the working copy
+  directory to the argument list, otherwise it will only be used when
+  ARGS are empty.
+
+  Set APPEND_LOG_MESSAGE to False to prevent adding a log message argument
+  if ARGS doesn't contain one.
 
   EXPECTED_STDERR is handled as in run_and_verify_svn()
 
@@ -1549,10 +1565,11 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
     output_tree = output_tree.old_tree()
 
   # Commit.
-  if len(args) == 0:
-    args = (wc_dir_name,)
-  if '-m' not in args and '-F' not in args:
-    args = list(args) + ['-m', 'log msg']
+  args = list(args)
+  if len(args) == 0 or prepend_wc_dir_name:
+    args.insert(0, wc_dir_name)
+  if append_log_message and '-m' not in args and '-F' not in args:
+    args.extend(['-m', 'log msg'])
   exit_code, output, errput = run_and_verify_svn(None, expected_stderr,
                                                  'ci', *args)
 

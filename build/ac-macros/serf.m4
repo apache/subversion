@@ -108,16 +108,29 @@ AC_DEFUN(SVN_SERF_PREFIX_CONFIG,
       save_ldflags="$LDFLAGS"
       LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS(-L$serf_prefix/lib)`"
       AC_CHECK_LIB($serf_major, serf_context_create,[
+        AC_MSG_CHECKING([serf library version])
+        serf_h="$serf_prefix/include/$serf_major/serf.h"
+        serf_M=`$SED -n '/define *SERF_MAJOR_VERSION/p' "$serf_h" | $SED 's/[[^0-9]]*//'`
+        serf_m=`$SED -n '/define *SERF_MINOR_VERSION/p' "$serf_h" | $SED 's/[[^0-9]]*//'`
+        serf_p=`$SED -n '/define *SERF_PATCH_VERSION/p' "$serf_h" | $SED 's/[[^0-9]]*//'`
+        SERF_VERSION=$serf_M.$serf_m.$serf_p
+        AC_MSG_RESULT([$SERF_VERSION])
+        AC_MSG_CHECKING([serf version is suitable])
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
 #include <stdlib.h>
 #include "serf.h"
-]])],[
 #if ! SERF_VERSION_AT_LEAST($serf_check_major, $serf_check_minor, $serf_check_patch)
 #error Serf version too old: need $serf_check_version
 #endif
-], [serf_found=yes], [AC_MSG_WARN([Serf version too old: need $serf_check_version])
-      serf_found=no])], ,
-    $SVN_APRUTIL_LIBS $SVN_APR_LIBS -lz)
+]])],[
+AC_MSG_RESULT([yes])
+serf_found=yes
+],[
+AC_MSG_RESULT([no])
+AC_MSG_WARN([Serf version too old: need $serf_check_version])
+serf_found=no
+])], ,
+    $SVN_APRUTIL_LIBS $SVN_APR_LIBS)
     LDFLAGS="$save_ldflags"])
     CPPFLAGS="$save_cppflags"
     test $serf_found = yes && break
