@@ -148,6 +148,15 @@ svn_wc__serialize_file_external(const char **str,
                                 const svn_opt_revision_t *rev,
                                 apr_pool_t *pool);
 
+/* Non-deprecated wrapper variant of svn_wc_entries_read used implement
+   legacy API functions. See svn_wc_entries_read for a detailed description.
+ */
+svn_error_t *
+svn_wc__entries_read_internal(apr_hash_t **entries,
+                              svn_wc_adm_access_t *adm_access,
+                              svn_boolean_t show_hidden,
+                              apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

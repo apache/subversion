@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl;
@@ -30,13 +28,10 @@ import org.apache.subversion.javahl.types.NodeKind;
  */
 public class CommitItem implements java.io.Serializable
 {
-    // Update the serialVersionUID when there is a incompatible change
-    // made to this class.  See any of the following, depending upon
-    // the Java release.
-    // http://java.sun.com/j2se/1.3/docs/guide/serialization/spec/version.doc7.html
-    // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
-    // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
-    // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
+    // Update the serialVersionUID when there is an incompatible change made to
+    // this class.  See the Java documentation (following link or its counter-
+    // part in your specific Java release) for when a change is incompatible.
+    // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
     private static final long serialVersionUID = 1L;
 
     /**
@@ -70,6 +65,11 @@ public class CommitItem implements java.io.Serializable
     long revision;
 
     /**
+     * the source of the move
+     */
+    String movedFromPath;
+
+    /**
      * This constructor will be only called from the jni code.
      * @param p     path to the commit item
      * @param nk    kind of node (see NodeKind)
@@ -77,8 +77,9 @@ public class CommitItem implements java.io.Serializable
      * @param u     url of the item
      * @param cu    copy source url
      * @param r     revision number
+     * @param mf    move source abspath
      */
-    public CommitItem(String p, NodeKind nk, int sf, String u, String cu, long r)
+    CommitItem(String p, NodeKind nk, int sf, String u, String cu, long r, String mf)
     {
         path = p;
         nodeKind = nk;
@@ -86,6 +87,7 @@ public class CommitItem implements java.io.Serializable
         url = u;
         copyUrl = cu;
         revision = r;
+        movedFromPath = mf;
     }
 
     /**
@@ -148,5 +150,14 @@ public class CommitItem implements java.io.Serializable
     public long getRevision()
     {
         return revision;
+    }
+
+    /**
+     * @return the absolute path of the source of a move.
+     * @since 1.8
+     */
+    public String getMovedFromPath()
+    {
+        return movedFromPath;
     }
 }

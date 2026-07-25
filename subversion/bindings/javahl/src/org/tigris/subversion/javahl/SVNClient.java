@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.tigris.subversion.javahl;
@@ -47,7 +45,7 @@ public class SVNClient implements SVNClientInterface
     private org.apache.subversion.javahl.SVNClient aSVNClient;
 
     /**
-     * Standard empty contructor, builds just the native peer.
+     * Standard empty constructor, builds just the native peer.
      */
     public SVNClient()
     {
@@ -73,7 +71,7 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
-     * slot for the adress of the native peer. The JNI code is the only user
+     * slot for the address of the native peer. The JNI code is the only user
      * of this member
      */
     protected long cppAddr;
@@ -377,7 +375,10 @@ public class SVNClient implements SVNClientInterface
 
         public boolean userAllowedSave()
         {
-            return false;
+            if (oldPrompt3 != null)
+                return oldPrompt3.userAllowedSave();
+            else
+                return false;
         }
 
         public String askQuestion(String realm, String question,
@@ -756,14 +757,14 @@ public class SVNClient implements SVNClientInterface
             }
 
             public String getLogMessage(
-                Set<org.apache.subversion.javahl.CommitItem> elementsToBeCommited)
+                Set<org.apache.subversion.javahl.CommitItem> elementsToBeCommitted)
             {
                 CommitItem[] aElements =
-                        new CommitItem[elementsToBeCommited.size()];
+                        new CommitItem[elementsToBeCommitted.size()];
 
                 int i = 0;
                 for (org.apache.subversion.javahl.CommitItem item
-                                                        : elementsToBeCommited)
+                                                        : elementsToBeCommitted)
                 {
                     aElements[i] = new CommitItem(item);
                     i++;
@@ -795,6 +796,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
+    @SuppressWarnings("unchecked")
     public void remove(String[] paths, String message, boolean force,
                        boolean keepLocal, Map revpropTable)
             throws ClientException
@@ -964,6 +966,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
+    @SuppressWarnings("unchecked")
     public long commit(String[] paths, String message, int depth,
                        boolean noUnlock, boolean keepChangelist,
                        String[] changelists, Map revpropTable)
@@ -998,6 +1001,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.7
      */
+    @SuppressWarnings("unchecked")
     public void copy(CopySource[] sources, String destPath, String message,
                      boolean copyAsChild, boolean makeParents,
                      boolean ignoreExternals, Map revpropTable)
@@ -1031,6 +1035,7 @@ public class SVNClient implements SVNClientInterface
      *                              boolean, boolean, Map)} instead.
      * @since 1.5
      */
+    @SuppressWarnings("unchecked")
     public void copy(CopySource[] sources, String destPath, String message,
                      boolean copyAsChild, boolean makeParents,
                      Map revpropTable)
@@ -1057,6 +1062,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
+    @SuppressWarnings("unchecked")
     public void move(String[] srcPaths, String destPath, String message,
                      boolean force, boolean moveAsChild,
                      boolean makeParents, Map revpropTable)
@@ -1106,6 +1112,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
+    @SuppressWarnings("unchecked")
     public void mkdir(String[] paths, String message,
                       boolean makeParents, Map revpropTable)
             throws ClientException
@@ -1191,6 +1198,7 @@ public class SVNClient implements SVNClientInterface
      *                                  boolean, boolean, int, String)} instead.
      * @since 1.0
      */
+    @Deprecated
     public long doExport(String srcPath, String destPath,
                                 Revision revision, boolean force)
             throws ClientException
@@ -1204,6 +1212,7 @@ public class SVNClient implements SVNClientInterface
      *                                  boolean, boolean, int, String)} instead.
      * @since 1.2
      */
+    @Deprecated
     public long doExport(String srcPath, String destPath, Revision revision,
                          Revision pegRevision, boolean force,
                          boolean ignoreExternals, boolean recurse,
@@ -1242,6 +1251,7 @@ public class SVNClient implements SVNClientInterface
      *             instead.
      * @since 1.0
      */
+    @Deprecated
     public long doSwitch(String path, String url, Revision revision,
                          boolean recurse)
             throws ClientException
@@ -1256,6 +1266,7 @@ public class SVNClient implements SVNClientInterface
      *                                  boolean)} instead.
      * @since 1.5
      */
+    @Deprecated
     public long doSwitch(String path, String url, Revision revision,
                          Revision pegRevision, int depth,
                          boolean depthIsSticky, boolean ignoreExternals,
@@ -1306,6 +1317,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
+    @SuppressWarnings("unchecked")
     public void doImport(String path, String url, String message,
                          int depth, boolean noIgnore,
                          boolean ignoreUnknownNodeTypes, Map revpropTable)
@@ -1349,6 +1361,7 @@ public class SVNClient implements SVNClientInterface
      *                               boolean, boolean)} instead.
      * @since 1.0
      */
+    @Deprecated
     public void merge(String path1, Revision revision1, String path2,
                       Revision revision2, String localPath,
                       boolean force, boolean recurse)
@@ -1364,6 +1377,7 @@ public class SVNClient implements SVNClientInterface
      *                               boolean, boolean)} instead.
      * @since 1.2
      */
+    @Deprecated
     public void merge(String path1, Revision revision1, String path2,
                       Revision revision2, String localPath, boolean force,
                       boolean recurse, boolean ignoreAncestry, boolean dryRun)
@@ -1888,6 +1902,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
+    @SuppressWarnings("unchecked")
     public void propertySet(String path, String name, String value, int depth,
                             String[] changelists, boolean force,
                             Map revpropTable)
@@ -2407,18 +2422,18 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-        	final List<org.apache.subversion.javahl.types.Info> infos =
-        		new ArrayList<org.apache.subversion.javahl.types.Info>();
-        	aSVNClient.info2(path,
-        					org.apache.subversion.javahl.types.Revision.HEAD,
-        					org.apache.subversion.javahl.types.Revision.HEAD,
-        					org.apache.subversion.javahl.types.Depth.empty,
-        				    null, new org.apache.subversion.javahl.callback.InfoCallback()
-        	{
-				public void singleInfo(org.apache.subversion.javahl.types.Info info) {
-					infos.add(info);
-				}
-        	});
+            final List<org.apache.subversion.javahl.types.Info> infos =
+                new ArrayList<org.apache.subversion.javahl.types.Info>();
+            aSVNClient.info2(path,
+                            org.apache.subversion.javahl.types.Revision.HEAD,
+                            org.apache.subversion.javahl.types.Revision.HEAD,
+                            org.apache.subversion.javahl.types.Depth.empty,
+                            null, new org.apache.subversion.javahl.callback.InfoCallback()
+            {
+                public void singleInfo(org.apache.subversion.javahl.types.Info info) {
+                    infos.add(info);
+                }
+            });
             return new Info(infos.get(0));
         }
         catch (org.apache.subversion.javahl.ClientException ex)

@@ -1,0 +1,50 @@
+# .clang-format       : clang format rules
+#
+# This file configures clang format rules. This file should be automatically
+# read by Visual Studio and other IDEs, when the project gets opened.
+#
+# See clang docs for more info:
+# https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+#
+######################################################################
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
+######################################################################
+
+# From the community guidelines:
+#
+# > Subversion uses ANSI C, and follows the GNU coding standards...
+BasedOnStyle: GNU
+
+# It seems to be simpler to follow our code-style when tab inserts only
+# two spaces
+IndentWidth: 2
+
+# Limit the size of the lines.
+ColumnLimit: 79
+
+SpaceBeforeParens: ControlStatements
+
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+
+BinPackArguments: true
+BinPackParameters: true
+
+PointerAlignment: Right
+AlignAfterOpenBracket: Align
+BreakBeforeBinaryOperators: false

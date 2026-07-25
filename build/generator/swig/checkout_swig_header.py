@@ -23,13 +23,12 @@
 # Checkout files from the SWIG library into Subversion's proxy directory
 #
 
-import sys, os, re, fileinput, shutil
+import sys, os, re, fileinput, shutil, subprocess
 if __name__ == "__main__":
   parent_dir = os.path.dirname(os.path.abspath(os.path.dirname(sys.argv[0])))
   sys.path[0:0] = [ parent_dir, os.path.dirname(parent_dir) ]
 import generator.swig
 from gen_base import build_path_splitfile, build_path_join
-from generator.util.executable import run
 
 class Generator(generator.swig.Generator):
 
@@ -63,7 +62,7 @@ class Generator(generator.swig.Generator):
     elif self.version() == (1, 3, 24):
       shutil.copy(build_path_join(self.swig_libdir, path), out)
     else:
-      run("%s -o %s -co %s" % (self.swig_path, out, path))
+      subprocess.check_call([self.swig_path, "-o", out, "-co", path])
 
   def _skip_checkout(self, path):
     """Should we skip this checkout?"""

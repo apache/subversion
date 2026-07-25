@@ -24,6 +24,7 @@
 
 #include <apr_hash.h>
 
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_fs.h"
@@ -86,16 +87,8 @@ svn_fs_access_add_lock_token2(svn_fs_access_t *access_ctx,
                               const char *path,
                               const char *token)
 {
-  apr_hash_set(access_ctx->lock_tokens,
-               token, APR_HASH_KEY_STRING, path);
+  svn_hash_sets(access_ctx->lock_tokens, token, path);
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
-                             const char *token)
-{
-  return svn_fs_access_add_lock_token2(access_ctx, (const char *) 1, token);
 }
 
 apr_hash_t *

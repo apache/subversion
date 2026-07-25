@@ -22,13 +22,13 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.7\n"
+"Project-Id-Version: subversion 1.9\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
 "POT-Creation-Date: 2010-11-12 08:49-0600\n"
 "PO-Revision-Date: 2004-09-12 22:05+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Traditional Chinese <dev@subversion.tigris.org>\n"
-"Language: \n"
+"Language: zh_TW\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -5927,7 +5927,7 @@ msgid ""
 "Copyright (C) 2010 The Apache Software Foundation.\n"
 "This software consists of contributions made by many people;\n"
 "see the NOTICE file for more information.\n"
-"Subversion is open source software, see http://subversion.apache.org/\n"
+"Subversion is open source software, see https://subversion.apache.org/\n"
 "\n"
 msgstr ""
 
@@ -7180,7 +7180,7 @@ msgid ""
 "This client is too old to work with the working copy at\n"
 "'%s' (format %d).\n"
 "You need to get a newer Subversion client. For more details, see\n"
-"  http://subversion.apache.org/faq.html#working-copy-format-change\n"
+"  https://subversion.apache.org/faq.html#working-copy-format-change\n"
 msgstr ""
 
 #: ../libsvn_wc/wc_db_pdh.c:265
@@ -7516,7 +7516,7 @@ msgstr ""
 #, fuzzy
 msgid ""
 "Subversion is a tool for version control.\n"
-"For additional information, see http://subversion.apache.org/\n"
+"For additional information, see https://subversion.apache.org/\n"
 msgstr ""
 "Subversion 是個版本控制系統的工具.\n"
 "欲取得詳細資料, 請參考 http://subversion.tigris.org/\n"
@@ -10123,13 +10123,11 @@ msgid "local %s, incoming %s upon %s"
 msgstr ""
 
 #: ../svn/util.c:74
-#, fuzzy, c-format
+#, c-format
 msgid ""
-"\n"
 "Committed revision %ld%s.\n"
 msgstr ""
-"\n"
-"送交修訂版 %ld.\n"
+"送交修訂版 %ld%s.\n"
 
 #: ../svn/util.c:78
 msgid " (the answer to life, the universe, and everything)"
@@ -12810,7 +12808,7 @@ msgstr ""
 #~ "                                '{' DATE '}' 該日開始的修訂版\n"
 #~ "                                'HEAD'       檔案庫最新版本\n"
 #~ "                                'BASE'       該項目工作複本的基礎修訂版\n"
-#~ "                                'COMMITED'   位於或早於 BASE 的最後送交\n"
+#~ "                                'COMMITTED'  位於或早於 BASE 的最後送交\n"
 #~ "                                'PREV'       COMMITTED 之前的修訂版"
 
 #~ msgid "Error reading administrative log file in '%s'"

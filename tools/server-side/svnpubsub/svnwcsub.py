@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# encoding: UTF-8
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -29,34 +30,68 @@
 # See svnwcsub.conf for more information on its contents.
 #
 
+# TODO:
+# - bulk update at startup time to avoid backlog warnings
+# - fold BigDoEverythingClasss ("BDEC") into Daemon
+# - fold WorkingCopy._get_match() into __init__
+# - remove wc_ready(). assume all WorkingCopy instances are usable.
+#   place the instances into .watch at creation. the .update_applies()
+#   just returns if the wc is disabled (eg. could not find wc dir)
+# - figure out way to avoid the ASF-specific PRODUCTION_RE_FILTER
+#   (a base path exclusion list should work for the ASF)
+# - add support for SIGHUP to reread the config and reinitialize working copies
+# - joes will write documentation for svnpubsub as these items become fulfilled
+# - make LOGLEVEL configurable
+
+import errno
 import subprocess
 import threading
 import sys
+import stat
 import os
 import re
-import ConfigParser
+import posixpath
+try:
+  import ConfigParser
+except ImportError:
+  import configparser as ConfigParser
 import time
 import logging.handlers
-import Queue
+try:
+  import Queue
+except ImportError:
+  import queue as Queue
 import optparse
 import functools
-import urlparse
+try:
+  import urlparse
+except ImportError:
+  import urllib.parse as urlparse
 
 import daemonize
 import svnpubsub.client
+import svnpubsub.util
 
-# check_output() is only available in Python 2.7. Allow us to run with
-# earlier versions
-try:
-    check_output = subprocess.check_output
-except AttributeError:
-    def check_output(args, env):  # note: we only use these two args
-        pipe = subprocess.Popen(args, stdout=subprocess.PIPE, env=env)
-        output, _ = pipe.communicate()
-        if pipe.returncode:
-            raise subprocess.CalledProcessError(pipe.returncode, args)
-        return output
-
+assert hasattr(subprocess, 'check_call')
+def check_call(*args, **kwds):
+    """Wrapper around subprocess.check_call() that logs stderr upon failure,
+    with an optional list of exit codes to consider non-failure."""
+    assert 'stderr' not in kwds
+    if '__okayexits' in kwds:
+        __okayexits = kwds['__okayexits']
+        del kwds['__okayexits']
+    else:
+        __okayexits = set([0]) # EXIT_SUCCESS
+    kwds.update(stderr=subprocess.PIPE)
+    pipe = subprocess.Popen(*args, **kwds)
+    output, errput = pipe.communicate()
+    if pipe.returncode not in __okayexits:
+        cmd = args[0] if len(args) else kwds.get('args', '(no command)')
+        # TODO: log stdout too?
+        logging.error('Command failed: returncode=%d command=%r stderr=%r',
+                      pipe.returncode, cmd, errput)
+        raise subprocess.CalledProcessError(pipe.returncode, args)
+    return pipe.returncode # is EXIT_OK
 
 ### note: this runs synchronously. within the current Twisted environment,
 ### it is called from ._get_match() which is run on a thread so it won't
@@ -64,13 +99,29 @@ except AttributeError:
 def svn_info(svnbin, env, path):
     "Run 'svn info' on the target path, returning a dict of info data."
     args = [svnbin, "info", "--non-interactive", "--", path]
-    output = check_output(args, env=env).strip()
+    output = svnpubsub.util.check_output(args, env=env).strip()
     info = { }
     for line in output.split('\n'):
         idx = line.index(':')
         info[line[:idx]] = line[idx+1:].strip()
     return info
 
+try:
+    import glob
+    glob.iglob
+    def is_emptydir(path):
+        # ### If the directory contains only dotfile children, this will readdir()
+        # ### the entire directory.  But os.readdir() is not exposed to us...
+        for x in glob.iglob('%s/*' % path):
+            return False
+        for x in glob.iglob('%s/.*' % path):
+            return False
+        return True
+except (ImportError, AttributeError):
+    # Python ≤2.4
+    def is_emptydir(path):
+        # This will read the entire directory list to memory.
+        return not os.listdir(path)
 
 class WorkingCopy(object):
     def __init__(self, bdec, path, url):
@@ -106,14 +157,16 @@ class WorkingCopy(object):
 
     def _get_match(self, svnbin, env):
         ### quick little hack to auto-checkout missing working copies
-        if not os.path.isdir(self.path):
+        dotsvn = os.path.join(self.path, ".svn")
+        if not os.path.isdir(dotsvn) or is_emptydir(dotsvn):
             logging.info("autopopulate %s from %s" % (self.path, self.url))
-            subprocess.check_call([svnbin, 'co', '-q',
-                                   '--non-interactive',
-                                   '--config-option',
-                                   'config:miscellany:use-commit-times=on',
-                                   '--', self.url, self.path],
-                                  env=env)
+            check_call([svnbin, 'co', '-q',
+                        '--force',
+                        '--non-interactive',
+                        '--config-option',
+                        'config:miscellany:use-commit-times=on',
+                        '--', self.url, self.path],
+                       env=env)
 
         # Fetch the info for matching dirs_changed against this WC
         info = svn_info(svnbin, env, self.path)
@@ -131,14 +184,10 @@ class BigDoEverythingClasss(object):
         self.svnbin = config.get_value('svnbin')
         self.env = config.get_env()
         self.tracking = config.get_track()
-        self.worker = BackgroundWorker(self.svnbin, self.env)
+        self.hook = config.get_optional_value('hook')
+        self.streams = config.get_value('streams').split()
+        self.worker = BackgroundWorker(self.svnbin, self.env, self.hook)
         self.watch = [ ]
-
-        self.hostports = [ ]
-        ### switch from URLs in the config to just host:port pairs
-        for url in config.get_value('streams').split():
-            parsed = urlparse.urlparse(url.strip())
-            self.hostports.append((parsed.hostname, parsed.port))
 
     def start(self):
         for path, url in self.tracking.items():
@@ -150,20 +199,24 @@ class BigDoEverythingClasss(object):
         # Add it to our watchers, and trigger an svn update.
         logging.info("Watching WC at %s <-> %s" % (wc.path, wc.url))
         self.watch.append(wc)
-        self.worker.add_work(OP_UPDATE, wc)
+        self.worker.add_work(OP_BOOT, wc)
 
     def _normalize_path(self, path):
         if path[0] != '/':
             return "/" + path
-        return os.path.abspath(path)
+        return posixpath.abspath(path)
 
-    def commit(self, host, port, rev):
-        logging.info("COMMIT r%d (%d paths) from %s:%d"
-                     % (rev.rev, len(rev.dirs_changed), host, port))
+    def commit(self, url, commit):
+        if commit.type != 'svn' or commit.format != 1:
+            logging.info("SKIP unknown commit format (%s.%d)",
+                         commit.type, commit.format)
+            return
+        logging.info("COMMIT r%d (%d paths) from %s"
+                     % (commit.id, len(commit.changed), url))
 
-        paths = map(self._normalize_path, rev.dirs_changed)
+        paths = map(self._normalize_path, commit.changed)
         if len(paths):
-            pre = os.path.commonprefix(paths)
+            pre = posixpath.commonprefix(paths)
             if pre == "/websites/":
                 # special case for svnmucc "dynamic content" buildbot commits
                 # just take the first production path to avoid updating all cms working copies
@@ -174,19 +227,20 @@ class BigDoEverythingClasss(object):
                         break
 
             #print "Common Prefix: %s" % (pre)
-            wcs = [wc for wc in self.watch if wc.update_applies(rev.uuid, pre)]
-            logging.info("Updating %d WC for r%d" % (len(wcs), rev.rev))
+            wcs = [wc for wc in self.watch if wc.update_applies(commit.repository, pre)]
+            logging.info("Updating %d WC for r%d" % (len(wcs), commit.id))
             for wc in wcs:
                 self.worker.add_work(OP_UPDATE, wc)
 
 
 # Start logging warnings if the work backlog reaches this many items
 BACKLOG_TOO_HIGH = 20
+OP_BOOT = 'boot'
 OP_UPDATE = 'update'
 OP_CLEANUP = 'cleanup'
 
 class BackgroundWorker(threading.Thread):
-    def __init__(self, svnbin, env):
+    def __init__(self, svnbin, env, hook):
         threading.Thread.__init__(self)
 
         # The main thread/process should not wait for this thread to exit.
@@ -195,20 +249,28 @@ class BackgroundWorker(threading.Thread):
 
         self.svnbin = svnbin
         self.env = env
+        self.hook = hook
         self.q = Queue.Queue()
 
         self.has_started = False
 
     def run(self):
         while True:
-            if self.q.qsize() > BACKLOG_TOO_HIGH:
-                logging.warn('worker backlog is at %d', self.q.qsize())
-
             # This will block until something arrives
             operation, wc = self.q.get()
+
+            # Warn if the queue is too long.
+            # (Note: the other thread might have added entries to self.q
+            # after the .get() and before the .qsize().)
+            qsize = self.q.qsize()+1
+            if operation != OP_BOOT and qsize > BACKLOG_TOO_HIGH:
+                logging.warn('worker backlog is at %d', qsize)
+
             try:
                 if operation == OP_UPDATE:
                     self._update(wc)
+                elif operation == OP_BOOT:
+                    self._update(wc, boot=True)
                 elif operation == OP_CLEANUP:
                     self._cleanup(wc)
                 else:
@@ -228,7 +290,7 @@ class BackgroundWorker(threading.Thread):
 
         self.q.put((operation, wc))
 
-    def _update(self, wc):
+    def _update(self, wc, boot=False):
         "Update the specified working copy."
 
         # For giggles, let's clean up the working copy in case something
@@ -237,21 +299,48 @@ class BackgroundWorker(threading.Thread):
 
         logging.info("updating: %s", wc.path)
 
+        ## Run the hook
+        HEAD = svn_info(self.svnbin, self.env, wc.url)['Revision']
+        if self.hook:
+            hook_mode = ['pre-update', 'pre-boot'][boot]
+            logging.info('running hook: %s at %s',
+                         wc.path, hook_mode)
+            args = [self.hook, hook_mode, wc.path, HEAD, wc.url]
+            rc = check_call(args, env=self.env, __okayexits=[0, 1])
+            if rc == 1:
+                # TODO: log stderr
+                logging.warn('hook denied update of %s at %s',
+                             wc.path, hook_mode)
+                return
+            del rc
+
         ### we need to move some of these args into the config. these are
         ### still specific to the ASF setup.
-        args = [self.svnbin, 'update',
+        args = [self.svnbin, 'switch',
                 '--quiet',
                 '--non-interactive',
                 '--trust-server-cert',
                 '--ignore-externals',
                 '--config-option',
                 'config:miscellany:use-commit-times=on',
+                '--',
+                wc.url + '@' + HEAD,
                 wc.path]
-        subprocess.check_call(args, env=self.env)
+        check_call(args, env=self.env)
 
         ### check the loglevel before running 'svn info'?
         info = svn_info(self.svnbin, self.env, wc.path)
+        assert info['Revision'] == HEAD
         logging.info("updated: %s now at r%s", wc.path, info['Revision'])
+
+        ## Run the hook
+        if self.hook:
+            hook_mode = ['post-update', 'boot'][boot]
+            logging.info('running hook: %s at revision %s due to %s',
+                         wc.path, info['Revision'], hook_mode)
+            args = [self.hook, hook_mode,
+                    wc.path, info['Revision'], wc.url]
+            check_call(args, env=self.env)
 
     def _cleanup(self, wc):
         "Run a cleanup on the specified working copy."
@@ -264,7 +353,7 @@ class BackgroundWorker(threading.Thread):
                 '--config-option',
                 'config:miscellany:use-commit-times=on',
                 wc.path]
-        subprocess.check_call(args, env=self.env)
+        check_call(args, env=self.env)
 
 
 class ReloadableConfig(ConfigParser.SafeConfigParser):
@@ -290,6 +379,12 @@ class ReloadableConfig(ConfigParser.SafeConfigParser):
 
     def get_value(self, which):
         return self.get(ConfigParser.DEFAULTSECT, which)
+
+    def get_optional_value(self, which, default=None):
+        if self.has_option(ConfigParser.DEFAULTSECT, which):
+            return self.get(ConfigParser.DEFAULTSECT, which)
+        else:
+            return default
 
     def get_env(self):
         env = os.environ.copy()
@@ -336,18 +431,18 @@ class Daemon(daemonize.Daemon):
         # Start the BDEC (on the main thread), then start the client
         self.bdec.start()
 
-        mc = svnpubsub.client.MultiClient(self.bdec.hostports,
+        mc = svnpubsub.client.MultiClient(self.bdec.streams,
                                           self.bdec.commit,
                                           self._event)
         mc.run_forever()
 
-    def _event(self, host, port, event_name):
+    def _event(self, url, event_name, event_arg):
         if event_name == 'error':
-            logging.exception('from %s:%s', host, port)
+            logging.exception('from %s', url)
         elif event_name == 'ping':
-            logging.debug('ping from %s:%s', host, port)
+            logging.debug('ping from %s', url)
         else:
-            logging.info('"%s" from %s:%s', event_name, host, port)
+            logging.info('"%s" from %s', event_name, url)
 
 
 def prepare_logging(logfile):
@@ -369,7 +464,7 @@ def prepare_logging(logfile):
     # Apply the handler to the root logger
     root = logging.getLogger()
     root.addHandler(handler)
-    
+
     ### use logging.INFO for now. switch to cmdline option or a config?
     root.setLevel(logging.INFO)
 
@@ -382,7 +477,15 @@ def handle_options(options):
     # Otherwise, we should write this (foreground) PID into the file.
     if options.pidfile and not options.daemon:
         pid = os.getpid()
-        open(options.pidfile, 'w').write('%s\n' % pid)
+        # Be wary of symlink attacks
+        try:
+            os.remove(options.pidfile)
+        except OSError:
+            pass
+        fd = os.open(options.pidfile, os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                     stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+        os.write(fd, '%d\n' % pid)
+        os.close(fd)
         logging.info('pid %d written to %s', pid, options.pidfile)
 
     if options.gid:
@@ -442,7 +545,8 @@ def main(args):
 
     # We manage the logfile ourselves (along with possible rotation). The
     # daemon process can just drop stdout/stderr into /dev/null.
-    d = Daemon('/dev/null', options.pidfile, options.umask, bdec)
+    d = Daemon('/dev/null', os.path.abspath(options.pidfile),
+               options.umask, bdec)
     if options.daemon:
         # Daemonize the process and call sys.exit() with appropriate code
         d.daemonize_exit()

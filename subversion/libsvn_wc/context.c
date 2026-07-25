@@ -65,10 +65,12 @@ svn_wc_context_create(svn_wc_context_t **wc_ctx,
 {
   svn_wc_context_t *ctx = apr_pcalloc(result_pool, sizeof(*ctx));
 
-  /* Create the state_pool, and open up a wc_db in it. */
+  /* Create the state_pool, and open up a wc_db in it.
+   * Since config contains a private mutable member but C doesn't support
+   * we need to make it writable */
   ctx->state_pool = result_pool;
-  SVN_ERR(svn_wc__db_open(&ctx->db, config,
-                          TRUE, TRUE, ctx->state_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_open(&ctx->db, (svn_config_t *)config,
+                          FALSE, TRUE, ctx->state_pool, scratch_pool));
   ctx->close_db_on_destroy = TRUE;
 
   apr_pool_cleanup_register(result_pool, ctx, close_ctx_apr,

@@ -37,14 +37,23 @@
 
 #include "svn_private_config.h"
 #include "private/svn_utf_private.h"
+#include "private/svn_cmdline_private.h"
 #include "private/svn_dep_compat.h"
 
 #if APR_HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
 #endif
 
+#if APR_HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #include <fcntl.h>
 #include <stdlib.h>
+
+#if defined(HAVE_TERMIOS_H)
+#include <termios.h>
+#endif
 
 /* Baton for functions in this file which implement svn_diff_output_fns_t. */
 struct file_merge_baton {
@@ -52,7 +61,7 @@ struct file_merge_baton {
   apr_file_t *original_file;
   apr_file_t *modified_file;
   apr_file_t *latest_file;
-  
+
   /* Counters to keep track of the current line in each file. */
   svn_linenum_t current_line_original;
   svn_linenum_t current_line_modified;
@@ -70,12 +79,12 @@ struct file_merge_baton {
   /* The client configuration hash. */
   apr_hash_t *config;
 
-  /* Wether the merge should be aborted. */
+  /* Whether the merge should be aborted. */
   svn_boolean_t abort_merge;
 
   /* Pool for temporary allocations. */
   apr_pool_t *scratch_pool;
-} file_merge_baton;
+};
 
 /* Copy LEN lines from SOURCE_FILE to the MERGED_FILE, starting at
  * line START. The CURRENT_LINE is the current line in the source file.
@@ -302,15 +311,18 @@ static int
 get_term_width(void)
 {
   char *columns_env;
-#ifdef TIOCGWINSZ	
+#ifdef TIOCGWINSZ
   int fd;
 
   fd = open("/dev/tty", O_RDONLY, 0);
   if (fd != -1)
     {
       struct winsize ws;
+      int error;
 
-      if (ioctl(fd, TIOCGWINSZ, &ws) != -1)
+      error = ioctl(fd, TIOCGWINSZ, &ws);
+      close(fd);
+      if (error != -1)
         {
           if (ws.ws_col < 80)
             return 80;
@@ -358,13 +370,13 @@ static const char *
 prepare_line_for_display(const char *line, apr_pool_t *pool)
 {
   svn_stringbuf_t *buf = svn_stringbuf_create(line, pool);
-  int width;
-  int line_width = LINE_DISPLAY_WIDTH;
+  size_t width;
+  size_t line_width = LINE_DISPLAY_WIDTH;
   apr_pool_t *iterpool;
 
   /* Trim EOL. */
   if (buf->len >= 2 &&
-      buf->data[buf->len - 2] == '\r' && 
+      buf->data[buf->len - 2] == '\r' &&
       buf->data[buf->len - 1] == '\n')
     svn_stringbuf_chop(buf, 2);
   else if (buf->len >= 1 &&
@@ -482,10 +494,10 @@ edit_chunk(apr_array_header_t **merged_chunk,
         return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL,
                                 _("Could not write data to temporary file"));
     }
-  SVN_ERR(svn_io_file_flush_to_disk(temp_file, scratch_pool));
+  SVN_ERR(svn_io_file_flush(temp_file, scratch_pool));
 
-  err = svn_cl__edit_file_externally(temp_file_name, editor_cmd,
-                                     config, scratch_pool);
+  err = svn_cmdline__edit_file_externally(temp_file_name, editor_cmd,
+                                          config, scratch_pool);
   if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR))
     {
       svn_error_t *root_err = svn_error_root_cause(err);
@@ -583,13 +595,13 @@ merge_chunks(apr_array_header_t **merged_chunk,
                                                   : chunk2->nelts;
   *abort_merge = FALSE;
 
-  /* 
+  /*
    * Prepare the selection prompt.
    */
 
   prompt = svn_stringbuf_create(
              apr_psprintf(scratch_pool, "%s\n%s|%s\n%s",
-                          _("Conflicting section found during merge."),
+                          _("Conflicting section found during merge:"),
                           prepare_line_for_display(
                             apr_psprintf(scratch_pool,
                                          _("(1) their version (at line %lu)"),
@@ -637,7 +649,7 @@ merge_chunks(apr_array_header_t **merged_chunk,
         }
       else
         line2 = prepare_line_for_display("", iterpool);
-        
+
       prompt_line = apr_psprintf(iterpool, "%s|%s\n", line1, line2);
 
       svn_stringbuf_appendcstr(prompt, prompt_line);
@@ -647,11 +659,13 @@ merge_chunks(apr_array_header_t **merged_chunk,
   svn_stringbuf_appendcstr(
     prompt,
     _("Select: (1) use their version, (2) use your version,\n"
+      "        (12) their version first, then yours,\n"
+      "        (21) your version first, then theirs,\n"
       "        (e1) edit their version and use the result,\n"
       "        (e2) edit your version and use the result,\n"
       "        (eb) edit both versions and use the result,\n"
       "        (p) postpone this conflicting section leaving conflict markers,\n"
-      "        (a) abort entire merge and return to main menu: "));
+      "        (a) abort file merge and return to main menu: "));
 
   /* Now let's see what the user wants to do with this conflict. */
   while (TRUE)
@@ -669,6 +683,24 @@ merge_chunks(apr_array_header_t **merged_chunk,
       else if (strcmp(answer, "2") == 0)
         {
           *merged_chunk = chunk2;
+          break;
+        }
+      if (strcmp(answer, "12") == 0)
+        {
+          *merged_chunk = apr_array_make(result_pool,
+                                         chunk1->nelts + chunk2->nelts,
+                                         sizeof(svn_stringbuf_t *));
+          apr_array_cat(*merged_chunk, chunk1);
+          apr_array_cat(*merged_chunk, chunk2);
+          break;
+        }
+      if (strcmp(answer, "21") == 0)
+        {
+          *merged_chunk = apr_array_make(result_pool,
+                                         chunk1->nelts + chunk2->nelts,
+                                         sizeof(svn_stringbuf_t *));
+          apr_array_cat(*merged_chunk, chunk2);
+          apr_array_cat(*merged_chunk, chunk1);
           break;
         }
       else if (strcmp(answer, "p") == 0)
@@ -825,14 +857,17 @@ static svn_diff_output_fns_t file_merge_diff_output_fns = {
 };
 
 svn_error_t *
-svn_cl__merge_file(const char *base_path,
+svn_cl__merge_file(svn_boolean_t *remains_in_conflict,
+                   const char *base_path,
                    const char *their_path,
                    const char *my_path,
                    const char *merged_path,
                    const char *wc_path,
+                   const char *path_prefix,
                    const char *editor_cmd,
                    apr_hash_t *config,
-                   svn_boolean_t *remains_in_conflict,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *scratch_pool)
 {
   svn_diff_t *diff;
@@ -843,15 +878,30 @@ svn_cl__merge_file(const char *base_path,
   apr_file_t *merged_file;
   const char *merged_file_name;
   struct file_merge_baton fmb;
+  svn_boolean_t executable;
+  const char *merged_path_local_style;
+  const char *merged_rel_path;
+  const char *wc_path_local_style;
+  const char *wc_rel_path = svn_dirent_skip_ancestor(path_prefix, wc_path);
+
+  /* PATH_PREFIX may not be an ancestor of WC_PATH, just use the
+     full WC_PATH in that case. */
+  if (wc_rel_path)
+    wc_path_local_style = svn_dirent_local_style(wc_rel_path, scratch_pool);
+  else
+    wc_path_local_style = svn_dirent_local_style(wc_path, scratch_pool);
+
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Merging '%s'.\n"),
+                             wc_path_local_style));
 
   SVN_ERR(svn_io_file_open(&original_file, base_path,
-                           APR_READ|APR_BUFFERED|APR_BINARY,
+                           APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, scratch_pool));
   SVN_ERR(svn_io_file_open(&modified_file, their_path,
-                           APR_READ|APR_BUFFERED|APR_BINARY,
+                           APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, scratch_pool));
   SVN_ERR(svn_io_file_open(&latest_file, my_path,
-                           APR_READ|APR_BUFFERED|APR_BINARY,
+                           APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, scratch_pool));
   SVN_ERR(svn_io_open_unique_file3(&merged_file, &merged_file_name,
                                    NULL, svn_io_file_del_none,
@@ -874,30 +924,63 @@ svn_cl__merge_file(const char *base_path,
   fmb.abort_merge = FALSE;
   fmb.scratch_pool = scratch_pool;
 
-  SVN_ERR(svn_diff_output(diff, &fmb, &file_merge_diff_output_fns));
+  SVN_ERR(svn_diff_output2(diff, &fmb, &file_merge_diff_output_fns,
+                           cancel_func, cancel_baton));
 
   SVN_ERR(svn_io_file_close(original_file, scratch_pool));
   SVN_ERR(svn_io_file_close(modified_file, scratch_pool));
   SVN_ERR(svn_io_file_close(latest_file, scratch_pool));
   SVN_ERR(svn_io_file_close(merged_file, scratch_pool));
 
+  /* Start out assuming that conflicts remain. */
   if (remains_in_conflict)
-    *remains_in_conflict = (fmb.remains_in_conflict || fmb.abort_merge);
+    *remains_in_conflict = TRUE;
 
   if (fmb.abort_merge)
     {
       SVN_ERR(svn_io_remove_file2(merged_file_name, TRUE, scratch_pool));
+      SVN_ERR(svn_cmdline_printf(scratch_pool, _("Merge of '%s' aborted.\n"),
+                                 wc_path_local_style));
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR_W(svn_io_file_move(merged_file_name, merged_path, scratch_pool),
+  SVN_ERR(svn_io_is_file_executable(&executable, merged_path, scratch_pool));
+
+  merged_rel_path = svn_dirent_skip_ancestor(path_prefix, merged_path);
+  if (merged_rel_path)
+    merged_path_local_style = svn_dirent_local_style(merged_rel_path,
+                                                     scratch_pool);
+  else
+    merged_path_local_style = svn_dirent_local_style(merged_path,
+                                                     scratch_pool);
+
+  SVN_ERR_W(svn_io_copy_file(merged_file_name, merged_path, FALSE,
+                             scratch_pool),
             apr_psprintf(scratch_pool,
-                         _("Could not write merged result to '%s', "
-                         "saved instead at '%s'.\n"),
-                         svn_dirent_local_style(merged_path,
-                                                scratch_pool),
+                         _("Could not write merged result to '%s', saved "
+                           "instead at '%s'.\n'%s' remains in conflict.\n"),
+                         merged_path_local_style,
                          svn_dirent_local_style(merged_file_name,
-                                                scratch_pool)));
+                                                scratch_pool),
+                         wc_path_local_style));
+  SVN_ERR(svn_io_set_file_executable(merged_path, executable, FALSE,
+                                     scratch_pool));
+  SVN_ERR(svn_io_remove_file2(merged_file_name, TRUE, scratch_pool));
+
+  /* The merge was not aborted and we could install the merged result. The
+   * file remains in conflict unless all conflicting sections were resolved. */
+  if (remains_in_conflict)
+    *remains_in_conflict = fmb.remains_in_conflict;
+
+  if (fmb.remains_in_conflict)
+    SVN_ERR(svn_cmdline_printf(
+              scratch_pool,
+              _("Merge of '%s' completed (remains in conflict).\n"),
+              wc_path_local_style));
+  else
+    SVN_ERR(svn_cmdline_printf(
+              scratch_pool, _("Merge of '%s' completed.\n"),
+              wc_path_local_style));
 
   return SVN_NO_ERROR;
 }

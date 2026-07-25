@@ -82,7 +82,7 @@ svn_error_t *svn_fs_base__dag_get_node(dag_node_t **node,
 
 /* Return a new dag_node_t object referring to the same node as NODE,
    allocated in POOL.  */
-dag_node_t *svn_fs_base__dag_dup(dag_node_t *node,
+dag_node_t *svn_fs_base__dag_dup(const dag_node_t *node,
                                  apr_pool_t *pool);
 
 
@@ -150,7 +150,7 @@ svn_error_t *svn_fs_base__dag_get_proplist(apr_hash_t **proplist_p,
    node being changed must be mutable.  TXN_ID is the Subversion
    transaction under which this occurs.  */
 svn_error_t *svn_fs_base__dag_set_proplist(dag_node_t *node,
-                                           apr_hash_t *proplist,
+                                           const apr_hash_t *proplist,
                                            const char *txn_id,
                                            trail_t *trail,
                                            apr_pool_t *pool);

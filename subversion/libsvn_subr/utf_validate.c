@@ -57,6 +57,8 @@
  */
 
 #include "private/svn_utf_private.h"
+#include "private/svn_eol_private.h"
+#include "private/svn_dep_compat.h"
 
 /* Lookup table to categorise each octet in the string. */
 static const char octet_category[256] = {
@@ -249,12 +251,28 @@ static const char machine [9][14] = {
    FSM_ERROR},        /* 0xf5-0xff */
 };
 
+/* Scan MAX_LEN bytes in *DATA for chars that are not in the octet
+ * category 0 (FSM_START).  Return the position of the first such char
+ * or DATA + MAX_LEN if all were cat 0.
+ */
+static const char *
+first_non_fsm_start_char(const char *data, apr_size_t max_len)
+{
+  for (; max_len > 0; ++data, --max_len)
+    if ((unsigned char)*data >= 0x80)
+      break;
+
+  return data;
+}
 
 const char *
 svn_utf__last_valid(const char *data, apr_size_t len)
 {
-  const char *start = data, *end = data + len;
+  const char *start = first_non_fsm_start_char(data, len);
+  const char *end = data + len;
   int state = FSM_START;
+
+  data = start;
   while (data < end)
     {
       unsigned char octet = *data++;
@@ -269,14 +287,10 @@ svn_utf__last_valid(const char *data, apr_size_t len)
 svn_boolean_t
 svn_utf__cstring_is_valid(const char *data)
 {
-  int state = FSM_START;
-  while (*data)
-    {
-      unsigned char octet = *data++;
-      int category = octet_category[octet];
-      state = machine[state][category];
-    }
-  return state == FSM_START;
+  if (!data)
+    return FALSE;
+
+  return svn_utf__is_valid(data, strlen(data));
 }
 
 svn_boolean_t
@@ -284,6 +298,12 @@ svn_utf__is_valid(const char *data, apr_size_t len)
 {
   const char *end = data + len;
   int state = FSM_START;
+
+  if (!data)
+    return FALSE;
+
+  data = first_non_fsm_start_char(data, len);
+
   while (data < end)
     {
       unsigned char octet = *data++;
@@ -296,8 +316,11 @@ svn_utf__is_valid(const char *data, apr_size_t len)
 const char *
 svn_utf__last_valid2(const char *data, apr_size_t len)
 {
-  const char *start = data, *end = data + len;
+  const char *start = first_non_fsm_start_char(data, len);
+  const char *end = data + len;
   int state = FSM_START;
+
+  data = start;
   while (data < end)
     {
       unsigned char octet = *data++;

@@ -55,6 +55,7 @@ my $repospath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1, CLEANUP => 1);
 
 my $repos;
 
+# TEST
 ok($repos = SVN::Repos::create("$repospath", undef, undef, undef, undef),
    "create repository at $repospath");
 
@@ -62,19 +63,23 @@ my $fs = $repos->fs;
 
 my $pool = SVN::Pool->new_default;
 
+# TEST
 is_pool_default($pool, 'default pool');
 
 {
     my $spool = SVN::Pool->new_default_sub;
+    # TEST
     is_pool_default($spool, 'lexical default pool default');
 }
 
+# TEST
 is_pool_default($pool, 'lexical default pool destroyed');
 
 my $root = $fs->revision_root(0);
 
 my $txn = $fs->begin_txn(0);
 
+# TEST
 $txn->root->make_dir('trunk');
 
 $txn->commit;
@@ -86,6 +91,7 @@ SVN::Repos::dir_delta($root, '', '',
                       undef, 1, 1, 0, 1);
 
 
+# TEST
 is_pool_default($pool, 'default pool from c calls destroyed');
 
 END {

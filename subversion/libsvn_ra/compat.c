@@ -23,6 +23,7 @@
 
 #include <apr_pools.h>
 
+#include "svn_hash.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_sorts.h"
@@ -34,6 +35,7 @@
 #include "svn_props.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_sorts_private.h"
 #include "ra_loader.h"
 #include "svn_private_config.h"
 
@@ -91,7 +93,7 @@ prev_log_path(const char **prev_path_p,
   if (changed_paths)
     {
       /* See if PATH was explicitly changed in this revision. */
-      change = apr_hash_get(changed_paths, path, APR_HASH_KEY_STRING);
+      change = svn_hash_gets(changed_paths, path);
       if (change)
         {
           /* If PATH was not newly added in this revision, then it may or may
@@ -314,6 +316,7 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
   svn_revnum_t youngest_requested, oldest_requested, youngest, oldest;
   svn_node_kind_t kind;
   const char *fs_path;
+  apr_array_header_t *sorted_location_revisions;
 
   /* Fetch the absolute FS path associated with PATH. */
   SVN_ERR(get_fs_path(&fs_path, session, path, pool));
@@ -335,11 +338,11 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
   /* Figure out the youngest and oldest revs (amongst the set of
      requested revisions + the peg revision) so we can avoid
      unnecessary log parsing. */
-  qsort(location_revisions->elts, location_revisions->nelts,
-        location_revisions->elt_size, compare_revisions);
-  oldest_requested = APR_ARRAY_IDX(location_revisions, 0, svn_revnum_t);
-  youngest_requested = APR_ARRAY_IDX(location_revisions,
-                                     location_revisions->nelts - 1,
+  sorted_location_revisions = apr_array_copy(pool, location_revisions);
+  svn_sort__array(sorted_location_revisions, compare_revisions);
+  oldest_requested = APR_ARRAY_IDX(sorted_location_revisions, 0, svn_revnum_t);
+  youngest_requested = APR_ARRAY_IDX(sorted_location_revisions,
+                                     sorted_location_revisions->nelts - 1,
                                      svn_revnum_t);
   youngest = peg_revision;
   youngest = (oldest_requested > youngest) ? oldest_requested : youngest;
@@ -351,7 +354,7 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
   /* Populate most of our log receiver baton structure. */
   lrb.kind = kind;
   lrb.last_path = fs_path;
-  lrb.location_revisions = apr_array_copy(pool, location_revisions);
+  lrb.location_revisions = apr_array_copy(pool, sorted_location_revisions);
   lrb.peg_revision = peg_revision;
   lrb.peg_path = NULL;
   lrb.locations = locations;
@@ -377,9 +380,9 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
   if (lrb.last_path)
     {
       int i;
-      for (i = 0; i < location_revisions->nelts; i++)
+      for (i = 0; i < sorted_location_revisions->nelts; i++)
         {
-          svn_revnum_t rev = APR_ARRAY_IDX(location_revisions, i,
+          svn_revnum_t rev = APR_ARRAY_IDX(sorted_location_revisions, i,
                                            svn_revnum_t);
           if (! apr_hash_get(locations, &rev, sizeof(rev)))
             apr_hash_set(locations, apr_pmemdup(pool, &rev, sizeof(rev)),
@@ -630,7 +633,6 @@ fr_log_message_receiver(void *baton,
 {
   struct fr_log_message_baton *lmb = baton;
   struct rev *rev;
-  apr_hash_index_t *hi;
 
   rev = apr_palloc(lmb->pool, sizeof(*rev));
   rev->revision = log_entry->revision;
@@ -639,17 +641,7 @@ fr_log_message_receiver(void *baton,
   lmb->eldest = rev;
 
   /* Duplicate log_entry revprops into rev->props */
-  rev->props = apr_hash_make(lmb->pool);
-  for (hi = apr_hash_first(pool, log_entry->revprops); hi;
-       hi = apr_hash_next(hi))
-    {
-      void *val;
-      const void *key;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      apr_hash_set(rev->props, apr_pstrdup(lmb->pool, key), APR_HASH_KEY_STRING,
-                   svn_string_dup(val, lmb->pool));
-    }
+  rev->props = svn_prop_hash_dup(log_entry->revprops, lmb->pool);
 
   return prev_log_path(&lmb->path, &lmb->action,
                        &lmb->copyrev, log_entry->changed_paths2,
@@ -869,5 +861,94 @@ svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
                           log_path_del_receiver, &log_path_deleted_baton,
                           pool));
   *revision_deleted = log_path_deleted_baton.revision_deleted;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_ra__get_inherited_props_walk(svn_ra_session_t *session,
+                                 const char *path,
+                                 svn_revnum_t revision,
+                                 apr_array_header_t **inherited_props,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
+{
+  const char *repos_root_url;
+  const char *session_url;
+  const char *parent_url;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  *inherited_props =
+    apr_array_make(result_pool, 1, sizeof(svn_prop_inherited_item_t *));
+
+  /* Walk to the root of the repository getting inherited
+     props for PATH. */
+  SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, scratch_pool));
+  SVN_ERR(svn_ra_get_session_url(session, &session_url, scratch_pool));
+  parent_url = session_url;
+
+  while (strcmp(repos_root_url, parent_url))
+    {
+      apr_hash_index_t *hi;
+      apr_hash_t *parent_props;
+      apr_hash_t *final_hash = apr_hash_make(result_pool);
+      svn_error_t *err;
+
+      svn_pool_clear(iterpool);
+      parent_url = svn_uri_dirname(parent_url, scratch_pool);
+      SVN_ERR(svn_ra_reparent(session, parent_url, iterpool));
+      err = session->vtable->get_dir(session, NULL, NULL,
+                                     &parent_props, "",
+                                     revision, SVN_DIRENT_ALL,
+                                     iterpool);
+
+      /* If the user doesn't have read access to a parent path then
+         skip, but allow them to inherit from further up. */
+      if (err)
+        {
+          if ((err->apr_err == SVN_ERR_RA_NOT_AUTHORIZED)
+              || (err->apr_err == SVN_ERR_RA_DAV_FORBIDDEN))
+            {
+              svn_error_clear(err);
+              continue;
+            }
+          else
+            {
+              return svn_error_trace(err);
+            }
+        }
+
+      for (hi = apr_hash_first(scratch_pool, parent_props);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *name = apr_hash_this_key(hi);
+          apr_ssize_t klen = apr_hash_this_key_len(hi);
+          svn_string_t *value = apr_hash_this_val(hi);
+
+          if (svn_property_kind2(name) == svn_prop_regular_kind)
+            {
+              name = apr_pstrdup(result_pool, name);
+              value = svn_string_dup(value, result_pool);
+              apr_hash_set(final_hash, name, klen, value);
+            }
+        }
+
+      if (apr_hash_count(final_hash))
+        {
+          svn_prop_inherited_item_t *new_iprop =
+            apr_palloc(result_pool, sizeof(*new_iprop));
+          new_iprop->path_or_url = svn_uri_skip_ancestor(repos_root_url,
+                                                         parent_url,
+                                                         result_pool);
+          new_iprop->prop_hash = final_hash;
+          SVN_ERR(svn_sort__array_insert2(*inherited_props, &new_iprop, 0));
+        }
+    }
+
+  /* Reparent session back to original URL. */
+  SVN_ERR(svn_ra_reparent(session, session_url, scratch_pool));
+
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }

@@ -49,7 +49,7 @@ module Svn
         @file = file
         @line = line
         @child = child
-        message = ""
+        message = String.new
         if file
           message << "#{file}"
           message << ":#{line}" if line

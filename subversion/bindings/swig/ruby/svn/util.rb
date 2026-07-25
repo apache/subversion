@@ -17,10 +17,10 @@
 #    under the License.
 # ====================================================================
 
-if /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
+if /cygwin|mingw|mswin|bccwin32/.match(RUBY_PLATFORM)
   $LOAD_PATH.each do |load_path|
     svn_ext_path = File.join(load_path, "svn", "ext")
-    if File.exists?(svn_ext_path)
+    if File.exist?(svn_ext_path)
       svn_ext_path_win = File.expand_path(svn_ext_path)
       svn_ext_path_win = svn_ext_path.gsub(File::SEPARATOR, File::ALT_SEPARATOR)
       unless ENV["PATH"].split(";").find {|path| path == svn_ext_path_win}
@@ -36,8 +36,13 @@ module Svn
   module Util #:nodoc:
     module_function
     def to_ruby_class_name(name)
-      name.split("_").collect do |x|
-        "#{x[0,1].upcase}#{x[1..-1].downcase}"
+      # Convert to CamelCase with 'X' for a leading/double/trailing underscore.
+      name.to_s.split("_").collect do |x|
+        if x.empty?
+          "X"
+        else
+          x.capitalize
+        end
       end.join("")
     end
 
@@ -70,6 +75,8 @@ module Svn
           target_name = $POSTMATCH
         when /^SWIG_SVN_/
           target_name = $POSTMATCH
+        when /^Svn_(?:#{target_mod.name.split("::").last.downcase}_)?_(.+)_t$/
+          # ignore private types
         when /^Svn_(?:#{target_mod.name.split("::").last.downcase}_)?(.+)_t$/
           target_name = to_ruby_class_name($1)
         when /^Svn_(?:#{target_mod.name.split("::").last.downcase}_)?/
@@ -115,7 +122,7 @@ EOC
     end
 
     def reset_message_directory
-      if /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
+      if /cygwin|mingw|mswin|bccwin32/.match(RUBY_PLATFORM)
         top_directory = File.join(File.dirname(__FILE__), "..", "..")
         top_directory = File.expand_path(top_directory)
         locale_directory = File.join(top_directory, "share", "locale")
@@ -140,7 +147,7 @@ EOC
     end
 
     def windows?
-      /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
+      /cygwin|mingw|mswin|bccwin32/.match(RUBY_PLATFORM)
     end
   end
 end

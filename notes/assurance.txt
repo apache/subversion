@@ -18,7 +18,7 @@ _secure_ features.
 You may have access control, but what if the code implementing this
 access control was written poorly, and contains a buffer overflow?  2
 hours ago you worried about who could read or write to a document in
-your repository. Now you discover that an attacker can execute arbitary
+your repository. Now you discover that an attacker can execute arbitrary
 code as the userid your service is running as. This is not ideal. 
 
 Hence, we distinquish between "security features" and assurance. Brian

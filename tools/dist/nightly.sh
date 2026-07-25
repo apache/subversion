@@ -21,7 +21,7 @@
 #
 set -e
 
-repo=http://svn.apache.org/repos/asf/subversion
+repo=https://svn.apache.org/repos/asf/subversion
 svn=svn
 olds=7
 
@@ -54,20 +54,20 @@ head=`$svn info $repo/trunk | grep '^Revision' | cut -d ' ' -f 2`
 
 # Get the latest versions of the rolling scripts
 for i in release.py dist.sh
-do 
-  $svn export -r $head $repo/trunk/tools/dist/$i@$head $dir/$i
+do
+  $svn export --force -r $head $repo/trunk/tools/dist/$i@$head $dir/$i
 done
 # We also need ezt
-$svn export -r $head $repo/trunk/build/generator/ezt.py@$head $dir/ezt.py
+$svn export --force -r $head $repo/trunk/build/generator/ezt.py@$head $dir/ezt.py
 
 # Create the environment
 cd roll
 echo '----------------building environment------------------'
-../release.py --base-dir ${abscwd}/roll build-env trunk-nightly
+../release.py --verbose --base-dir ${abscwd}/roll build-env trunk-nightly
 
 # Roll the tarballs
 echo '-------------------rolling tarball--------------------'
-../release.py --base-dir ${abscwd}/roll roll --branch trunk trunk-nightly $head
+../release.py --verbose --base-dir ${abscwd}/roll roll --branch trunk trunk-nightly $head
 cd ..
 
 # Create the information page

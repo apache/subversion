@@ -1,0 +1,54 @@
+API ERRATA -- $Id$
+
+Root Cause of Errata: implementation/docstring mismatch
+ Library(s) Affected: libsvn_fs_fs, libsvn_fs_base
+Function(s) Affected: svn_fs_props_changed, svn_fs_contents_changed
+     New Behavior in: 1.9.0-1.9.2 (only, see note below)
+      Related Issues: 4598
+
+[ Note: This only applies to Subversion 1.9.0-1.9.2; later versions
+        restore the original behavior of svn_fs_props_changed and
+        svn_fs_contents_changed.  The new svn_fs_props_different
+        svn_fs_contents_different functions are available for the
+        API users as well.
+
+        References:
+
+        https://issues.apache.org/jira/browse/SVN-4598
+        https://mail-archives.apache.org/mod_mbox/subversion-dev/201509.mbox/%3CCAB84uBVe8QnEpbPVAb__yQjiDDoYjFn2+M9mPcdBXZCwMCpOLw@mail.gmail.com%3E
+        ("No-op changes no longer dumped by 'svnadmin dump' in 1.9")
+        https://mail-archives.apache.org/mod_mbox/subversion-dev/201302.mbox/%3C510B6AE9.9070106@collab.net%3E
+        ("Re: Reintegrate-like merges and diff_ignore_ancestry") ]
+
+== Details ==
+
+The docstrings for svn_fs_props_changed and svn_fs_contents_changed
+did not state that these functions would only perform backend (BDB,
+FSFS) specific quick checks.  Moreover, the implementation of
+svn_fs_props_changed would not only generate false positives as
+svn_contents_changed did -- which could later be identified by the
+caller -- but also false negatives.
+
+This behavior makes these APIs very hard to use efficiently and
+creates dependencies between implementation details and API callers.
+
+For the 1.9 release, the implementations were fixed to never return
+false negatives and to produce false positives in fewer cases.  The
+docstrings have been updated to explain the approximative nature of
+these API and note the pre-1.9 deviation.
+
+Also, svn_fs_props_different and svn_fs_contents_different have been
+added as "strict" counterparts to the older quick check functions.
+These new API functions will produce neither false positives nor
+false negatives.
+
+
+== Impact on API Users ==
+
+If an API user relied on false positives e.g. in the case of a parent
+path change path, their code may no longer produce the same results.
+
+All API users should review their use of svn_fs_props_changed as
+well as svn_fs_contents_changed and consider using the new APIs,
+svn_fs_props_different and svn_fs_contents_different, instead.
+

@@ -1,0 +1,19 @@
+--- SConstruct.old	Mon Mar  3 14:34:37 2014
++++ SConstruct	Mon Mar  3 14:34:21 2014
+@@ -210,7 +210,7 @@
+ # Unfortunately we can't set the .dylib compatibility_version option separately
+ # from current_version, so don't use the PATCH level to avoid that build and
+ # runtime patch levels have to be identical.
+-env['SHLIBVERSION'] = '%d.%d.%d' % (MAJOR, MINOR, 0)
++#env['SHLIBVERSION'] = '%d.%d.%d' % (MAJOR, MINOR, 0)
+ 
+ LIBNAME = 'libserf-%d' % (MAJOR,)
+ if sys.platform != 'win32':
+@@ -248,6 +248,7 @@
+ 
+   if sys.platform == 'sunos5':
+     env.Append(LIBS='m')
++    env['PLATFORM'] = 'posix'
+ else:
+   # Warning level 4, no unused argument warnings
+   env.Append(CCFLAGS=['/W4', '/wd4100'])

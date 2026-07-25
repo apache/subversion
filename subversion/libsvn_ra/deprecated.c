@@ -26,6 +26,7 @@
    deprecated functions in this file. */
 #define SVN_DEPRECATED
 
+#include "svn_hash.h"
 #include "svn_ra.h"
 #include "svn_path.h"
 #include "svn_compat.h"
@@ -33,6 +34,11 @@
 #include "svn_pools.h"
 
 #include "ra_loader.h"
+
+/* Declarations of the init functions for the available RA libraries. */
+#include "../libsvn_ra_local/ra_init.h"
+#include "../libsvn_ra_svn/ra_init.h"
+#include "../libsvn_ra_serf/ra_init.h"
 
 #include "svn_private_config.h"
 
@@ -149,6 +155,19 @@ static svn_ra_reporter2_t reporter_3in2_wrapper = {
   abort_report
 };
 
+svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
+                          const char **corrected_url_p,
+                          const char *repos_URL,
+                          const char *uuid,
+                          const svn_ra_callbacks2_t *callbacks,
+                          void *callback_baton,
+                          apr_hash_t *config,
+                          apr_pool_t *pool)
+{
+  return svn_ra_open5(session_p, corrected_url_p, NULL, repos_URL, uuid,
+                      callbacks, callback_baton, config, pool);
+}
+
 svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
                           const char *repos_URL,
                           const char *uuid,
@@ -209,19 +228,18 @@ svn_error_t *svn_ra_get_commit_editor2(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        const char *log_msg,
-                                       svn_commit_callback2_t callback,
-                                       void *callback_baton,
+                                       svn_commit_callback2_t commit_callback,
+                                       void *commit_baton,
                                        apr_hash_t *lock_tokens,
                                        svn_boolean_t keep_locks,
                                        apr_pool_t *pool)
 {
   apr_hash_t *revprop_table = apr_hash_make(pool);
   if (log_msg)
-    apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG,
-                 APR_HASH_KEY_STRING,
-                 svn_string_create(log_msg, pool));
+    svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG,
+                  svn_string_create(log_msg, pool));
   return svn_ra_get_commit_editor3(session, editor, edit_baton, revprop_table,
-                                   callback, callback_baton,
+                                   commit_callback, commit_baton,
                                    lock_tokens, keep_locks, pool);
 }
 
@@ -348,6 +366,29 @@ svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,
                                handler2_baton, pool);
 }
 
+svn_error_t *
+svn_ra_do_update2(svn_ra_session_t *session,
+                  const svn_ra_reporter3_t **reporter,
+                  void **report_baton,
+                  svn_revnum_t revision_to_update_to,
+                  const char *update_target,
+                  svn_depth_t depth,
+                  svn_boolean_t send_copyfrom_args,
+                  const svn_delta_editor_t *update_editor,
+                  void *update_baton,
+                  apr_pool_t *pool)
+{
+  return svn_error_trace(
+            svn_ra_do_update3(session,
+                              reporter, report_baton,
+                              revision_to_update_to, update_target,
+                              depth,
+                              send_copyfrom_args,
+                              FALSE /* ignore_ancestry */,
+                              update_editor, update_baton,
+                              pool, pool));
+}
+
 svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
                               const svn_ra_reporter2_t **reporter,
                               void **report_baton,
@@ -368,8 +409,34 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
                                     revision_to_update_to, update_target,
                                     SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                     FALSE, /* no copyfrom args */
+                                    FALSE /* ignore_ancestry */,
                                     update_editor, update_baton,
-                                    pool);
+                                    pool, pool);
+}
+
+
+svn_error_t *
+svn_ra_do_switch2(svn_ra_session_t *session,
+                  const svn_ra_reporter3_t **reporter,
+                  void **report_baton,
+                  svn_revnum_t revision_to_switch_to,
+                  const char *switch_target,
+                  svn_depth_t depth,
+                  const char *switch_url,
+                  const svn_delta_editor_t *switch_editor,
+                  void *switch_baton,
+                  apr_pool_t *pool)
+{
+  return svn_error_trace(
+            svn_ra_do_switch3(session,
+                              reporter, report_baton,
+                              revision_to_switch_to, switch_target,
+                              depth,
+                              switch_url,
+                              FALSE /* send_copyfrom_args */,
+                              TRUE /* ignore_ancestry */,
+                              switch_editor, switch_baton,
+                              pool, pool));
 }
 
 svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
@@ -392,8 +459,11 @@ svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
                                     &(b->reporter3), &(b->reporter3_baton),
                                     revision_to_switch_to, switch_target,
                                     SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                    switch_url, switch_editor, switch_baton,
-                                    pool);
+                                    switch_url,
+                                    FALSE /* send_copyfrom_args */,
+                                    TRUE /* ignore_ancestry */,
+                                    switch_editor, switch_baton,
+                                    pool, pool);
 }
 
 svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
@@ -416,4 +486,67 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
                                     status_target, revision,
                                     SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse),
                                     status_editor, status_baton, pool);
+}
+
+svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
+                            const char *path,
+                            svn_revnum_t revision,
+                            apr_hash_t **dirents,
+                            svn_revnum_t *fetched_rev,
+                            apr_hash_t **props,
+                            apr_pool_t *pool)
+{
+  SVN_ERR_ASSERT(*path != '/');
+  return session->vtable->get_dir(session, dirents, fetched_rev, props,
+                                  path, revision, SVN_DIRENT_ALL, pool);
+}
+
+/* For each libsvn_ra_foo library, provide an implementation of deprecated
+   svn_ra_foo_init function that wraps svn_ra_foo__compat_init, or returns
+   a "not implemented" error if it was not linked. */
+
+#ifndef SVN_LIBSVN_RA_LINKS_RA_NEON
+svn_error_t *
+svn_ra_dav_init(int abi_version,
+                apr_pool_t *pool,
+                apr_hash_t *hash)
+{
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+}
+#endif /* ! SVN_LIBSVN_RA_LINKS_RA_NEON */
+
+svn_error_t *
+svn_ra_svn_init(int abi_version,
+                apr_pool_t *pool,
+                apr_hash_t *hash)
+{
+#ifdef SVN_LIBSVN_RA_LINKS_RA_SVN
+  return svn_error_trace(svn_ra_svn__compat_init(abi_version, pool, hash));
+#else
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+#endif /* ! SVN_LIBSVN_RA_LINKS_RA_SVN */
+}
+
+svn_error_t *
+svn_ra_local_init(int abi_version,
+                  apr_pool_t *pool,
+                  apr_hash_t *hash)
+{
+#ifdef SVN_LIBSVN_RA_LINKS_RA_LOCAL
+  return svn_error_trace(svn_ra_local__compat_init(abi_version, pool, hash));
+#else
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+#endif /* ! SVN_LIBSVN_RA_LINKS_RA_LOCAL */
+}
+
+svn_error_t *
+svn_ra_serf_init(int abi_version,
+                 apr_pool_t *pool,
+                 apr_hash_t *hash)
+{
+#ifdef SVN_LIBSVN_RA_LINKS_RA_SERF
+  return svn_error_trace(svn_ra_serf__compat_init(abi_version, pool, hash));
+#else
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+#endif /* ! SVN_LIBSVN_RA_LINKS_RA_SERF */
 }

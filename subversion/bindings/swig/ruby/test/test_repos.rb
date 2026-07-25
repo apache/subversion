@@ -98,11 +98,12 @@ class SvnReposTest < Test::Unit::TestCase
     fs_type = Svn::Fs::TYPE_FSFS
     fs_config = {Svn::Fs::CONFIG_FS_TYPE => fs_type}
     repos = nil
-    Svn::Repos.create(tmp_repos_path, {}, fs_config) do |repos|
+    Svn::Repos.create(tmp_repos_path, {}, fs_config) do |t_repos|
       assert(File.exist?(tmp_repos_path))
-      fs_type_path = File.join(repos.fs.path, Svn::Fs::CONFIG_FS_TYPE)
+      fs_type_path = File.join(t_repos.fs.path, Svn::Fs::CONFIG_FS_TYPE)
       assert_equal(fs_type, File.open(fs_type_path) {|f| f.read.chop})
-      repos.fs.set_warning_func(&warning_func)
+      t_repos.fs.set_warning_func(&warning_func)
+      repos = t_repos
     end
 
     assert(repos.closed?)
@@ -278,6 +279,7 @@ class SvnReposTest < Test::Unit::TestCase
       assert_equal(prev_rev, @repos.youngest_rev)
       assert_equal(prev_rev, @repos.dated_revision(past_date))
 
+      sleep 0.032r if Svn::Util::windows?
       prev_rev = @repos.youngest_rev
       @repos.transaction_for_commit(@author, log) do |txn|
       end
@@ -645,11 +647,11 @@ class SvnReposTest < Test::Unit::TestCase
         @repos.dump_fs(nil, nil, rev1, rev2)
       end
 
-      dump = StringIO.new("")
-      feedback = StringIO.new("")
+      dump = StringIO.new(String.new)
+      feedback = StringIO.new(String.new)
       @repos.dump_fs(dump, feedback, rev1, rev2)
 
-      dump_unless_feedback = StringIO.new("")
+      dump_unless_feedback = StringIO.new(String.new)
       @repos.dump_fs(dump_unless_feedback, nil, rev1, rev2)
 
       dump.rewind
@@ -672,19 +674,19 @@ class SvnReposTest < Test::Unit::TestCase
       File.open(path, "a") {|f| f.print(source)}
       rev2 = ctx.ci(@wc_path).revision
 
-      dump = StringIO.new("")
+      dump = StringIO.new(String.new)
       @repos.dump_fs(dump, nil, rev1, rev2)
 
       dest_path = File.join(@tmp_path, "dest")
       Svn::Repos.create(dest_path) do |repos|
         assert_raises(NoMethodError) do
-          repos.load_fs(nil)
+          repos.load_fs(Object.new)
         end
       end
 
       [
-       [StringIO.new(""), Svn::Repos::LOAD_UUID_DEFAULT, "/"],
-       [StringIO.new("")],
+       [StringIO.new(String.new), Svn::Repos::LOAD_UUID_DEFAULT, "/"],
+       [StringIO.new(String.new)],
        [],
       ].each_with_index do |args, i|
         dest_path = File.join(@tmp_path, "dest#{i}")

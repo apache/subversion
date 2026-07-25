@@ -24,23 +24,27 @@
 #ifndef SVN_LIBSVN_SUBR_OPT_H
 #define SVN_LIBSVN_SUBR_OPT_H
 
+#include "svn_version.h"
 #include "svn_opt.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-/* Print version info for PGM_NAME.  If QUIET is  true, print in
- * brief.  Else if QUIET is not true, print the version more
- * verbosely, and if FOOTER is non-null, print it following the
- * version information.
+
+/* Print version version info for PGM_NAME to the console.  If QUIET is
+ * true, print in brief.  Else if QUIET is not true, print the version
+ * more verbosely, and if FOOTER is non-null, print it following the
+ * version information. If VERBOSE is true, print running system info.
  *
  * Use POOL for temporary allocations.
  */
 svn_error_t *
 svn_opt__print_version_info(const char *pgm_name,
                             const char *footer,
+                            const svn_version_extended_t *info,
                             svn_boolean_t quiet,
+                            svn_boolean_t verbose,
                             apr_pool_t *pool);
 
 #ifdef __cplusplus

@@ -21,6 +21,9 @@
  * ====================================================================
  */
 
+/* prevent "empty compilation unit" warning on e.g. UNIX */
+typedef int win32_xlate__dummy;
+
 #ifdef WIN32
 
 /* Define _WIN32_DCOM for CoInitializeEx(). */
@@ -44,8 +47,11 @@
 #include "svn_string.h"
 #include "svn_utf.h"
 #include "private/svn_atomic.h"
+#include "private/svn_subr_private.h"
 
 #include "win32_xlate.h"
+
+#include "svn_private_config.h"
 
 static svn_atomic_t com_initialized = 0;
 
@@ -59,8 +65,8 @@ initialize_com(void *baton, apr_pool_t* pool)
 
   if (hr == RPC_E_CHANGED_MODE)
     {
-      /* COM already initalized for multi-threaded object concurrency. We are
-         neutral to object concurrency so try to initalize it in the same way
+      /* COM already initialized for multi-threaded object concurrency. We are
+         neutral to object concurrency so try to initialize it in the same way
          for us, to keep an handle open. */
       hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
     }
@@ -71,11 +77,11 @@ initialize_com(void *baton, apr_pool_t* pool)
   return SVN_NO_ERROR;
 }
 
-typedef struct win32_xlate_t
+struct svn_subr__win32_xlate_t
 {
   UINT from_page_id;
   UINT to_page_id;
-} win32_xlate_t;
+};
 
 static apr_status_t
 get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
@@ -110,16 +116,26 @@ get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
   if ((page_name[0] == 'c' || page_name[0] == 'C')
       && (page_name[1] == 'p' || page_name[1] == 'P'))
     {
-      *page_id_p = atoi(page_name + 2);
+      int page_id;
+
+      err = svn_cstring_atoi(&page_id, page_name + 2);
+      if (err)
+        {
+          apr_status_t saved = err->apr_err;
+          svn_error_clear(err);
+          return saved;
+        }
+
+      *page_id_p = page_id;
       return APR_SUCCESS;
     }
 
   err = svn_atomic__init_once(&com_initialized, initialize_com, NULL, pool);
-
   if (err)
     {
+      apr_status_t saved = err->apr_err;
       svn_error_clear(err);
-      return APR_EGENERAL;
+      return saved; /* probably SVN_ERR_ATOMIC_INIT_FAILURE */
     }
 
   hr = CoCreateInstance(&CLSID_CMultiLanguage, NULL, CLSCTX_INPROC_SERVER,
@@ -150,12 +166,12 @@ get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
 }
 
 apr_status_t
-svn_subr__win32_xlate_open(win32_xlate_t **xlate_p, const char *topage,
+svn_subr__win32_xlate_open(svn_subr__win32_xlate_t **xlate_p, const char *topage,
                            const char *frompage, apr_pool_t *pool)
 {
   UINT from_page_id, to_page_id;
   apr_status_t apr_err = APR_SUCCESS;
-  win32_xlate_t *xlate;
+  svn_subr__win32_xlate_t *xlate;
 
   apr_err = get_page_id_from_name(&to_page_id, topage, pool);
   if (apr_err == APR_SUCCESS)
@@ -174,7 +190,7 @@ svn_subr__win32_xlate_open(win32_xlate_t **xlate_p, const char *topage,
 }
 
 apr_status_t
-svn_subr__win32_xlate_to_stringbuf(win32_xlate_t *handle,
+svn_subr__win32_xlate_to_stringbuf(svn_subr__win32_xlate_t *handle,
                                    const char *src_data,
                                    apr_size_t src_length,
                                    svn_stringbuf_t **dest,
@@ -189,8 +205,14 @@ svn_subr__win32_xlate_to_stringbuf(win32_xlate_t *handle,
     return APR_SUCCESS;
   }
 
-  retval = MultiByteToWideChar(handle->from_page_id, 0, src_data, src_length,
-                               NULL, 0);
+  /* Use ERROR_INVALID_PARAMETER in case of integer overflow:
+     MultiByteToWideChar() returns ERROR_INVALID_PARAMETER in case source
+     string is longer than 2GB and cbMultiByte is -1 (use strlen). */
+  if (src_length > INT_MAX)
+    return APR_FROM_OS_ERROR(ERROR_INVALID_PARAMETER);
+
+  retval = MultiByteToWideChar(handle->from_page_id, 0, src_data,
+                               (int)src_length, NULL, 0);
   if (retval == 0)
     return apr_get_os_error();
 
@@ -206,11 +228,15 @@ svn_subr__win32_xlate_to_stringbuf(win32_xlate_t *handle,
       wide_str = apr_palloc(pool, wide_size * sizeof(WCHAR));
     }
 
-  retval = MultiByteToWideChar(handle->from_page_id, 0, src_data, src_length,
-                               wide_str, wide_size);
+  retval = MultiByteToWideChar(handle->from_page_id, 0, src_data,
+                               (int)src_length, wide_str, wide_size);
 
   if (retval == 0)
     return apr_get_os_error();
+
+  /* Theoretically the actual size can be different from the estimated
+     size. */
+  wide_size = retval;
 
   retval = WideCharToMultiByte(handle->to_page_id, 0, wide_str, wide_size,
                                NULL, 0, NULL, NULL);
@@ -221,15 +247,48 @@ svn_subr__win32_xlate_to_stringbuf(win32_xlate_t *handle,
   /* Ensure that buffer is enough to hold result string and termination
      character. */
   *dest = svn_stringbuf_create_ensure(retval + 1, pool);
-  (*dest)->len = retval;
 
   retval = WideCharToMultiByte(handle->to_page_id, 0, wide_str, wide_size,
-                               (*dest)->data, (*dest)->len, NULL, NULL);
+                               (*dest)->data, retval, NULL, NULL);
   if (retval == 0)
     return apr_get_os_error();
 
+  /* The data in svn_stringbuf_t is always NUL terminated string. */
+  (*dest)->data[retval] = '\0';
   (*dest)->len = retval;
   return APR_SUCCESS;
 }
+
+const char *
+svn_subr__win32_xlate_locale_encoding(apr_pool_t *pool)
+{
+  CPINFOEXW cpinfo = { 0 };
+
+  if (GetCPInfoExW(CP_THREAD_ACP, 0, &cpinfo))
+    {
+      DWORD codepage = cpinfo.CodePage;
+      if (codepage == CP_UTF8)
+        {
+          return "UTF-8";
+        }
+      else
+        {
+          return apr_psprintf(pool, "CP%u", (unsigned int)cpinfo.CodePage);
+        }
+    }
+  else
+    {
+      /* Fallback to apr_os_default_encoding() like
+       * apr_os_locale_encoding(). */
+      return apr_os_default_encoding(pool);
+    }
+}
+
+#else  /* !WIN32 */
+
+/* Silence OSX ranlib warnings about object files with no symbols. */
+#include <apr.h>
+extern const apr_uint32_t svn__fake__win32_xlate;
+const apr_uint32_t svn__fake__win32_xlate = 0xdeadbeef;
 
 #endif /* WIN32 */

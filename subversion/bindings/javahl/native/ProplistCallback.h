@@ -37,24 +37,33 @@
 class ProplistCallback
 {
  public:
-  ProplistCallback(jobject jcallback);
+  ProplistCallback(jobject jcallback, bool inherited);
   ~ProplistCallback();
 
   static svn_error_t *callback(void *baton,
                                const char *path,
                                apr_hash_t *prop_hash,
+                               apr_array_header_t *inherited_props,
                                apr_pool_t *pool);
+
+  bool inherited() const { return m_inherited; }
 
  protected:
   svn_error_t *singlePath(const char *path,
                           apr_hash_t *prop_hash,
                           apr_pool_t *pool);
 
+  svn_error_t *singlePath(const char *path,
+                          apr_hash_t *prop_hash,
+                          apr_array_header_t *inherited_props,
+                          apr_pool_t *pool);
  private:
   /**
    * This a local reference to the Java object.
    */
   jobject m_callback;
+  bool m_inherited;
 };
+
 
 #endif  // PROPLISTCALLBACK_H

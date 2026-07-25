@@ -51,7 +51,9 @@ typedef struct source_stack_t
   /* offset within the target buffer to where the structure got copied */
   apr_size_t target_offset;
 
-  /* parent stack entry. Will be NULL for the root entry. */
+  /* parent stack entry. Will be NULL for the root entry.
+   * Items in the svn_temp_serializer__context_t recycler will use this
+   * to link to the next unused item. */
   struct source_stack_t *upper;
 } source_stack_t;
 
@@ -70,6 +72,9 @@ struct svn_temp_serializer__context_t
    * process has been finished. However, it is not necessarily NULL when
    * the application end serialization. */
   source_stack_t *source;
+
+  /* unused stack elements will be put here for later reuse. */
+  source_stack_t *recycler;
 };
 
 /* Make sure the serialized data len is a multiple of the default alignment,
@@ -81,11 +86,11 @@ align_buffer_end(svn_temp_serializer__context_t *context)
 {
   apr_size_t current_len = context->buffer->len;
   apr_size_t aligned_len = APR_ALIGN_DEFAULT(current_len);
-  if (aligned_len != current_len)
-    {
-      svn_stringbuf_ensure(context->buffer, aligned_len);
-      context->buffer->len = aligned_len;
-    }
+
+  if (aligned_len + 1 > context->buffer->blocksize)
+    svn_stringbuf_ensure(context->buffer, aligned_len);
+
+   context->buffer->len = aligned_len;
 }
 
 /* Begin the serialization process for the SOURCE_STRUCT and all objects
@@ -110,6 +115,7 @@ svn_temp_serializer__init(const void *source_struct,
   svn_temp_serializer__context_t *context = apr_palloc(pool, sizeof(*context));
   context->pool = pool;
   context->buffer = svn_stringbuf_create_ensure(init_size, pool);
+  context->recycler = NULL;
 
   /* If a source struct has been given, make it the root struct. */
   if (source_struct)
@@ -137,7 +143,7 @@ svn_temp_serializer__init(const void *source_struct,
  * been serialized to BUFFER but contains references to new objects yet to
  * serialize. The current size of the serialized data is given in
  * CURRENTLY_USED. If the allocated data buffer is actually larger, you may
- * specifiy that in CURRENTLY_ALLOCATED to prevent unnecessary allocations.
+ * specify that in CURRENTLY_ALLOCATED to prevent unnecessary allocations.
  * Otherwise, set it to 0. All allocations will be made from POOl.
  */
 svn_temp_serializer__context_t *
@@ -167,6 +173,9 @@ svn_temp_serializer__init_append(void *buffer,
   context->source->source_struct = source_struct;
   context->source->target_offset = (char *)source_struct - (char *)buffer;
   context->source->upper = NULL;
+
+  /* initialize the RECYCLER */
+  context->recycler = NULL;
 
   /* done */
   return context;
@@ -219,9 +228,16 @@ svn_temp_serializer__push(svn_temp_serializer__context_t *context,
                           apr_size_t struct_size)
 {
   const void *source = *source_struct;
+  source_stack_t *new;
 
-  /* create a new entry for the structure stack */
-  source_stack_t *new = apr_palloc(context->pool, sizeof(*new));
+  /* recycle an old entry or create a new one for the structure stack */
+  if (context->recycler)
+    {
+      new = context->recycler;
+      context->recycler = new->upper;
+    }
+  else
+    new = apr_palloc(context->pool, sizeof(*new));
 
   /* the serialized structure must be properly aligned */
   if (source)
@@ -245,16 +261,42 @@ svn_temp_serializer__push(svn_temp_serializer__context_t *context,
     svn_stringbuf_appendbytes(context->buffer, source, struct_size);
 }
 
-/* Remove the lastest structure from the stack.
+/* Remove the latest structure from the stack.
  */
 void
 svn_temp_serializer__pop(svn_temp_serializer__context_t *context)
 {
+  source_stack_t *old = context->source;
+
   /* we may pop the original struct but not further */
   assert(context->source);
 
   /* one level up the structure stack */
   context->source = context->source->upper;
+
+  /* put the old stack element into the recycler for later reuse */
+  old->upper = context->recycler;
+  context->recycler = old;
+}
+
+void
+svn_temp_serializer__add_leaf(svn_temp_serializer__context_t *context,
+                              const void * const * source_struct,
+                              apr_size_t struct_size)
+{
+  const void *source = *source_struct;
+
+  /* the serialized structure must be properly aligned */
+  if (source)
+    align_buffer_end(context);
+
+  /* Store the offset at which the struct data that will the appended.
+   * Write 0 for NULL pointers. */
+  store_current_end_pointer(context, source_struct);
+
+  /* finally, actually append the struct contents */
+  if (*source_struct)
+    svn_stringbuf_appendbytes(context->buffer, source, struct_size);
 }
 
 /* Serialize a string referenced from the current structure within the
@@ -270,7 +312,7 @@ svn_temp_serializer__add_string(svn_temp_serializer__context_t *context,
 
   /* Store the offset at which the string data that will the appended.
    * Write 0 for NULL pointers. Strings don't need special alignment. */
-  store_current_end_pointer(context, (const void **)s);
+  store_current_end_pointer(context, (const void *const *)s);
 
   /* append the string data */
   if (string)
@@ -311,7 +353,7 @@ svn_temp_serializer__get_length(svn_temp_serializer__context_t *context)
   return context->buffer->len;
 }
 
-/* Return the data buffer that receives the serialialized data from
+/* Return the data buffer that receives the serialized data from
  * the given serialization CONTEXT.
  */
 svn_stringbuf_t *
@@ -324,7 +366,7 @@ svn_temp_serializer__get(svn_temp_serializer__context_t *context)
  * proper pointer value.
  */
 void
-svn_temp_deserializer__resolve(void *buffer, void **ptr)
+svn_temp_deserializer__resolve(const void *buffer, void **ptr)
 {
   /* All pointers are stored as offsets to the buffer start
    * (of the respective serialized sub-struct). */

@@ -70,40 +70,6 @@ create_repos_and_wc(const char **wc_abspath,
   return SVN_NO_ERROR;
 }
 
-
-/* Write the string DATA into a new unique-named file in the directory
- * DIR_ABSPATH.  Set *FILE_ABSPATH to its absolute path and *CHECKSUM_SHA1
- * and *CHECKSUM_MD5 to its SHA-1 and MD-5 checksums.
- *
- * CHECKSUM_SHA1 and/or CHECKSUM_MD5 may be null if not required. */
-static svn_error_t *
-write_and_checksum_temp_file(const char **file_abspath,
-                             svn_checksum_t **sha1_checksum,
-                             svn_checksum_t **md5_checksum,
-                             const char *data,
-                             const char *dir_abspath,
-                             apr_pool_t *pool)
-{
-  apr_file_t *file;
-
-  SVN_ERR(svn_io_open_unique_file3(&file, file_abspath,
-                                   dir_abspath, svn_io_file_del_none,
-                                   pool, pool));
-
-  SVN_ERR(svn_io_file_write_full(file, data, strlen(data), NULL, pool));
-  SVN_ERR(svn_io_file_close(file, pool));
-
-  if (sha1_checksum)
-    SVN_ERR(svn_io_file_checksum2(sha1_checksum, *file_abspath,
-                                  svn_checksum_sha1, pool));
-  if (md5_checksum)
-    SVN_ERR(svn_io_file_checksum2(md5_checksum, *file_abspath,
-                                  svn_checksum_md5, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Exercise the pristine text API with a simple write and read. */
 static svn_error_t *
 pristine_write_read(const svn_test_opts_t *opts,
@@ -112,7 +78,9 @@ pristine_write_read(const svn_test_opts_t *opts,
   svn_wc__db_t *db;
   const char *wc_abspath;
 
-  const char *pristine_tmp_abspath;
+  svn_wc__db_install_data_t *install_data;
+  svn_stream_t *pristine_stream;
+  apr_size_t sz;
 
   const char data[] = "Blah";
   svn_string_t *data_string = svn_string_create(data, pool);
@@ -123,36 +91,40 @@ pristine_write_read(const svn_test_opts_t *opts,
 
   /* Write DATA into a new temporary pristine file, set PRISTINE_TMP_ABSPATH
    * to its path and set DATA_SHA1 and DATA_MD5 to its checksums. */
-  {
-    const char *pristine_tmp_dir;
+  SVN_ERR(svn_wc__db_pristine_prepare_install(&pristine_stream,
+                                              &install_data,
+                                              &data_sha1, &data_md5,
+                                              db, wc_abspath, TRUE,
+                                              pool, pool));
 
-    SVN_ERR(svn_wc__db_pristine_get_tempdir(&pristine_tmp_dir, db,
-                                            wc_abspath, pool, pool));
-    SVN_ERR(write_and_checksum_temp_file(&pristine_tmp_abspath,
-                                         &data_sha1, &data_md5,
-                                         data, pristine_tmp_dir, pool));
-  }
+  sz = strlen(data);
+  SVN_ERR(svn_stream_write(pristine_stream, data, &sz));
+  SVN_ERR(svn_stream_close(pristine_stream));
 
   /* Ensure it's not already in the store. */
   {
     svn_boolean_t present;
+    svn_boolean_t hydrated;
 
-    SVN_ERR(svn_wc__db_pristine_check(&present, db, wc_abspath, data_sha1,
-                                      pool));
+    SVN_ERR(svn_wc__db_pristine_check(&present, &hydrated, db, wc_abspath,
+                                      data_sha1, pool));
     SVN_TEST_ASSERT(! present);
+    SVN_TEST_ASSERT(! hydrated);
   }
 
   /* Install the new pristine file, referenced by its checksum. */
-  SVN_ERR(svn_wc__db_pristine_install(db, pristine_tmp_abspath,
+  SVN_ERR(svn_wc__db_pristine_install(install_data,
                                       data_sha1, data_md5, pool));
 
   /* Ensure it is now found in the store. */
   {
     svn_boolean_t present;
+    svn_boolean_t hydrated;
 
-    SVN_ERR(svn_wc__db_pristine_check(&present, db, wc_abspath, data_sha1,
-                                      pool));
+    SVN_ERR(svn_wc__db_pristine_check(&present, &hydrated, db, wc_abspath,
+                                      data_sha1, pool));
     SVN_TEST_ASSERT(present);
+    SVN_TEST_ASSERT(hydrated);
   }
 
   /* Look up its MD-5 from its SHA-1, and check it's the same MD-5. */
@@ -187,17 +159,18 @@ pristine_write_read(const svn_test_opts_t *opts,
     SVN_ERR(svn_wc__db_pristine_remove(db, wc_abspath, data_sha1, pool));
     err = svn_wc__db_pristine_read(&data_read_back, NULL, db, wc_abspath,
                                    data_sha1, pool, pool);
-    SVN_TEST_ASSERT(err != NULL);
-    svn_error_clear(err);
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_PATH_NOT_FOUND);
   }
 
   /* Ensure it's no longer found in the store. */
   {
     svn_boolean_t present;
+    svn_boolean_t hydrated;
 
-    SVN_ERR(svn_wc__db_pristine_check(&present, db, wc_abspath, data_sha1,
-                                      pool));
+    SVN_ERR(svn_wc__db_pristine_check(&present, &hydrated, db, wc_abspath,
+                                      data_sha1, pool));
     SVN_TEST_ASSERT(! present);
+    SVN_TEST_ASSERT(! hydrated);
   }
 
   return SVN_NO_ERROR;
@@ -210,8 +183,10 @@ pristine_delete_while_open(const svn_test_opts_t *opts,
 {
   svn_wc__db_t *db;
   const char *wc_abspath;
-  const char *pristine_tmp_dir;
+  svn_wc__db_install_data_t *install_data;
+  svn_stream_t *pristine_stream;
   svn_stream_t *contents;
+  apr_size_t sz;
 
   const char data[] = "Blah";
   svn_checksum_t *data_sha1, *data_md5;
@@ -219,17 +194,17 @@ pristine_delete_while_open(const svn_test_opts_t *opts,
   SVN_ERR(create_repos_and_wc(&wc_abspath, &db,
                               "pristine_delete_while_open", opts, pool));
 
-  SVN_ERR(svn_wc__db_pristine_get_tempdir(&pristine_tmp_dir, db,
-                                          wc_abspath, pool, pool));
+  SVN_ERR(svn_wc__db_pristine_prepare_install(&pristine_stream,
+                                              &install_data,
+                                              &data_sha1, &data_md5,
+                                              db, wc_abspath, TRUE,
+                                              pool, pool));
 
-  /* Install a pristine text. */
-  {
-    const char *path;
-
-    SVN_ERR(write_and_checksum_temp_file(&path, &data_sha1, &data_md5,
-                                         data, pristine_tmp_dir, pool));
-    SVN_ERR(svn_wc__db_pristine_install(db, path, data_sha1, data_md5, pool));
-  }
+  sz = strlen(data);
+  SVN_ERR(svn_stream_write(pristine_stream, data, &sz));
+  SVN_ERR(svn_stream_close(pristine_stream));
+  SVN_ERR(svn_wc__db_pristine_install(install_data,
+                                      data_sha1, data_md5, pool));
 
   /* Open it for reading */
   SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, db, wc_abspath, data_sha1,
@@ -243,7 +218,7 @@ pristine_delete_while_open(const svn_test_opts_t *opts,
     char buffer[4];
     apr_size_t len = 4;
 
-    SVN_ERR(svn_stream_read(contents, buffer, &len));
+    SVN_ERR(svn_stream_read_full(contents, buffer, &len));
     SVN_TEST_ASSERT(len == 4);
     SVN_TEST_ASSERT(memcmp(buffer, data, len) == 0);
   }
@@ -252,10 +227,12 @@ pristine_delete_while_open(const svn_test_opts_t *opts,
    * an orphan, depending on the implementation.) */
   {
     svn_boolean_t present;
+    svn_boolean_t hydrated;
 
-    SVN_ERR(svn_wc__db_pristine_check(&present, db, wc_abspath, data_sha1,
-                                      pool));
+    SVN_ERR(svn_wc__db_pristine_check(&present, &hydrated, db, wc_abspath,
+                                      data_sha1, pool));
     SVN_TEST_ASSERT(! present);
+    SVN_TEST_ASSERT(! hydrated);
   }
 
   /* Close the read stream */
@@ -277,7 +254,6 @@ reject_mismatching_text(const svn_test_opts_t *opts,
 #ifdef SVN_DEBUG  /* The pristine store only checks this in debug mode. */
   svn_wc__db_t *db;
   const char *wc_abspath;
-  const char *pristine_tmp_dir;
 
   const char data[] = "Blah";
   svn_checksum_t *data_sha1, *data_md5;
@@ -287,30 +263,47 @@ reject_mismatching_text(const svn_test_opts_t *opts,
   SVN_ERR(create_repos_and_wc(&wc_abspath, &db,
                               "reject_mismatching_text", opts, pool));
 
-  SVN_ERR(svn_wc__db_pristine_get_tempdir(&pristine_tmp_dir, db,
-                                          wc_abspath, pool, pool));
-
   /* Install a pristine text. */
   {
-    const char *path;
+    svn_wc__db_install_data_t *install_data;
+    svn_stream_t *pristine_stream;
+    apr_size_t sz;
 
-    SVN_ERR(write_and_checksum_temp_file(&path, &data_sha1, &data_md5,
-                                         data, pristine_tmp_dir, pool));
-    SVN_ERR(svn_wc__db_pristine_install(db, path, data_sha1, data_md5, pool));
+    SVN_ERR(svn_wc__db_pristine_prepare_install(&pristine_stream,
+                                                &install_data,
+                                                &data_sha1, &data_md5,
+                                                db, wc_abspath, TRUE,
+                                                pool, pool));
+
+    sz = strlen(data);
+    SVN_ERR(svn_stream_write(pristine_stream, data, &sz));
+    SVN_ERR(svn_stream_close(pristine_stream));
+
+    SVN_ERR(svn_wc__db_pristine_install(install_data,
+                                        data_sha1, data_md5,
+                                        pool));
   }
 
   /* Try to install the wrong pristine text against the same checksum.
    * Should fail. */
   {
-    svn_error_t *err;
-    const char *path;
+    svn_wc__db_install_data_t *install_data;
+    svn_stream_t *pristine_stream;
+    apr_size_t sz;
 
-    SVN_ERR(write_and_checksum_temp_file(&path, NULL, NULL,
-                                         data2, pristine_tmp_dir, pool));
-    err = svn_wc__db_pristine_install(db, path, data_sha1, data_md5, pool);
-    SVN_TEST_ASSERT(err != NULL);
-    SVN_TEST_ASSERT(err->apr_err == SVN_ERR_WC_CORRUPT_TEXT_BASE);
-    svn_error_clear(err);
+    SVN_ERR(svn_wc__db_pristine_prepare_install(&pristine_stream,
+                                                &install_data,
+                                                &data_sha1, &data_md5,
+                                                db, wc_abspath, TRUE,
+                                                pool, pool));
+
+    sz = strlen(data2);
+    SVN_ERR(svn_stream_write(pristine_stream, data2, &sz));
+    SVN_ERR(svn_stream_close(pristine_stream));
+
+    SVN_ERR(svn_wc__db_pristine_install(install_data,
+                                        data_sha1, data_md5,
+                                        pool));
   }
 
   return SVN_NO_ERROR;
@@ -321,8 +314,237 @@ reject_mismatching_text(const svn_test_opts_t *opts,
 #endif
 }
 
+static svn_error_t *
+pristine_install_dehydrated(const svn_test_opts_t *opts,
+                            apr_pool_t *pool)
+{
+  svn_wc__db_t *db;
+  const char *wc_abspath;
 
-struct svn_test_descriptor_t test_funcs[] =
+  svn_wc__db_install_data_t *install_data;
+  svn_stream_t *pristine_stream;
+  apr_size_t sz;
+
+  const char data[] = "Blah";
+  svn_checksum_t *data_sha1, *data_md5;
+
+  svn_boolean_t store_pristine;
+
+  SVN_ERR(create_repos_and_wc(&wc_abspath, &db,
+                              "pristine_install_dehydrated", opts, pool));
+
+  SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, db, wc_abspath, pool));
+  if (store_pristine)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "Test assumes a working copy without pristine");
+
+  /* Write DATA into a new temporary pristine file, set PRISTINE_TMP_ABSPATH
+   * to its path and set DATA_SHA1 and DATA_MD5 to its checksums. */
+  SVN_ERR(svn_wc__db_pristine_prepare_install(&pristine_stream,
+                                              &install_data,
+                                              &data_sha1, &data_md5,
+                                              db, wc_abspath, FALSE,
+                                              pool, pool));
+
+  sz = strlen(data);
+  SVN_ERR(svn_stream_write(pristine_stream, data, &sz));
+  SVN_ERR(svn_stream_close(pristine_stream));
+
+  /* Ensure it's not already in the store. */
+  {
+    svn_boolean_t present;
+    svn_boolean_t hydrated;
+
+    SVN_ERR(svn_wc__db_pristine_check(&present, &hydrated, db, wc_abspath,
+                                      data_sha1, pool));
+    SVN_TEST_ASSERT(! present);
+    SVN_TEST_ASSERT(! hydrated);
+  }
+
+  /* Install the new pristine file, referenced by its checksum. */
+  SVN_ERR(svn_wc__db_pristine_install(install_data,
+                                      data_sha1, data_md5, pool));
+
+  /* Ensure it is now found in the store. */
+  {
+    svn_boolean_t present;
+    svn_boolean_t hydrated;
+
+    SVN_ERR(svn_wc__db_pristine_check(&present, &hydrated, db, wc_abspath,
+                                      data_sha1, pool));
+    SVN_TEST_ASSERT(present);
+    SVN_TEST_ASSERT(! hydrated);
+  }
+
+  /* Look up its MD-5 from its SHA-1, and check it's the same MD-5. */
+  {
+    const svn_checksum_t *looked_up_md5;
+
+    SVN_ERR(svn_wc__db_pristine_get_md5(&looked_up_md5, db, wc_abspath,
+                                        data_sha1, pool, pool));
+    SVN_TEST_ASSERT(looked_up_md5->kind == svn_checksum_md5);
+    SVN_TEST_ASSERT(svn_checksum_match(data_md5, looked_up_md5));
+  }
+
+  /* Check the saved pristine size and try to read the pristine text back. */
+  {
+    svn_stream_t *actual_contents;
+    svn_filesize_t actual_size;
+
+    SVN_ERR(svn_wc__db_pristine_read(&actual_contents, &actual_size,
+                                     db, wc_abspath, data_sha1, pool, pool));
+    SVN_TEST_ASSERT(actual_contents == NULL);
+    SVN_TEST_INT_ASSERT(actual_size, sz);
+  }
+
+  /* Trivially test the "remove if unreferenced" API: it's not referenced
+     so we should be able to remove it. */
+  {
+    svn_error_t *err;
+    svn_stream_t *data_read_back;
+
+    SVN_ERR(svn_wc__db_pristine_remove(db, wc_abspath, data_sha1, pool));
+    err = svn_wc__db_pristine_read(&data_read_back, NULL, db, wc_abspath,
+                                   data_sha1, pool, pool);
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_PATH_NOT_FOUND);
+  }
+
+  /* Ensure it's no longer found in the store. */
+  {
+    svn_boolean_t present;
+    svn_boolean_t hydrated;
+
+    SVN_ERR(svn_wc__db_pristine_check(&present, &hydrated, db, wc_abspath,
+                                      data_sha1, pool));
+    SVN_TEST_ASSERT(! present);
+    SVN_TEST_ASSERT(! hydrated);
+  }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+pristine_dehydrate(const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  svn_wc__db_t *db;
+  const char *wc_abspath;
+
+  svn_wc__db_install_data_t *install_data;
+  svn_stream_t *pristine_stream;
+  apr_size_t sz;
+
+  const char data[] = "Blah";
+  svn_string_t *data_string = svn_string_create(data, pool);
+  svn_checksum_t *data_sha1, *data_md5;
+
+  svn_boolean_t store_pristine;
+
+  SVN_ERR(create_repos_and_wc(&wc_abspath, &db,
+                              "pristine_dehydrate", opts, pool));
+
+  SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, db, wc_abspath, pool));
+  if (store_pristine)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "Test assumes a working copy without pristine");
+
+  /* Write DATA into a new temporary pristine file, set PRISTINE_TMP_ABSPATH
+   * to its path and set DATA_SHA1 and DATA_MD5 to its checksums. */
+  SVN_ERR(svn_wc__db_pristine_prepare_install(&pristine_stream,
+                                              &install_data,
+                                              &data_sha1, &data_md5,
+                                              db, wc_abspath, TRUE,
+                                              pool, pool));
+
+  sz = strlen(data);
+  SVN_ERR(svn_stream_write(pristine_stream, data, &sz));
+  SVN_ERR(svn_stream_close(pristine_stream));
+
+  /* Install the new pristine file, referenced by its checksum. */
+  SVN_ERR(svn_wc__db_pristine_install(install_data,
+                                      data_sha1, data_md5, pool));
+
+  /* Check the state of the pristine. */
+  {
+    svn_boolean_t present;
+    svn_boolean_t hydrated;
+
+    SVN_ERR(svn_wc__db_pristine_check(&present, &hydrated, db, wc_abspath,
+                                      data_sha1, pool));
+    SVN_TEST_ASSERT(present);
+    SVN_TEST_ASSERT(hydrated);
+  }
+
+  /* Dehydrate the pristine. */
+  SVN_ERR(svn_wc__db_pristine_dehydrate(db, wc_abspath, data_sha1, pool));
+
+  /* Check the state of the pristine. */
+  {
+    svn_boolean_t present;
+    svn_boolean_t hydrated;
+
+    SVN_ERR(svn_wc__db_pristine_check(&present, &hydrated, db, wc_abspath,
+                                      data_sha1, pool));
+    SVN_TEST_ASSERT(present);
+    SVN_TEST_ASSERT(! hydrated);
+  }
+
+  /* Check the saved pristine size and try to read the pristine text back. */
+  {
+    svn_stream_t *actual_contents;
+    svn_filesize_t actual_size;
+
+    SVN_ERR(svn_wc__db_pristine_read(&actual_contents, &actual_size,
+                                     db, wc_abspath, data_sha1, pool, pool));
+    SVN_TEST_ASSERT(actual_contents == NULL);
+    SVN_TEST_INT_ASSERT(actual_size, sz);
+  }
+
+  /* Rehydrate it by installing the pristine again. */
+  SVN_ERR(svn_wc__db_pristine_prepare_install(&pristine_stream,
+                                              &install_data,
+                                              &data_sha1, &data_md5,
+                                              db, wc_abspath, TRUE,
+                                              pool, pool));
+
+  sz = strlen(data);
+  SVN_ERR(svn_stream_write(pristine_stream, data, &sz));
+  SVN_ERR(svn_stream_close(pristine_stream));
+
+  SVN_ERR(svn_wc__db_pristine_install(install_data,
+                                      data_sha1, data_md5, pool));
+
+  /* Check the state of the pristine. */
+  {
+    svn_boolean_t present;
+    svn_boolean_t hydrated;
+
+    SVN_ERR(svn_wc__db_pristine_check(&present, &hydrated, db, wc_abspath,
+                                      data_sha1, pool));
+    SVN_TEST_ASSERT(present);
+    SVN_TEST_ASSERT(hydrated);
+  }
+
+  /* Read the pristine text back and verify it's the same content. */
+  {
+    svn_stream_t *data_stream = svn_stream_from_string(data_string, pool);
+    svn_stream_t *data_read_back;
+    svn_boolean_t same;
+
+    SVN_ERR(svn_wc__db_pristine_read(&data_read_back, NULL, db, wc_abspath,
+                                     data_sha1, pool, pool));
+    SVN_ERR(svn_stream_contents_same2(&same, data_read_back, data_stream,
+                                      pool));
+    SVN_TEST_ASSERT(same);
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
+static int max_threads = -1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(pristine_write_read,
@@ -331,5 +553,11 @@ struct svn_test_descriptor_t test_funcs[] =
                        "pristine_delete_while_open"),
     SVN_TEST_OPTS_PASS(reject_mismatching_text,
                        "reject_mismatching_text"),
+    SVN_TEST_OPTS_PASS(pristine_install_dehydrated,
+                       "pristine_install_dehydrated"),
+    SVN_TEST_OPTS_PASS(pristine_dehydrate,
+                       "pristine_dehydrate"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

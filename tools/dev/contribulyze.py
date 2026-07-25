@@ -28,7 +28,7 @@
 #
 # Some Subversion project log messages include parseable data to help
 # track who's contributing what.  The exact syntax is described in
-# http://subversion.apache.org/docs/community-guide/conventions.html#crediting,
+# https://subversion.apache.org/docs/community-guide/conventions.html#crediting,
 # but here's an example, indented by three spaces, i.e., the "Patch by:"
 # starts at the beginning of a line:
 #
@@ -56,6 +56,7 @@
 # a lot easier to whip up for straight 'svn log' output.  I'd have no
 # objection to it being rewritten to take XML input.
 
+import functools
 import os
 import sys
 import re
@@ -256,6 +257,9 @@ class Contributor(object):
     else:
       return 0 - result
 
+  def sort_key(self):
+      return (self.is_full_committer, self.score(), self.big_name())
+
   @staticmethod
   def parse(name):
     """Parse NAME, which can be
@@ -398,7 +402,7 @@ class Contributor(object):
     out.write('</table>\n\n')
     out.write('</div>\n\n')
 
-    sorted_logs = sorted(unique_logs.keys())
+    sorted_logs = sorted(unique_logs.keys(), key=LogMessage.sort_key)
     for log in sorted_logs:
       out.write('<hr />\n')
       out.write('<div class="h3" id="%s" title="%s">\n' % (log.revision,
@@ -490,6 +494,9 @@ class LogMessage(object):
     if a < b: return 1
     else:     return 0
 
+  def sort_key(self):
+    return int(self.revision[1:])
+
   def __str__(self):
     s = '=' * 15
     header = ' LOG: %s | %s ' % (self.revision, self.committer)
@@ -510,10 +517,15 @@ class LogMessage(object):
 
 log_separator = '-' * 72 + '\n'
 log_header_re = re.compile\
-                ('^(r[0-9]+) \| ([^|]+) \| ([^|]+) \| ([0-9]+)[^0-9]')
-field_re = re.compile('^(Patch|Review(ed)?|Suggested|Found|Inspired) by:\s*\S.*$')
-field_aliases = { 'Reviewed' : 'Review' }
-parenthetical_aside_re = re.compile('^\s*\(.*\)\s*$')
+                (r'^(r[0-9]+) \| ([^|]+) \| ([^|]+) \| ([0-9]+)[^0-9]')
+field_re = re.compile(
+           r'^(Patch|Review(ed)?|Suggested|Found|Inspired|Tested|Reported) by:'
+           r'\s*\S.*$')
+field_aliases = {
+  'Reviewed' : 'Review',
+  'Reported' : 'Found',
+}
+parenthetical_aside_re = re.compile(r'^\s*\(.*\)\s*$')
 
 def graze(input):
   just_saw_separator = False
@@ -564,7 +576,7 @@ def graze(input):
                 # Each line begins either with "WORD by:", or with whitespace.
                 in_field_re = re.compile('^('
                                          + (field.alias or field.name)
-                                         + ' by:\s+|\s+)([^\s(].*)')
+                                         + r' by:\s+|\s+)([^\s(].*)')
                 m = in_field_re.match(line)
                 if m is None:
                   sys.stderr.write("Error matching: %s\n" % (line))
@@ -608,7 +620,7 @@ to help us keep track of whom to consider for commit access.  The list
 was generated from "svn&nbsp;log" output by <a
 href="http://svn.apache.org/repos/asf/subversion/trunk/tools/dev/contribulyze.py"
 >contribulyze.py</a>, which looks for log messages that use the <a
-href="http://subversion.apache.org/docs/community-guide/conventions.html#crediting"
+href="https://subversion.apache.org/docs/community-guide/conventions.html#crediting"
 >special contribution format</a>.</p>
 
 <p><i>Please do not use this list as a generic guide to who has
@@ -656,7 +668,9 @@ def drop(revision_url_pattern):
   # sort by number of contributions, so the most active people appear at
   # the top -- that way we know whom to look at first for commit access
   # proposals.
-  sorted_contributors = sorted(Contributor.all_contributors.values())
+  sorted_contributors = sorted(Contributor.all_contributors.values(),
+                               key=Contributor.sort_key,
+                               reverse=True)
   for c in sorted_contributors:
     if c not in seen_contributors:
       if c.score() > 0:
@@ -689,7 +703,7 @@ def process_committers(committers):
   while line != 'Blanket commit access:\n':
     line = committers.readline()
   in_full_committers = True
-  matcher = re.compile('(\S+)\s+([^\(\)]+)\s+(\([^()]+\)){0,1}')
+  matcher = re.compile(r'(\S+)\s+([^\(\)]+)\s+(\([^()]+\)){0,1}')
   line = committers.readline()
   while line:
     # Every @-sign we see after this point indicates a committer line...
@@ -708,6 +722,9 @@ def process_committers(committers):
       c.is_committer = True
       c.is_full_committer = in_full_committers
     line = committers.readline()
+  svn_role = Contributor.parse('svn-role <svnsvn{_AT_}svn-qavm.apache.org>')
+  Contributor.get(*svn_role).is_committer = True
+  Contributor.get(*svn_role).is_full_committer = True # elide it from the listing
 
 
 def usage():
@@ -717,8 +734,8 @@ def usage():
   print('Create HTML files in the current directory, rooted at index.html,')
   print('in which you can browse to see who contributed what.')
   print('')
-  print('The log input should use the contribution-tracking format defined')
-  print('in http://subversion.apache.org/docs/community-guide/conventions.html#crediting.')
+  print('The log input should use the contribution-tracking format defined in')
+  print('https://subversion.apache.org/docs/community-guide/conventions.html#crediting.')
   print('')
   print('Options:')
   print('')
@@ -736,7 +753,7 @@ def usage():
 def main():
   try:
     opts, args = my_getopt(sys.argv[1:], 'C:U:hH?', [ 'help' ])
-  except getopt.GetoptError, e:
+  except getopt.GetoptError as e:
     complain(str(e) + '\n\n')
     usage()
     sys.exit(1)

@@ -39,15 +39,35 @@ my $swig_builddir = "${svnlib_builddir}/bindings/swig";
 my @modules = qw/client delta fs ra repos wc/;
 my @ldpaths = (abs_path($swig_builddir) . "/perl/libsvn_swig_perl/.libs",
                map { abs_path($svnlib_builddir) . "/libsvn_$_/.libs" }
-                   @modules, qw/diff subr ra_local ra_svn ra_neon
-                                ra_serf fs_base fs_util fs_fs/);
+                   @modules, qw/diff subr ra_local ra_svn ra_serf
+                                fs_base fs_util fs_fs fs_x/);
 
 my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 
 my $apr_shlib_path_var = '@SVN_APR_SHLIB_PATH_VAR@';
-my $cppflags = '@CPPFLAGS@';
-my $cflags = '@CFLAGS@';
+my $cppflags = <<'EOT';
+@CPPFLAGS@
+EOT
+my $cflags = <<'EOT';
+@CFLAGS@
+EOT
 my $includes = '@SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@';
+
+chomp($cppflags);
+chomp($cflags);
+
+# Avoid this bug in SWIG:
+# https://sourceforge.net/tracker/?func=detail&aid=3571361&group_id=1645&atid=101645
+# SWIG is using C++ style comments in an extern "C" code.
+$cflags =~ s/-ansi\s+//g;
+$cflags =~ s/-std=c89\s+//g;
+$cflags =~ s/-Wall//g;
+$cflags =~ s/-Wunused//g;
+$cflags =~ s/-Wshadow//g;
+$cflags =~ s/-Wstrict-prototypes//g;
+$cflags =~ s/-Wmissing-declarations//g;
+$cflags =~ s/-Wmissing-prototypes//g;
+$cflags =~ s/-Wredundant-decls//g;
 
 # According to the log of r7937, the flags guarded by the conditional break
 # the build on FreeBSD if not conditionalized.
@@ -70,6 +90,9 @@ my %config = (
                   (map {"-L$_"} @ldpaths),
                   @ldmodules, '-lsvn_swig_perl-1',
                   `$swig -perl -ldflags`)],
+    LDFLAGS => join(' ', (map {"-L$_"} @ldpaths), '@LDFLAGS@ @SWIG_PL_LINK@'),
+    LDDLFLAGS => join(' ', (map {"-L$_"} @ldpaths),
+                      '@LDFLAGS@ @SWIG_PL_LINK@', $Config{lddlflags}),
     test => { TESTS => "$swig_srcdir/perl/native/t/*.t" }
 );
 
@@ -121,6 +144,9 @@ modules :: $module_c_files
 $module_make_commands\t\$(NOECHO) \$(TOUCH) \$\@
 
 FULLPERLRUN=$fullperlrun \$(FULLPERL)
+
+update_test_counts ::
+\tfor test_file in \$(TEST_FILES); do \$(PERL) -MTest::Count::FileMutator::ByFileType::App -e 'run()' \$\$test_file; done
 
 EOPOST
 

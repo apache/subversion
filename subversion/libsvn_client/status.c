@@ -23,13 +23,18 @@
 
 /* ==================================================================== */
 
+/* We define this here to remove any further warnings about the usage of
+   experimental functions in this file. */
+#define SVN_EXPERIMENTAL
 
 
 /*** Includes. ***/
 #include <apr_strings.h>
 #include <apr_pools.h>
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
+#include "svn_sorts.h"
 #include "client.h"
 
 #include "svn_path.h"
@@ -39,9 +44,10 @@
 #include "svn_error.h"
 #include "svn_hash.h"
 
-#include "svn_private_config.h"
-#include "private/svn_wc_private.h"
+#include "private/svn_client_shelf.h"
 #include "private/svn_client_private.h"
+#include "private/svn_sorts_private.h"
+#include "private/svn_wc_private.h"
 
 
 /*** Getting update information ***/
@@ -85,23 +91,11 @@ tweak_status(void *baton,
   /* If the status item has an entry, but doesn't belong to one of the
      changelists our caller is interested in, we filter out this status
      transmission.  */
-  /* ### duplicated in ../libsvn_wc/diff_local.c */
-  if (sb->changelist_hash)
+  if (sb->changelist_hash
+      && (! status->changelist
+          || ! svn_hash_gets(sb->changelist_hash, status->changelist)))
     {
-      if (status->changelist)
-        {
-          /* Skip unless the caller requested this changelist. */
-          if (! apr_hash_get(sb->changelist_hash, status->changelist,
-                             APR_HASH_KEY_STRING))
-            return SVN_NO_ERROR;
-        }
-      else
-        {
-          /* Skip unless the caller requested changelist-lacking items. */
-          if (! apr_hash_get(sb->changelist_hash, "",
-                             APR_HASH_KEY_STRING))
-            return SVN_NO_ERROR;
-        }
+      return SVN_NO_ERROR;
     }
 
   /* If we know that the target was deleted in HEAD of the repository,
@@ -200,16 +194,14 @@ reporter_finish_report(void *report_baton, apr_pool_t *pool)
 
   /* Open an RA session to our common ancestor and grab the locks under it.
    */
-  SVN_ERR(svn_client__open_ra_session_internal(&ras, NULL, rb->ancestor, NULL,
-                                               NULL, FALSE, TRUE,
-                                               rb->ctx, subpool));
+  SVN_ERR(svn_client_open_ra_session2(&ras, rb->ancestor, NULL,
+                                      rb->ctx, subpool, subpool));
 
   /* The locks need to live throughout the edit.  Note that if the
      server doesn't support lock discovery, we'll just not do locky
      stuff. */
   err = svn_ra_get_locks2(ras, &locks, "", rb->depth, rb->pool);
-  if (err && ((err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
-              || (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)))
+  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
     {
       svn_error_clear(err);
       err = SVN_NO_ERROR;
@@ -247,18 +239,186 @@ static svn_ra_reporter3_t lock_fetch_reporter = {
   reporter_abort_report
 };
 
+/* Perform status operations on each external in EXTERNAL_MAP, a const char *
+   local_abspath of all externals mapping to the const char* defining_abspath.
+   All other options are the same as those passed to svn_client_status().
+
+   If ANCHOR_ABSPATH and ANCHOR-RELPATH are not null, use them to provide
+   properly formatted relative paths */
+static svn_error_t *
+do_external_status(svn_client_ctx_t *ctx,
+                   apr_hash_t *external_map,
+                   svn_depth_t depth,
+                   svn_boolean_t get_all,
+                   svn_boolean_t check_out_of_date,
+                   svn_boolean_t check_working_copy,
+                   svn_boolean_t no_ignore,
+                   const apr_array_header_t *changelists,
+                   const char *anchor_abspath,
+                   const char *anchor_relpath,
+                   svn_client_status_func_t status_func,
+                   void *status_baton,
+                   apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_array_header_t *externals;
+  int i;
+
+  externals = svn_sort__hash(external_map, svn_sort_compare_items_lexically,
+                             scratch_pool);
+
+  /* Loop over the hash of new values (we don't care about the old
+     ones).  This is a mapping of versioned directories to property
+     values. */
+  for (i = 0; i < externals->nelts; i++)
+    {
+      svn_node_kind_t external_kind;
+      svn_sort__item_t item = APR_ARRAY_IDX(externals, i, svn_sort__item_t);
+      const char *local_abspath = item.key;
+      const char *defining_abspath = item.value;
+      svn_node_kind_t kind;
+      svn_opt_revision_t opt_rev;
+      const char *status_path;
+
+      svn_pool_clear(iterpool);
+
+      /* Obtain information on the expected external. */
+      SVN_ERR(svn_wc__read_external_info(&external_kind, NULL, NULL, NULL,
+                                         &opt_rev.value.number,
+                                         ctx->wc_ctx, defining_abspath,
+                                         local_abspath, FALSE,
+                                         iterpool, iterpool));
+
+      if (external_kind != svn_node_dir)
+        continue;
+
+      SVN_ERR(svn_io_check_path(local_abspath, &kind, iterpool));
+      if (kind != svn_node_dir)
+        continue;
+
+      if (SVN_IS_VALID_REVNUM(opt_rev.value.number))
+        opt_rev.kind = svn_opt_revision_number;
+      else
+        opt_rev.kind = svn_opt_revision_unspecified;
+
+      /* Tell the client we're starting an external status set. */
+      if (ctx->notify_func2)
+        ctx->notify_func2(
+               ctx->notify_baton2,
+               svn_wc_create_notify(local_abspath,
+                                    svn_wc_notify_status_external,
+                                    iterpool), iterpool);
+
+      status_path = local_abspath;
+      if (anchor_abspath)
+        {
+          status_path = svn_dirent_join(anchor_relpath,
+                           svn_dirent_skip_ancestor(anchor_abspath,
+                                                    status_path),
+                           iterpool);
+        }
+
+      /* And then do the status. */
+      SVN_ERR(svn_client_status6(NULL, ctx, status_path, &opt_rev, depth,
+                                 get_all, check_out_of_date,
+                                 check_working_copy, no_ignore,
+                                 FALSE /* ignore_exernals */,
+                                 FALSE /* depth_as_sticky */,
+                                 changelists, status_func, status_baton,
+                                 iterpool));
+    }
+
+  /* Destroy SUBPOOL and (implicitly) ITERPOOL. */
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Run status on shelf SHELF_NAME, if it exists.
+ */
+static svn_error_t *
+shelf_status(const char *shelf_name,
+             const char *target_abspath,
+             svn_wc_status_func4_t status_func,
+             void *status_baton,
+             svn_client_ctx_t *ctx,
+             apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_client__shelf_t *shelf;
+  svn_client__shelf_version_t *shelf_version;
+  const char *wc_relpath;
+
+  err = svn_client__shelf_open_existing(&shelf,
+                                       shelf_name, target_abspath,
+                                       ctx, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_ILLEGAL_TARGET)
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  else
+    SVN_ERR(err);
+
+  SVN_ERR(svn_client__shelf_version_open(&shelf_version,
+                                        shelf, shelf->max_version,
+                                        scratch_pool, scratch_pool));
+  wc_relpath = svn_dirent_skip_ancestor(shelf->wc_root_abspath, target_abspath);
+  SVN_ERR(svn_client__shelf_version_status_walk(shelf_version, wc_relpath,
+                                               status_func, status_baton,
+                                               scratch_pool));
+  SVN_ERR(svn_client__shelf_close(shelf, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Run status on all shelves named in CHANGELISTS by a changelist name
+ * of the form "svn:shelf:SHELF_NAME", if they exist.
+ */
+static svn_error_t *
+shelves_status(const apr_array_header_t *changelists,
+               const char *target_abspath,
+               svn_wc_status_func4_t status_func,
+               void *status_baton,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *scratch_pool)
+{
+  static const char PREFIX[] = "svn:shelf:";
+  static const int PREFIX_LEN = 10;
+  int i;
+
+  if (! changelists)
+    return SVN_NO_ERROR;
+  for (i = 0; i < changelists->nelts; i++)
+    {
+      const char *cl = APR_ARRAY_IDX(changelists, i, const char *);
+
+      if (strncmp(cl, PREFIX, PREFIX_LEN) == 0)
+        {
+          const char *shelf_name = cl + PREFIX_LEN;
+
+          SVN_ERR(shelf_status(shelf_name, target_abspath,
+                               status_func, status_baton,
+                               ctx, scratch_pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** Public Interface. ***/
 
 
 svn_error_t *
-svn_client_status5(svn_revnum_t *result_rev,
+svn_client_status6(svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    const char *path,
                    const svn_opt_revision_t *revision,
                    svn_depth_t depth,
                    svn_boolean_t get_all,
-                   svn_boolean_t update,
+                   svn_boolean_t check_out_of_date,
+                   svn_boolean_t check_working_copy,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t depth_as_sticky,
@@ -274,6 +434,11 @@ svn_client_status5(svn_revnum_t *result_rev,
   apr_array_header_t *ignores;
   svn_error_t *err;
   apr_hash_t *changelist_hash = NULL;
+
+  /* Override invalid combinations of the check_out_of_date and
+     check_working_copy flags. */
+  if (!check_out_of_date)
+    check_working_copy = TRUE;
 
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -293,16 +458,16 @@ svn_client_status5(svn_revnum_t *result_rev,
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, path, pool));
 
-  if (update)
+  if (check_out_of_date)
     {
       /* The status editor only works on directories, so get the ancestor
          if necessary */
 
       svn_node_kind_t kind;
- 
-      SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
-                               pool));
- 
+
+      SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, target_abspath,
+                                TRUE, FALSE, pool));
+
       /* Dir must be a working copy directory or the status editor fails */
       if (kind == svn_node_dir)
         {
@@ -315,7 +480,7 @@ svn_client_status5(svn_revnum_t *result_rev,
           dir_abspath = svn_dirent_dirname(target_abspath, pool);
           target_basename = svn_dirent_basename(target_abspath, NULL);
           dir = svn_dirent_dirname(path, pool);
- 
+
           if (kind == svn_node_file)
             {
               if (depth == svn_depth_empty)
@@ -323,11 +488,11 @@ svn_client_status5(svn_revnum_t *result_rev,
             }
           else
             {
-              err = svn_wc_read_kind(&kind, ctx->wc_ctx, dir_abspath, FALSE,
-                                     pool);
- 
+              err = svn_wc_read_kind2(&kind, ctx->wc_ctx, dir_abspath,
+                                      FALSE, FALSE, pool);
+
               svn_error_clear(err);
- 
+
               if (err || kind != svn_node_dir)
                 {
                   return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
@@ -361,7 +526,7 @@ svn_client_status5(svn_revnum_t *result_rev,
   /* If we want to know about out-of-dateness, we crawl the working copy and
      let the RA layer drive the editor for real.  Otherwise, we just close the
      edit.  :-) */
-  if (update)
+  if (check_out_of_date)
     {
       svn_ra_session_t *ra_session;
       const char *URL;
@@ -383,22 +548,22 @@ svn_client_status5(svn_revnum_t *result_rev,
 
       /* Open a repository session to the URL. */
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL,
-                                                   dir_abspath,
-                                                   NULL, FALSE, TRUE,
-                                                   ctx, pool));
+                                                   dir_abspath, NULL,
+                                                   FALSE, TRUE,
+                                                   ctx, pool, pool));
 
       SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                     SVN_RA_CAPABILITY_DEPTH, pool));
 
       SVN_ERR(svn_wc__get_status_editor(&editor, &edit_baton, &set_locks_baton,
-                                    &edit_revision, ctx->wc_ctx,
-                                    dir_abspath, target_basename,
-                                    depth, get_all,
-                                    no_ignore, depth_as_sticky,
-                                    server_supports_depth,
-                                    ignores, tweak_status, &sb,
-                                    ctx->cancel_func, ctx->cancel_baton,
-                                    pool, pool));
+                                        &edit_revision, ctx->wc_ctx,
+                                        dir_abspath, target_basename,
+                                        depth, get_all, check_working_copy,
+                                        no_ignore, depth_as_sticky,
+                                        server_supports_depth,
+                                        ignores, tweak_status, &sb,
+                                        ctx->cancel_func, ctx->cancel_baton,
+                                        pool, pool));
 
 
       /* Verify that URL exists in HEAD.  If it doesn't, this can save
@@ -472,7 +637,7 @@ svn_client_status5(svn_revnum_t *result_rev,
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
              working copy and HEAD. */
-          SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx,
+          SVN_ERR(svn_wc_crawl_revisions6(ctx->wc_ctx,
                                           target_abspath,
                                           &lock_fetch_reporter, &rb,
                                           FALSE /* restore_files */,
@@ -489,7 +654,7 @@ svn_client_status5(svn_revnum_t *result_rev,
             = svn_wc_create_notify(target_abspath,
                                    svn_wc_notify_status_completed, pool);
           notify->revision = edit_revision;
-          (ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+          ctx->notify_func2(ctx->notify_baton2, notify, pool);
         }
 
       /* If the caller wants the result revision, give it to them. */
@@ -498,6 +663,9 @@ svn_client_status5(svn_revnum_t *result_rev,
     }
   else
     {
+      SVN_ERR(shelves_status(changelists, target_abspath,
+                             tweak_status, &sb,
+                             ctx, pool));
       err = svn_wc_walk_status(ctx->wc_ctx, target_abspath,
                                depth, get_all, no_ignore, FALSE, ignores,
                                tweak_status, &sb,
@@ -517,14 +685,7 @@ svn_client_status5(svn_revnum_t *result_rev,
       SVN_ERR(err);
     }
 
-  /* If there are svn:externals set, we don't want those to show up as
-     unversioned or unrecognized, so patch up the hash.  If caller wants
-     all the statuses, we will change unversioned status items that
-     are interesting to an svn:externals property to
-     svn_wc_status_unversioned, otherwise we'll just remove the status
-     item altogether.
-
-     We only descend into an external if depth is svn_depth_infinity or
+  /* We only descend into an external if depth is svn_depth_infinity or
      svn_depth_unknown.  However, there are conceivable behaviors that
      would involve descending under other circumstances; thus, we pass
      depth anyway, so the code will DTRT if we change the conditional
@@ -538,10 +699,12 @@ svn_client_status5(svn_revnum_t *result_rev,
                                               pool, pool));
 
 
-      SVN_ERR(svn_client__do_external_status(ctx, external_map,
-                                             depth, get_all,
-                                             update, no_ignore,
-                                             status_func, status_baton, pool));
+      SVN_ERR(do_external_status(ctx, external_map,
+                                 depth, get_all,
+                                 check_out_of_date, check_working_copy,
+                                 no_ignore, changelists,
+                                 sb.anchor_abspath, sb.anchor_relpath,
+                                 status_func, status_baton, pool));
     }
 
   return SVN_NO_ERROR;

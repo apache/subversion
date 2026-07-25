@@ -29,7 +29,7 @@ AC_DEFUN(SVN_LIB_APR_MEMCACHE,
 [
   apr_memcache_found=no
 
-  AC_ARG_WITH(apr_memcache,AC_HELP_STRING([--with-apr_memcache=PREFIX],
+  AC_ARG_WITH(apr_memcache,AS_HELP_STRING([--with-apr_memcache=PREFIX],
                                   [Standalone apr_memcache client library]),
   [
     if test "$withval" = "yes" ; then
@@ -48,31 +48,19 @@ AC_DEFUN(SVN_LIB_APR_MEMCACHE,
       CPPFLAGS="$save_cppflags"
     fi
   ], [
-    if test -d "$srcdir/apr_memcache"; then
-      apr_memcache_found=reconfig
-    else
 dnl   Try just looking in apr-util (>= 1.3 has it already).
-      AC_MSG_NOTICE([looking for apr_memcache as part of apr-util])
-      save_cppflags="$CPPFLAGS"
-      CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES"
-      AC_CHECK_HEADER(apr_memcache.h,[
-        save_ldflags="$LDFLAGS"
-        LDFLAGS="$LDFLAGS $SVN_APRUTIL_LIBS"
-        AC_CHECK_LIB(aprutil-1, apr_memcache_create,
-          [apr_memcache_found="aprutil"])
-        LDFLAGS="$save_ldflags"])
-      CPPFLAGS="$save_cppflags"
-
-    fi
+    AC_MSG_NOTICE([looking for apr_memcache as part of apr-util])
+    save_cppflags="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES"
+    AC_CHECK_HEADER(apr_memcache.h,[
+      save_ldflags="$LDFLAGS"
+      LDFLAGS="$LDFLAGS $SVN_APRUTIL_LIBS"
+      AC_CHECK_LIB(aprutil-1, apr_memcache_create,
+        [apr_memcache_found="aprutil"])
+      LDFLAGS="$save_ldflags"])
+    CPPFLAGS="$save_cppflags"
    ])
 
-
-  if test $apr_memcache_found = "reconfig"; then
-    SVN_EXTERNAL_PROJECT([apr_memcache], [--with-apr=$apr_config --with-apr-util=$apu_config])
-    apr_memcache_prefix=$prefix
-    SVN_APR_MEMCACHE_INCLUDES="-I$srcdir/memcache"
-    SVN_APR_MEMCACHE_LIBS="$abs_builddir/memcache/libapr_memcache.la"
-  fi
 
   if test $apr_memcache_found = "standalone"; then
     SVN_APR_MEMCACHE_INCLUDES="-I$apr_memcache_prefix/include/apr_memcache-0"
@@ -89,6 +77,7 @@ dnl We are already linking apr-util everywhere, so no special treatement needed.
     svn_lib_apr_memcache=no
   fi
 
+  SVN_DOT_CLANGD([$SVN_APR_MEMCACHE_INCLUDES])
   AC_SUBST(SVN_APR_MEMCACHE_INCLUDES)
   AC_SUBST(SVN_APR_MEMCACHE_LIBS)
 ])

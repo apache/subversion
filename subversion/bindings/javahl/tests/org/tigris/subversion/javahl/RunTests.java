@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 package org.tigris.subversion.javahl;
 
@@ -47,6 +45,7 @@ public class RunTests
          *
          * @return The complete test suite.
          */
+        @SuppressWarnings("unchecked")
         public static TestSuite suite()
         {
             TestSuite suite = new SVNTestSuite();
@@ -75,9 +74,8 @@ public class RunTests
                         Constructor ctor =
                             clazz.getDeclaredConstructor(argTypes);
                         methodName = methodName.substring(i + 1);
-                        String[] args = { methodName };
                         testCases[testCaseIndex++] =
-                            (TestCase) ctor.newInstance(args);
+                            (TestCase) ctor.newInstance(methodName);
                     }
                     catch (Exception e)
                     {

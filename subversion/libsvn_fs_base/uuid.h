@@ -29,7 +29,7 @@ extern "C" {
 
 
 
-/* Set FS->UUID to the the value read from the database, allocated
+/* Set FS->UUID to the value read from the database, allocated
    in FS->POOL.  Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *svn_fs_base__populate_uuid(svn_fs_t *fs,
                                         apr_pool_t *scratch_pool);

@@ -45,6 +45,10 @@ class Array
   Array(jobject jobjectsCollection);
   virtual ~Array();
   const std::vector<jobject> &vector(void) const;
+  bool isNull() const
+  {
+    return !m_objectArray;
+  }
 };
 
 #endif // ARRAY_H

@@ -22,18 +22,28 @@
 
 #include <stdlib.h>
 #include <string.h>
+
 #include <apr_pools.h>
+#include <apr_time.h>
 
 #include "../svn_test.h"
 
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
+#include "svn_hash.h"
 #include "svn_repos.h"
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_config.h"
 #include "svn_props.h"
+#include "svn_sorts.h"
+#include "svn_version.h"
+#include "private/svn_repos_private.h"
+#include "private/svn_dep_compat.h"
+
+/* be able to look into svn_config_t */
+#include "../../libsvn_subr/config_impl.h"
 
 #include "../svn_test_fs.h"
 
@@ -42,12 +52,19 @@
 /* Used to terminate lines in large multi-line string literals. */
 #define NL APR_EOL_STR
 
-#ifndef MAX
-#define MAX(a,b) (((a)>(b))?(a):(b))
-#endif
-#ifndef MIN
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#endif
+/* Compare strings, like strcmp but either or both may be NULL which
+ * compares equal to NULL and not equal to any non-NULL string. */
+static int
+strcmp_null(const char *s1, const char *s2)
+{
+  if (s1 && s2)
+    return strcmp(s1, s2);
+  else if (s1 || s2)
+    return 1;
+  else
+    return 0;
+}
+
 
 
 static svn_error_t *
@@ -468,19 +485,19 @@ print_chrevs(const apr_array_header_t *revs_got,
           outstr = apr_pstrcat(pool,
                                outstr,
                                apr_psprintf(pool, "%ld ", rev),
-                               (char *)NULL);
+                               SVN_VA_NULL);
         }
     }
-  outstr = apr_pstrcat(pool, outstr, "}  Expected: { ", (char *)NULL);
+  outstr = apr_pstrcat(pool, outstr, "}  Expected: { ", SVN_VA_NULL);
   for (i = 0; i < num_revs_expected; i++)
     {
       outstr = apr_pstrcat(pool,
                            outstr,
                            apr_psprintf(pool, "%ld ",
                                         revs_expected[i]),
-                           (char *)NULL);
+                           SVN_VA_NULL);
     }
-  return apr_pstrcat(pool, outstr, "}", (char *)NULL);
+  return apr_pstrcat(pool, outstr, "}", SVN_VA_NULL);
 }
 
 
@@ -730,8 +747,7 @@ check_locations_info(apr_hash_t *locations, const struct locations_info *info)
   unsigned int i;
   for (i = 0; info->rev != 0; ++i, ++info)
     {
-      const char *p = apr_hash_get(locations, &info->rev, sizeof
-                                   (svn_revnum_t));
+      const char *p = apr_hash_get(locations, &info->rev, sizeof(info->rev));
       if (!p)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "Missing path for revision %ld", info->rev);
@@ -934,15 +950,13 @@ rmlocks_change_prop(void *file_baton,
                                 "Value for lock-token property not NULL");
 
       /* We only want it removed once. */
-      if (apr_hash_get(fb->main_baton->removed, fb->path,
-                       APR_HASH_KEY_STRING) != NULL)
+      if (svn_hash_gets(fb->main_baton->removed, fb->path) != NULL)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "Lock token for '%s' already removed",
                                  fb->path);
 
       /* Mark as removed. */
-      apr_hash_set(fb->main_baton->removed, fb->path, APR_HASH_KEY_STRING,
-                   (void *)1);
+      svn_hash_sets(fb->main_baton->removed, fb->path, (void *)1);
     }
 
   return SVN_NO_ERROR;
@@ -1077,9 +1091,10 @@ rmlocks(const svn_test_opts_t *opts,
     SVN_ERR(create_rmlocks_editor(&editor, &edit_baton, &removed, subpool));
 
     /* Report what we have. */
-    SVN_ERR(svn_repos_begin_report2(&report_baton, 1, repos, "/", "", NULL,
+    SVN_ERR(svn_repos_begin_report3(&report_baton, 1, repos, "/", "", NULL,
                                     FALSE, svn_depth_infinity, FALSE, FALSE,
-                                    editor, edit_baton, NULL, NULL, subpool));
+                                    editor, edit_baton, NULL, NULL, 1024,
+                                    subpool));
     SVN_ERR(svn_repos_set_path3(report_baton, "", 1,
                                 svn_depth_infinity,
                                 FALSE, NULL, subpool));
@@ -1108,30 +1123,106 @@ rmlocks(const svn_test_opts_t *opts,
 
 
 /* Helper for the authz test.  Set *AUTHZ_P to a representation of
-   AUTHZ_CONTENTS, using POOL for temporary allocation. */
+   AUTHZ_CONTENTS, using POOL for temporary allocation. If DISK
+   is TRUE then write the contents to a temp file and use
+   svn_repos_authz_read() to get the data if FALSE write the
+   data to a buffered stream and use svn_repos_authz_parse(). */
 static svn_error_t *
 authz_get_handle(svn_authz_t **authz_p, const char *authz_contents,
-                 apr_pool_t *pool)
+                 svn_boolean_t disk, apr_pool_t *pool)
 {
-  const char *authz_file_path;
+  if (disk)
+    {
+      const char *authz_file_path;
 
-  /* Create a temporary file. */
-  SVN_ERR_W(svn_io_write_unique(&authz_file_path, NULL,
-                                authz_contents, strlen(authz_contents),
-                                svn_io_file_del_on_pool_cleanup, pool),
-            "Writing temporary authz file");
+      /* Create a temporary file. */
+      SVN_ERR_W(svn_io_write_unique(&authz_file_path, NULL,
+                                    authz_contents, strlen(authz_contents),
+                                    svn_io_file_del_on_pool_cleanup, pool),
+                "Writing temporary authz file");
 
-  /* Read the authz configuration back and start testing. */
-  SVN_ERR_W(svn_repos_authz_read(authz_p, authz_file_path, TRUE, pool),
-            "Opening test authz file");
+      /* Read the authz configuration back and start testing. */
+      SVN_ERR_W(svn_repos_authz_read(authz_p, authz_file_path, TRUE, pool),
+                "Opening test authz file");
 
-  /* Done with the file. */
-  SVN_ERR_W(svn_io_remove_file(authz_file_path, pool),
-            "Removing test authz file");
+      /* Done with the file. */
+      SVN_ERR_W(svn_io_remove_file(authz_file_path, pool),
+                "Removing test authz file");
+    }
+  else
+    {
+      svn_stream_t *stream;
+
+      stream = svn_stream_buffered(pool);
+      SVN_ERR_W(svn_stream_puts(stream, authz_contents),
+                "Writing authz contents to stream");
+
+      SVN_ERR_W(svn_repos_authz_parse(authz_p, stream, NULL, pool),
+                "Parsing the authz contents");
+
+      SVN_ERR_W(svn_stream_close(stream),
+                "Closing the stream");
+    }
 
   return SVN_NO_ERROR;
 }
 
+struct check_access_tests {
+  const char *path;
+  const char *repo_name;
+  const char *user;
+  const svn_repos_authz_access_t required;
+  const svn_boolean_t expected;
+};
+
+/* Helper for the authz test.  Runs a set of tests against AUTHZ_CFG
+ * as defined in TESTS. */
+static svn_error_t *
+authz_check_access(svn_authz_t *authz_cfg,
+                   const char *authz_contents,
+                   const struct check_access_tests *tests,
+                   apr_pool_t *pool)
+{
+  int i;
+  svn_boolean_t access_granted;
+
+  /* Loop over the test array and test each case. */
+  for (i = 0; !(tests[i].path == NULL
+               && tests[i].required == svn_authz_none); i++)
+    {
+      SVN_ERR(svn_repos_authz_check_access(authz_cfg,
+                                           tests[i].repo_name,
+                                           tests[i].path,
+                                           tests[i].user,
+                                           tests[i].required,
+                                           &access_granted, pool));
+
+      if (access_granted != tests[i].expected)
+        {
+          return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                   "Authz incorrectly %s %s%s access "
+                                   "to %s%s%s for user %s\n%s",
+                                   access_granted ?
+                                   "grants" : "denies",
+                                   tests[i].required
+                                   & svn_authz_recursive ?
+                                   "recursive " : "",
+                                   tests[i].required
+                                   & svn_authz_read ?
+                                   "read" : "write",
+                                   tests[i].repo_name ?
+                                   tests[i].repo_name : "",
+                                   tests[i].repo_name ?
+                                   ":" : "",
+                                   tests[i].path,
+                                   tests[i].user ?
+                                   tests[i].user : "-",
+                                   authz_contents);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
 
 
 /* Test that authz is giving out the right authorizations. */
@@ -1143,36 +1234,30 @@ authz(apr_pool_t *pool)
   svn_error_t *err;
   svn_boolean_t access_granted;
   apr_pool_t *subpool = svn_pool_create(pool);
-  int i;
+
   /* Definition of the paths to test and expected replies for each. */
-  struct
-  {
-    const char *path;
-    const char *user;
-    const svn_repos_authz_access_t required;
-    const svn_boolean_t expected;
-  } test_set[] = {
+  struct check_access_tests test_set[] = {
     /* Test that read rules are correctly used. */
-    { "/A", NULL, svn_authz_read, TRUE },
-    { "/iota", NULL, svn_authz_read, FALSE },
+    { "/A", "greek", NULL, svn_authz_read, TRUE },
+    { "/iota", "greek", NULL, svn_authz_read, FALSE },
     /* Test that write rules are correctly used. */
-    { "/A", "plato", svn_authz_write, TRUE },
-    { "/A", NULL, svn_authz_write, FALSE },
+    { "/A", "greek", "plato", svn_authz_write, TRUE },
+    { "/A", "greek", NULL, svn_authz_write, FALSE },
     /* Test that pan-repository rules are found and used. */
-    { "/A/B/lambda", "plato", svn_authz_read, TRUE },
-    { "/A/B/lambda", NULL, svn_authz_read, FALSE },
+    { "/A/B/lambda", "greek", "plato", svn_authz_read, TRUE },
+    { "/A/B/lambda", "greek", NULL, svn_authz_read, FALSE },
     /* Test that authz uses parent path ACLs if no rule for the path
        exists. */
-    { "/A/C", NULL, svn_authz_read, TRUE },
+    { "/A/C", "greek", NULL, svn_authz_read, TRUE },
     /* Test that recursive access requests take into account the rules
        of subpaths. */
-    { "/A/D", "plato", svn_authz_read | svn_authz_recursive, TRUE },
-    { "/A/D", NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D", "greek", "plato", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/A/D", "greek", NULL, svn_authz_read | svn_authz_recursive, FALSE },
     /* Test global write access lookups. */
-    { NULL, "plato", svn_authz_read, TRUE },
-    { NULL, NULL, svn_authz_write, FALSE },
+    { NULL, "greek", "plato", svn_authz_read, TRUE },
+    { NULL, "greek", NULL, svn_authz_write, FALSE },
     /* Sentinel */
-    { NULL, NULL, svn_authz_none, FALSE }
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
   };
 
   /* The test logic:
@@ -1199,7 +1284,7 @@ authz(apr_pool_t *pool)
   contents =
     "[greek:/A]"                                                             NL
     "* = r"                                                                  NL
-    "plato = w"                                                              NL
+    "plato = rw"                                                             NL
     ""                                                                       NL
     "[greek:/iota]"                                                          NL
     "* ="                                                                    NL
@@ -1224,37 +1309,14 @@ authz(apr_pool_t *pool)
     ""                                                                       NL;
 
   /* Load the test authz rules. */
-  SVN_ERR(authz_get_handle(&authz_cfg, contents, subpool));
+  SVN_ERR(authz_get_handle(&authz_cfg, contents, FALSE, subpool));
 
   /* Loop over the test array and test each case. */
-  for (i = 0; !(test_set[i].path == NULL
-               && test_set[i].required == svn_authz_none); i++)
-    {
-      SVN_ERR(svn_repos_authz_check_access(authz_cfg, "greek",
-                                           test_set[i].path,
-                                           test_set[i].user,
-                                           test_set[i].required,
-                                           &access_granted, subpool));
+  SVN_ERR(authz_check_access(authz_cfg, contents, test_set, subpool));
 
-      if (access_granted != test_set[i].expected)
-        {
-          return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                   "Authz incorrectly %s %s%s access "
-                                   "to greek:%s for user %s",
-                                   access_granted ?
-                                   "grants" : "denies",
-                                   test_set[i].required
-                                   & svn_authz_recursive ?
-                                   "recursive " : "",
-                                   test_set[i].required
-                                   & svn_authz_read ?
-                                   "read" : "write",
-                                   test_set[i].path,
-                                   test_set[i].user ?
-                                   test_set[i].user : "-");
-        }
-    }
-
+  /* Repeat the previous test on disk */
+  SVN_ERR(authz_get_handle(&authz_cfg, contents, TRUE, subpool));
+  SVN_ERR(authz_check_access(authz_cfg, contents, test_set, subpool));
 
   /* The authz rules for the phase 2 tests, first case (cyclic
      dependency). */
@@ -1268,7 +1330,7 @@ authz(apr_pool_t *pool)
 
   /* Load the test authz rules and check that group cycles are
      reported. */
-  err = authz_get_handle(&authz_cfg, contents, subpool);
+  err = authz_get_handle(&authz_cfg, contents, FALSE, subpool);
   if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1283,7 +1345,7 @@ authz(apr_pool_t *pool)
     "@senate = r"                                                            NL;
 
   /* Check that references to undefined groups are reported. */
-  err = authz_get_handle(&authz_cfg, contents, subpool);
+  err = authz_get_handle(&authz_cfg, contents, FALSE, subpool);
   if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
                              "Got %s error instead of expected "
@@ -1300,7 +1362,7 @@ authz(apr_pool_t *pool)
     "* ="                                                                    NL;
 
   /* Load the test authz rules. */
-  SVN_ERR(authz_get_handle(&authz_cfg, contents, subpool));
+  SVN_ERR(authz_get_handle(&authz_cfg, contents, FALSE, subpool));
 
   /* Verify that the rule on /dir2/secret doesn't affect this
      request */
@@ -1318,15 +1380,1058 @@ authz(apr_pool_t *pool)
   contents =
     "[greek:/dir2//secret]"                                                  NL
     "* ="                                                                    NL;
-  SVN_TEST_ASSERT_ERROR(authz_get_handle(&authz_cfg, contents, subpool),
+  SVN_TEST_ASSERT_ERROR(authz_get_handle(&authz_cfg, contents, FALSE, subpool),
                         SVN_ERR_AUTHZ_INVALID_CONFIG);
+
+  /* Verify that the rule on /dir2/secret doesn't affect this
+     request */
+  SVN_ERR(svn_repos_authz_check_access(authz_cfg, "greek",
+                                       "/dir", NULL,
+                                       (svn_authz_read
+                                        | svn_authz_recursive),
+                                       &access_granted, subpool));
+  if (!access_granted)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Regression: incomplete ancestry test "
+                            "for recursive access lookup.");
 
   /* That's a wrap! */
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
+/* Test the supported authz wildcard variants. */
+static svn_error_t *
+test_authz_wildcards(apr_pool_t *pool)
+{
+  svn_authz_t *authz_cfg;
 
+  /* Some non-trivially overlapping wildcard rules, convering all types
+   * of wildcards: "any", "any-var", "prefix", "postfix" and "complex".
+   *
+   * Note that the rules are not in 1:1 correspondence to that enumeration.
+   */
+  const char *contents =
+    "[:glob:/**/G]"                                                          NL
+    "* = r"                                                                  NL
+    ""                                                                       NL
+    "[:glob:/A/*/G]"                                                         NL
+    "* ="                                                                    NL
+    ""                                                                       NL
+    "[:glob:/A/**/*a*]"                                                      NL
+    "* = r"                                                                  NL
+    ""                                                                       NL
+    "[:glob:/**/*a]"                                                         NL
+    "* = rw"                                                                 NL
+    ""                                                                       NL
+    "[:glob:/A/**/g*]"                                                       NL
+    "* ="                                                                    NL
+    ""                                                                       NL
+    "[:glob:/**/lambda]"                                                     NL
+    "* = rw"                                                                 NL;
+
+  /* Definition of the paths to test and expected replies for each. */
+  struct check_access_tests test_set[] = {
+    /* Test that read rules are correctly used. */
+    { "/", NULL, NULL, svn_authz_read, FALSE },              /* default */
+    { "/iota", NULL, NULL, svn_authz_write, TRUE },          /* rule 4 */
+    { "/A", NULL, NULL, svn_authz_read, FALSE },             /* inherited */
+    { "/A/mu", NULL, NULL, svn_authz_read, FALSE },          /* inherited */
+    { "/A/B", NULL, NULL, svn_authz_read, FALSE },           /* inherited */
+    { "/A/B/lambda", NULL, NULL, svn_authz_write, TRUE },    /* rule 6 */
+    { "/A/B/E", NULL, NULL, svn_authz_read, FALSE },         /* inherited */
+    { "/A/B/E/alpha", NULL, NULL, svn_authz_write, TRUE },   /* rule 4 */
+    { "/A/B/E/beta", NULL, NULL, svn_authz_write, TRUE },    /* rule 4 */
+    { "/A/B/F", NULL, NULL, svn_authz_read, FALSE },         /* inherited */
+    { "/A/C", NULL, NULL, svn_authz_read, FALSE },           /* inherited */
+    { "/A/D", NULL, NULL, svn_authz_read, FALSE },           /* inherited */
+    { "/A/D/gamma", NULL, NULL, svn_authz_read, FALSE },     /* rule 5 */
+    { "/A/D/G", NULL, NULL, svn_authz_read, FALSE },         /* rule 2 */
+    { "/A/D/G/pi", NULL, NULL, svn_authz_read, FALSE },      /* inherited */
+    { "/A/D/G/rho", NULL, NULL, svn_authz_read, FALSE },     /* inherited */
+    { "/A/D/G/tau", NULL, NULL, svn_authz_read, TRUE },      /* rule 3 */
+    { "/A/D/G/tau", NULL, NULL, svn_authz_write, FALSE },    /* rule 3 */
+    { "/A/D/H", NULL, NULL, svn_authz_read, FALSE },         /* inherited */
+    { "/A/D/H/chi", NULL, NULL, svn_authz_read, FALSE },     /* inherited */
+    { "/A/D/H/psi", NULL, NULL, svn_authz_read, FALSE },     /* inherited */
+    { "/A/D/H/omega", NULL, NULL, svn_authz_write, TRUE },   /* rule 4 */
+    /* Non-greek tree paths: */
+    { "/A/G", NULL, NULL, svn_authz_read, TRUE },            /* rule 1 */
+    { "/A/G", NULL, NULL, svn_authz_write, FALSE },          /* rule 1 */
+    { "/A/G/G", NULL, NULL, svn_authz_read, FALSE },         /* rule 2 */
+    { "/G", NULL, NULL, svn_authz_read, TRUE },              /* rule 1 */
+    { "/G", NULL, NULL, svn_authz_write, FALSE },            /* rule 1 */
+    { "/Y/G", NULL, NULL, svn_authz_read, TRUE },            /* rule 1 */
+    { "/Y/G", NULL, NULL, svn_authz_write, FALSE },          /* rule 1 */
+    { "/X/Z/G", NULL, NULL, svn_authz_read, TRUE },          /* rule 1 */
+    { "/X/Z/G", NULL, NULL, svn_authz_write, FALSE },        /* rule 1 */
+    /* Rule 5 prevents recursive access anywhere below /A. */
+    { "/", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/iota", NULL, NULL, svn_authz_read | svn_authz_recursive, TRUE },
+    { "/iota", NULL, NULL, svn_authz_write | svn_authz_recursive, FALSE },
+    { "/A", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/mu", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/B", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/B/lambda", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/B/E", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/B/E/alpha", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/B/E/beta", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/B/F", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/C", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/gamma", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/G", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/G/pi", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/G/rho", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/G/tau", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/H", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/H/chi", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/H/psi", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/H/omega", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  /* Load the test authz rules. */
+  SVN_ERR(authz_get_handle(&authz_cfg, contents, FALSE, pool));
+
+  /* Loop over the test array and test each case. */
+  SVN_ERR(authz_check_access(authz_cfg, contents, test_set, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Test the authz performance with wildcard rules. */
+static svn_error_t *
+test_authz_wildcard_performance(apr_pool_t *pool)
+{
+  svn_authz_t *authz_cfg;
+  svn_boolean_t access_granted;
+  int i, k;
+  apr_time_t start, end;
+
+  /* Some non-trivially overlapping wildcard rules, convering all types
+   * of wildcards: "any", "any-var", "prefix", "postfix" and "complex".
+   */
+  const char *contents =
+    "[:glob:greek:/A/*/G]"                                                   NL
+    "* ="                                                                    NL
+    ""                                                                       NL
+    "[:glob:greek:/A/**/*a*]"                                                NL
+    "* = r"                                                                  NL
+    ""                                                                       NL
+    "[:glob:greek:/**/*a]"                                                   NL
+    "* = rw"                                                                 NL
+    ""                                                                       NL
+    "[:glob:greek:/A/**/g*]"                                                 NL
+    "* ="                                                                    NL
+    ""                                                                       NL
+    "[:glob:greek:/**/lambda]"                                               NL
+    "* = rw"                                                                 NL;
+
+  /* Load the test authz rules. */
+  SVN_ERR(authz_get_handle(&authz_cfg, contents, FALSE, pool));
+
+  start = apr_time_now();
+  for (k = 0; k < 100000; ++k)
+    for (i = 1; i < 4; ++i)
+      {
+        const char **path;
+        const char *paths[] =
+        { "/iota",
+          "/A",
+          "/A/mu",
+          "/A/B",
+          "/A/B/lambda",
+          "/A/B/E",
+          "/A/B/E/alpha",
+          "/A/B/E/beta",
+          "/A/B/F",
+          "/A/C",
+          "/A/D",
+          "/A/D/gamma",
+          "/A/D/G",
+          "/A/D/G/pi",
+          "/A/D/G/rho",
+          "/A/D/G/tau",
+          "/A/D/H",
+          "/A/D/H/chi",
+          "/A/D/H/psi",
+          "/A/D/H/omega",
+          NULL
+        };
+
+        for (path = paths; *path; ++path)
+          SVN_ERR(svn_repos_authz_check_access(authz_cfg, "greek",
+                                               *path, NULL, i,
+                                               &access_granted, pool));
+      }
+
+  end = apr_time_now();
+  printf("%"APR_TIME_T_FMT" musecs\n", end - start);
+  printf("%"APR_TIME_T_FMT" checks / sec\n",
+           (k * (i - 1) * 20 * 1000000l) / (end - start));
+
+  return SVN_NO_ERROR;
+}
+
+/* Test that the latest definition wins, regardless of whether the ":glob:"
+ * prefix has been given. */
+static svn_error_t *
+test_authz_prefixes(apr_pool_t *pool)
+{
+  svn_authz_t *authz_cfg;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int i, combi;
+
+  /* Set all rights at some folder and replace them again.  Make sure to
+   * cover the "/" b/c that already has an implicit rule, so we* overwrite
+   * it twice.  The first 2 string placeholders in the rules are for the
+   * repository name and the optional glob support marker. */
+  const char *contents_format =
+    "[%s%s%s]"                                                              NL
+    "* = r"                                                                 NL
+    "plato = rw"                                                            NL
+    ""                                                                      NL
+    "[%s%s%s]"                                                              NL
+    "* ="                                                                   NL
+    "plato = r"                                                             NL;
+
+  /* The paths on which to apply this test. */
+  enum { PATH_COUNT = 2 };
+  const char *test_paths[PATH_COUNT] = { "/", "/A" };
+
+  /* Definition of the paths to test and expected replies for each. */
+  struct check_access_tests test_set1[] = {
+    /* Test that read rules are correctly used. */
+    { "", "greek", NULL, svn_authz_read, FALSE },
+    /* Test that write rules are correctly used. */
+    { "", "greek", "plato", svn_authz_read, TRUE },
+    { "", "greek", "plato", svn_authz_write, FALSE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  /* To be used when global rules are specified after per-repos rules.
+   * In that case, the global rules still win. */
+  struct check_access_tests test_set2[] = {
+    /* Test that read rules are correctly used. */
+    { "", "greek", NULL, svn_authz_read, TRUE },
+    { "", "greek", NULL, svn_authz_write, FALSE },
+    /* Test that write rules are correctly used. */
+    { "", "greek", "plato", svn_authz_read, TRUE },
+    { "", "greek", "plato", svn_authz_write, TRUE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  /* There is a total of 16 combinations of authz content. */
+  for (combi = 0; combi < 16; ++combi)
+    {
+      const char *contents;
+      const char *glob1 = (combi & 1) ? ":glob:" : "";
+      const char *glob2 = (combi & 2) ? ":glob:" : "";
+      const char *repo1 = (combi & 4) ? "greek:" : "";
+      const char *repo2 = (combi & 4) ? "" : "greek:";
+      const char *test_path = test_paths[combi / 8];
+      struct check_access_tests *test_set = (combi & 4) ? test_set2 : test_set1;
+
+      /* Create and parse the authz rules. */
+      svn_pool_clear(iterpool);
+      contents = apr_psprintf(iterpool, contents_format,
+                              glob1, repo1, test_path,
+                              glob2, repo2, test_path);
+      SVN_ERR(authz_get_handle(&authz_cfg, contents, FALSE, iterpool));
+
+      /* iterate over all test paths */
+      for (i = combi / 8; i < PATH_COUNT; ++i)
+        {
+          /* Set the path for all test cases to the current test path. */
+          struct check_access_tests *test;
+          for (test = test_set; test->path != NULL; ++test)
+            test->path = test_paths[i];
+
+          /* Loop over the test array and test each case. */
+          SVN_ERR(authz_check_access(authz_cfg, contents, test_set, iterpool));
+        }
+    }
+
+  /* That's a wrap! */
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_authz_recursive_override(apr_pool_t *pool)
+{
+  svn_authz_t *authz_cfg;
+
+  /* Set all rights at some folder and replace them again.  Make sure to
+   * cover the "/" b/c that already has an implicit rule, so we* overwrite
+   * it twice.  The first 2 string placeholders in the rules are for the
+   * repository name and the optional glob support marker. */
+  const char *contents =
+    "[:glob:/A/B]"                                                          NL
+    "plato = rw"                                                            NL
+    ""                                                                      NL
+    "[:glob:/A/**]"                                                         NL
+    "plato = r"                                                             NL
+    ""                                                                      NL
+    "[:glob:/B/C]"                                                          NL
+    "plato ="                                                               NL
+    ""                                                                      NL
+    "[:glob:/B/**]"                                                         NL
+    "plato = rw"                                                            NL
+    ""                                                                      NL
+    "[:glob:/C/D]"                                                          NL
+    "plato = rw"                                                            NL
+    ""                                                                      NL
+    "[:glob:/C/**/E]"                                                       NL
+    "plato = r"                                                             NL
+    ""                                                                      NL
+    "[:glob:/D/E]"                                                          NL
+    "plato = r"                                                             NL
+    ""                                                                      NL
+    "[:glob:/D/**/F]"                                                       NL
+    "plato = rw"                                                            NL;
+
+  /* Definition of the paths to test and expected replies for each. */
+  struct check_access_tests test_set[] = {
+    /* The root shall not be affected -> defaults to "no access". */
+    { "/", NULL, "plato", svn_authz_read, FALSE },
+    /* Recursive restriction of rights shall work. */
+    { "/A", NULL, "plato", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/A", NULL, "plato", svn_authz_write | svn_authz_recursive, FALSE },
+    /* Recursive extension of rights shall work. */
+    { "/B", NULL, "plato", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/B", NULL, "plato", svn_authz_write | svn_authz_recursive, TRUE },
+    /* Partial replacements shall not result in recursive rights. */
+    { "/C", NULL, "plato", svn_authz_read | svn_authz_recursive, FALSE },
+    { "/C/D", NULL, "plato", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/C/D", NULL, "plato", svn_authz_write | svn_authz_recursive, FALSE },
+    { "/D", NULL, "plato", svn_authz_read | svn_authz_recursive, FALSE },
+    { "/D/E", NULL, "plato", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/D/E", NULL, "plato", svn_authz_write | svn_authz_recursive, FALSE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  SVN_ERR(authz_get_handle(&authz_cfg, contents, FALSE, pool));
+
+  /* Loop over the test array and test each case. */
+  SVN_ERR(authz_check_access(authz_cfg, contents, test_set, pool));
+
+  /* That's a wrap! */
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_authz_pattern_tests(apr_pool_t *pool)
+{
+  svn_authz_t *authz_cfg;
+
+  /* Rules will be considered for recursive access checks irrespective of
+   * whether the respective paths actually do exist. */
+  const char *contents =
+    "[:glob:/**/Yeti]"                                                      NL
+    "plato = r"                                                             NL
+    ""                                                                      NL
+    "[/]"                                                                   NL
+    "plato = r"                                                             NL
+    ""                                                                      NL
+    "[/trunk]"                                                              NL
+    "plato = rw"                                                            NL;
+
+  /* Definition of the paths to test and expected replies for each. */
+  struct check_access_tests test_set[] = {
+    /* We have no recursive write access anywhere. */
+    { "/", NULL, "plato", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/", NULL, "plato", svn_authz_write | svn_authz_recursive, FALSE },
+    { "/trunk", NULL, "plato", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/trunk", NULL, "plato", svn_authz_write | svn_authz_recursive, FALSE },
+
+    /* We do have ordinary write access to anything under /trunk that is
+     * not a Yeti. */
+    { "/trunk", NULL, "plato", svn_authz_write, TRUE },
+    { "/trunk/A/B/C", NULL, "plato", svn_authz_write, TRUE },
+
+    /* We don't have write access to Yetis. */
+    { "/trunk/A/B/C/Yeti", NULL, "plato", svn_authz_write, FALSE },
+    { "/trunk/Yeti", NULL, "plato", svn_authz_write, FALSE },
+    { "/Yeti", NULL, "plato", svn_authz_write, FALSE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  /* Global override via "**" and selective override for a specific path. */
+  const char *contents2 =
+    "[:glob:/X]"                                                            NL
+    "user1 ="                                                               NL
+    ""                                                                      NL
+    "[:glob:/X/**]"                                                         NL
+    "user1 = rw"                                                            NL
+    "user2 = rw"                                                            NL
+    ""                                                                      NL
+    "[:glob:/X/Y/Z]"                                                        NL
+    "user2 ="                                                               NL;
+
+  /* Definition of the paths to test and expected replies for each. */
+  struct check_access_tests test_set2[] = {
+    /* No access at the root*/
+    { "/", NULL, "user1", svn_authz_read, FALSE },
+    { "/", NULL, "user2", svn_authz_read, FALSE },
+
+    /* User 1 has recursive write access anywhere. */
+    { "/X", NULL, "user1", svn_authz_write | svn_authz_recursive, TRUE },
+    { "/X/Y", NULL, "user1", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/X/Y/Z", NULL, "user1", svn_authz_read | svn_authz_recursive, TRUE },
+
+    /* User 2 only has recursive read access to X/Y/Z. */
+    { "/X", NULL, "user1", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/X", NULL, "user2", svn_authz_write | svn_authz_recursive, FALSE },
+    { "/X/Y", NULL, "user2", svn_authz_write | svn_authz_recursive, FALSE },
+    { "/X/Y/Z", NULL, "user2", svn_authz_write | svn_authz_recursive, FALSE },
+
+    /* However, user2 has ordinary write access X and recursive write access
+     * to anything not in X/Y/Z. */
+    { "/X", NULL, "user2", svn_authz_write, TRUE },
+    { "/X/A", NULL, "user2", svn_authz_write | svn_authz_recursive, TRUE },
+    { "/X/Y/A", NULL, "user2", svn_authz_write | svn_authz_recursive, TRUE },
+
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  /* Global patterns vs. global path rules. */
+  const char *contents3 =
+    "[groups]"                                                              NL
+    "Team1 = user1"                                                         NL
+    "Team2 = user1, user2"                                                  NL
+    ""                                                                      NL
+    "[/]"                                                                   NL
+    "* ="                                                                   NL
+    ""                                                                      NL
+    "[:glob:Repo1:/**/folder*]"                                             NL
+    "@Team1 = rw"                                                           NL
+    ""                                                                      NL
+    "[Repo2:/]"                                                             NL
+    "@Team2 = r"                                                            NL;
+
+  /* Definition of the paths to test and expected replies for each. */
+  struct check_access_tests test_set3[] = {
+    /* No access at the root of Repo1 (inherited from global settings) */
+    { "/", "Repo1", "user1", svn_authz_read, FALSE },
+    { "/", "Repo1", "user2", svn_authz_read, FALSE },
+
+    /* r/o access for both users at the root of Repo2 */
+    { "/", "Repo2", "user1", svn_authz_read, TRUE },
+    { "/", "Repo2", "user2", svn_authz_read, TRUE },
+    { "/", "Repo2", "user1", svn_authz_write, FALSE },
+    { "/", "Repo2", "user2", svn_authz_write, FALSE },
+
+    /* user1 has recursive write access (b/c there are no further rules
+     * restricting the access once granted at the parent) wherever there is
+     * a "folder..." in the  path, while user2 has no access at all. */
+    { "/folder_1", "Repo1", "user1",
+      svn_authz_write | svn_authz_recursive, TRUE },
+    { "/folder_1", "Repo1", "user2", svn_authz_read, FALSE },
+    { "/1_folder", "Repo1", "user1", svn_authz_read, FALSE },
+    { "/foo/bar/folder_2/random", "Repo1", "user1",
+      svn_authz_write | svn_authz_recursive, TRUE },
+    { "/foo/bar/folder_2/random", "Repo1", "user2", svn_authz_read, FALSE },
+    { "/foo/bar/2_folder/random", "Repo1", "user1", svn_authz_read, FALSE },
+    { "/foo/bar/folder", "Repo1", "user1",
+      svn_authz_write | svn_authz_recursive, TRUE },
+    { "/foo/bar/folder", "Repo1", "user2", svn_authz_read, FALSE },
+
+    /* Doesn't quite match the pattern: */
+    { "/foo/bar/folde", "Repo1", "user1", svn_authz_read, FALSE },
+    { "/foo/bar/folde", "Repo1", "user2", svn_authz_read, FALSE },
+
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  /* Illustrate the difference between "matching" rule and "applying" rule.
+   * "*" only _matches_ a single level and will _apply_ to sub-paths only
+   * if no other rule _applies_.  The "**" rule applies to all paths in
+   * trunk and will only be eclipsed for members of team1 and then only for
+   * the first sub-level. */
+  const char *contents4 =
+    "[groups]"                                                              NL
+    "team1 = user1, user3"                                                  NL
+    "team2 = user2, user3"                                                  NL
+    ""                                                                      NL
+    "[:glob:Repo1:/trunk/**]"                                               NL
+    "@team2 = rw"                                                           NL
+    ""                                                                      NL
+    "[:glob:Repo1:/trunk/*]"                                                NL
+    "@team1 = r"                                                            NL;
+
+  /* Definition of the paths to test and expected replies for each. */
+  struct check_access_tests test_set4[] = {
+    /* Team2 has r/w access to /trunk */
+    { "/trunk", "Repo1", "user1", svn_authz_read, FALSE },
+    { "/trunk", "Repo1", "user2", svn_authz_write, TRUE },
+    { "/trunk", "Repo1", "user3", svn_authz_write, TRUE },
+
+    /* At the first sub-level, team1 has only read access;
+     * the remainder of team2 has write access. */
+    { "/trunk/A", "Repo1", "user1", svn_authz_read, TRUE },
+    { "/trunk/A", "Repo1", "user3", svn_authz_read, TRUE },
+    { "/trunk/A", "Repo1", "user1", svn_authz_write, FALSE },
+    { "/trunk/A", "Repo1", "user2", svn_authz_write, TRUE },
+    { "/trunk/A", "Repo1", "user3", svn_authz_write, FALSE },
+
+    /* At the second sub-level, team2 has full write access;
+     * the remainder of team1 has still r/o access. */
+    { "/trunk/A/B", "Repo1", "user2",
+      svn_authz_write | svn_authz_recursive, TRUE },
+    { "/trunk/A/B", "Repo1", "user3",
+      svn_authz_write | svn_authz_recursive, TRUE },
+    { "/trunk/A/B", "Repo1", "user1", svn_authz_read, TRUE },
+    { "/trunk/A/B", "Repo1", "user1", svn_authz_write, FALSE },
+
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  /* Verify that the rules are applies as expected. */
+  SVN_ERR(authz_get_handle(&authz_cfg, contents, FALSE, pool));
+  SVN_ERR(authz_check_access(authz_cfg, contents, test_set, pool));
+
+  SVN_ERR(authz_get_handle(&authz_cfg, contents2, FALSE, pool));
+  SVN_ERR(authz_check_access(authz_cfg, contents2, test_set2, pool));
+
+  SVN_ERR(authz_get_handle(&authz_cfg, contents3, FALSE, pool));
+  SVN_ERR(authz_check_access(authz_cfg, contents3, test_set3, pool));
+
+  SVN_ERR(authz_get_handle(&authz_cfg, contents4, FALSE, pool));
+  SVN_ERR(authz_check_access(authz_cfg, contents4, test_set4, pool));
+
+  /* That's a wrap! */
+  return SVN_NO_ERROR;
+}
+
+
+/* Test in-repo authz paths */
+static svn_error_t *
+in_repo_authz(const svn_test_opts_t *opts,
+                                 apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t youngest_rev;
+  svn_authz_t *authz_cfg;
+  const char *authz_contents;
+  const char *repos_root;
+  const char *repos_url;
+  const char *authz_url;
+  const char *noent_authz_url;
+  svn_error_t *err;
+  struct check_access_tests test_set[] = {
+    /* reads */
+    { "/A", NULL, NULL, svn_authz_read, FALSE },
+    { "/A", NULL, "plato", svn_authz_read, TRUE },
+    { "/A", NULL, "socrates", svn_authz_read, TRUE },
+    /* writes */
+    { "/A", NULL, NULL, svn_authz_write, FALSE },
+    { "/A", NULL, "socrates", svn_authz_write, FALSE },
+    { "/A", NULL, "plato", svn_authz_write, TRUE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  /* Test plan:
+   * Create an authz file and put it in the repository.
+   * Verify it can be read with an relative URL.
+   * Verify it can be read with an absolute URL.
+   * Verify non-existent path does not error out when must_exist is FALSE.
+   * Verify non-existent path does error out when must_exist is TRUE.
+   * Verify that an http:// URL produces an error.
+   * Verify that an svn:// URL produces an error.
+   */
+
+  /* What we'll put in the authz file, it's simple since we're not testing
+   * the parsing, just that we got what we expected. */
+  authz_contents =
+    ""                                                                       NL
+    ""                                                                       NL
+    "[/]"                                                                    NL
+    "plato = rw"                                                             NL
+    "socrates = r";
+
+  /* Create a filesystem and repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-in-repo-authz",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Commit the authz file to the repo. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "authz", pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "authz", authz_contents,
+                                      pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+
+  repos_root = svn_repos_path(repos, pool);
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_root, pool));
+  authz_url = svn_path_url_add_component2(repos_url, "authz", pool);
+  noent_authz_url = svn_path_url_add_component2(repos_url, "A/authz", pool);
+
+  /* absolute file URL. */
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, NULL, TRUE, pool));
+  SVN_ERR(authz_check_access(authz_cfg, authz_contents, test_set, pool));
+
+  /* Non-existent path in the repo with must_exist set to FALSE */
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, noent_authz_url, NULL,
+                                FALSE, pool));
+
+  /* Non-existent path in the repo with must_exist set to TRUE */
+  err = svn_repos_authz_read2(&authz_cfg, noent_authz_url, NULL, TRUE, pool);
+  if (!err || err->apr_err != SVN_ERR_ILLEGAL_TARGET)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_ILLEGAL_TARGET",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+  /* http:// URL which is unsupported */
+  err = svn_repos_authz_read2(&authz_cfg, "http://example.com/repo/authz",
+                              NULL, TRUE, pool);
+  if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_RA_ILLEGAL_URL",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+  /* svn:// URL which is unsupported */
+  err = svn_repos_authz_read2(&authz_cfg, "svn://example.com/repo/authz",
+                              NULL, TRUE, pool);
+  if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_RA_ILLEGAL_URL",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Test in-repo authz with global groups. */
+static svn_error_t *
+in_repo_groups_authz(const svn_test_opts_t *opts,
+                     apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t youngest_rev;
+  svn_authz_t *authz_cfg;
+  const char *groups_contents;
+  const char *authz_contents;
+  const char *repos_root;
+  const char *repos_url;
+  const char *groups_url;
+  const char *noent_groups_url;
+  const char *authz_url;
+  const char *empty_authz_url;
+  const char *noent_authz_url;
+  svn_error_t *err;
+  struct check_access_tests test_set[] = {
+    /* reads */
+    { "/A", NULL, NULL, svn_authz_read, FALSE },
+    { "/A", NULL, "plato", svn_authz_read, TRUE },
+    { "/A", NULL, "socrates", svn_authz_read, TRUE },
+    { "/A", NULL, "solon", svn_authz_read, TRUE },
+    { "/A", NULL, "ephialtes", svn_authz_read, TRUE },
+    /* writes */
+    { "/A", NULL, NULL, svn_authz_write, FALSE },
+    { "/A", NULL, "plato", svn_authz_write, FALSE },
+    { "/A", NULL, "socrates", svn_authz_write, FALSE },
+    { "/A", NULL, "solon", svn_authz_write, TRUE },
+    { "/A", NULL, "ephialtes", svn_authz_write, TRUE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  /* Test plan:
+   * 1. Create an authz file, a global groups file and an empty authz file,
+   *    put all these files in the repository.  The empty authz file is
+   *    required to perform the non-existent path checks (4-7) --
+   *    otherwise we would get the authz validation error due to undefined
+   *    groups.
+   * 2. Verify that the groups file can be read with an relative URL.
+   * 3. Verify that the groups file can be read with an absolute URL.
+   * 4. Verify that non-existent groups file path does not error out when
+   *    must_exist is FALSE.
+   * 5. Same as (4), but when both authz and groups file paths do
+   *    not exist.
+   * 6. Verify that non-existent path for the groups file does error out when
+   *    must_exist is TRUE.
+   * 7. Verify that an http:// URL produces an error.
+   * 8. Verify that an svn:// URL produces an error.
+   */
+
+  /* What we'll put in the authz and groups files, it's simple since
+   * we're not testing the parsing, just that we got what we expected. */
+
+  groups_contents =
+    "[groups]"                                                               NL
+    "philosophers = plato, socrates"                                         NL
+    "senate = solon, ephialtes"                                              NL
+    ""                                                                       NL;
+
+  authz_contents =
+    "[/]"                                                                    NL
+    "@senate = rw"                                                           NL
+    "@philosophers = r"                                                      NL
+    ""                                                                       NL;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR(svn_test__create_repos(&repos,
+                                 "test-repo-in-repo-global-groups-authz",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Commit the authz, empty authz and groups files to the repo. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "groups", pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "authz", pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "empty-authz", pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "groups",
+                                      groups_contents, pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "authz",
+                                      authz_contents, pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "empty-authz", "", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+
+  /* Calculate URLs */
+  repos_root = svn_repos_path(repos, pool);
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_root, pool));
+  authz_url = svn_path_url_add_component2(repos_url, "authz", pool);
+  empty_authz_url = svn_path_url_add_component2(repos_url, "empty-authz", pool);
+  noent_authz_url = svn_path_url_add_component2(repos_url, "A/authz", pool);
+  groups_url = svn_path_url_add_component2(repos_url, "groups", pool);
+  noent_groups_url = svn_path_url_add_component2(repos_url, "A/groups", pool);
+
+
+  /* absolute file URLs. */
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, groups_url, TRUE, pool));
+  SVN_ERR(authz_check_access(authz_cfg, authz_contents, test_set, pool));
+
+  /* Non-existent path for the groups file with must_exist
+   * set to TRUE */
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, empty_authz_url, noent_groups_url,
+                                FALSE, pool));
+
+  /* Non-existent paths for both the authz and the groups files
+   * with must_exist set to TRUE */
+  SVN_ERR(svn_repos_authz_read2(&authz_cfg, noent_authz_url, noent_groups_url,
+                                FALSE, pool));
+
+  /* Non-existent path for the groups file with must_exist
+   * set to TRUE */
+  err = svn_repos_authz_read2(&authz_cfg, empty_authz_url, noent_groups_url,
+                              TRUE, pool);
+  if (!err || err->apr_err != SVN_ERR_ILLEGAL_TARGET)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_ILLEGAL_TARGET",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+  /* http:// URL which is unsupported */
+  err = svn_repos_authz_read2(&authz_cfg, empty_authz_url,
+                              "http://example.com/repo/groups",
+                              TRUE, pool);
+  if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_RA_ILLEGAL_URL",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+  /* svn:// URL which is unsupported */
+  err = svn_repos_authz_read2(&authz_cfg, empty_authz_url,
+                              "http://example.com/repo/groups",
+                              TRUE, pool);
+  if (!err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_RA_ILLEGAL_URL",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper for the groups_authz test.  Set *AUTHZ_P to a representation of
+   AUTHZ_CONTENTS in conjunction with GROUPS_CONTENTS, using POOL for
+   temporary allocation.  If DISK is TRUE then write the contents to
+   temporary files and use svn_repos_authz_read2() to get the data if FALSE
+   write the data to a buffered stream and use svn_repos_authz_parse(). */
+static svn_error_t *
+authz_groups_get_handle(svn_authz_t **authz_p,
+                        const char *authz_contents,
+                        const char *groups_contents,
+                        svn_boolean_t disk,
+                        apr_pool_t *pool)
+{
+  if (disk)
+    {
+      const char *authz_file_path;
+      const char *groups_file_path;
+
+      /* Create temporary files. */
+      SVN_ERR_W(svn_io_write_unique(&authz_file_path, NULL,
+                                    authz_contents,
+                                    strlen(authz_contents),
+                                    svn_io_file_del_on_pool_cleanup, pool),
+                "Writing temporary authz file");
+      SVN_ERR_W(svn_io_write_unique(&groups_file_path, NULL,
+                                    groups_contents,
+                                    strlen(groups_contents),
+                                    svn_io_file_del_on_pool_cleanup, pool),
+                "Writing temporary groups file");
+
+      /* Read the authz configuration back and start testing. */
+      SVN_ERR_W(svn_repos_authz_read2(authz_p, authz_file_path,
+                                      groups_file_path, TRUE, pool),
+                "Opening test authz and groups files");
+
+      /* Done with the files. */
+      SVN_ERR_W(svn_io_remove_file(authz_file_path, pool),
+                "Removing test authz file");
+      SVN_ERR_W(svn_io_remove_file(groups_file_path, pool),
+                "Removing test groups file");
+    }
+  else
+    {
+      svn_stream_t *stream;
+      svn_stream_t *groups_stream;
+
+      /* Create the streams. */
+      stream = svn_stream_buffered(pool);
+      groups_stream = svn_stream_buffered(pool);
+
+      SVN_ERR_W(svn_stream_puts(stream, authz_contents),
+                "Writing authz contents to stream");
+      SVN_ERR_W(svn_stream_puts(groups_stream, groups_contents),
+                "Writing groups contents to stream");
+
+      /* Read the authz configuration from the streams and start testing. */
+      SVN_ERR_W(svn_repos_authz_parse(authz_p, stream, groups_stream, pool),
+                "Parsing the authz and groups contents");
+
+      /* Done with the streams. */
+      SVN_ERR_W(svn_stream_close(stream),
+                "Closing the authz stream");
+      SVN_ERR_W(svn_stream_close(groups_stream),
+                "Closing the groups stream");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Test authz with global groups. */
+static svn_error_t *
+groups_authz(const svn_test_opts_t *opts,
+             apr_pool_t *pool)
+{
+  svn_authz_t *authz_cfg;
+  const char *authz_contents;
+  const char *groups_contents;
+  svn_error_t *err;
+
+  struct check_access_tests test_set1[] = {
+    /* reads */
+    { "/A", "greek", NULL, svn_authz_read, FALSE },
+    { "/A", "greek", "plato", svn_authz_read, TRUE },
+    { "/A", "greek", "demetrius", svn_authz_read, TRUE },
+    { "/A", "greek", "galenos", svn_authz_read, TRUE },
+    { "/A", "greek", "pamphilos", svn_authz_read, FALSE },
+    /* writes */
+    { "/A", "greek", NULL, svn_authz_write, FALSE },
+    { "/A", "greek", "plato", svn_authz_write, TRUE },
+    { "/A", "greek", "demetrius", svn_authz_write, FALSE },
+    { "/A", "greek", "galenos", svn_authz_write, FALSE },
+    { "/A", "greek", "pamphilos", svn_authz_write, FALSE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  struct check_access_tests test_set2[] = {
+    /* reads */
+    { "/A", "greek", NULL, svn_authz_read, FALSE },
+    { "/A", "greek", "socrates", svn_authz_read, FALSE },
+    { "/B", "greek", NULL, svn_authz_read, FALSE},
+    { "/B", "greek", "socrates", svn_authz_read, TRUE },
+    /* writes */
+    { "/A", "greek", NULL, svn_authz_write, FALSE },
+    { "/A", "greek", "socrates", svn_authz_write, FALSE },
+    { "/B", "greek", NULL, svn_authz_write, FALSE},
+    { "/B", "greek", "socrates", svn_authz_write, TRUE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  /* Test plan:
+   * 1. Ensure that a simple setup with global groups and access rights in
+   *    two separate files works as expected.
+   * 2. Verify that access rights written in the global groups file are
+   *    discarded and affect nothing in authorization terms.
+   * 3. Verify that local groups in the authz file are prohibited in
+   *    conjunction with global groups (and that a configuration error is
+   *    reported in this scenario).
+   * 4. Ensure that group cycles in the global groups file are reported.
+   *
+   * All checks are performed twice -- for the configurations stored on disk
+   * and in memory.  See authz_groups_get_handle.
+   */
+
+  groups_contents =
+    "[groups]"                                                               NL
+    "slaves = pamphilos,@gladiators"                                         NL
+    "gladiators = demetrius,galenos"                                         NL
+    "philosophers = plato"                                                   NL
+    ""                                                                       NL;
+
+  authz_contents =
+    "[greek:/A]"                                                             NL
+    "@slaves = "                                                             NL
+    "@gladiators = r"                                                        NL
+    "@philosophers = rw"                                                     NL
+    ""                                                                       NL;
+
+  SVN_ERR(authz_groups_get_handle(&authz_cfg, authz_contents,
+                                  groups_contents, TRUE, pool));
+
+  SVN_ERR(authz_check_access(authz_cfg, authz_contents, test_set1, pool));
+
+  SVN_ERR(authz_groups_get_handle(&authz_cfg, authz_contents,
+                                  groups_contents, FALSE, pool));
+
+  SVN_ERR(authz_check_access(authz_cfg, authz_contents, test_set1, pool));
+
+  /* Access rights in the global groups file are forbidden. */
+  groups_contents =
+    "[groups]"                                                               NL
+    "philosophers = socrates"                                                NL
+    ""                                                                       NL
+    "[greek:/A]"                                                             NL
+    "@philosophers = rw"                                                     NL
+    ""                                                                       NL;
+
+  authz_contents =
+    "[greek:/B]"                                                             NL
+    "@philosophers = rw"                                                     NL
+    ""                                                                       NL;
+
+  SVN_TEST_ASSERT_ERROR(
+      authz_groups_get_handle(&authz_cfg, authz_contents,
+                              groups_contents, TRUE, pool),
+      SVN_ERR_AUTHZ_INVALID_CONFIG);
+  SVN_TEST_ASSERT_ERROR(
+      authz_groups_get_handle(&authz_cfg, authz_contents,
+                              groups_contents, FALSE, pool),
+      SVN_ERR_AUTHZ_INVALID_CONFIG);
+
+  groups_contents =
+    "[groups]"                                                               NL
+    "philosophers = socrates"                                                NL
+    ""                                                                       NL;
+  SVN_ERR(authz_groups_get_handle(&authz_cfg, authz_contents,
+                                  groups_contents, TRUE, pool));
+
+  SVN_ERR(authz_check_access(authz_cfg, authz_contents, test_set2, pool));
+
+  SVN_ERR(authz_groups_get_handle(&authz_cfg, authz_contents,
+                                  groups_contents, FALSE, pool));
+
+  SVN_ERR(authz_check_access(authz_cfg, authz_contents, test_set2, pool));
+
+  /* Local groups cannot be used in conjunction with global groups. */
+  groups_contents =
+    "[groups]"                                                               NL
+    "slaves = maximus"                                                       NL
+    ""                                                                       NL;
+
+  authz_contents =
+    "[greek:/A]"                                                             NL
+    "@slaves = "                                                             NL
+    "@kings = rw"                                                            NL
+    ""                                                                       NL
+    "[groups]"                                                               NL
+    /* That's an epic story of the slave who tried to become a king. */
+    "kings = maximus"                                                        NL
+    ""                                                                       NL;
+
+  err = authz_groups_get_handle(&authz_cfg, authz_contents,
+                                groups_contents, TRUE, pool);
+
+  if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_AUTHZ_INVALID_CONFIG",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+  err = authz_groups_get_handle(&authz_cfg, authz_contents,
+                                groups_contents, FALSE, pool);
+
+  if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_AUTHZ_INVALID_CONFIG",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+  /* Ensure that group cycles are reported. */
+  groups_contents =
+    "[groups]"                                                               NL
+    "slaves = cooks,scribes,@gladiators"                                     NL
+    "gladiators = equites,thraces,@slaves"                                   NL
+    ""                                                                       NL;
+
+  authz_contents =
+    "[greek:/A]"                                                             NL
+    "@slaves = r"                                                            NL
+    ""                                                                       NL;
+
+  err = authz_groups_get_handle(&authz_cfg, authz_contents,
+                                groups_contents, TRUE, pool);
+
+  if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_AUTHZ_INVALID_CONFIG",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+  err = authz_groups_get_handle(&authz_cfg, authz_contents,
+                                groups_contents, FALSE, pool);
+
+  if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "Got %s error instead of expected "
+                             "SVN_ERR_AUTHZ_INVALID_CONFIG",
+                             err ? "unexpected" : "no");
+  svn_error_clear(err);
+
+  return SVN_NO_ERROR;
+}
 
 /* Callback for the commit editor tests that relays requests to
    authz. */
@@ -1467,6 +2572,9 @@ test_path_authz(svn_repos_t *repos,
                                     path_action->copyfrom_path, youngest_rev,
                                     scratch_pool, &out_baton);
         break;
+
+      default:
+        SVN_TEST_ASSERT(FALSE);
     }
 
   /* Don't worry about closing batons, just abort the edit.  Since errors
@@ -1570,7 +2678,7 @@ commit_editor_authz(const svn_test_opts_t *opts,
     "[/A/D/G]"                                                               NL
     "plato = r"; /* No newline at end of file. */
 
-  SVN_ERR(authz_get_handle(&authz_file, authz_contents, pool));
+  SVN_ERR(authz_get_handle(&authz_file, authz_contents, FALSE, pool));
 
   iterpool = svn_pool_create(pool);
   for (i = 0; i < (sizeof(path_actions) / sizeof(struct authz_path_action_t));
@@ -1705,15 +2813,17 @@ commit_continue_txn(const svn_test_opts_t *opts,
 }
 
 
+
+/* A baton for check_location_segments(). */
 struct nls_receiver_baton
 {
   int count;
-  svn_location_segment_t *expected_segments;
+  const svn_location_segment_t *expected_segments;
 };
 
-
+/* Return a pretty-printed string representing SEGMENT. */
 static const char *
-format_segment(svn_location_segment_t *segment,
+format_segment(const svn_location_segment_t *segment,
                apr_pool_t *pool)
 {
   return apr_psprintf(pool, "[r%ld-r%ld: /%s]",
@@ -1722,14 +2832,15 @@ format_segment(svn_location_segment_t *segment,
                       segment->path ? segment->path : "(null)");
 }
 
-
+/* A location segment receiver for check_location_segments().
+ * Implements svn_location_segment_receiver_t. */
 static svn_error_t *
 nls_receiver(svn_location_segment_t *segment,
              void *baton,
              apr_pool_t *pool)
 {
   struct nls_receiver_baton *b = baton;
-  svn_location_segment_t *expected_segment = b->expected_segments + b->count;
+  const svn_location_segment_t *expected_segment = b->expected_segments + b->count;
 
   /* expected_segments->range_end can't be 0, so if we see that, it's
      our end-of-the-list sentry. */
@@ -1738,7 +2849,9 @@ nls_receiver(svn_location_segment_t *segment,
                              "Got unexpected location segment: %s",
                              format_segment(segment, pool));
 
-  if (expected_segment->range_start != segment->range_start)
+  if (expected_segment->range_start != segment->range_start
+      || expected_segment->range_end != segment->range_end
+      || strcmp_null(expected_segment->path, segment->path) != 0)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "Location segments differ\n"
                              "   Expected location segment: %s\n"
@@ -1749,18 +2862,22 @@ nls_receiver(svn_location_segment_t *segment,
   return SVN_NO_ERROR;
 }
 
-
+/* Run a svn_repos_node_location_segments() query with REPOS, PATH, PEG_REV,
+ * START_REV, END_REV.  Check that the result exactly matches the list of
+ * segments EXPECTED_SEGMENTS, which is terminated by an entry with
+ * 'range_end'==0.
+ */
 static svn_error_t *
 check_location_segments(svn_repos_t *repos,
                         const char *path,
                         svn_revnum_t peg_rev,
                         svn_revnum_t start_rev,
                         svn_revnum_t end_rev,
-                        svn_location_segment_t *expected_segments,
+                        const svn_location_segment_t *expected_segments,
                         apr_pool_t *pool)
 {
   struct nls_receiver_baton b;
-  svn_location_segment_t *segment;
+  const svn_location_segment_t *segment;
 
   /* Run svn_repos_node_location_segments() with a receiver that
      validates against EXPECTED_SEGMENTS.  */
@@ -1782,6 +2899,21 @@ check_location_segments(svn_repos_t *repos,
   return SVN_NO_ERROR;
 }
 
+/* Inputs and expected outputs for svn_repos_node_location_segments() tests.
+ */
+typedef struct location_segment_test_t
+{
+  /* Path and peg revision to query */
+  const char *path;
+  svn_revnum_t peg;
+  /* Start (youngest) and end (oldest) revisions to query */
+  svn_revnum_t start;
+  svn_revnum_t end;
+
+  /* Expected segments */
+  svn_location_segment_t segments[10];
+
+} location_segment_test_t;
 
 static svn_error_t *
 node_location_segments(const svn_test_opts_t *opts,
@@ -1794,10 +2926,77 @@ node_location_segments(const svn_test_opts_t *opts,
   svn_fs_root_t *txn_root, *root;
   svn_revnum_t youngest_rev = 0;
 
+  static const location_segment_test_t subtests[] =
+  {
+    { /* Check locations for /@HEAD. */
+      "", SVN_INVALID_REVNUM, SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+      {
+        { 0, 7, "" },
+        { 0 }
+      }
+    },
+    { /* Check locations for A/D@HEAD. */
+      "A/D", SVN_INVALID_REVNUM, SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+      {
+        { 7, 7, "A/D" },
+        { 3, 6, "A/D2" },
+        { 1, 2, "A/D" },
+        { 0 }
+      }
+    },
+    { /* Check a subset of the locations for A/D@HEAD. */
+      "A/D", SVN_INVALID_REVNUM, 5, 2,
+      {
+        { 3, 5, "A/D2" },
+        { 2, 2, "A/D" },
+        { 0 }
+      },
+    },
+    { /* Check a subset of locations for A/D2@5. */
+      "A/D2", 5, 3, 2,
+      {
+        { 3, 3, "A/D2" },
+        { 2, 2, "A/D" },
+        { 0 }
+      },
+    },
+    { /* Check locations for A/D@6. */
+      "A/D", 6, 6, SVN_INVALID_REVNUM,
+      {
+        { 1, 6, "A/D" },
+        { 0 }
+      },
+    },
+    { /* Check locations for A/D/G@HEAD. */
+      "A/D/G", SVN_INVALID_REVNUM, SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+      {
+        { 7, 7, "A/D/G" },
+        { 6, 6, "A/D2/G" },
+        { 5, 5, NULL },
+        { 3, 4, "A/D2/G" },
+        { 1, 2, "A/D/G" },
+        { 0 }
+      },
+    },
+    { /* Check a subset of the locations for A/D/G@HEAD. */
+      "A/D/G", SVN_INVALID_REVNUM, 3, 2,
+      {
+        { 3, 3, "A/D2/G" },
+        { 2, 2, "A/D/G" },
+        { 0 }
+      },
+    },
+    {
+      NULL
+    },
+  };
+  const location_segment_test_t *subtest;
+
   /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "bdb") == 0)
       && (opts->server_minor_version == 4))
-    return SVN_NO_ERROR;
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "not supported for BDB in SVN 1.4");
 
   /* Create the repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-node-location-segments",
@@ -1867,117 +3066,19 @@ node_location_segments(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(subpool);
 
-  /* Check locations for /@HEAD. */
-  {
-    svn_location_segment_t expected_segments[] =
-      {
-        { 0, 7, "" },
-        { 0 }
-      };
-    SVN_ERR(check_location_segments(repos, "",
-                                    SVN_INVALID_REVNUM,
-                                    SVN_INVALID_REVNUM,
-                                    SVN_INVALID_REVNUM,
-                                    expected_segments, pool));
-  }
-
-  /* Check locations for A/D@HEAD. */
-  {
-    svn_location_segment_t expected_segments[] =
-      {
-        { 7, 7, "A/D" },
-        { 3, 6, "A/D2" },
-        { 1, 2, "A/D" },
-        { 0 }
-      };
-    SVN_ERR(check_location_segments(repos, "A/D",
-                                    SVN_INVALID_REVNUM,
-                                    SVN_INVALID_REVNUM,
-                                    SVN_INVALID_REVNUM,
-                                    expected_segments, pool));
-  }
-
-  /* Check a subset of the locations for A/D@HEAD. */
-  {
-    svn_location_segment_t expected_segments[] =
-      {
-        { 3, 5, "A/D2" },
-        { 2, 2, "A/D" },
-        { 0 }
-      };
-    SVN_ERR(check_location_segments(repos, "A/D",
-                                    SVN_INVALID_REVNUM,
-                                    5,
-                                    2,
-                                    expected_segments, pool));
-  }
-
-  /* Check a subset of locations for A/D2@5. */
-  {
-    svn_location_segment_t expected_segments[] =
-      {
-        { 3, 3, "A/D2" },
-        { 2, 2, "A/D" },
-        { 0 }
-      };
-    SVN_ERR(check_location_segments(repos, "A/D2",
-                                    5,
-                                    3,
-                                    2,
-                                    expected_segments, pool));
-  }
-
-  /* Check locations for A/D@6. */
-  {
-    svn_location_segment_t expected_segments[] =
-      {
-        { 1, 6, "A/D" },
-        { 0 }
-      };
-    SVN_ERR(check_location_segments(repos, "A/D",
-                                    6,
-                                    6,
-                                    SVN_INVALID_REVNUM,
-                                    expected_segments, pool));
-  }
-
-  /* Check locations for A/D/G@HEAD. */
-  {
-    svn_location_segment_t expected_segments[] =
-      {
-        { 7, 7, "A/D/G" },
-        { 6, 6, "A/D2/G" },
-        { 5, 5, NULL },
-        { 3, 4, "A/D2/G" },
-        { 1, 2, "A/D2/G" },
-        { 0 }
-      };
-    SVN_ERR(check_location_segments(repos, "A/D/G",
-                                    SVN_INVALID_REVNUM,
-                                    SVN_INVALID_REVNUM,
-                                    SVN_INVALID_REVNUM,
-                                    expected_segments, pool));
-  }
-
-  /* Check a subset of the locations for A/D/G@HEAD. */
-  {
-    svn_location_segment_t expected_segments[] =
-      {
-        { 3, 3, "A/D2/G" },
-        { 2, 2, "A/D2/G" },
-        { 0 }
-      };
-    SVN_ERR(check_location_segments(repos, "A/D/G",
-                                    SVN_INVALID_REVNUM,
-                                    3,
-                                    2,
-                                    expected_segments, pool));
-  }
+  /*  */
+  for (subtest = subtests; subtest->path; subtest++)
+    {
+      SVN_ERR(check_location_segments(repos, subtest->path, subtest->peg,
+                                      subtest->start, subtest->end,
+                                      subtest->segments, pool));
+    }
 
   return SVN_NO_ERROR;
 }
 
 
+
 /* Test that the reporter doesn't send deltas under excluded paths. */
 static svn_error_t *
 reporter_depth_exclude(const svn_test_opts_t *opts,
@@ -2065,9 +3166,10 @@ reporter_depth_exclude(const svn_test_opts_t *opts,
   SVN_ERR(dir_delta_get_editor(&editor, &edit_baton, fs,
                                txn_root, "", subpool));
 
-  SVN_ERR(svn_repos_begin_report2(&report_baton, 2, repos, "/", "", NULL,
+  SVN_ERR(svn_repos_begin_report3(&report_baton, 2, repos, "/", "", NULL,
                                   TRUE, svn_depth_infinity, FALSE, FALSE,
-                                  editor, edit_baton, NULL, NULL, subpool));
+                                  editor, edit_baton, NULL, NULL, 0,
+                                  subpool));
   SVN_ERR(svn_repos_set_path3(report_baton, "", 1,
                               svn_depth_infinity,
                               FALSE, NULL, subpool));
@@ -2122,9 +3224,10 @@ reporter_depth_exclude(const svn_test_opts_t *opts,
   SVN_ERR(dir_delta_get_editor(&editor, &edit_baton, fs,
                                txn_root, "", subpool));
 
-  SVN_ERR(svn_repos_begin_report2(&report_baton, 2, repos, "/", "", NULL,
+  SVN_ERR(svn_repos_begin_report3(&report_baton, 2, repos, "/", "", NULL,
                                   TRUE, svn_depth_infinity, FALSE, FALSE,
-                                  editor, edit_baton, NULL, NULL, subpool));
+                                  editor, edit_baton, NULL, NULL, 0,
+                                  subpool));
   SVN_ERR(svn_repos_set_path3(report_baton, "", 1,
                               svn_depth_infinity,
                               FALSE, NULL, subpool));
@@ -2212,15 +3315,13 @@ prop_validation_commit_with_revprop(const char *filename,
   /* Set usual author and log props, if not set already */
   if (strcmp(prop_key, SVN_PROP_REVISION_AUTHOR) != 0)
     {
-      apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR,
-                   APR_HASH_KEY_STRING,
-                   svn_string_create("plato", pool));
+      svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                    svn_string_create("plato", pool));
     }
   else if (strcmp(prop_key, SVN_PROP_REVISION_LOG) != 0)
     {
-      apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG,
-                   APR_HASH_KEY_STRING,
-                   svn_string_create("revision log", pool));
+      svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG,
+                    svn_string_create("revision log", pool));
     }
 
   /* Make an arbitrary change and commit using above values... */
@@ -2256,7 +3357,7 @@ prop_validation(const svn_test_opts_t *opts,
 {
   svn_error_t *err;
   svn_repos_t *repos;
-  const char non_utf8_string[5] = { 'a', (char)0xff, 'b', '\n', 0 };
+  const char non_utf8_string[5] = { 'a', '\xff', 'b', '\n', 0 };
   const char *non_lf_string = "a\r\nb\n\rc\rd\n";
   apr_pool_t *subpool = svn_pool_create(pool);
 
@@ -2319,7 +3420,7 @@ log_receiver(void *baton,
              svn_log_entry_t *log_entry,
              apr_pool_t *pool)
 {
-  int *count = baton;
+  svn_revnum_t *count = baton;
   (*count)++;
   return SVN_NO_ERROR;
 }
@@ -2377,13 +3478,18 @@ get_logs(const svn_test_opts_t *opts,
           svn_revnum_t end_arg   = end ? end : SVN_INVALID_REVNUM;
           svn_revnum_t eff_start = start ? start : youngest_rev;
           svn_revnum_t eff_end   = end ? end : youngest_rev;
-          int limit, max_logs =
+          int limit;
+          svn_revnum_t max_logs =
             MAX(eff_start, eff_end) + 1 - MIN(eff_start, eff_end);
-          int num_logs;
+          svn_revnum_t num_logs;
 
+          /* this may look like it can get in an infinite loop if max_logs
+           * ended up being larger than the size limit can represent.  It
+           * can't because a negative limit will end up failing to match
+           * the existed number of logs. */
           for (limit = 0; limit <= max_logs; limit++)
             {
-              int num_expected = limit ? limit : max_logs;
+              svn_revnum_t num_expected = limit ? limit : max_logs;
 
               svn_pool_clear(subpool);
               num_logs = 0;
@@ -2394,9 +3500,9 @@ get_logs(const svn_test_opts_t *opts,
               if (num_logs != num_expected)
                 return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                          "Log with start=%ld,end=%ld,limit=%d "
-                                         "returned %d entries (expected %d)",
+                                         "returned %ld entries (expected %ld)",
                                          start_arg, end_arg, limit,
-                                         num_logs, max_logs);
+                                         num_logs, num_expected);
             }
         }
     }
@@ -2425,7 +3531,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t rev,
 {
   apr_hash_t *ht = baton;
   const char *author;
-  file_revs_t *file_rev = apr_hash_get(ht, &rev, sizeof(svn_revnum_t));
+  file_revs_t *file_rev = apr_hash_get(ht, &rev, sizeof(rev));
 
   if (!file_rev)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -2443,7 +3549,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t rev,
 
   /* Remove this revision from this list so we'll be able to verify that we
      have seen all expected revisions. */
-  apr_hash_set(ht, &rev, sizeof(svn_revnum_t), NULL);
+  apr_hash_set(ht, &rev, sizeof(rev), NULL);
 
   return SVN_NO_ERROR;
 }
@@ -2477,14 +3583,25 @@ test_get_file_revs(const svn_test_opts_t *opts,
   };
   apr_hash_t *ht_trunk_results = apr_hash_make(subpool);
   apr_hash_t *ht_branch_results = apr_hash_make(subpool);
+  apr_hash_t *ht_reverse_results = apr_hash_make(subpool);
 
   for (i = 0; i < sizeof(trunk_results) / sizeof(trunk_results[0]); i++)
     apr_hash_set(ht_trunk_results, &trunk_results[i].rev,
-                 sizeof(svn_revnum_t), &trunk_results[i]);
+                 sizeof(trunk_results[i].rev), &trunk_results[i]);
 
   for (i = 0; i < sizeof(branch_results) / sizeof(branch_results[0]); i++)
     apr_hash_set(ht_branch_results, &branch_results[i].rev,
-                 sizeof(svn_revnum_t), &branch_results[i]);
+                 sizeof(branch_results[i].rev), &branch_results[i]);
+
+  for (i = 0; i < sizeof(trunk_results) / sizeof(trunk_results[0]); i++)
+    if (!trunk_results[i].result_of_merge)
+      apr_hash_set(ht_reverse_results, &trunk_results[i].rev,
+                   sizeof(trunk_results[i].rev), &trunk_results[i]);
+
+  /* Check for feature support */
+  if (opts->server_minor_version && (opts->server_minor_version < 5))
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "not supported in pre-1.5 SVN");
 
   /* Create the repository and verify blame results. */
   SVN_ERR(svn_test__create_blame_repository(&repos, "test-repo-get-filerevs",
@@ -2495,7 +3612,7 @@ test_get_file_revs(const svn_test_opts_t *opts,
 
   /* Verify blame of /trunk/A/mu */
   SVN_ERR(svn_repos_get_file_revs2(repos, "/trunk/A/mu", 0, youngest_rev,
-                                   1, NULL, NULL,
+                                   TRUE, NULL, NULL,
                                    file_rev_handler,
                                    ht_trunk_results,
                                    subpool));
@@ -2504,13 +3621,20 @@ test_get_file_revs(const svn_test_opts_t *opts,
   /* Verify blame of /branches/1.0.x/A/mu */
   SVN_ERR(svn_repos_get_file_revs2(repos, "/branches/1.0.x/A/mu", 0,
                                    youngest_rev,
-                                   1, NULL, NULL,
+                                   TRUE, NULL, NULL,
                                    file_rev_handler,
                                    ht_branch_results,
                                    subpool));
   SVN_TEST_ASSERT(apr_hash_count(ht_branch_results) == 0);
 
   /* ### TODO: Verify blame of /branches/1.0.x/A/mu in range 6-7 */
+
+  SVN_ERR(svn_repos_get_file_revs2(repos, "/trunk/A/mu", youngest_rev, 0,
+                                   FALSE, NULL, NULL,
+                                   file_rev_handler,
+                                   ht_reverse_results,
+                                   subpool));
+  SVN_TEST_ASSERT(apr_hash_count(ht_reverse_results) == 0);
 
   svn_pool_destroy(subpool);
 
@@ -2531,7 +3655,7 @@ issue_4060(const svn_test_opts_t *opts,
     "ozymandias = r"                                                       NL
     ""                                                                     NL;
 
-  SVN_ERR(authz_get_handle(&authz_cfg, authz_contents, subpool));
+  SVN_ERR(authz_get_handle(&authz_cfg, authz_contents, FALSE, subpool));
 
   SVN_ERR(svn_repos_authz_check_access(authz_cfg, "babylon",
                                        "/A/B/C", "ozymandias",
@@ -2556,10 +3680,795 @@ issue_4060(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-
+/* Test svn_repos_delete(). */
+static svn_error_t *
+test_delete_repos(const svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  const char *path;
+  svn_node_kind_t kind;
+
+  /* We have to use a subpool to close the svn_repos_t before calling
+     svn_repos_delete. */
+  {
+    svn_repos_t *repos;
+    apr_pool_t *subpool = svn_pool_create(pool);
+    SVN_ERR(svn_test__create_repos(&repos, "test-repo-delete-repos", opts,
+                                   subpool));
+    path = svn_repos_path(repos, pool);
+    svn_pool_destroy(subpool);
+  }
+
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_TEST_ASSERT(kind != svn_node_none);
+  SVN_ERR(svn_repos_delete(path, pool));
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_TEST_ASSERT(kind == svn_node_none);
+
+  /* Recreate dir so that test cleanup doesn't fail. */
+  SVN_ERR(svn_io_dir_make(path, APR_OS_DEFAULT, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Prepare a commit for the filename_with_control_chars() tests */
+static svn_error_t *
+fwcc_prepare(const svn_delta_editor_t **editor_p,
+             void **edit_baton_p,
+             void **root_baton,
+             svn_repos_t *repos,
+             apr_pool_t *scratch_pool)
+{
+  /* Checks for control characters are implemented in the commit editor,
+   * not in the FS API. */
+  SVN_ERR(svn_repos_get_commit_editor4(editor_p, edit_baton_p, repos,
+                                       NULL, "file://test", "/",
+                                       "plato", "test commit",
+                                       dummy_commit_cb, NULL, NULL, NULL,
+                                       scratch_pool));
+  SVN_ERR((*editor_p)->open_root(*edit_baton_p, 1, scratch_pool, root_baton));
+  return SVN_NO_ERROR;
+}
+
+/* Related to issue 4340, "filenames containing \n corrupt FSFS repositories" */
+static svn_error_t *
+filename_with_control_chars(const svn_test_opts_t *opts,
+                            apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t youngest_rev = 0;
+  svn_error_t *err;
+  static const char *bad_paths[] = {
+    "/bar\t",
+    "/bar\n",
+    "/\barb\az",
+    "/\x02 baz",
+    NULL,
+  };
+  const char *p;
+  int i;
+  void *edit_baton;
+  void *root_baton;
+  void *out_baton;
+  const svn_delta_editor_t *editor;
+
+  /* Create the repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-filename-with-cntrl-chars",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Revision 1:  Add a directory /foo  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/foo", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
+
+  /* Attempt to copy /foo to a bad path P. This should fail. */
+  i = 0;
+  do
+    {
+      p = bad_paths[i++];
+      if (p == NULL)
+        break;
+      svn_pool_clear(subpool);
+
+      SVN_ERR(fwcc_prepare(&editor, &edit_baton, &root_baton, repos, subpool));
+      err = editor->add_directory(p, root_baton, "/foo", 1, subpool,
+                                  &out_baton);
+      if (!err)
+        err = editor->close_edit(edit_baton, subpool);
+      svn_error_clear(editor->abort_edit(edit_baton, subpool));
+      SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
+  } while (p);
+
+  /* Attempt to add a file with bad path P. This should fail. */
+  i = 0;
+  do
+    {
+      p = bad_paths[i++];
+      if (p == NULL)
+        break;
+      svn_pool_clear(subpool);
+
+      SVN_ERR(fwcc_prepare(&editor, &edit_baton, &root_baton, repos, subpool));
+      err = editor->add_file(p, root_baton, NULL, SVN_INVALID_REVNUM,
+                             subpool, &out_baton);
+      if (!err)
+        err = editor->close_edit(edit_baton, subpool);
+      svn_error_clear(editor->abort_edit(edit_baton, subpool));
+      SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
+  } while (p);
+
+
+  /* Attempt to add a directory with bad path P. This should fail. */
+  i = 0;
+  do
+    {
+      p = bad_paths[i++];
+      if (p == NULL)
+        break;
+      svn_pool_clear(subpool);
+
+      SVN_ERR(fwcc_prepare(&editor, &edit_baton, &root_baton, repos, subpool));
+      err = editor->add_directory(p, root_baton, NULL, SVN_INVALID_REVNUM,
+                                  subpool, &out_baton);
+      if (!err)
+        err = editor->close_edit(edit_baton, subpool);
+      svn_error_clear(editor->abort_edit(edit_baton, subpool));
+      SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
+  } while (p);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_repos_info(const svn_test_opts_t *opts,
+                apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_test_opts_t opts2;
+  apr_hash_t *capabilities;
+  svn_version_t *supports_version;
+  svn_version_t v1_0_0 = {1, 0, 0, ""};
+  svn_version_t v1_4_0 = {1, 4, 0, ""};
+  int repos_format;
+  svn_boolean_t is_fsx = strcmp(opts->fs_type, "fsx") == 0;
+
+  opts2 = *opts;
+
+  /* for repo types that have been around before 1.4 */
+  if (!is_fsx)
+    {
+      opts2.server_minor_version = 3;
+      SVN_ERR(svn_test__create_repos(&repos, "test-repo-info-3",
+                                     &opts2, pool));
+      SVN_ERR(svn_repos_capabilities(&capabilities, repos, pool, pool));
+      SVN_TEST_ASSERT(apr_hash_count(capabilities) == 0);
+      SVN_ERR(svn_repos_info_format(&repos_format, &supports_version, repos,
+                                    pool, pool));
+      SVN_TEST_ASSERT(repos_format == 3);
+      SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_0_0));
+    }
+
+  opts2.server_minor_version = 9;
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-info-9",
+                                 &opts2, pool));
+  SVN_ERR(svn_repos_capabilities(&capabilities, repos, pool, pool));
+  SVN_TEST_ASSERT(apr_hash_count(capabilities) == 1);
+  SVN_TEST_ASSERT(svn_hash_gets(capabilities, SVN_REPOS_CAPABILITY_MERGEINFO));
+  SVN_ERR(svn_repos_info_format(&repos_format, &supports_version, repos,
+                                pool, pool));
+  SVN_TEST_ASSERT(repos_format == 5);
+  SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_4_0));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_config_pool(const svn_test_opts_t *opts,
+                 apr_pool_t *pool)
+{
+  const char *repo_name = "test-repo-config-pool";
+  svn_repos_t *repos;
+  svn_stringbuf_t *cfg_buffer1, *cfg_buffer2;
+  svn_config_t *cfg;
+  apr_hash_t *sections1, *sections2;
+  int i;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root, *rev_root;
+  svn_revnum_t rev;
+  const char *repo_root_url;
+  const char *srcdir;
+  svn_error_t *err;
+
+  svn_repos__config_pool_t *config_pool;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  const char *wrk_dir = svn_test_data_path("config_pool", pool);
+
+  SVN_ERR(svn_io_make_dir_recursively(wrk_dir, pool));
+
+  /* read all config info through a single config pool. */
+  SVN_ERR(svn_repos__config_pool_create(&config_pool, TRUE, pool));
+
+  /* have two different configurations  */
+  SVN_ERR(svn_test_get_srcdir(&srcdir, opts, pool));
+  SVN_ERR(svn_stringbuf_from_file2(
+                        &cfg_buffer1,
+                        svn_dirent_join(srcdir,
+                                        "../libsvn_subr/config-test.cfg",
+                                        pool),
+                        pool));
+  cfg_buffer2 = svn_stringbuf_dup(cfg_buffer1, pool);
+  svn_stringbuf_appendcstr(cfg_buffer2, "\n[more]\nU=\"X\"\n");
+
+  /* write them to 2x2 files */
+  SVN_ERR(svn_io_write_atomic2(svn_dirent_join(wrk_dir,
+                                               "config-pool-test1.cfg",
+                                               pool),
+                               cfg_buffer1->data, cfg_buffer1->len, NULL,
+                               FALSE, pool));
+  SVN_ERR(svn_io_write_atomic2(svn_dirent_join(wrk_dir,
+                                               "config-pool-test2.cfg",
+                                               pool),
+                               cfg_buffer1->data, cfg_buffer1->len, NULL,
+                               FALSE, pool));
+  SVN_ERR(svn_io_write_atomic2(svn_dirent_join(wrk_dir,
+                                               "config-pool-test3.cfg",
+                                               pool),
+                               cfg_buffer2->data, cfg_buffer2->len, NULL,
+                               FALSE, pool));
+  SVN_ERR(svn_io_write_atomic2(svn_dirent_join(wrk_dir,
+                                               "config-pool-test4.cfg",
+                                               pool),
+                               cfg_buffer2->data, cfg_buffer2->len, NULL,
+                               FALSE, pool));
+
+  /* requesting a config over and over again should return the same
+     (even though it is not being referenced) */
+  sections1 = NULL;
+  for (i = 0; i < 4; ++i)
+    {
+      SVN_ERR(svn_repos__config_pool_get(
+                                    &cfg, config_pool,
+                                    svn_dirent_join(wrk_dir,
+                                                    "config-pool-test1.cfg",
+                                                    pool),
+                                    TRUE, NULL, subpool));
+
+      if (sections1 == NULL)
+        sections1 = cfg->sections;
+      else
+        SVN_TEST_ASSERT(cfg->sections == sections1);
+
+      svn_pool_clear(subpool);
+    }
+
+  /* requesting the same config from another file should return the same
+     (even though it is not being referenced) */
+  for (i = 0; i < 4; ++i)
+    {
+      SVN_ERR(svn_repos__config_pool_get(
+                                    &cfg, config_pool,
+                                    svn_dirent_join(wrk_dir,
+                                                    "config-pool-test2.cfg",
+                                                    pool),
+                                    TRUE, NULL, subpool));
+
+      SVN_TEST_ASSERT(cfg->sections == sections1);
+
+      svn_pool_clear(subpool);
+    }
+
+  /* reading a different configuration should return a different pointer */
+  sections2 = NULL;
+  for (i = 0; i < 2; ++i)
+    {
+      SVN_ERR(svn_repos__config_pool_get(
+                                    &cfg, config_pool,
+                                    svn_dirent_join(wrk_dir,
+                                                    "config-pool-test3.cfg",
+                                                    pool),
+                                    TRUE, NULL, subpool));
+
+      if (sections2 == NULL)
+        sections2 = cfg->sections;
+      else
+        SVN_TEST_ASSERT(cfg->sections == sections2);
+
+      SVN_TEST_ASSERT(sections1 != sections2);
+      svn_pool_clear(subpool);
+    }
+
+  /* create an in-repo config */
+  SVN_ERR(svn_dirent_get_absolute(&repo_root_url, repo_name, pool));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repo_root_url, repo_root_url,
+                                           pool));
+
+  SVN_ERR(svn_test__create_repos(&repos, repo_name, opts, pool));
+  SVN_ERR(svn_fs_begin_txn2(&txn, svn_repos_fs(repos), 0, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(root, "dir", pool));
+  SVN_ERR(svn_fs_make_file(root, "dir/config", pool));
+  SVN_ERR(svn_test__set_file_contents(root, "dir/config",
+                                      cfg_buffer1->data, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* reading the config from the repo should still give cfg1 */
+  SVN_ERR(svn_repos__config_pool_get(&cfg, config_pool,
+                                     svn_path_url_add_component2(
+                                                    repo_root_url,
+                                                    "dir/config", pool),
+                                     TRUE, NULL, subpool));
+  SVN_TEST_ASSERT(cfg->sections == sections1);
+  svn_pool_clear(subpool);
+
+  /* create another in-repo config */
+  SVN_ERR(svn_fs_begin_txn2(&txn, svn_repos_fs(repos), rev, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_revision_root(&rev_root, svn_repos_fs(repos), rev, pool));
+  SVN_ERR(svn_fs_copy(rev_root, "dir", root, "another-dir", pool));
+  SVN_ERR(svn_test__set_file_contents(root, "dir/config",
+                                      cfg_buffer2->data, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* reading the config from the repo should give cfg2 now */
+  SVN_ERR(svn_repos__config_pool_get(&cfg, config_pool,
+                                     svn_path_url_add_component2(
+                                                    repo_root_url,
+                                                    "dir/config", pool),
+                                     TRUE, NULL, subpool));
+  SVN_TEST_ASSERT(cfg->sections == sections2);
+  svn_pool_clear(subpool);
+
+  /* reading the copied config should still give cfg1 */
+  SVN_ERR(svn_repos__config_pool_get(&cfg, config_pool,
+                                     svn_path_url_add_component2(
+                                                    repo_root_url,
+                                                    "another-dir/config",
+                                                    pool),
+                                     TRUE, NULL, subpool));
+  SVN_TEST_ASSERT(cfg->sections == sections1);
+  svn_pool_clear(subpool);
+
+  /* once again: repeated reads.  This triggers a different code path. */
+  SVN_ERR(svn_repos__config_pool_get(&cfg, config_pool,
+                                     svn_path_url_add_component2(
+                                                    repo_root_url,
+                                                    "dir/config", pool),
+                                     TRUE, NULL, subpool));
+  SVN_TEST_ASSERT(cfg->sections == sections2);
+  SVN_ERR(svn_repos__config_pool_get(&cfg, config_pool,
+                                     svn_path_url_add_component2(
+                                                    repo_root_url,
+                                                    "another-dir/config",
+                                                    pool),
+                                     TRUE, NULL, subpool));
+  SVN_TEST_ASSERT(cfg->sections == sections1);
+  svn_pool_clear(subpool);
+
+  /* access paths that don't exist */
+  SVN_TEST_ASSERT_ERROR(svn_repos__config_pool_get(&cfg, config_pool,
+                          svn_path_url_add_component2(repo_root_url, "X",
+                                                      pool),
+                          TRUE, NULL, subpool),
+                        SVN_ERR_ILLEGAL_TARGET);
+  err = svn_repos__config_pool_get(&cfg, config_pool, "X.cfg", TRUE, NULL,
+                                   subpool);
+  SVN_TEST_ASSERT(err && APR_STATUS_IS_ENOENT(err->apr_err));
+  svn_error_clear(err);
+  svn_pool_clear(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+test_repos_fs_type(const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+
+  /* Create test repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-repos_fs_type",
+                                 opts, pool));
+
+  SVN_TEST_STRING_ASSERT(svn_repos_fs_type(repos, pool), opts->fs_type);
+
+  /* Re-open repository and verify fs-type again. */
+  SVN_ERR(svn_repos_open3(&repos, svn_repos_path(repos, pool), NULL,
+                          pool, pool));
+
+  SVN_TEST_STRING_ASSERT(svn_repos_fs_type(repos, pool), opts->fs_type);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+deprecated_access_context_api(const svn_test_opts_t *opts,
+                              apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_access_t *access;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
+  const char *conflict;
+  svn_revnum_t new_rev;
+  const char *hook;
+
+  /* Create test repository. */
+  SVN_ERR(svn_test__create_repos(&repos,
+                                 "test-repo-deprecated-access-context-api",
+                                 opts, pool));
+
+  /* Set an empty pre-commit hook. */
+#ifdef WIN32
+  hook = apr_pstrcat(pool, svn_repos_pre_commit_hook(repos, pool), ".bat",
+                     SVN_VA_NULL);
+  SVN_ERR(svn_io_file_create(hook,
+                             "exit 0" APR_EOL_STR,
+                             pool));
+#else
+  hook = svn_repos_pre_commit_hook(repos, pool);
+  SVN_ERR(svn_io_file_create(hook,
+                             "#!/bin/sh" APR_EOL_STR "exit 0" APR_EOL_STR,
+                             pool));
+  SVN_ERR(svn_io_set_file_executable(hook, TRUE, FALSE, pool));
+#endif
+
+  /* Set some access context using svn_fs_access_add_lock_token(). */
+  SVN_ERR(svn_fs_create_access(&access, "jrandom", pool));
+  SVN_ERR(svn_fs_access_add_lock_token(access, "opaquelocktoken:abc"));
+  SVN_ERR(svn_fs_set_access(svn_repos_fs(repos), access));
+
+  /* Commit a new revision. */
+  SVN_ERR(svn_repos_fs_begin_txn_for_commit2(&txn, repos, 0,
+                                             apr_hash_make(pool), pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(root, "/whatever", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(&conflict, repos, &new_rev, txn, pool));
+
+  SVN_TEST_STRING_ASSERT(conflict, NULL);
+  SVN_TEST_ASSERT(new_rev == 1);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+mkdir_delete_copy(svn_repos_t *repos,
+                  const char *src,
+                  const char *dst,
+                  apr_pool_t *pool)
+{
+  svn_fs_t *fs = svn_repos_fs(repos);
+  svn_revnum_t youngest_rev;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+
+  SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "A/T", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_delete(txn_root, "A/T", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev - 1, pool));
+  SVN_ERR(svn_fs_copy(rev_root, src, txn_root, dst, pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+
+  return SVN_NO_ERROR;
+}
+
+struct authz_read_baton_t {
+  apr_hash_t *paths;
+  apr_pool_t *pool;
+  const char *deny;
+};
+
+static svn_error_t *
+authz_read_func(svn_boolean_t *allowed,
+                svn_fs_root_t *root,
+                const char *path,
+                void *baton,
+                apr_pool_t *pool)
+{
+  struct authz_read_baton_t *b = baton;
+
+  if (b->deny && !strcmp(b->deny, path))
+    *allowed = FALSE;
+  else
+    *allowed = TRUE;
+
+  svn_hash_sets(b->paths, apr_pstrdup(b->pool, path), (void*)1);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+verify_locations(apr_hash_t *actual,
+                 apr_hash_t *expected,
+                 apr_hash_t *checked,
+                 apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, expected); hi; hi = apr_hash_next(hi))
+    {
+      const svn_revnum_t *rev = apr_hash_this_key(hi);
+      const char *path = apr_hash_get(actual, rev, sizeof(*rev));
+
+      if (!path)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "expected %s for %d found (null)",
+                                 (char*)apr_hash_this_val(hi), (int)*rev);
+      else if (strcmp(path, apr_hash_this_val(hi)))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "expected %s for %d found %s",
+                                 (char*)apr_hash_this_val(hi), (int)*rev, path);
+
+    }
+
+  for (hi = apr_hash_first(pool, actual); hi; hi = apr_hash_next(hi))
+    {
+      const svn_revnum_t *rev = apr_hash_this_key(hi);
+      const char *path = apr_hash_get(expected, rev, sizeof(*rev));
+
+      if (!path)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "found %s for %d expected (null)",
+                                 (char*)apr_hash_this_val(hi), (int)*rev);
+      else if (strcmp(path, apr_hash_this_val(hi)))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "found %s for %d expected %s",
+                                 (char*)apr_hash_this_val(hi), (int)*rev, path);
+
+      if (!svn_hash_gets(checked, path))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "did not check %s", path);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static void
+set_expected(apr_hash_t *expected,
+             svn_revnum_t rev,
+             const char *path,
+             apr_pool_t *pool)
+{
+  svn_revnum_t *rp = apr_palloc(pool, sizeof(svn_revnum_t));
+  *rp = rev;
+  apr_hash_set(expected, rp, sizeof(*rp), path);
+}
+
+static svn_error_t *
+trace_node_locations_authz(const svn_test_opts_t *opts,
+                           apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_revnum_t youngest_rev = 0;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  struct authz_read_baton_t arb;
+  apr_array_header_t *revs = apr_array_make(pool, 10, sizeof(svn_revnum_t));
+  apr_hash_t *locations;
+  apr_hash_t *expected = apr_hash_make(pool);
+  int i;
+
+  /* Create test repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-trace-node-locations-authz",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* r1 create A */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "A", pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "A/f", pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/f", "foobar", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+
+  /* r4 copy A to B */
+  SVN_ERR(mkdir_delete_copy(repos, "A", "B", pool));
+
+  /* r7 copy B to C */
+  SVN_ERR(mkdir_delete_copy(repos, "B", "C", pool));
+
+  /* r10 copy C to D */
+  SVN_ERR(mkdir_delete_copy(repos, "C", "D", pool));
+
+  SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, pool));
+  SVN_ERR_ASSERT(youngest_rev == 10);
+
+  arb.paths = apr_hash_make(pool);
+  arb.pool = pool;
+  arb.deny = NULL;
+
+  apr_array_clear(revs);
+  for (i = 0; i <= youngest_rev; ++i)
+    APR_ARRAY_PUSH(revs, svn_revnum_t) = i;
+  set_expected(expected, 10, "/D/f", pool);
+  set_expected(expected, 8, "/C/f", pool);
+  set_expected(expected, 7, "/C/f", pool);
+  set_expected(expected, 5, "/B/f", pool);
+  set_expected(expected, 4, "/B/f", pool);
+  set_expected(expected, 2, "/A/f", pool);
+  set_expected(expected, 1, "/A/f", pool);
+  apr_hash_clear(arb.paths);
+  SVN_ERR(svn_repos_trace_node_locations(fs, &locations, "D/f", 10, revs,
+                                         authz_read_func, &arb, pool));
+  SVN_ERR(verify_locations(locations, expected, arb.paths, pool));
+
+  apr_array_clear(revs);
+  for (i = 1; i <= youngest_rev; ++i)
+    APR_ARRAY_PUSH(revs, svn_revnum_t) = i;
+  apr_hash_clear(arb.paths);
+  SVN_ERR(svn_repos_trace_node_locations(fs, &locations, "D/f", 10, revs,
+                                         authz_read_func, &arb, pool));
+  SVN_ERR(verify_locations(locations, expected, arb.paths, pool));
+
+  apr_array_clear(revs);
+  for (i = 2; i <= youngest_rev; ++i)
+    APR_ARRAY_PUSH(revs, svn_revnum_t) = i;
+  set_expected(expected, 1, NULL, pool);
+  apr_hash_clear(arb.paths);
+  SVN_ERR(svn_repos_trace_node_locations(fs, &locations, "D/f", 10, revs,
+                                         authz_read_func, &arb, pool));
+  SVN_ERR(verify_locations(locations, expected, arb.paths, pool));
+
+  apr_array_clear(revs);
+  for (i = 3; i <= youngest_rev; ++i)
+    APR_ARRAY_PUSH(revs, svn_revnum_t) = i;
+  set_expected(expected, 2, NULL, pool);
+  apr_hash_clear(arb.paths);
+  SVN_ERR(svn_repos_trace_node_locations(fs, &locations, "D/f", 10, revs,
+                                         authz_read_func, &arb, pool));
+  SVN_ERR(verify_locations(locations, expected, arb.paths, pool));
+
+  apr_array_clear(revs);
+  for (i = 6; i <= youngest_rev; ++i)
+    APR_ARRAY_PUSH(revs, svn_revnum_t) = i;
+  set_expected(expected, 5, NULL, pool);
+  set_expected(expected, 4, NULL, pool);
+  apr_hash_clear(arb.paths);
+  SVN_ERR(svn_repos_trace_node_locations(fs, &locations, "D/f", 10, revs,
+                                         authz_read_func, &arb, pool));
+  SVN_ERR(verify_locations(locations, expected, arb.paths, pool));
+
+  arb.deny = "/B/f";
+  apr_array_clear(revs);
+  for (i = 0; i <= youngest_rev; ++i)
+    APR_ARRAY_PUSH(revs, svn_revnum_t) = i;
+  apr_hash_clear(arb.paths);
+  SVN_ERR(svn_repos_trace_node_locations(fs, &locations, "D/f", 10, revs,
+                                         authz_read_func, &arb, pool));
+  SVN_ERR(verify_locations(locations, expected, arb.paths, pool));
+
+  apr_array_clear(revs);
+  for (i = 6; i <= youngest_rev; ++i)
+    APR_ARRAY_PUSH(revs, svn_revnum_t) = i;
+  apr_hash_clear(arb.paths);
+  SVN_ERR(svn_repos_trace_node_locations(fs, &locations, "D/f", 10, revs,
+                                         authz_read_func, &arb, pool));
+  SVN_ERR(verify_locations(locations, expected, arb.paths, pool));
+
+  APR_ARRAY_PUSH(revs, svn_revnum_t) = 0;
+  apr_hash_clear(arb.paths);
+  SVN_ERR(svn_repos_trace_node_locations(fs, &locations, "D/f", 10, revs,
+                                         authz_read_func, &arb, pool));
+  SVN_ERR(verify_locations(locations, expected, arb.paths, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+commit_aborted_txn(const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  const char *conflict;
+  svn_revnum_t new_rev;
+  svn_revnum_t youngest_rev;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-commit-aborted-txn",
+                                 opts, pool));
+
+  /* Create and abort the transaction. */
+  SVN_ERR(svn_repos_fs_begin_txn_for_commit2(&txn, repos, 0,
+                                             apr_hash_make(pool), pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/A", pool));
+  SVN_ERR(svn_fs_abort_txn(txn, pool));
+
+  /* Committing the aborted transaction should fail. */
+  SVN_TEST_ASSERT_ANY_ERROR(svn_repos_fs_commit_txn(&conflict, repos,
+                                                    &new_rev, txn, pool));
+
+  /* Ensure that output arguments follow svn_repos_fs_commit_txn()'s
+     contract -- NEW_REV should be set to SVN_INVALID_REVNUM and
+     CONFLICT should be NULL. */
+  SVN_TEST_ASSERT(new_rev == SVN_INVALID_REVNUM);
+  SVN_TEST_ASSERT(conflict == NULL);
+
+  /* Re-open repository and verify that it's still empty. */
+  SVN_ERR(svn_repos_open3(&repos, svn_repos_path(repos, pool), NULL,
+                          pool, pool));
+  SVN_ERR(svn_fs_youngest_rev(&youngest_rev, svn_repos_fs(repos), pool));
+  SVN_TEST_ASSERT(youngest_rev == 0);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+list_callback(const char *path,
+              svn_dirent_t *dirent,
+              void *baton,
+              apr_pool_t *pool)
+{
+  *(int *)baton += 1;
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+test_list(const svn_test_opts_t *opts,
+          apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t youngest_rev;
+  int counter = 0;
+  apr_array_header_t *patterns;
+
+  /* Create yet another greek tree repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-list", opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+
+  /* List all nodes under /A that contain an 'a'. */
+
+  patterns = apr_array_make(pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(patterns, const char *) = "*a*";
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, pool));
+  SVN_ERR(svn_repos_list(rev_root, "/A", patterns, svn_depth_infinity, FALSE,
+                         NULL, NULL, list_callback, &counter, NULL, NULL,
+                         pool));
+  SVN_TEST_ASSERT(counter == 7);
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 4;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(dir_deltas,
@@ -2576,6 +4485,12 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test removal of defunct locks"),
     SVN_TEST_PASS2(authz,
                    "test authz access control"),
+    SVN_TEST_OPTS_PASS(in_repo_authz,
+                       "test authz stored in the repo"),
+    SVN_TEST_OPTS_PASS(in_repo_groups_authz,
+                       "test authz and global groups stored in the repo"),
+    SVN_TEST_OPTS_PASS(groups_authz,
+                       "test authz with global groups"),
     SVN_TEST_OPTS_PASS(commit_editor_authz,
                        "test authz in the commit editor"),
     SVN_TEST_OPTS_PASS(commit_continue_txn,
@@ -2592,5 +4507,35 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_repos_get_file_revsN"),
     SVN_TEST_OPTS_PASS(issue_4060,
                        "test issue 4060"),
+    SVN_TEST_OPTS_PASS(test_delete_repos,
+                       "test svn_repos_delete"),
+    SVN_TEST_OPTS_PASS(filename_with_control_chars,
+                       "test filenames with control characters"),
+    SVN_TEST_OPTS_PASS(test_repos_info,
+                       "test svn_repos_info_*"),
+    SVN_TEST_OPTS_PASS(test_config_pool,
+                       "test svn_repos__config_pool_*"),
+    SVN_TEST_OPTS_PASS(test_repos_fs_type,
+                       "test test_repos_fs_type"),
+    SVN_TEST_OPTS_PASS(deprecated_access_context_api,
+                       "test deprecated access context api"),
+    SVN_TEST_OPTS_PASS(trace_node_locations_authz,
+                       "authz for svn_repos_trace_node_locations"),
+    SVN_TEST_OPTS_PASS(commit_aborted_txn,
+                       "test committing a previously aborted txn"),
+    SVN_TEST_PASS2(test_authz_prefixes,
+                   "test authz prefixes"),
+    SVN_TEST_PASS2(test_authz_recursive_override,
+                   "test recursively authz rule override"),
+    SVN_TEST_PASS2(test_authz_pattern_tests,
+                   "test various basic authz pattern combinations"),
+    SVN_TEST_PASS2(test_authz_wildcards,
+                   "test the different types of authz wildcards"),
+    SVN_TEST_SKIP2(test_authz_wildcard_performance, TRUE,
+                   "optional authz wildcard performance test"),
+    SVN_TEST_OPTS_PASS(test_list,
+                       "test svn_repos_list"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

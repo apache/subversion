@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.tigris.subversion.javahl;
@@ -30,14 +28,6 @@ package org.tigris.subversion.javahl;
  */
 public class Path
 {
-    /**
-     * Load the required native library.
-     */
-    static
-    {
-        org.apache.subversion.javahl.NativeResources.loadNativeLibrary();
-    }
-
     /**
      * A valid path is a UTF-8 string without any control characters.
      *

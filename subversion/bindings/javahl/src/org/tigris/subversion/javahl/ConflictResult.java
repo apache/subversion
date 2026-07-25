@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.tigris.subversion.javahl;
@@ -84,7 +82,7 @@ public class ConflictResult
     private String mergedPath;
 
     /**
-     * Create a new conflict result instace.
+     * Create a new conflict result instance.
      */
     public ConflictResult(int choice, String mergedPath)
     {

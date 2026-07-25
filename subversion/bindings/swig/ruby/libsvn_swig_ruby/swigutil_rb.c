@@ -23,9 +23,16 @@
 /* Tell swigutil_rb.h that we're inside the implementation */
 #define SVN_SWIG_SWIGUTIL_RB_C
 
+/* Windows hack: Allow overriding some <ruby.h> defaults */
+#include "swigutil_rb__pre_ruby.h"
 #include "swig_ruby_external_runtime.swg"
 #include "swigutil_rb.h"
+
+#ifdef HAVE_RUBY_ST_H
+#include <ruby/st.h>
+#else
 #include <st.h>
+#endif
 
 #undef PACKAGE_BUGREPORT
 #undef PACKAGE_NAME
@@ -53,6 +60,7 @@
 #include <locale.h>
 #include <math.h>
 
+#include "svn_hash.h"
 #include "svn_nls.h"
 #include "svn_pools.h"
 #include "svn_props.h"
@@ -473,9 +481,9 @@ static void
 check_apr_status(apr_status_t status, VALUE exception_class, const char *format)
 {
     if (status != APR_SUCCESS) {
-	char buffer[1024];
-	apr_strerror(status, buffer, sizeof(buffer) - 1);
-	rb_raise(exception_class, format, buffer);
+        char buffer[1024];
+        apr_strerror(status, buffer, sizeof(buffer) - 1);
+        rb_raise(exception_class, format, buffer);
     }
 }
 
@@ -518,8 +526,8 @@ svn_swig_rb_destroyer_destroy(VALUE self, VALUE target)
 
     objects[0] = target;
     if (find_swig_type_object(1, objects) && DATA_PTR(target)) {
-	svn_swig_rb_destroy_internal_pool(target);
-	DATA_PTR(target) = NULL;
+        svn_swig_rb_destroy_internal_pool(target);
+        DATA_PTR(target) = NULL;
     }
 
     return Qnil;
@@ -537,9 +545,9 @@ svn_swig_rb_initialize(void)
   }
 
   check_apr_status(apr_allocator_create(&swig_rb_allocator),
-		   rb_eLoadError, "failed to create allocator: %s");
+                   rb_eLoadError, "failed to create allocator: %s");
   apr_allocator_max_free_set(swig_rb_allocator,
-			     SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
+                             SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
 
   swig_rb_pool = svn_pool_create_ex(NULL, swig_rb_allocator);
   apr_pool_tag(swig_rb_pool, "svn-ruby-pool");
@@ -548,8 +556,8 @@ svn_swig_rb_initialize(void)
     apr_thread_mutex_t *mutex;
 
     check_apr_status(apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT,
-					     swig_rb_pool),
-		     rb_eLoadError, "failed to create allocator: %s");
+                                             swig_rb_pool),
+                                             rb_eLoadError, "failed to create allocator: %s");
     apr_allocator_mutex_set(swig_rb_allocator, mutex);
   }
 #endif
@@ -582,7 +590,7 @@ svn_swig_rb_initialize(void)
 
   mSvnDestroyer = rb_define_module_under(rb_svn(), "Destroyer");
   rb_define_module_function(mSvnDestroyer, "destroy",
-			    svn_swig_rb_destroyer_destroy, 1);
+                            svn_swig_rb_destroyer_destroy, 1);
 }
 
 apr_pool_t *
@@ -688,6 +696,12 @@ rb_set_pool(VALUE self, VALUE pool)
 }
 
 static VALUE
+rb_set_pool_callback(RB_BLOCK_CALL_FUNC_ARGLIST(self, pool))
+{
+  return rb_set_pool(self, pool);
+}
+
+static VALUE
 rb_pool_new(VALUE parent)
 {
   return rb_funcall(rb_svn_core_pool(), id_new, 1, parent);
@@ -734,7 +748,9 @@ svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
 static svn_boolean_t
 rb_set_pool_if_swig_type_object(VALUE target, VALUE pool)
 {
-  VALUE targets[1] = {target};
+  VALUE targets[1];
+
+  targets[0] = target;
 
   if (!NIL_P(find_swig_type_object(1, targets))) {
     rb_set_pool(target, pool);
@@ -750,9 +766,10 @@ struct rb_set_pool_for_hash_arg {
 };
 
 static int
-rb_set_pool_for_hash_callback(VALUE key, VALUE value,
-                              struct rb_set_pool_for_hash_arg *arg)
+rb_set_pool_for_hash_callback(VALUE key, VALUE value, VALUE hash_arg)
 {
+  struct rb_set_pool_for_hash_arg *arg;
+  arg = (struct rb_set_pool_for_hash_arg *) hash_arg;
   if (svn_swig_rb_set_pool(value, arg->pool))
     arg->set = TRUE;
   return ST_CONTINUE;
@@ -796,7 +813,8 @@ svn_swig_rb_set_pool_for_no_swig_type(VALUE target, VALUE pool)
     target = rb_ary_new3(1, target);
   }
 
-  rb_iterate(rb_each, target, rb_set_pool, pool);
+  rb_block_call(target, rb_intern("each"), 0, NULL, rb_set_pool_callback,
+                pool);
 }
 
 void
@@ -859,7 +877,7 @@ svn_swig_rb_raise_svn_repos_already_close(void)
 
 VALUE
 svn_swig_rb_svn_error_new(VALUE code, VALUE message, VALUE file, VALUE line,
-			  VALUE child)
+                          VALUE child)
 {
   return rb_funcall(rb_svn_error_svn_error(),
                     id_new_corresponding_error,
@@ -1018,9 +1036,10 @@ typedef struct prop_hash_each_arg_t {
 } prop_hash_each_arg_t;
 
 static int
-svn_swig_rb_to_apr_array_row_prop_callback(VALUE key, VALUE value,
-                                           prop_hash_each_arg_t *arg)
+svn_swig_rb_to_apr_array_row_prop_callback(VALUE key, VALUE value, VALUE
+                                           prop_arg)
 {
+  prop_hash_each_arg_t *arg = (prop_hash_each_arg_t *) prop_arg;
   svn_prop_t *prop;
 
   prop = apr_array_push(arg->array);
@@ -1060,7 +1079,8 @@ svn_swig_rb_to_apr_array_row_prop(VALUE array_or_hash, apr_pool_t *pool)
     result = apr_array_make(pool, 0, sizeof(svn_prop_t));
     arg.array = result;
     arg.pool = pool;
-    rb_hash_foreach(array_or_hash, svn_swig_rb_to_apr_array_row_prop_callback,
+    rb_hash_foreach(array_or_hash,
+                    svn_swig_rb_to_apr_array_row_prop_callback,
                     (VALUE)&arg);
     return result;
   } else {
@@ -1071,9 +1091,9 @@ svn_swig_rb_to_apr_array_row_prop(VALUE array_or_hash, apr_pool_t *pool)
 }
 
 static int
-svn_swig_rb_to_apr_array_prop_callback(VALUE key, VALUE value,
-                                       prop_hash_each_arg_t *arg)
+svn_swig_rb_to_apr_array_prop_callback(VALUE key, VALUE value, VALUE prop_arg)
 {
+  prop_hash_each_arg_t *arg = (prop_hash_each_arg_t *) prop_arg;
   svn_prop_t *prop;
 
   prop = apr_palloc(arg->pool, sizeof(svn_prop_t));
@@ -1115,7 +1135,8 @@ svn_swig_rb_to_apr_array_prop(VALUE array_or_hash, apr_pool_t *pool)
     result = apr_array_make(pool, 0, sizeof(svn_prop_t *));
     arg.array = result;
     arg.pool = pool;
-    rb_hash_foreach(array_or_hash, svn_swig_rb_to_apr_array_prop_callback,
+    rb_hash_foreach(array_or_hash,
+                    svn_swig_rb_to_apr_array_prop_callback,
                     (VALUE)&arg);
     return result;
   } else {
@@ -1189,6 +1210,7 @@ DEFINE_DUP(auth_ssl_server_cert_info)
 DEFINE_DUP(wc_entry)
 DEFINE_DUP(client_diff_summarize)
 DEFINE_DUP(dirent)
+DEFINE_DUP(log_entry)
 DEFINE_DUP_NO_CONVENIENCE(client_commit_item3)
 DEFINE_DUP_NO_CONVENIENCE(client_proplist_item)
 DEFINE_DUP_NO_CONVENIENCE(wc_external_item2)
@@ -1219,7 +1241,7 @@ r2c_svn_string(VALUE value, void *ctx, apr_pool_t *pool)
 }
 
 void *
-svn_swig_rb_to_swig_type(VALUE value, void *ctx, apr_pool_t *pool)
+svn_swig_rb_to_swig_type(VALUE value, const void *ctx, apr_pool_t *pool)
 {
   void **result = NULL;
   result = apr_palloc(pool, sizeof(void *));
@@ -1512,14 +1534,13 @@ svn_swig_rb_apr_revnum_key_hash_to_hash_string(apr_hash_t *hash)
 
 /* Ruby Hash -> apr_hash_t */
 static int
-r2c_hash_i(VALUE key, VALUE value, hash_to_apr_hash_data_t *data)
+r2c_hash_i(VALUE key, VALUE value, VALUE data_arg)
 {
+  hash_to_apr_hash_data_t *data = (hash_to_apr_hash_data_t *) data_arg;
   if (key != Qundef) {
     void *val = data->func(value, data->ctx, data->pool);
-    apr_hash_set(data->apr_hash,
-                 apr_pstrdup(data->pool, StringValuePtr(key)),
-                 APR_HASH_KEY_STRING,
-                 val);
+    svn_hash_sets(data->apr_hash, apr_pstrdup(data->pool, StringValuePtr(key)),
+                  val);
   }
   return ST_CONTINUE;
 }
@@ -1531,15 +1552,14 @@ r2c_hash(VALUE hash, r2c_func func, void *ctx, apr_pool_t *pool)
     return NULL;
   } else {
     apr_hash_t *apr_hash;
-    hash_to_apr_hash_data_t data = {
-      NULL,
-      func,
-      ctx,
-      pool
-    };
+    hash_to_apr_hash_data_t data;
 
     apr_hash = apr_hash_make(pool);
     data.apr_hash = apr_hash;
+    data.ctx = ctx;
+    data.func = func;
+    data.pool = pool;
+
     rb_hash_foreach(hash, r2c_hash_i, (VALUE)&data);
 
     return apr_hash;
@@ -1562,7 +1582,9 @@ svn_swig_rb_hash_to_apr_hash_svn_string(VALUE hash, apr_pool_t *pool)
 apr_hash_t *
 svn_swig_rb_hash_to_apr_hash_swig_type(VALUE hash, const char *typename, apr_pool_t *pool)
 {
-  return r2c_hash(hash, r2c_swig_type, (void *)typename, pool);
+  /* Note: casting to r2c_cunc for r2c_swig_type may unsafe, because
+         it contains the cast from "const void *" to "void *" */
+  return r2c_hash(hash, (r2c_func)r2c_swig_type, (void *)typename, pool);
 }
 
 apr_hash_t *
@@ -1609,7 +1631,7 @@ callback(VALUE baton)
 }
 
 static VALUE
-callback_rescue(VALUE baton)
+callback_rescue(VALUE baton, VALUE unused)
 {
   callback_rescue_baton_t *rescue_baton = (callback_rescue_baton_t*)baton;
 
@@ -1637,12 +1659,13 @@ static VALUE
 invoke_callback(VALUE baton, VALUE pool)
 {
   callback_baton_t *cbb = (callback_baton_t *)baton;
-  VALUE sub_pool;
-  VALUE argv[] = {pool};
+  VALUE subpool;
+  VALUE argv[1];
 
-  svn_swig_rb_get_pool(1, argv, Qnil, &sub_pool, NULL);
-  cbb->pool = sub_pool;
-  return rb_ensure(callback, baton, callback_ensure, sub_pool);
+  argv[0] = pool;
+  svn_swig_rb_get_pool(1, argv, Qnil, &subpool, NULL);
+  cbb->pool = subpool;
+  return rb_ensure(callback, baton, callback_ensure, subpool);
 }
 
 static VALUE
@@ -1706,7 +1729,7 @@ make_baton(apr_pool_t *pool, VALUE editor, VALUE baton)
 }
 
 static VALUE
-add_baton_if_delta_editor(VALUE target, VALUE baton)
+add_baton_if_delta_editor(RB_BLOCK_CALL_FUNC_ARGLIST(target, baton))
 {
   if (RTEST(rb_obj_is_kind_of(target, svn_swig_rb_svn_delta_editor()))) {
     add_baton(target, baton);
@@ -1726,7 +1749,8 @@ svn_swig_rb_set_baton(VALUE target, VALUE baton)
     target = rb_ary_new3(1, target);
   }
 
-  rb_iterate(rb_each, target, add_baton_if_delta_editor, baton);
+  rb_block_call(target, rb_intern("each"), 0, NULL, add_baton_if_delta_editor,
+                baton);
 }
 
 
@@ -2154,9 +2178,7 @@ svn_swig_rb_log_entry_receiver(void *baton,
 
         cbb.receiver = proc;
         cbb.message = id_call;
-        cbb.args = rb_ary_new3(1,
-                               c2r_swig_type((void *)entry,
-                                             (void *)"svn_log_entry_t *"));
+        cbb.args = rb_ary_new3(1, c2r_log_entry__dup(entry));
         invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
     }
     return err;
@@ -3231,7 +3253,8 @@ svn_swig_rb_make_stream(VALUE io)
     pool_wrapper_p = &pool_wrapper;
     r2c_swig_type2(rb_pool, "apr_pool_wrapper_t *", (void **)pool_wrapper_p);
     stream = svn_stream_create((void *)io, pool_wrapper->pool);
-    svn_stream_set_read(stream, read_handler_rbio);
+    svn_stream_set_read2(stream, NULL /* only full read support */,
+                         read_handler_rbio);
     svn_stream_set_write(stream, write_handler_rbio);
   }
 
@@ -4025,4 +4048,7 @@ static svn_ra_reporter3_t rb_ra_reporter3 = {
   svn_swig_rb_ra_reporter_abort_report
 };
 
-svn_ra_reporter3_t *svn_swig_rb_ra_reporter3 = &rb_ra_reporter3;
+svn_ra_reporter3_t *svn_swig_rb_get_ra_reporter3()
+{
+  return &rb_ra_reporter3;
+}

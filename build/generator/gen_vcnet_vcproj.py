@@ -38,17 +38,22 @@ class Generator(gen_win.WinGeneratorBase):
   def quote(self, str):
     return '"%s"' % str
 
-  def get_external_project(self, target, proj_ext):
-    "Link project files: prefer vcproj's, but if don't exist, try dsp's."
-    vcproj = gen_win.WinGeneratorBase.get_external_project(self, target,
-                                                           proj_ext)
-    if vcproj and not os.path.exists(vcproj):
-      dspproj = gen_win.WinGeneratorBase.get_external_project(self, target,
-                                                              'dsp')
-      if os.path.exists(dspproj):
-        return dspproj
+  def gen_proj_names(self, install_targets):
+    "Generate project file names for the targets"
 
-    return vcproj
+    if float(self.vcproj_version) < 11.0:
+      gen_win.WinGeneratorBase.gen_proj_names(self, install_targets)
+      return
+
+    # With VS2012 we can assume that even the light versions
+    # support proper project nesting in the UI
+
+    for target in install_targets:
+      if target.msvc_name:
+        target.proj_name = target.msvc_name
+        continue
+
+      target.proj_name = target.name
 
   def write_project(self, target, fname, depends):
     "Write a Project (.vcproj/.vcxproj)"
@@ -100,7 +105,6 @@ class Generator(gen_win.WinGeneratorBase):
       'platforms' : self.platforms,
       'config_type' : config_type,
       'configs' : configs,
-      'includes' : self.get_win_includes(target),
       'sources' : sources,
       'default_platform' : self.platforms[0],
       'default_config' : configs[0].name,
@@ -116,10 +120,13 @@ class Generator(gen_win.WinGeneratorBase):
       'instrument_purify_quantify' : self.instrument_purify_quantify,
       'version' : self.vcproj_version,
       'toolset_version' : 'v' + self.vcproj_version.replace('.',''),
+      'user_macros': self.user_macros,
       }
 
     if self.vcproj_extension == '.vcproj':
       self.write_with_template(fname, 'templates/vcnet_vcproj.ezt', data)
+      self.write_with_template(os.path.splitext(fname)[0] + '.vsprops',
+                               'templates/vcnet_vsprops.ezt', data)
     else:
       self.write_with_template(fname, 'templates/vcnet_vcxproj.ezt', data)
       self.write_with_template(fname + '.filters', 'templates/vcnet_vcxproj_filters.ezt', data)
@@ -138,14 +145,14 @@ class Generator(gen_win.WinGeneratorBase):
                                    key=lambda t: t[0]):
       sql.append(_eztdata(header=hdrfile.replace('/', '\\'),
                           source=sqlfile[0].replace('/', '\\'),
-                          dependencies=[x.replace('/', '\\') for x in sqlfile[1:]],
-                          svn_python=sys.executable))
+                          dependencies=[x.replace('/', '\\') for x in sqlfile[1:]]))
 
     # apr doesn't supply vcproj files, the user must convert them
     # manually before loading the generated solution
     self.move_proj_file(self.projfilesdir,
                         'svn_config' + self.vcproj_extension,
                           (
+                            ('svn_python', sys.executable),
                             ('sql', sql),
                             ('project_guid', self.makeguid('__CONFIG__')),
                           )
@@ -155,8 +162,6 @@ class Generator(gen_win.WinGeneratorBase):
                         (
                           ('project_guid', self.makeguid('svn_locale')),
                         ))
-    self.write_zlib_project_file('zlib' + self.vcproj_extension)
-    self.write_serf_project_file('serf' + self.vcproj_extension)
 
     install_targets = self.get_install_targets()
 
@@ -195,14 +200,23 @@ class Generator(gen_win.WinGeneratorBase):
 
       deplist = [ ]
       for i in range(len(depends)):
-        if depends[i].fname.startswith(self.projfilesdir):
-          path = depends[i].fname[len(self.projfilesdir) + 1:]
+        dp = depends[i]
+        if dp.fname.startswith(self.projfilesdir):
+          path = dp.fname[len(self.projfilesdir) + 1:]
         else:
           path = os.path.join(os.path.relpath('.', self.projfilesdir),
-                              depends[i].fname)
+                              dp.fname)
+
+        if isinstance(dp, gen_base.TargetLib) and dp.msvc_delayload \
+           and isinstance(target, gen_base.TargetLinked) \
+           and not self.disable_shared:
+          delayload = self.get_output_name(dp)
+        else:
+          delayload = None
         deplist.append(gen_win.ProjectItem(guid=guids[depends[i].name],
                                            index=i,
                                            path=path,
+                                           delayload=delayload
                                            ))
 
       fname = self.get_external_project(target, self.vcproj_extension[1:])
@@ -271,7 +285,12 @@ class Generator(gen_win.WinGeneratorBase):
       'guids' : guidvals,
       }
 
-    if self.vs_version == '2002' or self.vs_version == '2003':
-      self.write_with_template('subversion_vcnet.sln', 'templates/vcnet_vc7_sln.ezt', data)
+    self.write_with_template('subversion_vcnet.sln', 'templates/vcnet_sln.ezt', data)
+
+  def quote_define(self, value):
+    "Properly quote special characters in a define (if needed)"
+
+    if self.vcproj_extension == '.vcproj':
+      return value.replace('"', '""')
     else:
-      self.write_with_template('subversion_vcnet.sln', 'templates/vcnet_sln.ezt', data)
+      return value

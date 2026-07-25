@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.tigris.subversion.javahl;
@@ -37,7 +35,7 @@ public interface StatusKind
     /** text or props have been modified */
     public static final int modified = 2;
 
-    /** is scheduled for additon */
+    /** is scheduled for addition */
     public static final int added = 3;
 
     /** scheduled for deletion */

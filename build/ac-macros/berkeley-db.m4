@@ -48,7 +48,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   AC_ARG_WITH(berkeley-db, [AS_HELP_STRING(
                                            [[--with-berkeley-db[=HEADER:INCLUDES:LIB_SEARCH_DIRS:LIBS]]], [
                           The Subversion Berkeley DB based filesystem library 
-                          requires Berkeley DB $db_version or newer.  If you
+                          requires Berkeley DB $db_version or $db_alt_version.  If you
                           specify `--without-berkeley-db', that library will
                           not be built.  If you omit the argument of this option
                           completely, the configure script will use Berkeley DB
@@ -89,7 +89,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
         done
         SVN_DB_INCLUDES="${SVN_DB_INCLUDES## }"
         for l in [`echo "$withval" | $SED -e "s/.*:[^:]*:\([^:]*\):.*/\1/"`]; do
-          LDFLAGS="$LDFLAGS -L$l"
+          LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS(-L$l)`"
         done
         SVN_DB_LIBS=""
         for l in [`echo "$withval" | $SED -e "s/.*:\([^:]*\)/\1/"`]; do
@@ -126,22 +126,37 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
     svn_lib_berkeley_db=no
   else
     AC_MSG_CHECKING([for availability of Berkeley DB])
-    SVN_LIB_BERKELEY_DB_TRY($1, $2, $3)
+    AC_ARG_ENABLE(bdb6,
+      AS_HELP_STRING([--enable-bdb6],
+                     [Allow building against BDB 6+.
+                      See --with-berkeley-db for specifying the location of
+                      the Berkeley DB installation.  Using BDB 6 will fail if
+                      this option is not used.]),
+      [enable_bdb6=$enableval],[enable_bdb6=unspecified])
+
+    SVN_LIB_BERKELEY_DB_TRY($1, $2, $3, $enable_bdb6)
     if test "$svn_have_berkeley_db" = "yes"; then
       AC_MSG_RESULT([yes])
       svn_lib_berkeley_db=yes
     else
-      AC_MSG_RESULT([no])
+      if test "$svn_have_berkeley_db" = "no6"; then
+        AC_MSG_RESULT([no (found version 6, but --enable-bdb6 not specified)])
+        # A warning will be printed at the end of configure.ac.
+      else
+        AC_MSG_RESULT([no])
+      fi
       svn_lib_berkeley_db=no
       if test "$bdb_status" = "required"; then
-        AC_MSG_ERROR([Berkeley DB $db_version or newer wasn't found.])
+        AC_MSG_ERROR([Berkeley DB $db_version or $db_alt_version wasn't found.])
       fi
     fi
   fi
+
+  SVN_DOT_CLANGD([$SVN_DB_INCLUDES])
 ])
 
 
-dnl   SVN_LIB_BERKELEY_DB_TRY(major, minor, patch)
+dnl   SVN_LIB_BERKELEY_DB_TRY(major, minor, patch, enable_bdb6)
 dnl
 dnl   A subroutine of SVN_LIB_BERKELEY_DB.
 dnl
@@ -174,14 +189,26 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
     svn_check_berkeley_db_major=$1
     svn_check_berkeley_db_minor=$2
     svn_check_berkeley_db_patch=$3
+    enable_bdb6=$4
 
-    # Extract only the -ldb.* flag from the libs supplied by apu-config
-    # Otherwise we get bit by the fact that expat might not be built yet
-    # Or that it resides in a non-standard location which we would have
-    # to compensate with using something like -R`$apu_config --prefix`/lib.
-    #
-    if test -z "$SVN_DB_LIBS"; then
-      SVN_DB_LIBS=["`$apu_config --libs | $SED -e 's/.*\(-ldb[^[:space:]]*\).*/\1/' | $EGREP -- '-ldb[^[:space:]]*'`"]
+   if test -z "$SVN_DB_LIBS"; then
+      # We pass --dbm-libs here since Debian has modified apu-config not
+      # to return -ldb unless --dbm-libs is passed.  This may also produce
+      # extra output beyond -ldb but since we're only filtering for -ldb
+      # it won't matter to us.  However, --dbm-libs was added to apu-config
+      # in 1.3.8 so it's possible the version we have doesn't support it
+      # so fallback without it if we get an error.
+      svn_db_libs_prefiltered=["`$apu_config --libs --dbm-libs`"]
+      if test $? -ne 0; then
+        svn_db_libs_prefiltered=["`$apu_config --libs`"]
+      fi
+
+      # Extract only the -ldb.* flag from the libs supplied by apu-config
+      # Otherwise we get bit by the fact that expat might not be built yet
+      # Or that it resides in a non-standard location which we would have
+      # to compensate with using something like -R`$apu_config --prefix`/lib.
+      #
+      SVN_DB_LIBS=["`echo \"$svn_db_libs_prefiltered\" | $SED -e 's/.*\(-ldb[^[:space:]]*\).*/\1/' | $EGREP -- '-ldb[^[:space:]]*'`"]
     fi
 
     CPPFLAGS="$SVN_DB_INCLUDES $SVN_APRUTIL_INCLUDES $CPPFLAGS" 
@@ -204,6 +231,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
 )
 
     AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#include <string.h>
 #include <stdlib.h>
 $svn_db_header
 
@@ -218,6 +246,12 @@ int main ()
       || minor != DB_VERSION_MINOR
       || patch != DB_VERSION_PATCH)
     exit (1);
+
+  /* Block Berkeley DB 6, because (a) we haven't tested with it, (b) 6.0.20
+     and newer are under the AGPL, and we want use of AGPL dependencies to be
+     opt-in. */
+  if (major >= 6 && strcmp("$enable_bdb6", "yes"))
+    exit(2);
 
   /* Run-time check:  ensure the library claims to be the correct version. */
 
@@ -238,7 +272,11 @@ int main ()
 }
       ]])],
       [svn_have_berkeley_db=yes],
-      [svn_have_berkeley_db=no],
+      [rc=$?
+       svn_have_berkeley_db=no
+       if test $rc = 2; then
+         svn_have_berkeley_db=no6
+       fi],
       [svn_have_berkeley_db=yes]
     )
 

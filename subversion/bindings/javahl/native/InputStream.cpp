@@ -54,7 +54,8 @@ svn_stream_t *InputStream::getStream(const SVN::Pool &pool)
   // Create a stream with this as the baton and set the read and
   // close functions.
   svn_stream_t *ret = svn_stream_create(this, pool.getPool());
-  svn_stream_set_read(ret, InputStream::read);
+  svn_stream_set_read2(ret, InputStream::read,
+                       NULL /* only partial read support */);
   svn_stream_set_close(ret, InputStream::close);
   return ret;
 }
@@ -68,9 +69,12 @@ svn_stream_t *InputStream::getStream(const SVN::Pool &pool)
  */
 svn_error_t *InputStream::read(void *baton, char *buffer, apr_size_t *len)
 {
+  if (0 == *len)
+    return SVN_NO_ERROR;
+
   JNIEnv *env = JNIUtil::getEnv();
   // An object of our class is passed in as the baton.
-  InputStream *that = (InputStream*)baton;
+  InputStream *that = static_cast<InputStream *>(baton);
 
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
@@ -89,8 +93,7 @@ svn_error_t *InputStream::read(void *baton, char *buffer, apr_size_t *len)
     }
 
   // Allocate a Java byte array to read the data.
-  jbyteArray data = JNIUtil::makeJByteArray((const signed char*)buffer,
-                                            *len);
+  jbyteArray data = JNIUtil::makeJByteArray(buffer, static_cast<int>(*len));
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
@@ -138,7 +141,7 @@ svn_error_t *InputStream::close(void *baton)
   JNIEnv *env = JNIUtil::getEnv();
 
   // An object of our class is passed in as the baton
-  InputStream *that = (InputStream*)baton;
+  InputStream *that = reinterpret_cast<InputStream*>(baton);
 
   // The method id will not change during the time this library is
   // loaded, so it can be cached.

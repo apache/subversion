@@ -255,14 +255,14 @@ B. Match working copy paths with entries-file paths using NFC/NFD
    aware comparison functions. On a match, use the entries-file path
    to communicate with the server.
 
-The above means the client has to be very carefull to preserve the
+The above means the client has to be very careful to preserve the
 encoding from the server and use that when talking to the server
 otherwise the server may not recognize the path as a versioned entity.
 
 Locally however, we can't be sure the filesystem enforces the encoding
 the server sent to the client, meaning there are (contrived) cases where
 a file exists in a different encoding locally than in the repository.
-Which means we have to be very carefull about how we find our files and
+Which means we have to be very careful about how we find our files and
 to use the encoding we got from the local filesystem.
 
 Implementation details:

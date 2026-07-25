@@ -4,7 +4,7 @@
 #                      (adds, deletes, reversion)
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -26,7 +26,7 @@
 ######################################################################
 
 # General modules
-import os, logging
+import os, logging, stat
 
 logger = logging.getLogger()
 
@@ -184,23 +184,25 @@ def add_executable(sbox):
     file_ospath = sbox.ospath(fileName)
     if executable:
       expected_out = ["*\n"]
+      expected_err = []
     else:
       expected_out = []
+      expected_err = '.*W200017: Property.*not found'
 
     # create an empty file
     open(file_ospath, "w")
 
     os.chmod(file_ospath, perm)
     sbox.simple_add(fileName)
-    svntest.actions.run_and_verify_svn(None, expected_out, [],
+    svntest.actions.run_and_verify_svn(expected_out, expected_err,
                                        'propget', "svn:executable", file_ospath)
 
   test_cases = [
-    ("all_exe",   0777, 1),
-    ("none_exe",  0666, 0),
-    ("user_exe",  0766, 1),
-    ("group_exe", 0676, 0),
-    ("other_exe", 0667, 0),
+    ("all_exe",   svntest.main.S_ALL_RWX, 1),
+    ("none_exe",  svntest.main.S_ALL_RW, 0),
+    ("user_exe",  svntest.main.S_ALL_RW | stat.S_IXUSR, 1),
+    ("group_exe", svntest.main.S_ALL_RW | stat.S_IXGRP, 0),
+    ("other_exe", svntest.main.S_ALL_RW | stat.S_IXOTH, 0),
     ]
   for test_case in test_cases:
     runTest(sbox.wc_dir, *test_case)
@@ -251,19 +253,6 @@ def delete_dirs(sbox):
 #  and then also tests reversion of those changes.
 #
 
-def check_reversion(files, output):
-  expected_output = []
-  for file in files:
-    expected_output = expected_output + ["Reverted '" + file + "'\n"]
-  output.sort()
-  expected_output.sort()
-  if output != expected_output:
-    logger.warn("Expected output: %s", expected_output)
-    logger.warn("Actual output:   %s", output)
-    raise svntest.Failure
-
-#----------------------------------------------------------------------
-
 def revert_add_files(sbox):
   "revert: add some files"
 
@@ -276,11 +265,7 @@ def revert_add_files(sbox):
   epsilon_path = sbox.ospath('A/D/G/epsilon')
   files = [delta_path, zeta_path, epsilon_path]
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'revert',
-                                                              '--recursive',
-                                                              wc_dir)
-  check_reversion(files, output)
+  svntest.actions.run_and_verify_revert(files, '--recursive', wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -296,11 +281,7 @@ def revert_add_directories(sbox):
   Z_path = sbox.ospath('A/D/H/Z')
   files = [X_path, Y_path, Z_path]
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'revert',
-                                                              '--recursive',
-                                                              wc_dir)
-  check_reversion(files, output)
+  svntest.actions.run_and_verify_revert(files, '--recursive', wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -322,11 +303,7 @@ def revert_nested_adds(sbox):
            + [os.path.join(Z_path, child)
               for child in ['R', 'zeta']])
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'revert',
-                                                              '--recursive',
-                                                              wc_dir)
-  check_reversion(files, output)
+  svntest.actions.run_and_verify_revert(files, '--recursive', wc_dir)
 
 #----------------------------------------------------------------------
 @SkipUnless(svntest.main.is_posix_os)
@@ -343,11 +320,7 @@ def revert_add_executable(sbox):
   other_path = sbox.ospath('other_exe')
   files = [all_path, none_path, user_path, group_path, other_path]
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'revert',
-                                                              '--recursive',
-                                                              wc_dir)
-  check_reversion(files, output)
+  svntest.actions.run_and_verify_revert(files, '--recursive', wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -364,11 +337,7 @@ def revert_delete_files(sbox):
   omega_path = sbox.ospath('A/D/H/omega')
   files = [iota_path, mu_path, omega_path, rho_path]
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'revert',
-                                                              '--recursive',
-                                                              wc_dir)
-  check_reversion(files, output)
+  svntest.actions.run_and_verify_revert(files, '--recursive', wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -390,11 +359,7 @@ def revert_delete_dirs(sbox):
   files = [E_path, F_path, H_path,
            alpha_path, beta_path, chi_path, omega_path, psi_path]
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'revert',
-                                                              '--recursive',
-                                                              wc_dir)
-  check_reversion(files, output)
+  svntest.actions.run_and_verify_revert(files, '--recursive', wc_dir)
 
 
 #######################################################################
@@ -493,8 +458,7 @@ def delete_missing(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
 #----------------------------------------------------------------------
 # Regression test for issue #854:
@@ -553,7 +517,7 @@ def status_add_deleted_directory(sbox):
 
   # Update will *not* remove the entry for A despite it being marked
   # deleted.
-  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(2), [],
+  svntest.actions.run_and_verify_svn(exp_noop_up_out(2), [],
                                      'up', wc_dir)
   expected_status.tweak('', 'iota', wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -563,12 +527,12 @@ def status_add_deleted_directory(sbox):
 # Regression test for issue #939:
 # Recursive 'svn add' should still traverse already-versioned dirs.
 @Issue(939)
+@Issue(4241)
 def add_recursive_already_versioned(sbox):
   "'svn add' should traverse already-versioned dirs"
 
+  sbox.build()
   wc_dir = sbox.wc_dir
-
-  svntest.actions.make_repo_and_wc(sbox)
 
   # Create some files, then schedule them for addition
   delta_path = sbox.ospath('delta')
@@ -592,8 +556,8 @@ def add_recursive_already_versioned(sbox):
   ### or else Subversion will think you're trying to add the working copy
   ### to its parent directory, and will (possibly, if the parent directory
   ### isn't versioned) fail.
-  #svntest.main.run_svn(None, 'add', '--force', wc_dir)
-  #svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.main.run_svn(None, 'add', '--force', wc_dir)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Now revert, and do the adds again from inside the working copy.
   svntest.main.run_svn(None, 'revert', '--recursive', wc_dir)
@@ -615,8 +579,7 @@ def fail_add_directory(sbox):
   os.makedirs(sbox.wc_dir)
 
   os.chdir(sbox.wc_dir)
-  svntest.actions.run_and_verify_svn('Failed mkdir',
-                                     None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'mkdir', 'A')
   if os.path.exists('A'):
     raise svntest.Failure('svn mkdir created an unversioned directory')
@@ -635,7 +598,7 @@ def delete_non_existent(sbox):
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'rm', '--force', 'non-existent')
 
 
@@ -650,7 +613,7 @@ def delete_redelete_fudgery(sbox):
   B_path = os.path.join(wc_dir, 'A', 'B')
 
   # Delete 'A/B' using --keep-local, then remove at the OS level.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', '--keep-local', B_path)
   svntest.main.safe_rmtree(B_path)
 
@@ -668,10 +631,10 @@ def delete_redelete_fudgery(sbox):
   ### information stored now in the working copy root's one DB.  That
   ### could change the whole flow of this test, possible leading us to
   ### remove it as altogether irrelevant.  --cmpilato
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
 
   # Now try to run
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', '--keep-local', B_path)
 
 def propset_on_deleted_should_fail(sbox):
@@ -680,9 +643,9 @@ def propset_on_deleted_should_fail(sbox):
   wc_dir = sbox.wc_dir
   iota = os.path.join(wc_dir, 'iota')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', iota)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', iota)
 
-  svntest.actions.run_and_verify_svn(None, None, "svn: E155023: Can't set propert.*",
+  svntest.actions.run_and_verify_svn(None, "svn: E155023: Can't set propert.*",
                                      'ps', 'prop', 'val', iota)
 
 @Issue(3468)
@@ -720,8 +683,7 @@ def replace_dir_delete_child(sbox):
 
   svntest.actions.run_and_verify_commit(sbox.wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, sbox.wc_dir)
+                                        expected_status)
 
 
 ########################################################################

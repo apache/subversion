@@ -57,7 +57,7 @@ dav_svn__allow_read(request_rec *r,
   /* Sometimes we get paths that do not start with '/' and
      hence below uri concatenation would lead to wrong uris .*/
   if (path && path[0] != '/')
-    path = apr_pstrcat(pool, "/", path, NULL);
+    path = apr_pstrcat(pool, "/", path, SVN_VA_NULL);
 
   /* If bypass is specified and authz has exported the provider.
      Otherwise, we fall through to the full version.  This should be
@@ -80,7 +80,8 @@ dav_svn__allow_read(request_rec *r,
     uri_type = DAV_SVN__BUILD_URI_PUBLIC;
 
   /* Build a Version Resource uri representing (rev, path). */
-  uri = dav_svn__build_uri(repos, uri_type, rev, path, FALSE, pool);
+  uri = dav_svn__build_uri(repos, uri_type, rev, path, FALSE /* add_href */,
+                           pool);
 
   /* Check if GET would work against this uri. */
   subreq = ap_sub_req_method_uri("GET", uri, r, r->output_filters);
@@ -96,6 +97,43 @@ dav_svn__allow_read(request_rec *r,
   return allowed;
 }
 
+
+svn_boolean_t
+dav_svn__allow_list_repos(request_rec *r,
+                          const char *repos_name,
+                          apr_pool_t *pool)
+{
+  const char *uri;
+  request_rec *subreq;
+  svn_boolean_t allowed = FALSE;
+
+  /* Easy out:  if the admin has explicitly set 'SVNPathAuthz Off',
+     then this whole callback does nothing. */
+  if (! dav_svn__get_pathauthz_flag(r))
+    {
+      return TRUE;
+    }
+
+  /* Do not use short_circuit mode: bypass provider expects R to be request to
+     the repository to find repository relative authorization file. */
+
+  /* Build a Public Resource uri representing repository root. */
+  uri =  svn_urlpath__join(dav_svn__get_root_dir(r),
+                           svn_path_uri_encode(repos_name, pool), pool);
+
+  /* Check if GET would work against this uri. */
+  subreq = ap_sub_req_method_uri("GET", uri, r, r->output_filters);
+
+  if (subreq)
+    {
+      if (subreq->status == HTTP_OK)
+        allowed = TRUE;
+
+      ap_destroy_sub_req(subreq);
+    }
+
+  return allowed;
+}
 
 /* This function implements 'svn_repos_authz_func_t', specifically
    for read authorization.

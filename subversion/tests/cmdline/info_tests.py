@@ -3,7 +3,7 @@
 #  info_tests.py:  testing the svn info command
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -33,6 +33,8 @@ logger = logging.getLogger()
 
 # Our testing module
 import svntest
+
+from prop_tests import binary_mime_type_on_text_file_warning
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -94,7 +96,7 @@ def match_xml_element(str, exprs):
   atttribute_re = re.compile(
                  r"\s+(?P<key>[\w-]+)\s*=\s*(['\"])(?P<val>[^'\"]*)\2", re.M)
   self_closing_re = re.compile(r"\s*/>", re.M)
-  content_re_str = "\\s*>(?P<content>.*?)</%s\s*>"
+  content_re_str = r"\s*>(?P<content>.*?)</%s\s*>"
 
   m = start_tag_re.match(str)
   if not m:
@@ -173,12 +175,12 @@ def info_with_tree_conflicts(sbox):
     path = os.path.join(G, fname)
 
     # check plain info
-    expected_str1 = ".*local %s, incoming %s.*" % (reason, action)
+    expected_str1 = ".*local file %s, incoming file %s.*" % (reason, action)
     expected_info = { 'Tree conflict' : expected_str1 }
     svntest.actions.run_and_verify_info([expected_info], path)
 
     # check XML info
-    exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+    exit_code, output, error = svntest.actions.run_and_verify_svn(None,
                                                                   [], 'info',
                                                                   path,
                                                                   '--xml')
@@ -197,7 +199,7 @@ def info_with_tree_conflicts(sbox):
   expected_infos = [{ 'Path' : re.escape(G) }]
   for fname, action, reason in scenarios:
     path = os.path.join(G, fname)
-    tree_conflict_re = ".*local %s, incoming %s.*" % (reason, action)
+    tree_conflict_re = ".*local file %s, incoming file %s.*" % (reason, action)
     expected_infos.append({ 'Path' : re.escape(path),
                             'Tree conflict' : tree_conflict_re })
   expected_infos.sort(key=lambda info: info['Path'])
@@ -206,7 +208,7 @@ def info_with_tree_conflicts(sbox):
 def info_on_added_file(sbox):
   """info on added file"""
 
-  svntest.actions.make_repo_and_wc(sbox)
+  sbox.build()
   wc_dir = sbox.wc_dir
 
   # create new file
@@ -221,6 +223,7 @@ def info_on_added_file(sbox):
   expected = {'Path' : re.escape(new_file),
               'Name' : 'new_file',
               'URL' : '.*/new_file',
+              'Relative URL' : '.*/new_file',
               'Repository Root' : '.*',
               'Node Kind' : 'file',
               'Schedule' : 'add',
@@ -230,7 +233,7 @@ def info_on_added_file(sbox):
   svntest.actions.run_and_verify_info([expected], new_file)
 
   # check XML info
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
                                                                 [], 'info',
                                                                 new_file,
                                                                 '--xml')
@@ -240,6 +243,7 @@ def info_on_added_file(sbox):
                                      'path'     : new_file,
                                      'revision' : 'Resource is not under version control.'}),
                        ('url',      {}, '.*/new_file'),
+                       ('relative-url', {}, '.*/new_file'),
                        ('root',     {}, '.*'),
                        ('uuid',     {}, uuid_regex),
                        ('depth',    {}, 'infinity'),
@@ -247,7 +251,7 @@ def info_on_added_file(sbox):
 
 def info_on_mkdir(sbox):
   """info on new dir with mkdir"""
-  svntest.actions.make_repo_and_wc(sbox)
+  sbox.build()
   wc_dir = sbox.wc_dir
 
   # create a new directory using svn mkdir
@@ -259,6 +263,7 @@ def info_on_mkdir(sbox):
   # check that we have a Repository Root and Repository UUID
   expected = {'Path' : re.escape(new_dir),
               'URL' : '.*/new_dir',
+              'Relative URL' : '.*/new_dir',
               'Repository Root' : '.*',
               'Node Kind' : 'directory',
               'Schedule' : 'add',
@@ -268,7 +273,7 @@ def info_on_mkdir(sbox):
   svntest.actions.run_and_verify_info([expected], new_dir)
 
   # check XML info
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
                                                                 [], 'info',
                                                                 new_dir,
                                                                 '--xml')
@@ -277,6 +282,7 @@ def info_on_mkdir(sbox):
                                      'path'     : new_dir,
                                      'revision' : 'Resource is not under version control.'}),
                        ('url',      {}, '.*/new_dir'),
+                       ('relative-url', {}, '.*/new_dir'),
                        ('root',     {}, '.*'),
                        ('uuid',     {}, uuid_regex),
                        ('depth',    {}, 'infinity'),
@@ -345,7 +351,7 @@ def info_multiple_targets(sbox):
     non_existent_path = os.path.join(wc_dir, 'non-existent')
 
     # All targets are existing
-    svntest.actions.run_and_verify_svn2(None, None, [],
+    svntest.actions.run_and_verify_svn2(None, [],
                                         0, 'info', alpha, beta)
 
     # One non-existing target
@@ -368,7 +374,7 @@ def info_multiple_targets(sbox):
     non_existent_url = sbox.repo_url +  '/non-existent'
 
     # All targets are existing
-    svntest.actions.run_and_verify_svn2(None, None, [],
+    svntest.actions.run_and_verify_svn2(None, [],
                                         0, 'info', alpha, beta)
 
     # One non-existing target
@@ -396,6 +402,7 @@ def info_repos_root_url(sbox):
         'Path'              : re.escape(os.path.basename(sbox.repo_dir)),
         'Repository Root'   : re.escape(sbox.repo_url),
         'URL'               : re.escape(sbox.repo_url),
+        'Relative URL'      : r'\^/', # escape ^ -- this isn't a regexp
         'Revision'          : '1',
         'Node Kind'         : 'directory',
         'Last Changed Rev'  : '1',
@@ -405,6 +412,7 @@ def info_repos_root_url(sbox):
         'Name'              : 'iota',
         'Repository Root'   : re.escape(sbox.repo_url),
         'URL'               : re.escape(sbox.repo_url + '/iota'),
+        'Relative URL'      : r'\^/iota', # escape ^ -- this isn't a regexp
         'Revision'          : '1',
         'Node Kind'         : 'file',
         'Last Changed Rev'  : '1',
@@ -475,12 +483,12 @@ def info_show_exclude(sbox):
   expected_error = 'svn: E200009: Could not display info for all targets.*'
 
   # Expect error on iota (status = not-present)
-  svntest.actions.run_and_verify_svn(None, [], expected_error, 'info', iota)
+  svntest.actions.run_and_verify_svn([], expected_error, 'info', iota)
 
   sbox.simple_update()
 
   # Expect error on iota (unversioned)
-  svntest.actions.run_and_verify_svn(None, [], expected_error, 'info', iota)
+  svntest.actions.run_and_verify_svn([], expected_error, 'info', iota)
 
 @Issue(3998)
 def binary_tree_conflict(sbox):
@@ -488,7 +496,9 @@ def binary_tree_conflict(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  sbox.simple_propset('svn:mime-type', 'binary/octet-stream', 'iota')
+  svntest.main.run_svn(binary_mime_type_on_text_file_warning,
+                       'propset', 'svn:mime-type', 'binary/octet-stream',
+                       sbox.ospath('iota'))
   sbox.simple_commit()
 
   iota = sbox.ospath('iota')
@@ -506,7 +516,7 @@ def binary_tree_conflict(sbox):
   })
   svntest.actions.run_and_verify_update(iota,
                                         expected_output, None, expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         iota, '-r', '2')
 
   expected_info = [{
@@ -516,8 +526,444 @@ def binary_tree_conflict(sbox):
   }]
   svntest.actions.run_and_verify_info(expected_info, iota)
 
+  expected_info = [{
+      'Path' : '%s' % re.escape(wc_dir),
+  }]
+  svntest.actions.run_and_verify_info(expected_info, wc_dir)
+
+def relpath_escaping(sbox):
+  "relpath escaping should be usable as-is"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  name = 'path with space, +, % and #'
+  name2 = 'path with %20'
+  sbox.simple_copy('iota', name)
+  sbox.simple_copy('iota', name2)
+  sbox.simple_commit()
+
+  testpath = sbox.ospath(name)
+
+  expected = {'Path' : re.escape(testpath),
+              'URL' : '.*/path.*with.*space.*',
+              'Relative URL' : '.*/path.*with.*space.*',
+             }
+
+  svntest.actions.run_and_verify_info([expected], sbox.ospath(name))
+
+  info = svntest.actions.run_and_parse_info(sbox.ospath(name), sbox.ospath(name2))
+
+  # And now verify that the returned URL and relative url are usable
+
+  # Also test the local path (to help resolving the relative path) and an
+  # unescaped path which the client should automatically encode
+  svntest.actions.run_and_verify_svn(None, [], 'info',
+                                     info[0]['Relative URL'],
+                                     info[0]['URL'],
+                                     testpath,
+                                     '^/' + name,
+
+                                     info[1]['Relative URL'],
+                                     info[1]['URL'])
+
+  # And now do the same thing with a the file external handling
+  sbox.simple_propset('svn:externals',
+                        info[0]['Relative URL'] + " f1\n" +
+                        info[0]['URL'] + " f2\n" +
+                        '"^/' + name + "\" f3\n" +
+
+                        info[1]['Relative URL'] + " g1\n" +
+                        info[1]['URL'] + " g2\n",
+                      ''
+                     )
+
+  # And now we expect to see 3 file externals
+  expected_output = svntest.wc.State(wc_dir, {
+    'f1'                : Item(status='A '),
+    'f2'                : Item(status='A '),
+    'f3'                : Item(status='A '),
+
+    'g1'                : Item(status='A '),
+    'g2'                : Item(status='A '),
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None)
+
+def node_hidden_info(sbox):
+  "fetch svn info on 'hidden' nodes"
+
+  sbox.build()
+
+  sbox.simple_rm('A/B/E/alpha')
+  sbox.simple_commit()
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'up', '--set-depth', 'exclude',
+                                     sbox.ospath('A/B/E/beta'))
+
+  sbox.simple_copy('A/B/E', 'E')
+
+  # Running info on BASE not-present fails
+  expected_err = '.*(E|W)155010: The node \'.*alpha\' was not found.*'
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'info', sbox.ospath('A/B/E/alpha'))
+
+  expected_info = [
+    {
+        'Path': re.escape(sbox.ospath('A/B/E/beta')),
+        'Schedule': 'normal',
+        'Depth': 'exclude',
+        'Node Kind': 'file',
+    },
+    {
+        'Path': re.escape(sbox.ospath('E/alpha')),
+        'Schedule': 'delete',
+        'Depth': 'exclude',
+        'Node Kind': 'unknown',
+    },
+    {
+        'Path': re.escape(sbox.ospath('E/beta')),
+        'Schedule': 'normal',
+        'Depth': 'exclude',
+        'Node Kind': 'file',
+    }
+  ]
+
+  svntest.actions.run_and_verify_info(expected_info,
+                                      sbox.ospath('A/B/E/beta'),
+                                      sbox.ospath('E/alpha'),
+                                      sbox.ospath('E/beta'))
 
 
+def info_item_simple(sbox):
+  "show one info item"
+
+  sbox.build(read_only=True)
+  svntest.actions.run_and_verify_svn(
+    ['1'], [],
+    'info', '--show-item=revision', '--no-newline',
+    sbox.ospath(''))
+
+
+def info_item_simple_multiple(sbox):
+  "show one info item with multiple targets"
+
+  sbox.build(read_only=True)
+
+  svntest.actions.run_and_verify_svn(
+    r'^jrandom\s+\S+(/|\\)info_tests-\d+((/|\\)[^/\\]+)?$', [],
+    'info', '--show-item=last-changed-author',
+    '--depth=immediates', sbox.ospath(''))
+
+  svntest.actions.run_and_verify_svn(
+    r'^1\s+\S+(/|\\)info_tests-\d+(/|\\)[^/\\]+$', [],
+    'info', '--show-item=last-changed-revision',
+    sbox.ospath('A'), sbox.ospath('iota'))
+
+
+def info_item_url(sbox):
+  "show one info item with URL targets"
+
+  sbox.build(create_wc=False, read_only=True)
+
+  svntest.actions.run_and_verify_svn(
+    '1', [],
+    'info', '--show-item=last-changed-revision',
+    sbox.repo_url)
+
+
+  svntest.actions.run_and_verify_svn(
+    r'^1\s+[^/:]+://.+/repos/[^/]+$', [],
+    'info', '--show-item=last-changed-revision',
+    sbox.repo_url + '/A', sbox.repo_url + '/iota')
+
+
+  # Empty working copy root on URL targets
+  svntest.actions.run_and_verify_svn(
+    '', [],
+    'info', '--show-item=wc-root',
+    sbox.repo_url)
+
+
+def info_item_uncommitted(sbox):
+  "show one info item on uncommitted targets"
+
+  sbox.build()
+
+  svntest.main.file_write(sbox.ospath('newfile'), 'newfile')
+  sbox.simple_add('newfile')
+  sbox.simple_mkdir('newdir')
+
+  svntest.actions.run_and_verify_svn(
+    '', [],
+    'info', '--show-item=last-changed-revision',
+    sbox.ospath('newfile'))
+
+  svntest.actions.run_and_verify_svn(
+    '', [],
+    'info', '--show-item=last-changed-author',
+    sbox.ospath('newdir'))
+
+  svntest.actions.run_and_verify_svn(
+    r'\s+\S+(/|\\)new(file|dir)', [],
+    'info', '--show-item=last-changed-date',
+    sbox.ospath('newfile'), sbox.ospath('newdir'))
+
+  svntest.actions.run_and_verify_svn(
+    r'\^/new(file|dir)\s+\S+(/|\\)new(file|dir)', [],
+    'info', '--show-item=relative-url',
+    sbox.ospath('newfile'), sbox.ospath('newdir'))
+
+
+def info_item_size_wc_recursive(sbox):
+  "recursive '--show-item=repos-size' on local path"
+
+  sbox.build(read_only=True)
+
+  svntest.actions.run_and_verify_svn(
+    [], [],
+    'info', '--show-item=repos-size', '--recursive',
+    sbox.ospath(''))
+
+
+def info_item_size_repos(sbox):
+  "non-recursive '--show-item=repos-size' on URL"
+
+  sbox.build(read_only=True)
+
+  svntest.actions.run_and_verify_svn(
+    "25\n", [],
+    'info', '--show-item=repos-size',
+    sbox.repo_url + "/iota")
+
+  # Same, but without the newline.
+  svntest.actions.run_and_verify_svn(
+    "25", [],
+    'info', '--show-item=repos-size', '--no-newline',
+    sbox.repo_url + "/iota")
+
+  # Same, but with "human-readable" output.
+  svntest.actions.run_and_verify_svn(
+    "25 B", [],
+    'info', '--show-item=repos-size', '--human-readable',
+    sbox.repo_url + "/iota")
+
+  # No output when the URL is a directory.
+  svntest.actions.run_and_verify_svn(
+    [], [],
+    'info', '--show-item=repos-size',
+    sbox.repo_url)
+
+
+def info_item_size_repos_recursive(sbox):
+  "recursive '--show-item=repos-size' on dir URL"
+
+  sbox.build(read_only=True)
+
+  expected_output = svntest.verify.UnorderedOutput([
+    "25         " + sbox.repo_url + "/iota\n",
+    "27         " + sbox.repo_url + "/A/B/lambda\n",
+    "25         " + sbox.repo_url + "/A/B/E/beta\n",
+    "26         " + sbox.repo_url + "/A/B/E/alpha\n",
+    "23         " + sbox.repo_url + "/A/mu\n",
+    "26         " + sbox.repo_url + "/A/D/gamma\n",
+    "23         " + sbox.repo_url + "/A/D/G/pi\n",
+    "24         " + sbox.repo_url + "/A/D/G/rho\n",
+    "24         " + sbox.repo_url + "/A/D/G/tau\n",
+    "26         " + sbox.repo_url + "/A/D/H/omega\n",
+    "24         " + sbox.repo_url + "/A/D/H/psi\n",
+    "24         " + sbox.repo_url + "/A/D/H/chi\n",
+  ])
+
+  svntest.actions.run_and_verify_svn(
+    expected_output, [],
+    'info', '--show-item=repos-size', '--recursive',
+    sbox.repo_url)
+
+
+def info_item_failures(sbox):
+  "failure modes of 'svn info --show-item'"
+
+  sbox.build(read_only=True)
+
+  svntest.actions.run_and_verify_svn(
+    None, r'.*E200009:.*',
+    'info', '--show-item=revision',
+    sbox.ospath('not-there'))
+
+  svntest.actions.run_and_verify_svn(
+    None, r".*E205000: .*; did you mean 'wc-root'\?",
+    'info', '--show-item=root',
+    sbox.ospath(''))
+
+  svntest.actions.run_and_verify_svn(
+    None, (r".*E205000: --show-item is not valid in --xml mode"),
+    'info', '--show-item=revision', '--xml',
+    sbox.ospath(''))
+
+  svntest.actions.run_and_verify_svn(
+    None, (r".*E205000: --incremental is only valid in --xml mode"),
+    'info', '--show-item=revision', '--incremental',
+    sbox.ospath(''))
+
+  svntest.actions.run_and_verify_svn(
+    None, (r".*E205000: --no-newline is only available.*"),
+    'info', '--show-item=revision', '--no-newline',
+    sbox.ospath('A'), sbox.ospath('iota'))
+
+  svntest.actions.run_and_verify_svn(
+    None, (r".*E200007: can't show in-repository size.*"),
+    'info', '--show-item=repos-size',
+    sbox.ospath('iota'))
+
+
+@Issue(4837)
+def info_file_in_file_replaced_dir(sbox):
+  "info, file in file-replaced dir"
+
+  sbox.build(empty=True)
+  sbox.simple_mkdir('dir')
+  sbox.simple_add_text('text\n', 'dir/file')
+  sbox.simple_commit(message='Add file')
+
+  sbox.simple_copy('dir/file', 'file-moved')
+  sbox.simple_rm('dir')
+  sbox.simple_add_text('replaced\n', 'dir')
+  sbox.simple_commit(message='Replace dir with file')
+
+  sbox.simple_update()
+
+  expected = {'Relative URL' : r'\^/dir/file',
+              'Node Kind' : 'file',
+              'Revision': '1',
+              'Last Changed Rev': '1',
+             }
+
+  svntest.actions.run_and_verify_info([expected],
+                                      sbox.repo_url + '/dir/file@1')
+
+@Issue(4869)
+def info_tree_conflict_source(sbox):
+  "info --xml: verify source-left, source-right"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  lambda_path = os.path.join(B_path, 'lambda')
+  alpha_path = os.path.join(B_path, 'E', 'alpha')
+  F_path = os.path.join(B_path, 'F')
+
+  B2_url = sbox.repo_url + '/A/B2'
+  B2_path = os.path.join(wc_dir, 'A', 'B2')
+  lambda2_path = os.path.join(B2_path, 'lambda')
+
+  # Rev 2 copy B to B2
+  sbox.simple_repo_copy('A/B', 'A/B2')
+  sbox.simple_update()
+
+  # Rev 3:
+  # edit A/B/lambda to test text conflict case
+  # add property to A/B/E/alpha to test property conflict case
+  # rename A/B/F to A/B/Z to test tree conflict case
+
+  svntest.main.file_write(lambda_path, 'B/lambda side of conflict')
+  sbox.simple_propset('blue', 'azul', 'A/B/E/alpha')
+  sbox.simple_move('A/B/F', 'A/B/Z');
+  sbox.simple_commit()
+
+  # Rev 4:
+  # edit A/B2/lambda
+  # add property to A/B2/E/alpha
+  # rename A/B2/F to A/B2/Y
+
+  svntest.main.file_write(lambda2_path, 'B2/lambda side of conflict')
+  sbox.simple_propset('blue', 'bleue', 'A/B2/E/alpha')
+  sbox.simple_move('A/B2/F', 'A/B2/Y');
+  sbox.simple_commit()
+
+  # Now merge B2 into B to cause a text conflict, property conflict, and
+  # tree conflict
+  sbox.simple_update()
+
+  svntest.actions.run_and_verify_svn2(svntest.verify.AnyOutput, [],
+                                      0, 'merge', B2_url, B_path)
+
+  # Verify 'svn info --xml' on the text conflicted case
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                                                [], 'info',
+                                                                lambda_path,
+                                                                '--xml')
+
+  verify_xml_elements(output,
+                      [('version', {'revision'     : '1',
+                                    'side'         : 'source-left',
+                                    'kind'         : 'file',
+                                    'path-in-repos': 'A/B/lambda',
+                                    'repos-url'    : sbox.repo_url,
+                                   },
+                       )])
+
+  verify_xml_elements(output,
+                      [('version', {'revision'     : '4',
+                                    'side'         : 'source-right',
+                                    'kind'         : 'file',
+                                    'path-in-repos': 'A/B2/lambda',
+                                    'repos-url'    : sbox.repo_url,
+                                   },
+                       )])
+
+  # Verify 'svn info --xml' on the property conflicted case
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                                                [], 'info',
+                                                                alpha_path,
+                                                                '--xml')
+
+  verify_xml_elements(output,
+                      [('version', {'revision'     : '1',
+                                    'side'         : 'source-left',
+                                    'kind'         : 'file',
+                                    'path-in-repos': 'A/B/E/alpha',
+                                    'repos-url'    : sbox.repo_url,
+                                   },
+                       )])
+
+  verify_xml_elements(output,
+                      [('version', {'revision'     : '4',
+                                    'side'         : 'source-right',
+                                    'kind'         : 'file',
+                                    'path-in-repos': 'A/B2/E/alpha',
+                                    'repos-url'    : sbox.repo_url,
+                                   },
+                       )])
+
+  # Verify 'svn info --xml' on the tree conflicted case
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                                                [], 'info',
+                                                                F_path,
+                                                                '--xml')
+
+  verify_xml_elements(output,
+                      [('version', {'revision'     : '1',
+                                    'side'         : 'source-left',
+                                    'kind'         : 'dir',
+                                    'path-in-repos': 'A/B/F',
+                                    'repos-url'    : sbox.repo_url,
+                                   },
+                       )])
+
+  verify_xml_elements(output,
+                      [('version', {'revision'     : '4',
+                                    'side'         : 'source-right',
+                                    'kind'         : 'none',
+                                    'path-in-repos': 'A/B2/F',
+                                    'repos-url'    : sbox.repo_url,
+                                   },
+                       )])
 
 ########################################################################
 # Run the tests
@@ -533,6 +979,18 @@ test_list = [ None,
               info_repos_root_url,
               info_show_exclude,
               binary_tree_conflict,
+              relpath_escaping,
+              node_hidden_info,
+              info_item_simple,
+              info_item_simple_multiple,
+              info_item_url,
+              info_item_uncommitted,
+              info_item_size_wc_recursive,
+              info_item_size_repos,
+              info_item_size_repos_recursive,
+              info_item_failures,
+              info_file_in_file_replaced_dir,
+              info_tree_conflict_source,
              ]
 
 if __name__ == '__main__':

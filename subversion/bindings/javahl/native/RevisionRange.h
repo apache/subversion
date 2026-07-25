@@ -29,6 +29,7 @@
 
 #include <jni.h>
 #include "svn_types.h"
+#include "svn_opt.h"
 
 #include "Pool.h"
 
@@ -53,7 +54,12 @@ class RevisionRange
   /**
    * Return an svn_opt_revision_range_t.
    */
-  const svn_opt_revision_range_t *toRange(SVN::Pool &pool) const;
+  svn_opt_revision_range_t *toRange(SVN::Pool &pool) const;
+
+  /**
+   * Return an svn_merge_range_t.
+   */
+  svn_merge_range_t* toMergeRange(SVN::Pool &pool) const;
 
   /**
    * Make a (single) RevisionRange Java object.

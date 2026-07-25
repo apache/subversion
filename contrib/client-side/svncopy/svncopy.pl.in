@@ -92,7 +92,7 @@ GetOptions( "pin-externals|tag|t" => \$pin_externals,
             "revision|r=s" => \$revision,
             "verbose!" => \$verbose,
             "quiet|q" => sub { $verbose = 0; push( @svn_options, "--quiet" ) },
-            "file|F=s" => sub { push( @svn_options, "--file", $_[1] ) },
+            "file|F=s" => sub { open FILE, $_[1]; my @content = <FILE>; $message = join("\n", @content, "\n"); close FILE; },
             "username=s" => sub { push( @svn_options, "--username", $_[1] ) },
             "password=s" => sub { push( @svn_options, "--password", $_[1] ) },
             "no_auth_cache" => sub { push( @svn_options, "--no-auth-cache" ) },
@@ -969,6 +969,12 @@ B<svncopy> - extended form of B<svn copy>
 =head1 SYNOPSIS
 
 B<svncopy.pl> [option ...] source [source ...] destination
+
+--------------------------------------------------------------------------
+NOTE: This script is deprecated. Please use 'svn copy --pin-externals' for
+pinning externals, and use the relative external URL syntax instead of the
+'--update-externals' functionality of this script.
+--------------------------------------------------------------------------
 
 This script copies one Subversion location or set of locations to another,
 in the same way as B<svn copy>.  Using the script allows more advanced operations,

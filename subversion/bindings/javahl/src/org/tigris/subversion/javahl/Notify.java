@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.tigris.subversion.javahl;
@@ -52,7 +50,7 @@ public interface Notify
                          int contentState, int propState, long revision);
 
     /**
-     * The type of action occuring.  The values are defined in the
+     * The type of action occurring.  The values are defined in the
      * interface NotifyAction for building reasons.
      */
     public static final class Action implements NotifyAction
@@ -69,7 +67,7 @@ public interface Notify
 
     }
     /**
-     * The type of notification that is occuring.  The values are
+     * The type of notification that is occurring.  The values are
      * defined in the interface NotifyStatus for building reasons.
      */
     public static final class Status implements NotifyStatus

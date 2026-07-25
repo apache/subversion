@@ -350,7 +350,7 @@ dir_entry_id_from_node(const svn_fs_id_t **id_p,
 
   SVN_ERR(svn_fs_base__dag_dir_entries(&entries, parent, trail, pool));
   if (entries)
-    dirent = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
+    dirent = svn_hash_gets(entries, name);
   else
     dirent = NULL;
 
@@ -421,7 +421,7 @@ set_entry(dag_node_t *parent,
     entries = apr_hash_make(pool);
 
   /* Now, add our new entry to the entries list. */
-  apr_hash_set(entries, name, APR_HASH_KEY_STRING, id);
+  svn_hash_sets(entries, name, id);
 
   /* Finally, replace the old entries list with the new one. */
   SVN_ERR(svn_fs_base__unparse_entries_skel(&entries_skel, entries,
@@ -579,7 +579,7 @@ svn_fs_base__dag_get_proplist(apr_hash_t **proplist_p,
 
 svn_error_t *
 svn_fs_base__dag_set_proplist(dag_node_t *node,
-                              apr_hash_t *proplist,
+                              const apr_hash_t *proplist,
                               const char *txn_id,
                               trail_t *trail,
                               apr_pool_t *pool)
@@ -910,7 +910,7 @@ svn_fs_base__dag_delete(dag_node_t *parent,
 
   /* Find NAME in the ENTRIES skel.  */
   if (entries)
-    id = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
+    id = svn_hash_gets(entries, name);
 
   /* If we never found ID in ENTRIES (perhaps because there are no
      ENTRIES, perhaps because ID just isn't in the existing ENTRIES
@@ -929,7 +929,7 @@ svn_fs_base__dag_delete(dag_node_t *parent,
                                              trail, pool));
 
   /* Remove this entry from its parent's entries list. */
-  apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
+  svn_hash_sets(entries, name, NULL);
 
   /* Replace the old entries list with the new one. */
   {
@@ -1028,12 +1028,14 @@ svn_fs_base__dag_delete_if_mutable(svn_fs_t *fs,
               void *val;
               svn_fs_dirent_t *dirent;
 
+              svn_pool_clear(subpool);
               apr_hash_this(hi, NULL, NULL, &val);
               dirent = val;
               SVN_ERR(svn_fs_base__dag_delete_if_mutable(fs, dirent->id,
                                                          txn_id, trail,
                                                          subpool));
             }
+          svn_pool_destroy(subpool);
         }
     }
 
@@ -1342,7 +1344,7 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
 
 
 dag_node_t *
-svn_fs_base__dag_dup(dag_node_t *node,
+svn_fs_base__dag_dup(const dag_node_t *node,
                      apr_pool_t *pool)
 {
   /* Allocate our new node. */
@@ -1579,10 +1581,10 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
                             apr_pool_t *pool)
 {
   revision_t revision;
-  svn_string_t date;
   apr_hash_t *txnprops;
   svn_fs_t *fs = txn->fs;
   const char *txn_id = txn->id;
+  const svn_string_t *client_date;
 
   /* Remove any temporary transaction properties initially created by
      begin_txn().  */
@@ -1593,25 +1595,35 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
   *new_rev = SVN_INVALID_REVNUM;
   SVN_ERR(svn_fs_bdb__put_rev(new_rev, fs, &revision, trail, pool));
 
-  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
+  if (svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CHECK_OOD))
     SVN_ERR(svn_fs_base__set_txn_prop
             (fs, txn_id, SVN_FS__PROP_TXN_CHECK_OOD, NULL, trail, pool));
 
-  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
-                   APR_HASH_KEY_STRING))
+  if (svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS))
     SVN_ERR(svn_fs_base__set_txn_prop
             (fs, txn_id, SVN_FS__PROP_TXN_CHECK_LOCKS, NULL, trail, pool));
+
+  client_date = svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CLIENT_DATE);
+  if (client_date)
+    SVN_ERR(svn_fs_base__set_txn_prop
+            (fs, txn_id, SVN_FS__PROP_TXN_CLIENT_DATE, NULL, trail, pool));
 
   /* Promote the unfinished transaction to a committed one. */
   SVN_ERR(svn_fs_base__txn_make_committed(fs, txn_id, *new_rev,
                                           trail, pool));
 
-  /* Set a date on the commit.  We wait until now to fetch the date,
-     so it's definitely newer than any previous revision's date. */
-  date.data = svn_time_to_cstring(apr_time_now(), pool);
-  date.len = strlen(date.data);
-  return svn_fs_base__set_rev_prop(fs, *new_rev, SVN_PROP_REVISION_DATE,
-                                   NULL, &date, trail, pool);
+  if (!client_date || strcmp(client_date->data, "1"))
+    {
+      /* Set a date on the commit if requested.  We wait until now to fetch the
+         date, so it's definitely newer than any previous revision's date. */
+      svn_string_t date;
+      date.data = svn_time_to_cstring(apr_time_now(), pool);
+      date.len = strlen(date.data);
+      SVN_ERR(svn_fs_base__set_rev_prop(fs, *new_rev, SVN_PROP_REVISION_DATE,
+                                        NULL, &date, trail, pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -1632,7 +1644,7 @@ svn_fs_base__things_different(svn_boolean_t *props_changed,
   if (! props_changed && ! contents_changed)
     return SVN_NO_ERROR;
 
-  /* The the node revision skels for these two nodes. */
+  /* The node revision skels for these two nodes. */
   SVN_ERR(svn_fs_bdb__get_node_revision(&noderev1, node1->fs, node1->id,
                                         trail, pool));
   SVN_ERR(svn_fs_bdb__get_node_revision(&noderev2, node2->fs, node2->id,

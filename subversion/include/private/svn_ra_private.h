@@ -39,14 +39,49 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Return an error with code SVN_ERR_UNSUPPORTED_FEATURE, and an error
-   message referencing PATH_OR_URL, if the "server" pointed to by
-   RA_SESSION doesn't support Merge Tracking (e.g. is pre-1.5).
-   Perform temporary allocations in POOL. */
+
+
+/**
+ * Open a new ra session @a *new_session to the same repository as an existing
+ * ra session @a old_session, copying the callbacks, auth baton, etc. from the
+ * old session. This essentially limits the lifetime of the new, duplicated
+ * session to the lifetime of the old session. If the new session should
+ * outlive the new session, creating a new session using svn_ra_open4() is
+ * recommended.
+ *
+ * If @a session_url is not NULL, parent the new session at session_url. Note
+ * that @a session_url MUST BE in the same repository as @a old_session or an
+ * error will be returned. When @a session_url NULL the same session root
+ * will be used.
+ *
+ * Allocate @a new_session in @a result_pool. Perform temporary allocations
+ * in @a scratch_pool.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_ra__dup_session(svn_ra_session_t **new_session,
+                    svn_ra_session_t *old_session,
+                    const char *session_url,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+/* Equivalent to svn_ra__assert_capable_server()
+   for SVN_RA_CAPABILITY_MERGEINFO. */
 svn_error_t *
 svn_ra__assert_mergeinfo_capable_server(svn_ra_session_t *ra_session,
                                         const char *path_or_url,
                                         apr_pool_t *pool);
+
+/* Return an error with code SVN_ERR_UNSUPPORTED_FEATURE, and an error
+   message referencing PATH_OR_URL, if the "server" pointed to by
+   RA_SESSION doesn't support CAPABILITY (an SVN_RA_CAPABILITY_* constant).
+   Perform temporary allocations in POOL. */
+svn_error_t *
+svn_ra__assert_capable_server(svn_ra_session_t *ra_session,
+                              const char *capability,
+                              const char *path_or_url,
+                              apr_pool_t *pool);
 
 
 /*** Operational Locks ***/
@@ -119,16 +154,6 @@ svn_ra__release_operational_lock(svn_ra_session_t *session,
                                  const svn_string_t *mylocktoken,
                                  apr_pool_t *scratch_pool);
 
-
-/** Like svn_ra_get_path_relative_to_root(), except returning a fspath
- * (starting with '/') instead of a relpath.
- */
-svn_error_t *
-svn_ra__get_fspath_relative_to_root(svn_ra_session_t *ra_session,
-                                    const char **fspath,
-                                    const char *url,
-                                    apr_pool_t *pool);
-
 /** Register CALLBACKS to be used with the Ev2 shims in RA_SESSION. */
 svn_error_t *
 svn_ra__register_editor_shim_callbacks(svn_ra_session_t *ra_session,
@@ -171,11 +196,11 @@ typedef svn_error_t *(*svn_ra__provide_props_cb_t)(
 /* Using information from BATON, fetch the kind of REPOS_RELPATH at revision
    SRC_REVISION, returning it in *KIND.
 
-   If the kind cannot be determined, then set *KIND to svn_kind_unknown.
+   If the kind cannot be determined, then set *KIND to svn_node_unknown.
 
    Temporary allocations can be made in SCRATCH_POOL.  */
 typedef svn_error_t *(*svn_ra__get_copysrc_kind_cb_t)(
-  svn_kind_t *kind,
+  svn_node_kind_t *kind,
   void *baton,
   const char *repos_relpath,
   svn_revnum_t src_revision,
@@ -218,8 +243,8 @@ typedef svn_error_t *(*svn_ra__get_copysrc_kind_cb_t)(
 
    CB_BATON is the baton used/shared by the above three callbacks.
 
-   CANCEL_FUNC/BATON is a standard cancellation function, and is used for
-   the returned Ev2 editor, and possibly other RA-specific operations.
+   Cancellation is handled through the callbacks provided when SESSION
+   is initially opened.
 
    *EDITOR will be allocated in RESULT_POOL, and all temporary allocations
    will be performed in SCRATCH_POOL.
@@ -236,8 +261,6 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
                        svn_ra__provide_props_cb_t provide_props_cb,
                        svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
                        void *cb_baton,
-                       svn_cancel_func_t cancel_func,
-                       void *cancel_baton,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
@@ -269,6 +292,10 @@ svn_ra__replay_range_ev2(svn_ra_session_t *session,
                          svn_ra__replay_revstart_ev2_callback_t revstart_func,
                          svn_ra__replay_revfinish_ev2_callback_t revfinish_func,
                          void *replay_baton,
+                         svn_ra__provide_base_cb_t provide_base_cb,
+                         svn_ra__provide_props_cb_t provide_props_cb,
+                         svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
+                         void *cb_baton,
                          apr_pool_t *scratch_pool);
 
 /* Similar to svn_ra_replay(), but with an Ev2 editor. */

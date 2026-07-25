@@ -32,7 +32,7 @@ AC_DEFUN(SVN_LIB_APR,
 
   AC_MSG_NOTICE([Apache Portable Runtime (APR) library configuration])
 
-  APR_FIND_APR("$abs_srcdir/apr", "$abs_builddir/apr", 1, [1 0])
+  APR_FIND_APR("", "", 1, [2 1 0])
 
   if test $apr_found = "no"; then
     AC_MSG_WARN([APR not found])
@@ -40,7 +40,7 @@ AC_DEFUN(SVN_LIB_APR,
   fi
 
   if test $apr_found = "reconfig"; then
-    SVN_EXTERNAL_PROJECT([apr])
+    AC_MSG_ERROR([Unexpected APR reconfig])
   fi
 
   dnl check APR version number against regex  
@@ -72,10 +72,23 @@ AC_DEFUN(SVN_LIB_APR,
     AC_MSG_ERROR([apr-config --cppflags failed])
   fi
 
-  CFLAGS="$CFLAGS `$apr_config --cflags`"
+  dnl Remove debugging, optimization and warning flags from the result of
+  dnl 'apr-config --cflags'. They're usually not present, but Homebrew on
+  dnl macOS adds '-g -O2 -Wall', for example. we don't want that to
+  dnl interact with our default flags.
+  apr_cflags="`$apr_config --cflags`"
   if test $? -ne 0; then
     AC_MSG_ERROR([apr-config --cflags failed])
   fi
+  if test "$GCC" = "yes"; then
+    saved="$apr_cflags"
+    apr_cflags=["`echo $apr_cflags' ' | $SED -e 's/-[gOW][^ ]* //g'`"]
+    apr_cflags=["`echo $apr_cflags' ' | $SED -e 's/-w //g'`"]
+    if test "$saved" != "$apr_cflags"; then
+      AC_MSG_WARN(['apr_config --cflags': [[$saved]] -> [[$apr_cflags]]])
+    fi
+  fi
+  CFLAGS="$CFLAGS $apr_cflags"
 
   apr_ldflags="`$apr_config --ldflags`"
   if test $? -ne 0; then
@@ -106,6 +119,7 @@ AC_DEFUN(SVN_LIB_APR,
     AC_MSG_ERROR([apr-config --shlib-path-var failed])
   fi
 
+  SVN_DOT_CLANGD([$SVN_APR_INCLUDES])
   AC_SUBST(SVN_APR_CONFIG, ["$apr_config"])
   AC_SUBST(SVN_APR_INCLUDES)
   AC_SUBST(SVN_APR_LIBS)
@@ -117,29 +131,12 @@ dnl no apr found, print out a message telling the user what to do
 AC_DEFUN(SVN_DOWNLOAD_APR,
 [
   echo "The Apache Portable Runtime (APR) library cannot be found."
-  echo "Please install APR on this system and supply the appropriate"
-  echo "--with-apr option to 'configure'"
+  echo "Please install APR on this system and configure Subversion"
+  echo "with the appropriate --with-apr option."
   echo ""
-  echo "or"
+  echo "You probably need to do something similar with the Apache"
+  echo "Portable Runtime Utility (APRUTIL) library and then configure"
+  echo "Subversion with both the --with-apr and --with-apr-util options."
   echo ""
-  echo "get it with SVN and put it in a subdirectory of this source:"
-  echo ""
-  echo "   svn co \\"
-  echo "    http://svn.apache.org/repos/asf/apr/apr/branches/1.3.x \\"
-  echo "    apr"
-  echo ""
-  echo "Run that right here in the top level of the Subversion tree."
-  echo "Afterwards, run apr/buildconf in that subdirectory and"
-  echo "then run configure again here."
-  echo ""
-  echo "Whichever of the above you do, you probably need to do"
-  echo "something similar for apr-util, either providing both"
-  echo "--with-apr and --with-apr-util to 'configure', or"
-  echo "getting both from SVN with:"
-  echo ""
-  echo "   svn co \\"
-  echo "    http://svn.apache.org/repos/asf/apr/apr-util/branches/1.3.x \\"
-  echo "    apr-util"
-  echo ""
-  AC_MSG_ERROR([no suitable apr found])
+  AC_MSG_ERROR([no suitable APR found])
 ])

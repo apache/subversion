@@ -23,9 +23,18 @@
 # This option specifies the hostname for delivery via SMTP.
 #smtp_hostname = localhost
 
+# This option specifies the TCP port number to connect for SMTP.
+# If it is not specified, 25 is used for SMTP and 465 is used for
+# SMTP-Over-SSL by default.
+#smtp_port = 25
+
 # Username and password for SMTP servers requiring authorisation.
 #smtp_username = example
 #smtp_password = example
+
+# This option specifies whether to use SSL from the beginning of the SMTP
+# connection.
+#smtp_ssl = yes
 
 # --------------------------------------------------------------------------
 
@@ -145,6 +154,15 @@
 # set to "no_author". Thus, you might define a line like:
 #
 #   from_addr = %(author)s@example.com
+#
+# The substitution variable "repos_basename" is provided, and is set to
+# the directory name of the repository. This can be useful to set
+# a custom subject that can be re-used in multiple repositories:
+#
+#   commit_subject_prefix = [svn-%(repos_basename)s]
+#
+# For example if the repository is at /path/to/repo/project-x then
+# the subject of commit emails will be prefixed with [svn-project-x]
 #
 #
 # SUMMARY

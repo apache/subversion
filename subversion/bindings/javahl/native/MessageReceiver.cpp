@@ -58,7 +58,7 @@ void MessageReceiver::receiveMessage(const char *message)
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/ISVNAdmin$MessageReceiver");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/ISVNAdmin$MessageReceiver"));
       if (JNIUtil::isJavaExceptionThrown())
         return;
 

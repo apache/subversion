@@ -204,14 +204,14 @@ become an op_depth layer of their own.
   commit rules to act on revision-number changes within this flat tree.
 
   GJS: correct. Consider a root of the subtree at r10, and a
-  descendent is at r12. We cannot create one layer at r10, and another
-  at r12 because we do not have the descendent@r10 to place into the
+  descendant is at r12. We cannot create one layer at r10, and another
+  at r12 because we do not have the descendant@r10 to place into the
   first layer. Thus, we need to use a single op_depth layer for this
   operation. At commit time, one copy will be me for the subtree from
-  r10, a deletion will be made for the descendent, and then another
-  copy performed for the r12 descendent.
+  r10, a deletion will be made for the descendant, and then another
+  copy performed for the r12 descendant.
 
-### GJS: in the above scenario, we do not know if the descendent
+### GJS: in the above scenario, we do not know if the descendant
   existed in r10, so the deletion may not be necessary (and could even
   throw an error!). I do not recall if our copy's destination is
   allowed to exist (ie. we have implied overwrite semantics in the

@@ -28,7 +28,7 @@ C<$data-E<gt>field($new_value)>.
 Once you understand the convention of subversion functions in perl
 bindings, you could look at the subversion api and write them in perl.
 The API is available in the source header files or online at
-http://svn.collab.net/svn-doxygen/.
+L<https://subversion.apache.org/docs/api/latest/>.
 
 =head1 INTERNALS
 
@@ -40,7 +40,7 @@ with prefix trimmed in the namespace of the caller for this import.
 
 The 3rd through the last parameter is a list of symbol endings that
 you wish for SVN::Base not to import into your namespace.  This is useful
-for cases where you may want to import certaion symbols differently than
+for cases where you may want to import certain symbols differently than
 normally.
 
 =head1 CAVEATS

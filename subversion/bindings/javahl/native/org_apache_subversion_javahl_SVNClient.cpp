@@ -47,12 +47,18 @@
 #include "InfoCallback.h"
 #include "StatusCallback.h"
 #include "ListCallback.h"
+#include "ImportFilterCallback.h"
 #include "ChangelistCallback.h"
 #include "StringArray.h"
-#include "RevpropTable.h"
-#include "svn_version.h"
+#include "PropertyTable.h"
+#include "CreateJ.h"
+#include "Version.hpp"
+#include "VersionExtended.h"
+#include "DiffOptions.h"
+#include "svn_client.h"
 #include "svn_private_config.h"
 #include "version.h"
+#include "jniwrapper/jni_env.hpp"
 #include <iostream>
 
 JNIEXPORT jlong JNICALL
@@ -86,6 +92,20 @@ Java_org_apache_subversion_javahl_SVNClient_finalize
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl != NULL)
     cl->finalize();
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_SVNClient_getVersionExtended(
+    JNIEnv *env, jobject jthis, jboolean verbose)
+{
+  JNIEntry(SVNClient, getVersionExtended);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return NULL;
+    }
+  return cl->getVersionExtended(!!verbose);
 }
 
 JNIEXPORT jstring JNICALL
@@ -138,8 +158,8 @@ Java_org_apache_subversion_javahl_SVNClient_getLastPath
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_list
 (JNIEnv *env, jobject jthis, jstring jurl, jobject jrevision,
- jobject jpegRevision, jobject jdepth, jint jdirentFields,
- jboolean jfetchLocks, jobject jcallback)
+ jobject jpegRevision, jobject jpatterns, jobject jdepth, jint jdirentFields,
+ jboolean jfetchLocks, jboolean jincludeExternals, jobject jcallback)
 {
   JNIEntry(SVNClient, list);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -158,16 +178,25 @@ Java_org_apache_subversion_javahl_SVNClient_list
   if (JNIUtil::isExceptionThrown())
     return;
 
+  StringArray patterns(jpatterns);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   ListCallback callback(jcallback);
-  cl->list(url, revision, pegRevision, EnumMapper::toDepth(jdepth),
-           (int)jdirentFields, jfetchLocks ? true : false, &callback);
+  cl->list(url, revision, pegRevision, patterns,
+           EnumMapper::toDepth(jdepth),
+           static_cast<int>(jdirentFields),
+           jfetchLocks ? true : false,
+           jincludeExternals ? true : false,
+           &callback);
 }
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_status
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jdepth,
- jboolean jonServer, jboolean jgetAll, jboolean jnoIgnore,
- jboolean jignoreExternals, jobject jchangelists,
+ jboolean jonServer, jboolean jonDisk, jboolean jgetAll,
+ jboolean jnoIgnore, jboolean jignoreExternals,
+ jboolean jdepthAsSticky, jobject jchangelists,
  jobject jstatusCallback)
 {
   JNIEntry(SVNClient, status);
@@ -185,9 +214,9 @@ Java_org_apache_subversion_javahl_SVNClient_status
 
   StatusCallback callback(jstatusCallback);
   cl->status(path, EnumMapper::toDepth(jdepth),
-             jonServer ? true:false,
-             jgetAll ? true:false, jnoIgnore ? true:false,
-             jignoreExternals ? true:false, changelists, &callback);
+             bool(jonServer), bool(jonDisk), bool(jgetAll),
+             bool(jnoIgnore), bool(jignoreExternals),
+             bool(jdepthAsSticky), changelists, &callback);
 }
 
 JNIEXPORT void JNICALL
@@ -239,7 +268,7 @@ Java_org_apache_subversion_javahl_SVNClient_password
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_setPrompt
+Java_org_apache_subversion_javahl_SVNClient_setPrompt__Lorg_apache_subversion_javahl_callback_AuthnCallback_2
 (JNIEnv *env, jobject jthis, jobject jprompter)
 {
   JNIEntry(SVNClient, setPrompt);
@@ -249,21 +278,63 @@ Java_org_apache_subversion_javahl_SVNClient_setPrompt
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  Prompter *prompter = Prompter::makeCPrompter(jprompter);
+  Prompter::UniquePtr prompter(Prompter::create(jprompter));
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->getClientContext().setPrompt(prompter);
+  cl->getClientContext().setPrompt(JavaHL::cxx::move(prompter));
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_setPrompt__Lorg_apache_subversion_javahl_callback_UserPasswordCallback_2
+(JNIEnv *env, jobject jthis, jobject jprompter)
+{
+  JNIEntry(SVNClient, setPrompt);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+  Prompter::UniquePtr prompter(CompatPrompter::create(jprompter));
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->getClientContext().setPrompt(JavaHL::cxx::move(prompter));
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_setTunnelAgent
+(JNIEnv *env, jobject jthis, jobject jtunnelcb)
+{
+  JNIEntry(SVNClient, setTunnelAgent);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  cl->getClientContext().setTunnelCallback(jtunnelcb);
 }
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_logMessages
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jranges, jboolean jstopOnCopy, jboolean jdisoverPaths,
- jboolean jincludeMergedRevisions, jobject jrevProps, jlong jlimit,
- jobject jlogMessageCallback)
+ jboolean jincludeMergedRevisions,
+ jobject jrevProps, jboolean jallRevProps,
+ jlong jlimit, jobject jlogMessageCallback)
 {
   JNIEntry(SVNClient, logMessages);
+
+  if (jlong(int(jlimit)) != jlimit)
+    {
+      JNIUtil::raiseThrowable("java/lang/IllegalArgumentException",
+                              "The value of 'limit' is too large");
+      return;
+    }
+
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
     {
@@ -305,14 +376,16 @@ Java_org_apache_subversion_javahl_SVNClient_logMessages
   cl->logMessages(path, pegRevision, revisionRanges,
                   jstopOnCopy ? true: false, jdisoverPaths ? true : false,
                   jincludeMergedRevisions ? true : false,
-                  revProps, jlimit, &callback);
+                  revProps, jallRevProps ? true : false,
+                  int(jlimit), &callback);
 }
 
 JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_SVNClient_checkout
 (JNIEnv *env, jobject jthis, jstring jmoduleName, jstring jdestPath,
  jobject jrevision, jobject jpegRevision, jobject jdepth,
- jboolean jignoreExternals, jboolean jallowUnverObstructions)
+ jboolean jignoreExternals, jboolean jallowUnverObstructions,
+ jobject jwcFormatVersion, jobject jstorePristines)
 {
   JNIEntry(SVNClient, checkout);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -337,10 +410,22 @@ Java_org_apache_subversion_javahl_SVNClient_checkout
   if (JNIUtil::isExceptionThrown())
     return -1;
 
+  svn_version_t version_data;
+  const svn_version_t *version_ptr = NULL;
+  if (jwcFormatVersion != 0)
+    {
+      JavaHL::Version wcFormatVersion(::Java::Env(env), jwcFormatVersion);
+      if (JNIUtil::isExceptionThrown())
+        return -1;
+      wcFormatVersion.getVersion(version_data);
+      version_ptr = &version_data;
+    }
+
   return cl->checkout(moduleName, destPath, revision, pegRevision,
                       EnumMapper::toDepth(jdepth),
                       jignoreExternals ? true : false,
-                      jallowUnverObstructions ? true : false);
+                      jallowUnverObstructions ? true : false,
+                      version_ptr, EnumMapper::toTristate(jstorePristines));
 }
 
 JNIEXPORT void JNICALL
@@ -366,7 +451,7 @@ Java_org_apache_subversion_javahl_SVNClient_remove
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -377,8 +462,9 @@ Java_org_apache_subversion_javahl_SVNClient_remove
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_revert
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jdepth,
- jobject jchangelists)
+(JNIEnv *env, jobject jthis, jobject jpaths, jobject jdepth,
+ jobject jchangelists, jboolean jclear_changelists,
+ jboolean jmetadata_only, jboolean jadded_keep_local)
 {
   JNIEntry(SVNClient, revert);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -387,7 +473,9 @@ Java_org_apache_subversion_javahl_SVNClient_revert
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  JNIStringHolder path(jpath);
+
+  SVN_JNI_NULL_PTR_EX(jpaths, "paths", );
+  StringArray paths(jpaths);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -395,13 +483,16 @@ Java_org_apache_subversion_javahl_SVNClient_revert
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->revert(path, EnumMapper::toDepth(jdepth), changelists);
+  cl->revert(paths, EnumMapper::toDepth(jdepth),
+             changelists, bool(jclear_changelists),
+             bool(jmetadata_only), bool(jadded_keep_local));
 }
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_add
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jdepth,
- jboolean jforce, jboolean jnoIgnore, jboolean jaddParents)
+ jboolean jforce, jboolean jnoIgnore, jboolean jnoAutoProps,
+ jboolean jaddParents)
 {
   JNIEntry(SVNClient, add);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -414,8 +505,11 @@ Java_org_apache_subversion_javahl_SVNClient_add
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->add(path, EnumMapper::toDepth(jdepth), jforce ? true : false,
-          jnoIgnore ? true : false, jaddParents ? true : false);
+  cl->add(path, EnumMapper::toDepth(jdepth),
+          jforce ? true : false,
+          jnoIgnore ? true : false,
+          jnoAutoProps ? true : false,
+          jaddParents ? true : false);
 }
 
 JNIEXPORT jlongArray JNICALL
@@ -476,7 +570,7 @@ Java_org_apache_subversion_javahl_SVNClient_commit
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -491,6 +585,7 @@ JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_copy
 (JNIEnv *env, jobject jthis, jobject jcopySources, jstring jdestPath,
  jboolean jcopyAsChild, jboolean jmakeParents, jboolean jignoreExternals,
+ jboolean jmetadataOnly, jboolean jpinExternals, jobject jexternalsToPin,
  jobject jrevpropTable, jobject jmessage, jobject jcallback)
 {
   JNIEntry(SVNClient, copy);
@@ -517,13 +612,15 @@ Java_org_apache_subversion_javahl_SVNClient_copy
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
   CommitCallback callback(jcallback);
-  cl->copy(copySources, destPath, &message, jcopyAsChild ? true : false,
-           jmakeParents ? true : false, jignoreExternals ? true : false,
+  cl->copy(copySources, destPath, &message,
+           bool(jcopyAsChild), bool(jmakeParents),
+           bool(jignoreExternals), bool(jmetadataOnly),
+           bool(jpinExternals), jexternalsToPin,
            revprops, jcallback ? &callback : NULL);
 }
 
@@ -531,7 +628,8 @@ JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_move
 (JNIEnv *env, jobject jthis, jobject jsrcPaths, jstring jdestPath,
  jboolean jforce, jboolean jmoveAsChild, jboolean jmakeParents,
- jobject jrevpropTable, jobject jmessage, jobject jcallback)
+ jboolean jmetadataOnly, jboolean jallowMixRev, jobject jrevpropTable,
+ jobject jmessage, jobject jcallback)
 {
   JNIEntry(SVNClient, move);
 
@@ -554,13 +652,14 @@ Java_org_apache_subversion_javahl_SVNClient_move
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
   CommitCallback callback(jcallback);
   cl->move(srcPaths, destPath, &message, jforce ? true : false,
            jmoveAsChild ? true : false, jmakeParents ? true : false,
+           jmetadataOnly ? true: false, jallowMixRev ? true : false,
            revprops, jcallback ? &callback : NULL);
 }
 
@@ -586,7 +685,7 @@ Java_org_apache_subversion_javahl_SVNClient_mkdir
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -597,7 +696,10 @@ Java_org_apache_subversion_javahl_SVNClient_mkdir
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_cleanup
-(JNIEnv *env, jobject jthis, jstring jpath)
+(JNIEnv *env, jobject jthis, jstring jpath,
+ jboolean jbreakLocks, jboolean jfixRecordedTimestamps,
+ jboolean jclearDavCache, jboolean jremoveUnusedPristines,
+ jboolean jincludeExternals)
 {
   JNIEntry(SVNClient, cleanup);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -610,7 +712,9 @@ Java_org_apache_subversion_javahl_SVNClient_cleanup
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->cleanup(path);
+  cl->cleanup(path, jbreakLocks, jfixRecordedTimestamps,
+              jclearDavCache, jremoveUnusedPristines,
+              jincludeExternals);
 }
 
 JNIEXPORT void JNICALL
@@ -636,7 +740,8 @@ JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_SVNClient_doExport
 (JNIEnv *env, jobject jthis, jstring jsrcPath, jstring jdestPath,
  jobject jrevision, jobject jpegRevision, jboolean jforce,
- jboolean jignoreExternals, jobject jdepth, jstring jnativeEOL)
+ jboolean jignoreExternals, jboolean jignoreKeywords,
+ jobject jdepth, jstring jnativeEOL)
 {
   JNIEntry(SVNClient, doExport);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -666,7 +771,9 @@ Java_org_apache_subversion_javahl_SVNClient_doExport
     return -1;
 
   return cl->doExport(srcPath, destPath, revision, pegRevision,
-                      jforce ? true : false, jignoreExternals ? true : false,
+                      jforce ? true : false,
+                      jignoreExternals ? true : false,
+                      jignoreKeywords ? true : false,
                       EnumMapper::toDepth(jdepth), nativeEOL);
 }
 
@@ -711,8 +818,9 @@ Java_org_apache_subversion_javahl_SVNClient_doSwitch
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_doImport
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jurl, jobject jdepth,
- jboolean jnoIgnore, jboolean jignoreUnknownNodeTypes, jobject jrevpropTable,
- jobject jmessage, jobject jcallback)
+ jboolean jnoIgnore, jboolean jnoAutoProps,
+ jboolean jignoreUnknownNodeTypes, jobject jrevpropTable,
+ jobject jimportFilterCallback, jobject jmessage, jobject jcommitCallback)
 {
   JNIEntry(SVNClient, doImport);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -733,15 +841,18 @@ Java_org_apache_subversion_javahl_SVNClient_doImport
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  CommitCallback callback(jcallback);
+  ImportFilterCallback importFilterCallback(jimportFilterCallback);
+  CommitCallback commitCallback(jcommitCallback);
+
   cl->doImport(path, url, &message, EnumMapper::toDepth(jdepth),
-               jnoIgnore ? true : false,
+               jnoIgnore ? true : false, jnoAutoProps ? true : false,
                jignoreUnknownNodeTypes ? true : false, revprops,
-               jcallback ? &callback : NULL);
+               jimportFilterCallback ? &importFilterCallback : NULL,
+               jcommitCallback ? &commitCallback : NULL);
 }
 
 JNIEXPORT jobject JNICALL
@@ -768,11 +879,11 @@ Java_org_apache_subversion_javahl_SVNClient_suggestMergeSources
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZ
+Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZZZ
 (JNIEnv *env, jobject jthis, jstring jpath1, jobject jrevision1,
- jstring jpath2, jobject jrevision2, jstring jlocalPath, jboolean jforce,
- jobject jdepth, jboolean jignoreAncestry, jboolean jdryRun,
- jboolean jrecordOnly)
+ jstring jpath2, jobject jrevision2, jstring jlocalPath, jboolean jforceDelete,
+ jobject jdepth, jboolean jignoreMergeinfo, jboolean jdiffIgnoreAncestry,
+ jboolean jdryRun, jboolean jallowMixedRev, jboolean jrecordOnly)
 {
   JNIEntry(SVNClient, merge);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -802,16 +913,21 @@ Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apach
     return;
 
   cl->merge(path1, revision1, path2, revision2, localPath,
-            jforce ? true:false, EnumMapper::toDepth(jdepth),
-            jignoreAncestry ? true:false, jdryRun ? true:false,
+            jforceDelete ? true:false,
+            EnumMapper::toDepth(jdepth),
+            jignoreMergeinfo ? true:false,
+            jdiffIgnoreAncestry ? true:false,
+            jdryRun ? true:false,
+            jallowMixedRev ? true:false,
             jrecordOnly ? true:false);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_util_List_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZ
+Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_util_List_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZZZ
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
- jobject jranges, jstring jlocalPath, jboolean jforce, jobject jdepth,
- jboolean jignoreAncestry, jboolean jdryRun, jboolean jrecordOnly)
+ jobject jranges, jstring jlocalPath, jboolean jforceDelete, jobject jdepth,
+ jboolean jignoreMergeinfo, jboolean jdiffIgnoreAncestry,
+ jboolean jdryRun, jboolean jallowMixedRev, jboolean jrecordOnly)
 {
   JNIEntry(SVNClient, merge);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -833,27 +949,36 @@ Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apach
   if (JNIUtil::isExceptionThrown())
     return;
 
+  std::vector<RevisionRange> *revisionRanges = NULL;
+  std::vector<RevisionRange> realRevisionRanges;
   // Build the revision range vector from the Java array.
-  Array ranges(jranges);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  std::vector<RevisionRange> revisionRanges;
-  std::vector<jobject> rangeVec = ranges.vector();
-
-  for (std::vector<jobject>::const_iterator it = rangeVec.begin();
-        it < rangeVec.end(); ++it)
+  if (jranges)
     {
-      RevisionRange revisionRange(*it);
+      Array ranges(jranges);
       if (JNIUtil::isExceptionThrown())
         return;
 
-      revisionRanges.push_back(revisionRange);
+      std::vector<jobject> rangeVec = ranges.vector();
+
+      for (std::vector<jobject>::const_iterator it = rangeVec.begin();
+           it < rangeVec.end(); ++it)
+        {
+          RevisionRange revisionRange(*it);
+          if (JNIUtil::isExceptionThrown())
+            return;
+
+          realRevisionRanges.push_back(revisionRange);
+        }
+      revisionRanges = &realRevisionRanges;
     }
 
   cl->merge(path, pegRevision, revisionRanges, localPath,
-            jforce ? true:false, EnumMapper::toDepth(jdepth),
-            jignoreAncestry ? true:false, jdryRun ? true:false,
+            jforceDelete ? true:false,
+            EnumMapper::toDepth(jdepth),
+            jignoreMergeinfo ? true:false,
+            jdiffIgnoreAncestry ? true:false,
+            jdryRun ? true:false,
+            jallowMixedRev ? true:false,
             jrecordOnly ? true:false);
 }
 
@@ -886,13 +1011,11 @@ Java_org_apache_subversion_javahl_SVNClient_mergeReintegrate
                        jdryRun ? true:false);
 }
 
-JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_properties
+static void SVNClient_properties
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
  jobject jpegRevision, jobject jdepth, jobject jchangelists,
- jobject jproplistCallback)
+ jobject jproplistCallback, bool inherited)
 {
-  JNIEntry(SVNClient, properties);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
     {
@@ -915,9 +1038,31 @@ Java_org_apache_subversion_javahl_SVNClient_properties
   if (JNIUtil::isExceptionThrown())
     return;
 
-  ProplistCallback callback(jproplistCallback);
+  ProplistCallback callback(jproplistCallback, inherited);
   cl->properties(path, revision, pegRevision, EnumMapper::toDepth(jdepth),
                  changelists, &callback);
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_properties__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2Lorg_apache_subversion_javahl_callback_ProplistCallback_2
+(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
+ jobject jpegRevision, jobject jdepth, jobject jchangelists,
+ jobject jproplistCallback)
+{
+  JNIEntry(SVNClient, properties);
+  SVNClient_properties(env, jthis, jpath, jrevision, jpegRevision, jdepth,
+                       jchangelists, jproplistCallback, false);
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_properties__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2Lorg_apache_subversion_javahl_callback_InheritedProplistCallback_2
+(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
+ jobject jpegRevision, jobject jdepth, jobject jchangelists,
+ jobject jproplistCallback)
+{
+  JNIEntry(SVNClient, properties);
+  SVNClient_properties(env, jthis, jpath, jrevision, jpegRevision, jdepth,
+                       jchangelists, jproplistCallback, true);
 }
 
 JNIEXPORT void JNICALL
@@ -926,7 +1071,7 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
  jbyteArray jval, jobject jmessage, jboolean jforce, jobject jrevpropTable,
  jobject jcallback)
 {
-  JNIEntry(SVNClient, propertySet);
+  JNIEntry(SVNClient, propertySetRemote);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
     {
@@ -949,13 +1094,13 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
   CommitCallback callback(jcallback);
-  cl->propertySetRemote(path, jbaseRev, name, &message, value,
-                        jforce ? true:false,
+  cl->propertySetRemote(path, static_cast<svn_revnum_t>(jbaseRev),
+                        name, &message, value, jforce ? true : false,
                         revprops, jcallback ? &callback : NULL);
 }
 
@@ -964,7 +1109,7 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetLocal
 (JNIEnv *env, jobject jthis, jobject jtargets, jstring jname,
  jbyteArray jval, jobject jdepth, jobject jchangelists, jboolean jforce)
 {
-  JNIEntry(SVNClient, propertySet);
+  JNIEntry(SVNClient, propertySetLocal);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
     {
@@ -1080,7 +1225,7 @@ Java_org_apache_subversion_javahl_SVNClient_setRevProperty
 JNIEXPORT jbyteArray JNICALL
 Java_org_apache_subversion_javahl_SVNClient_propertyGet
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jobject jrevision,
- jobject jpegRevision)
+ jobject jpegRevision, jobject jchangelists)
 {
   JNIEntry(SVNClient, propertyGet);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1105,7 +1250,11 @@ Java_org_apache_subversion_javahl_SVNClient_propertyGet
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
-  return cl->propertyGet(path, name, revision, pegRevision);
+  StringArray changelists(jchangelists);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  return cl->propertyGet(path, name, revision, pegRevision, changelists);
 }
 
 JNIEXPORT jobject JNICALL
@@ -1131,6 +1280,7 @@ Java_org_apache_subversion_javahl_SVNClient_getMergeinfo
 JNIEXPORT void JNICALL Java_org_apache_subversion_javahl_SVNClient_getMergeinfoLog
 (JNIEnv *env, jobject jthis, jobject jkind, jstring jpathOrUrl,
  jobject jpegRevision, jstring jmergeSourceUrl, jobject jsrcPegRevision,
+ jobject jsrcStartRevision, jobject jsrcEndRevision,
  jboolean jdiscoverChangedPaths, jobject jdepth, jobject jrevProps,
  jobject jlogMessageCallback)
 {
@@ -1150,6 +1300,14 @@ JNIEXPORT void JNICALL Java_org_apache_subversion_javahl_SVNClient_getMergeinfoL
   if (JNIUtil::isExceptionThrown())
     return;
 
+  Revision srcStartRevision(jsrcStartRevision);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  Revision srcEndRevision(jsrcEndRevision);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   JNIStringHolder pathOrUrl(jpathOrUrl);
   if (JNIUtil::isExceptionThrown())
     return;
@@ -1166,17 +1324,19 @@ JNIEXPORT void JNICALL Java_org_apache_subversion_javahl_SVNClient_getMergeinfoL
 
   cl->getMergeinfoLog(EnumMapper::toMergeinfoLogKind(jkind),
                       pathOrUrl, pegRevision, mergeSourceUrl,
-                      srcPegRevision, jdiscoverChangedPaths ? true : false,
+                      srcPegRevision, srcStartRevision, srcEndRevision,
+                      jdiscoverChangedPaths ? true : false,
                       EnumMapper::toDepth(jdepth), revProps, &callback);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Ljava_io_OutputStream_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2ZZZZZZ
+Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Ljava_io_OutputStream_2Ljava_io_OutputStream_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2ZZZZZZLorg_apache_subversion_javahl_types_DiffOptions_2
 (JNIEnv *env, jobject jthis, jstring jtarget1, jobject jrevision1,
  jstring jtarget2, jobject jrevision2, jstring jrelativeToDir,
- jobject jstream, jobject jdepth, jobject jchangelists,
+ jobject joutStream, jobject jerrStream, jobject jdepth, jobject jchangelists,
  jboolean jignoreAncestry, jboolean jnoDiffDeleted, jboolean jforce,
- jboolean jcopiesAsAdds, jboolean jignoreProps, jboolean jpropsOnly)
+ jboolean jcopiesAsAdds, jboolean jignoreProps, jboolean jpropsOnly,
+ jobject jdiffOptions)
 {
   JNIEntry(SVNClient, diff);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1205,7 +1365,11 @@ Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache
   if (JNIUtil::isExceptionThrown())
     return;
 
-  OutputStream dataOut(jstream);
+  OutputStream outStream(joutStream);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  OutputStream errStream(jerrStream);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1213,21 +1377,27 @@ Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->diff(target1, revision1, target2, revision2, relativeToDir, dataOut,
+  DiffOptions options(jdiffOptions);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->diff(target1, revision1, target2, revision2,
+           relativeToDir, outStream, errStream,
            EnumMapper::toDepth(jdepth), changelists,
            jignoreAncestry ? true:false,
            jnoDiffDeleted ? true:false, jforce ? true:false,
            jcopiesAsAdds ? true:false, jignoreProps ? true:false,
-           jpropsOnly ? true:false);
+           jpropsOnly ? true:false, options);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Ljava_io_OutputStream_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2ZZZZZZ
+Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Ljava_io_OutputStream_2Ljava_io_OutputStream_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2ZZZZZZLorg_apache_subversion_javahl_types_DiffOptions_2
 (JNIEnv *env, jobject jthis, jstring jtarget, jobject jpegRevision,
  jobject jstartRevision, jobject jendRevision, jstring jrelativeToDir,
- jobject jstream, jobject jdepth, jobject jchangelists,
+ jobject joutStream, jobject jerrStream, jobject jdepth, jobject jchangelists,
  jboolean jignoreAncestry, jboolean jnoDiffDeleted, jboolean jforce,
- jboolean jcopiesAsAdds, jboolean jignoreProps, jboolean jpropsOnly)
+ jboolean jcopiesAsAdds, jboolean jignoreProps, jboolean jpropsOnly,
+ jobject jdiffOptions)
 {
   JNIEntry(SVNClient, diff);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1252,7 +1422,11 @@ Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache
   if (JNIUtil::isExceptionThrown())
     return;
 
-  OutputStream dataOut(jstream);
+  OutputStream outStream(joutStream);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  OutputStream errStream(jerrStream);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1264,12 +1438,16 @@ Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache
   if (JNIUtil::isExceptionThrown())
     return;
 
+  DiffOptions options(jdiffOptions);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   cl->diff(target, pegRevision, startRevision, endRevision, relativeToDir,
-           dataOut, EnumMapper::toDepth(jdepth), changelists,
+           outStream, errStream, EnumMapper::toDepth(jdepth), changelists,
            jignoreAncestry ? true:false,
            jnoDiffDeleted ? true:false, jforce ? true:false,
            jcopiesAsAdds ? true:false, jignoreProps ? true:false,
-           jpropsOnly ? true:false);
+           jpropsOnly ? true:false, options);
 }
 
 JNIEXPORT void JNICALL
@@ -1355,35 +1533,44 @@ Java_org_apache_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lo
                     jignoreAncestry ? true : false, receiver);
 }
 
-JNIEXPORT void JNICALL
+JNIEXPORT jobject JNICALL
 Java_org_apache_subversion_javahl_SVNClient_streamFileContent
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
- jobject jpegRevision, jobject jstream)
+(JNIEnv *env, jobject jthis, jstring jpath,
+ jobject jrevision, jobject jpegRevision,
+ jboolean jexpand_keywords, jboolean jreturn_props,
+ jobject jstream)
 {
   JNIEntry(SVNClient, streamFileContent);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
-      return;
+      return NULL;
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    return;
+    return NULL;
 
   Revision revision(jrevision);
   if (JNIUtil::isExceptionThrown())
-    return;
+    return NULL;
 
   Revision pegRevision(jpegRevision);
   if (JNIUtil::isExceptionThrown())
-    return;
+    return NULL;
 
   OutputStream dataOut(jstream);
   if (JNIUtil::isExceptionThrown())
-    return;
+    return NULL;
 
-  cl->streamFileContent(path, revision, pegRevision, dataOut);
+  apr_hash_t* props =
+    cl->streamFileContent(path, revision, pegRevision,
+                          bool(jexpand_keywords), bool(jreturn_props),
+                          dataOut);
+  if (!jreturn_props || JNIUtil::isExceptionThrown())
+    return NULL;
+
+  return CreateJ::PropertyMap(props, SVN::Pool().getPool());
 }
 
 JNIEXPORT jstring JNICALL
@@ -1406,21 +1593,32 @@ Java_org_apache_subversion_javahl_SVNClient_getVersionInfo
   return cl->getVersionInfo(path, trailUrl, jlastChanged ? true:false);
 }
 
-JNIEXPORT void JNICALL Java_org_apache_subversion_javahl_SVNClient_upgrade
-  (JNIEnv *env, jobject jthis, jstring jpath)
+JNIEXPORT jobject JNICALL Java_org_apache_subversion_javahl_SVNClient_upgrade
+(JNIEnv *env, jobject jthis, jstring jpath, jobject jtargetWcVersion)
 {
   JNIEntry(SVNClient, upgrade);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
-      return;
+      return NULL;
     }
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
-    return;
+    return NULL;
 
-  cl->upgrade(path);
+  svn_version_t target_version_data;
+  const svn_version_t *target_version_ptr = NULL;
+  if (jtargetWcVersion != NULL)
+    {
+      ::JavaHL::Version targetWcVersion(::Java::Env(env), jtargetWcVersion);
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+      targetWcVersion.getVersion(target_version_data);
+      target_version_ptr = &target_version_data;
+    }
+
+  return cl->upgrade(::Java::Env(env), path, target_version_ptr);
 }
 
 JNIEXPORT void JNICALL
@@ -1495,9 +1693,11 @@ Java_org_apache_subversion_javahl_SVNClient_relocate
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_blame
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
+(JNIEnv *env, jobject jthis,
+ jstring jpath, jobject jpegRevision,
  jobject jrevisionStart, jobject jrevisionEnd, jboolean jignoreMimeType,
- jboolean jincludeMergedRevisions, jobject jblameCallback)
+ jboolean jincludeMergedRevisions, jobject jdiffOptions,
+ jobject jrangeCallback, jobject jlineCallback)
 {
   JNIEntry(SVNClient, blame);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1522,10 +1722,15 @@ Java_org_apache_subversion_javahl_SVNClient_blame
   if (JNIUtil::isExceptionThrown())
     return;
 
-  BlameCallback callback(jblameCallback);
+  DiffOptions options(jdiffOptions);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  BlameCallback callback(jrangeCallback, jlineCallback);
   cl->blame(path, pegRevision, revisionStart, revisionEnd,
             jignoreMimeType ? true : false,
-            jincludeMergedRevisions ? true : false, &callback);
+            jincludeMergedRevisions ? true : false, &callback,
+            options);
 }
 
 JNIEXPORT void JNICALL
@@ -1561,6 +1766,36 @@ Java_org_apache_subversion_javahl_SVNClient_getConfigDirectory
 
   const char *configDir = cl->getClientContext().getConfigDirectory();
   return JNIUtil::makeJString(configDir);
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_setConfigEventHandler(
+    JNIEnv* env, jobject jthis, jobject jcallback)
+{
+  JNIEntry(SVNClient, setConfigEventHandler);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  cl->getClientContext().setConfigEventHandler(jcallback);
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_SVNClient_getConfigEventHandler(
+    JNIEnv* env, jobject jthis)
+{
+  JNIEntry(SVNClient, getConfigEventHandler);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return NULL;
+    }
+
+  return cl->getClientContext().getConfigEventHandler();
 }
 
 JNIEXPORT void JNICALL
@@ -1654,8 +1889,9 @@ Java_org_apache_subversion_javahl_SVNClient_getChangelists
     return;
 
   ChangelistCallback callback(jchangelistCallback);
-  cl->getChangelists(root_path, changelists, EnumMapper::toDepth(jdepth),
-                     &callback);
+  cl->getChangelists(root_path,
+                     (jchangelists ? &changelists : NULL),
+                     EnumMapper::toDepth(jdepth), &callback);
 }
 
 JNIEXPORT void JNICALL
@@ -1706,12 +1942,14 @@ Java_org_apache_subversion_javahl_SVNClient_unlock
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_info2
+Java_org_apache_subversion_javahl_SVNClient_info
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
- jobject jpegRevision, jobject jdepth, jobject jchangelists,
- jobject jinfoCallback)
+ jobject jpegRevision, jobject jdepth,
+ jboolean jfetchExcluded, jboolean jfetchActualOnly,
+ jboolean jincludeExternals,
+ jobject jchangelists, jobject jinfoCallback)
 {
-  JNIEntry(SVNClient, info2);
+  JNIEntry(SVNClient, info);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
     {
@@ -1735,8 +1973,10 @@ Java_org_apache_subversion_javahl_SVNClient_info2
     return;
 
   InfoCallback callback(jinfoCallback);
-  cl->info2(path, revision, pegRevision, EnumMapper::toDepth(jdepth),
-            changelists, &callback);
+  cl->info(path, revision, pegRevision, EnumMapper::toDepth(jdepth),
+           svn_boolean_t(jfetchExcluded), svn_boolean_t(jfetchActualOnly),
+           svn_boolean_t(jincludeExternals),
+           changelists, &callback);
 }
 
 JNIEXPORT void JNICALL
@@ -1762,7 +2002,86 @@ Java_org_apache_subversion_javahl_SVNClient_patch
     return;
 
   PatchCallback callback(jcallback);
-  cl->patch(patchPath, targetPath, jdryRun ? true : false, (int) jstripCount,
+  cl->patch(patchPath, targetPath,
+            jdryRun ? true : false, static_cast<int>(jstripCount),
             jreverse ? true : false, jignoreWhitespace ? true : false,
             jremoveTempfiles ? true : false, &callback);
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_vacuum
+(JNIEnv *env, jobject jthis, jstring jpath,
+ jboolean jremoveUnversionedItems, jboolean jremoveIgnoredItems,
+ jboolean jfixRecordedTimestamps, jboolean jremoveUnusedPristines,
+ jboolean jincludeExternals)
+{
+  JNIEntry(SVNClient, vacuum);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError("bad C++ this");
+      return;
+    }
+
+  JNIStringHolder path(jpath);
+  cl->vacuum(path,
+             jremoveUnversionedItems, jremoveIgnoredItems,
+             jfixRecordedTimestamps, jremoveUnusedPristines,
+             jincludeExternals);
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_SVNClient_defaultWcVersion
+(JNIEnv *env, jobject jthis)
+{
+  JNIEntry(SVNClient, defaultWcVersion);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError("bad C++ this");
+      return NULL;
+    }
+
+  return cl->defaultWcVersion(::Java::Env(env));
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_SVNClient_oldestWcVersion
+(JNIEnv *env, jclass jclazz)
+{
+  JNIEntryStatic(SVNClient, oldestWcVersion);
+  SVN::Pool tmpPool;
+  return JavaHL::Version::getInstance(
+      ::Java::Env(env),
+      *svn_client_oldest_wc_version(tmpPool.getPool()));
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_SVNClient_latestWcVersion
+(JNIEnv *env, jclass jclazz)
+{
+  JNIEntryStatic(SVNClient, latestWcVersion);
+  SVN::Pool tmpPool;
+  return JavaHL::Version::getInstance(
+      ::Java::Env(env),
+      *svn_client_latest_wc_version(tmpPool.getPool()));
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_SVNClient_nativeOpenRemoteSession
+(JNIEnv *env, jobject jthis, jstring jpath, jint jretryAttempts)
+{
+  JNIEntry(SVNClient, nativeOpenRemoteSession);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError("bad C++ this");
+      return NULL;
+    }
+
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return cl->openRemoteSession(path, jretryAttempts);
 }

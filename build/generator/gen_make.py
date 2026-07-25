@@ -48,10 +48,17 @@ import gen_base
 import generator.swig.header_wrappers
 import generator.swig.checkout_swig_header
 import generator.swig.external_runtime
+from gen_pkgconfig import write_pkg_config_dot_in_files 
 
 from gen_base import build_path_join, build_path_strip, build_path_splitfile, \
       build_path_basename, build_path_dirname, build_path_retreat, unique
 
+
+def _normstr(x):
+  if os.sep == '/':
+    return os.path.normpath(str(x))
+  else:
+    return os.path.normpath(str(x).replace('/', os.sep)).replace(os.sep, '/')
 
 class Generator(gen_base.GeneratorBase):
 
@@ -62,6 +69,8 @@ class Generator(gen_base.GeneratorBase):
     ('lib', 'object'): '.lo',
     ('pyd', 'target'): '.la',
     ('pyd', 'object'): '.lo',
+    ('so', 'target'): '.la',
+    ('so', 'object'): '.lo',
     }
 
   def __init__(self, fname, verfname, options=None):
@@ -200,7 +209,9 @@ class Generator(gen_base.GeneratorBase):
       swig_lang_deps[objname.lang].append(str(objname))
 
     for lang in self.swig.langs:
-      data.swig_langs.append(_eztdata(short=self.swig.short[lang],
+      data.swig_langs.append(_eztdata(name=lang,
+                                      short=self.swig.short[lang],
+                                      short_upper=self.swig.short[lang].upper(),
                                       deps=swig_lang_deps[lang]))
 
     ########################################
@@ -230,12 +241,14 @@ class Generator(gen_base.GeneratorBase):
 
       # get the source items (.o and .la) for the link unit
       objects = [ ]
+      objdeps = [ ]
       object_srcs = [ ]
       headers = [ ]
       header_classes = [ ]
       header_class_filenames = [ ]
       deps = [ ]
       libs = [ ]
+      add_deps = target_ob.add_deps.split()
 
       for link_dep in self.graph.get_sources(gen_base.DT_LINK, target_ob.name):
         if isinstance(link_dep, gen_base.TargetJava):
@@ -260,6 +273,7 @@ class Generator(gen_base.GeneratorBase):
         elif isinstance(link_dep, gen_base.ObjectFile):
           # link in the object file
           objects.append(link_dep.filename)
+          objdeps.append(_normstr(link_dep.filename))
           for dep in self.graph.get_sources(gen_base.DT_OBJECT, link_dep, gen_base.SourceFile):
             object_srcs.append(
               build_path_join('$(abs_srcdir)', dep.filename))
@@ -286,9 +300,11 @@ class Generator(gen_base.GeneratorBase):
                             varname=targ_varname,
                             path=path,
                             install=None,
-                            add_deps=target_ob.add_deps,
+                            add_deps=add_deps,
                             objects=objects,
+                            objdeps=objdeps,
                             deps=deps,
+                            when=target_ob.when,
                             )
       data.target.append(ezt_target)
 
@@ -296,6 +312,8 @@ class Generator(gen_base.GeneratorBase):
         ezt_target.link_cmd = target_ob.link_cmd
       if hasattr(target_ob, 'output_dir'):
         ezt_target.output_dir = target_ob.output_dir
+      if hasattr(target_ob, 'headers_dir'):
+        ezt_target.headers_dir = target_ob.headers_dir
 
       # Add additional install dependencies if necessary
       if target_ob.add_install_deps:
@@ -370,23 +388,29 @@ class Generator(gen_base.GeneratorBase):
       # get the output files for these targets, sorted in dependency order
       files = gen_base._sorted_files(self.graph, area)
 
-      ezt_area = _eztdata(type=area, files=[ ], apache_files=[ ],
-                          extra_install=None)
+      ezt_area_type = (area == 'apache-mod' and 'mods-shared' or area)
+      ezt_area = _eztdata(type=ezt_area_type, files=[], extra_install=None)
+
+      def file_to_eztdata(file):
+          # cd to dirname before install to work around libtool 1.4.2 bug.
+          dirname, fname = build_path_splitfile(file.filename)
+          return _eztdata(mode=None,
+                          dirname=dirname, fullname=file.filename,
+                          filename=fname, when=file.when,
+                          pc_fullname=None,
+                          pc_installdir=None,
+                          pc_install_fname=None,)
 
       def apache_file_to_eztdata(file):
           # cd to dirname before install to work around libtool 1.4.2 bug.
-          dirname, fname = build_path_splitfile(file)
+          dirname, fname = build_path_splitfile(file.filename)
           base, ext = os.path.splitext(fname)
           name = base.replace('mod_', '')
-          return _eztdata(fullname=file, dirname=dirname,
-                          name=name, filename=fname)
-      if area == 'apache-mod':
-        data.areas.append(ezt_area)
+          return _eztdata(mode='apache-mod',
+                          fullname=file.filename, dirname=dirname,
+                          name=name, filename=fname, when=file.when)
 
-        for file in files:
-          ezt_area.files.append(apache_file_to_eztdata(file))
-
-      elif area != 'test' and area != 'bdb-test':
+      if area != 'test' and area != 'bdb-test':
         data.areas.append(ezt_area)
 
         area_var = area.replace('-', '_')
@@ -394,35 +418,37 @@ class Generator(gen_base.GeneratorBase):
         ezt_area.varname = area_var
         ezt_area.uppervar = upper_var
 
-        # ### TODO: This is a hack.  See discussion here:
-        # ### http://mid.gmane.org/20120316191639.GA28451@daniel3.local
-        apache_files = [t.filename for t in inst_targets
-                        if isinstance(t, gen_base.TargetApacheMod)]
-
-        files = [f for f in files if f not in apache_files]
-        for file in apache_files:
-          ezt_area.apache_files.append(apache_file_to_eztdata(file))
         for file in files:
-          # cd to dirname before install to work around libtool 1.4.2 bug.
-          dirname, fname = build_path_splitfile(file)
-          ezt_file = _eztdata(dirname=dirname, fullname=file,
-                              filename=fname)
-          if area == 'locale':
-            lang, objext = os.path.splitext(fname)
-            installdir = '$(DESTDIR)$(%sdir)/%s/LC_MESSAGES' % (area_var, lang)
-            ezt_file.installdir = installdir
-            ezt_file.objext = objext
+          if isinstance(file.target, gen_base.TargetApacheMod):
+            ezt_file = apache_file_to_eztdata(file)
           else:
-            ezt_file.install_fname = build_path_join('$(%sdir)' % area_var,
-                                                     fname)
+            ezt_file = file_to_eztdata(file)
+            if area == 'locale':
+              lang, objext = os.path.splitext(ezt_file.filename)
+              installdir = ('$(DESTDIR)$(%sdir)/%s/LC_MESSAGES'
+                            % (area_var, lang))
+              ezt_file.installdir = installdir
+              ezt_file.objext = objext
+            else:
+              ezt_file.install_fname = build_path_join('$(%sdir)' % area_var,
+                                                       ezt_file.filename)
 
+          # Install pkg-config files
+          if (isinstance(file.target, gen_base.TargetLib) and
+              ezt_file.fullname.startswith('subversion/libsvn_')):
+            ezt_file.pc_fullname = ezt_file.fullname.replace('-1.la', '.pc')
+            ezt_file.pc_installdir = '$(pkgconfig_dir)'
+            pc_install_fname = ezt_file.filename.replace('-1.la', '.pc')
+            ezt_file.pc_install_fname = build_path_join(ezt_file.pc_installdir,
+                                                        pc_install_fname)
           ezt_area.files.append(ezt_file)
 
         # certain areas require hooks for extra install rules defined
         # in Makefile.in
         ### we should turn AREA into an object, then test it instead of this
-        if area[:5] == 'swig-' and area[-4:] != '-lib' or \
-           area[:7] == 'javahl-' \
+        if area[:5] == 'swig-' and area[-4:] != '-lib' \
+           or area[:7] == 'javahl-' \
+           or area[:6] == 'svnxx-' \
            or area == 'tools':
           ezt_area.extra_install = 'yes'
 
@@ -455,15 +481,16 @@ class Generator(gen_base.GeneratorBase):
                       key=lambda t: t[0].filename)
 
     for objname, sources in obj_deps:
-      dep = _eztdata(name=str(objname),
-                     deps=list(map(str, sources)),
+      dep = _eztdata(name=_normstr(objname),
+                     when=objname.when,
+                     deps=list(map(_normstr, sources)),
                      cmd=objname.compile_cmd,
-                     source=str(sources[0]))
+                     source=_normstr(sources[0]))
       data.deps.append(dep)
       dep.generated = ezt.boolean(getattr(objname, 'source_generated', 0))
 
     template = ezt.Template(os.path.join('build', 'generator', 'templates',
-                                         'makefile.ezt'),
+                                         'build-outputs.mk.ezt'),
                             compress_whitespace=False)
     template.generate(open('build-outputs.mk', 'w'), data)
 
@@ -471,17 +498,24 @@ class Generator(gen_base.GeneratorBase):
 
     self.write_transform_libtool_scripts(install_sources)
 
+    write_pkg_config_dot_in_files(self.version, self.sections, install_sources)
+
   def write_standalone(self):
     """Write autogen-standalone.mk"""
 
     standalone = open("autogen-standalone.mk", "w")
-    standalone.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n')
+    standalone.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED '
+                     'BY build/generator/gen_make.py\n')
+    standalone.write('# FROM build-outputs.mk\n')
     standalone.write('abs_srcdir = %s\n' % os.getcwd())
     standalone.write('abs_builddir = %s\n' % os.getcwd())
     standalone.write('top_srcdir = .\n')
     standalone.write('top_builddir = .\n')
     standalone.write('SWIG = swig\n')
-    standalone.write('PYTHON = python\n')
+    swig_py_opts = os.environ.get('SWIG_PY_OPTS',
+                                  '-python -py3 -nofastunpack -modern')
+    standalone.write('SWIG_PY_OPTS = %s\n' % (swig_py_opts))
+    standalone.write('PYTHON = ' + sys.executable + '\n')
     standalone.write('\n')
     standalone.write(open("build-outputs.mk","r").read())
     standalone.close()
@@ -491,7 +525,7 @@ class Generator(gen_base.GeneratorBase):
     script = 'build/transform_libtool_scripts.sh'
     fd = open(script, 'w')
     fd.write('''#!/bin/sh
-# DO NOT EDIT -- AUTOMATICALLY GENERATED
+# DO NOT EDIT -- AUTOMATICALLY GENERATED BY build/generator/gen_make.py
 
 transform()
 {

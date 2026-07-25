@@ -613,7 +613,7 @@ The second is if you have $SVN::Error::handler set to undef as a wrapper for
 calls you want to croak on when there is an error, but you don't want to write
 an explicit error handler. For example:
 
-my $result_rev=SVN::Error::croak_on_error($ctx-E<gt>checkout($url,$path,'HEAD',1));
+my $rev = SVN::Error::croak_on_error($ctx-E<gt>checkout($url,$path,'HEAD',1));
 
 If there is no error then croak_on_error will return the arguments passed to it
 unchanged.
@@ -698,6 +698,47 @@ no previous history.
 
 =cut
 
+package _p_svn_log_changed_path2_t;
+use SVN::Base qw(Core svn_log_changed_path2_t_);
+
+=head2 svn_log_changed_path2_t
+
+An object to represent a path that changed for a log entry.
+
+=over 4
+
+=item $lcp-E<gt>action()
+
+'A'dd, 'D'elete, 'R'eplace, 'M'odify
+
+=item $lcp-E<gt>copyfrom_path()
+
+Source path of copy, or C<undef> if there isn't any previous revision
+history.
+
+=item $lcp-E<gt>copyfrom_rev()
+
+Source revision of copy, or C<$SVN::Core::INVALID_REVNUM> if there is
+no previous history.
+
+=item $lcp-E<gt>node_kind()
+
+The type of the node, a C<$SVN::Node> enum; may be C<$SVN::Node::unknown>.
+
+=item $lcp-E<gt>text_modified()
+
+Is the text modified, a C<SVN::Tristate> enum, 
+may be C<$SVN::Tristate::unknown>.
+
+=item $lcp-E<gt>props_modified()
+
+Are properties modified, a C<SVN::Tristate> enum,
+may be C<$SVN::Tristate::unknown>.
+
+=back
+
+=cut
+
 package SVN::Node;
 use SVN::Base qw(Core svn_node_);
 
@@ -710,15 +751,131 @@ $SVN::Node::dir, $SVN::Node::unknown.
 
 =cut
 
+package SVN::Tristate;
+use SVN::Base qw(Core svn_tristate_);
+
+=head2 svn_tristate_t - SVN::Tristate
+
+An enum of the following constants:
+
+$SVN::Tristate::true, $SVN::Tristate::false, $SVN::Tristate::unknown
+
+Note that these true/false values have nothing to do with Perl's concept 
+of truth. In fact, each constant would evaluate to true in a boolean context.
+
+=cut
+
+package SVN::Depth;
+use SVN::Base qw(Core svn_depth_);
+
+=head2 svn_depth_t - SVN::Depth
+
+An enum of the following constants:
+
+=over 4
+
+=item $SVN::Depth::unknown
+
+Depth undetermined or ignored.  In some contexts, this means the client should
+choose an appropriate default depth.  The server will generally treat it as
+$SVN::Depth::infinity.
+
+=item $SVN::Depth::exclude
+
+Exclude (i.e., don't descend into) directory D.
+
+Note: In Subversion 1.5, $SVN::Depth::exclude is B<not> supported anywhere in
+the client-side (Wc/Client/etc) code; it is only supported as an argument to
+set_path functions in the Ra and Repos reporters.  (This will enable future
+versions of Subversion to run updates, etc, against 1.5 servers with proper
+$SVN::Depth::exclude behavior, once we get a chance to implement client side
+support for $SVN::Depth::exclude).
+
+=item $SVN::Depth::empty
+
+Just the named directory D, no entries.
+
+Updates will not pull in any files or subdirectories not already present.
+
+=item $SVN::Depth::files
+
+D + its files children, but not subdirs.
+
+Updates will pull in any files not already present, but not subdirectories.
+
+=item $SVN::Depth::immediates
+
+D + immediate children (D and its entries).
+
+Updates will pull in any files or subdirectories not already present; those
+subdirectories' this_dir entries will have depth-empty.
+
+=item $SVN::Depth::infinity
+
+D + all descendants (full recursion from D).
+
+Updates will pull in any files or subdirectories not already present; those
+subdirectories' this_dir entries will have depth-infinity.  Equivalent to the
+pre 1.5 default update behavior.
+
+=back
+
+=cut
+
 package _p_svn_opt_revision_t;
 use SVN::Base qw(Core svn_opt_revision_t_);
 
 =head2 svn_opt_revision_t
 
+A revision, specified in one of C<SVN::Core::opt_revision_*> ways.
+
+=over 4
+
+=item $rev-E<gt>kind()
+
+An enum denoting how the revision C<$rev> was specified.  One of 
+C<$SVN::Core::opt_revision_unspecified>,
+C<$SVN::Core::opt_revision_number>,
+C<$SVN::Core::opt_revision_date>,
+C<$SVN::Core::opt_revision_committed>,
+C<$SVN::Core::opt_revision_previous>,
+C<$SVN::Core::opt_revision_base>,
+C<$SVN::Core::opt_revision_working>
+or C<$SVN::Core::opt_revision_head>.
+
+=item $rev-E<gt>value()
+
+Extra data about the revision. Only relevant if C<$rev-E<gt>kind> is
+C<$SVN::Core::opt_revision_number> (where it contains the revision number)
+or C<$SVN::Core::opt_revision_date> (where it contains a date).
+
+=back
+
 =cut
 
-package _p_svn_opt_revision_t_value;
-use SVN::Base qw(Core svn_opt_revision_t_value_);
+package _p_svn_opt_revision_value_t;
+use SVN::Base qw(Core svn_opt_revision_value_t_);
+
+package _p_svn_opt_revision_range_t;
+use SVN::Base qw(Core svn_opt_revision_range_t_);
+
+=head2 svn_opt_revision_range_t
+
+An object representing a range of revisions.
+
+=over 4
+
+=item $range-E<gt>start()
+
+The first revision in the range, a C<_p_svn_opt_revision_t> object.
+
+=item $range-E<gt>end()
+
+The last revision in the range, a C<_p_svn_opt_revision_t> object.
+
+=back
+
+=cut
 
 package _p_svn_config_t;
 use SVN::Base qw(Core svn_config_);
@@ -761,6 +918,77 @@ Time of created_rev (mod-time).
 =item $dirent-E<gt>last_author()
 
 Author of created rev.
+
+=back
+
+=cut
+
+package _p_svn_commit_info_t;
+use SVN::Base qw(Core svn_commit_info_t_);
+
+=head2 svn_commit_info_t
+
+=over 4
+
+=item $commit-E<gt>revision()
+
+Just committed revision.
+
+=item $commit-E<gt>date()
+
+Server-side date of the commit.
+
+=item $commit-E<gt>author()
+
+Author of the commit.
+
+=item $commit-E<gt>post_commit_err()
+
+Error message from the post-commit hook, or undef.
+
+=item $commit-E<gt>repos_root()
+
+Repository root, may be C<undef> if unknown.
+
+=back
+
+=cut
+
+package _p_svn_log_entry_t;
+use SVN::Base qw(Core svn_log_entry_t_);
+
+=head2 svn_log_entry_t
+
+=over 4
+
+=item $entry-E<gt>revision()
+
+The revision of the commit.
+
+=item $entry-E<gt>revprops()
+
+A reference to a hash of requested revision properties, 
+which may be C<undef> if it would contain no revprops. 
+
+=item $entry-E<gt>has_children()
+
+Whether or not this message has children.
+
+=item $entry-E<gt>changed_paths2()
+
+A reference to hash containing as keys every path committed in 
+C<$entry-E<gt>revision()>; the values are C<_p_svn_log_changed_path2_t>
+objects.
+
+=item $entry-E<gt>non_inheritable()
+
+Whether C<$entry-E<gt>revision()> should be interpreted as non-inheritable 
+in the same sense of C<_p_svn_merge_range_t>.
+
+=item $entry-E<gt>subtractive_merge()
+
+Whether C<$entry-E<gt>revision()> is a merged revision resulting 
+from a reverse merge.
 
 =back
 
@@ -924,8 +1152,7 @@ Certificate authority is unknown (i.e. not trusted).
 
 =item $SVN::Auth::SSL::OTHER
 
-Other failure. This can happen if neon has introduced a new failure bit that we
-do not handle yet.
+Other failure. This can happen if some unknown error condition occurs.
 
 =back
 

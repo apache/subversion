@@ -24,33 +24,36 @@
  * @brief Interface of the C++ class Path.
  */
 
-#ifndef PATH_H
-#define PATH_H
+#ifndef JAVAHL_PATH_H
+#define JAVAHL_PATH_H
 
 #include <string>
 #include <jni.h>
 #include "Pool.h"
 struct svn_error_t;
 
+
 /**
  * Encapsulation for Subversion Path handling
  */
-class Path
+class PathBase
 {
  private:
   // The path to be stored.
   std::string m_path;
 
-  svn_error_t *m_error_occured;
+  svn_error_t *m_error_occurred;
 
   /**
    * Initialize the class.
    *
    * @param pi_path Path string
    */
-  void init(const char *pi_path, SVN::Pool &in_pool);
+  void init(const char *pi_path,
+            svn_error_t* initfunc(const char*&, SVN::Pool&),
+            SVN::Pool &in_pool);
 
- public:
+ protected:
   /**
    * Constructor that takes a string as parameter.
    * The string is converted to subversion internal
@@ -58,27 +61,31 @@ class Path
    *
    * @param pi_path Path string
    */
-  Path(const std::string &pi_path, SVN::Pool &in_pool);
+  PathBase(const std::string &pi_path,
+           svn_error_t* initfunc(const char*&, SVN::Pool&),
+           SVN::Pool &in_pool);
 
   /**
    * Constructor
    *
-   * @see Path::Path (const std::string &)
+   * @see PathBase::PathBase (const std::string &)
    * @param pi_path Path string
    */
-  Path(const char *pi_path, SVN::Pool &in_pool);
+  PathBase(const char *pi_path,
+           svn_error_t* initfunc(const char*&, SVN::Pool&),
+           SVN::Pool &in_pool);
 
   /**
-   * Copy constructor
-   *
-   * @param pi_path Path to be copied
+   * Constructor from a Java string.
    */
-  Path(const Path &pi_path, SVN::Pool &in_pool);
+  PathBase(jstring jpath,
+           svn_error_t* initfunc(const char*&, SVN::Pool&),
+           SVN::Pool &in_pool);
 
   /**
    * Assignment operator
    */
-  Path &operator=(const Path&);
+  PathBase &operator=(const PathBase&);
 
   /**
    * @return Path string
@@ -90,8 +97,9 @@ class Path
    */
   const char *c_str() const;
 
-  svn_error_t *error_occured() const;
+  svn_error_t *error_occurred() const;
 
+public:
   /**
    * Returns whether @a path is non-NULL and passes the @c
    * svn_path_check_valid() test.
@@ -101,4 +109,113 @@ class Path
   static jboolean isValid(const char *path);
 };
 
-#endif  // PATH_H
+
+/**
+ * Dirent or URI
+ */
+class Path : protected PathBase
+{
+ public:
+  Path(const std::string &pi_path, SVN::Pool &in_pool)
+    : PathBase(pi_path, initfunc, in_pool)
+    {}
+
+  Path(const char *pi_path, SVN::Pool &in_pool)
+    : PathBase(pi_path, initfunc, in_pool)
+    {}
+
+  Path(jstring jpath, SVN::Pool &in_pool)
+    : PathBase(jpath, initfunc, in_pool)
+    {}
+
+  Path& operator=(const Path& that)
+    {
+      PathBase::operator=(that);
+      return *this;
+    }
+
+  const std::string &path() const { return PathBase::path(); }
+  const char *c_str() const { return PathBase::c_str(); }
+
+  svn_error_t *error_occurred() const
+    {
+      return PathBase::error_occurred();
+    }
+
+ private:
+  static svn_error_t* initfunc(const char*&, SVN::Pool&);
+};
+
+/**
+ * URL
+ */
+class URL : protected PathBase
+{
+ public:
+  URL(const std::string &pi_path, SVN::Pool &in_pool)
+    : PathBase(pi_path, initfunc, in_pool)
+    {}
+
+  URL(const char *pi_path, SVN::Pool &in_pool)
+    : PathBase(pi_path, initfunc, in_pool)
+    {}
+
+  URL(jstring jpath, SVN::Pool &in_pool)
+    : PathBase(jpath, initfunc, in_pool)
+    {}
+
+  URL& operator=(const URL& that)
+    {
+      PathBase::operator=(that);
+      return *this;
+    }
+
+  const std::string &path() const { return PathBase::path(); }
+  const char *c_str() const { return PathBase::c_str(); }
+
+  svn_error_t *error_occurred() const
+    {
+      return PathBase::error_occurred();
+    }
+
+ private:
+  static svn_error_t* initfunc(const char*&, SVN::Pool&);
+};
+
+/**
+ * Relative path
+ */
+class Relpath : protected PathBase
+{
+ public:
+  Relpath(const std::string &pi_path, SVN::Pool &in_pool)
+    : PathBase(pi_path, initfunc, in_pool)
+    {}
+
+  Relpath(const char *pi_path, SVN::Pool &in_pool)
+    : PathBase(pi_path, initfunc, in_pool)
+    {}
+
+  Relpath(jstring jpath, SVN::Pool &in_pool)
+    : PathBase(jpath, initfunc, in_pool)
+    {}
+
+  Relpath& operator=(const Relpath& that)
+    {
+      PathBase::operator=(that);
+      return *this;
+    }
+
+  const std::string &path() const { return PathBase::path(); }
+  const char *c_str() const { return PathBase::c_str(); }
+
+  svn_error_t *error_occurred() const
+    {
+      return PathBase::error_occurred();
+    }
+
+ private:
+  static svn_error_t* initfunc(const char*&, SVN::Pool&);
+};
+
+#endif  // JAVAHL_PATH_H

@@ -327,7 +327,7 @@ class SvnWcTest < Test::Unit::TestCase
         callbacks.ignored_errors = ignored_errors
         access.walk_entries(@wc_path, callbacks)
         sorted_ignored_errors = ignored_errors.sort_by {|path, err| path}
-        sorted_ignored_errors = sorted_ignored_errors.collect! do |path, err| 
+        sorted_ignored_errors = sorted_ignored_errors.collect! do |path, err|
           [path, err.class]
         end
         assert_equal([
@@ -342,11 +342,11 @@ class SvnWcTest < Test::Unit::TestCase
 
   def test_adm_ensure
     adm_dir = Dir.glob(File.join(@wc_path, "{.,_}svn")).first
-    assert(File.exists?(adm_dir))
+    assert(File.exist?(adm_dir))
     FileUtils.rm_rf(adm_dir)
-    assert(!File.exists?(adm_dir))
+    assert(!File.exist?(adm_dir))
     Svn::Wc.ensure_adm(@wc_path, @fs.uuid, @repos_uri, @repos_uri, 0)
-    assert(File.exists?(adm_dir))
+    assert(File.exist?(adm_dir))
   end
 
   def test_merge
@@ -474,19 +474,19 @@ EOE
       ctx.add(path)
       ctx.ci(@wc_path).revision
 
-      assert(File.exists?(path))
+      assert(File.exist?(path))
       Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
         access.delete(path)
       end
-      assert(!File.exists?(path))
+      assert(!File.exist?(path))
 
       ctx.revert(path)
 
-      assert(File.exists?(path))
+      assert(File.exist?(path))
       Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
         access.delete(path, nil, nil, true)
       end
-      assert(File.exists?(path))
+      assert(File.exist?(path))
     end
   end
 
@@ -534,7 +534,7 @@ EOE
       ctx.ci(lf_path)
 
       Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
-        _wrap_assertion do
+        _my_assert_block do
           File.open(src_path, "wb") {|f| f.print(source)}
           args = [method_name, src_path, crlf_path, Svn::Wc::TRANSLATE_FROM_NF]
           result = yield(access.send(*args), source)
@@ -650,10 +650,10 @@ EOE
       ctx.add(path)
       ctx.ci(path)
 
-      File.open(path, "w") {|f| f.print("b")}
+      File.open(path, "w") {|f| f.print("bb")}
       ctx.ci(path)
 
-      File.open(path, "w") {|f| f.print("c")}
+      File.open(path, "w") {|f| f.print("ccc")}
       rev = ctx.ci(path).revision
 
       status = Svn::Wc::RevisionStatus.new(path, nil, true)
@@ -742,20 +742,13 @@ EOE
           adm.crawl_revisions(dir_path, reporter)
 
           property_info = {
-            :dir_changed_prop_names => [
-                                        "svn:entry:committed-date",
-                                        "svn:entry:uuid",
-                                        "svn:entry:last-author",
-                                        "svn:entry:committed-rev"
-                                       ],
             :file_changed_prop_name => prop_name,
             :file_changed_prop_value => prop_value,
           }
           sorted_result = callbacks.result.sort_by {|r| r.first.to_s}
           expected_props, actual_result = yield(property_info, sorted_result)
-          dir_changed_props, file_changed_props, empty_changed_props = expected_props
+          file_changed_props, empty_changed_props = expected_props
           assert_equal([
-                        [:dir_props_changed, @wc_path, dir_changed_props],
                         [:file_added, path2, empty_changed_props],
                         [:file_changed, path1, file_changed_props],
                        ],
@@ -767,35 +760,25 @@ EOE
 
   def test_diff_callbacks_for_backward_compatibility
     assert_diff_callbacks(:diff_editor) do |property_info, result|
-      dir_changed_prop_names = property_info[:dir_changed_prop_names]
-      dir_changed_props = dir_changed_prop_names.sort.collect do |name|
-        Svn::Core::Prop.new(name, nil)
-      end
       prop_name = property_info[:file_changed_prop_name]
       prop_value = property_info[:file_changed_prop_value]
       file_changed_props = [Svn::Core::Prop.new(prop_name, prop_value)]
       empty_changed_props = []
 
       sorted_result = result.dup
-      dir_prop_changed = sorted_result.assoc(:dir_props_changed)
-      dir_prop_changed[2] = dir_prop_changed[2].sort_by {|prop| prop.name}
 
-      [[dir_changed_props, file_changed_props, empty_changed_props],
+      [[file_changed_props, empty_changed_props],
        sorted_result]
     end
   end
 
   def test_diff_callbacks
     assert_diff_callbacks(:diff_editor2) do |property_info, result|
-      dir_changed_props = {}
-      property_info[:dir_changed_prop_names].each do |name|
-        dir_changed_props[name] = nil
-      end
       prop_name = property_info[:file_changed_prop_name]
       prop_value = property_info[:file_changed_prop_value]
       file_changed_props = {prop_name => prop_value}
       empty_changed_props = {}
-      [[dir_changed_props, file_changed_props, empty_changed_props],
+      [[file_changed_props, empty_changed_props],
        result]
     end
   end
@@ -825,9 +808,9 @@ EOE
         ctx.add(path2)
         rev2 = ctx.commit(@wc_path).revision
 
-        assert(File.exists?(path2))
+        assert(File.exist?(path2))
         assert_equal(0, ctx.up(@wc_path, 0))
-        assert(!File.exists?(path2))
+        assert(!File.exist?(path2))
         Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
           editor = access.update_editor('', 0)
           assert_equal(0, editor.target_revision)
@@ -865,9 +848,9 @@ EOE
         ctx.add(path2)
         rev2 = ctx.commit(@wc_path).revision
 
-        assert(File.exists?(path2))
+        assert(File.exist?(path2))
         assert_equal(0, ctx.up(@wc_path, 0))
-        assert(!File.exists?(path2))
+        assert(!File.exist?(path2))
         notification_count = 0
         Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
           notify_func = Proc.new {|n| notification_count += 1}
@@ -963,9 +946,9 @@ EOE
         ctx.add(dir2_path)
         rev2 = ctx.commit(@wc_path).revision
 
-        assert(File.exists?(path1))
+        assert(File.exist?(path1))
         assert_equal(rev2, ctx.switch(@wc_path, dir2_uri))
-        assert(File.exists?(File.join(@wc_path, file2)))
+        assert(File.exist?(File.join(@wc_path, file2)))
         Svn::Wc::AdmAccess.open_anchor(@wc_path) do |access, dir_access, target|
           editor = dir_access.switch_editor('', dir1_uri, rev2)
           assert_equal(rev2, editor.target_revision)
@@ -1085,11 +1068,10 @@ EOE
 
   def test_context_create
     assert_nothing_raised do
-      result = Svn::Wc::Context.create do |context|
+      Svn::Wc::Context.create do |context|
         assert_not_nil context
         assert_kind_of Svn::Wc::Context, context
       end
-      assert_nil result;
     end
   end
 

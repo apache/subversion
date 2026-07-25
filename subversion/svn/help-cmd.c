@@ -27,9 +27,13 @@
 
 /*** Includes. ***/
 
+#include "svn_hash.h"
 #include "svn_string.h"
+#include "svn_config.h"
+#include "svn_dirent_uri.h"
 #include "svn_error.h"
 #include "svn_version.h"
+#include "svn_client.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -37,21 +41,47 @@
 
 /*** Code. ***/
 
+/* Append a textual list of the supported WC formats to OUTPUT. */
+static svn_error_t *
+print_supported_wc_formats(svn_stringbuf_t *output,
+                           const char *prefix,
+                           apr_pool_t *pool)
+{
+  const int *wc_formats = svn_client_get_wc_formats_supported(pool);
+  int i;
+
+  for (i = 0; wc_formats[i]; i++)
+    {
+      const svn_version_t *ver
+        = svn_client_wc_version_from_format(wc_formats[i], pool);
+      const char *s
+        = apr_psprintf(
+            pool,
+            _("%sWC format %d, compatible with Subversion v%d.%d and newer\n"),
+            prefix, wc_formats[i], ver->major, ver->minor);
+
+      svn_stringbuf_appendcstr(output, s);
+    }
+  return SVN_NO_ERROR;
+}
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__help(apr_getopt_t *os,
              void *baton,
              apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state;
+  svn_cl__opt_state_t *opt_state = NULL;
+  svn_stringbuf_t *version_footer = svn_stringbuf_create_empty(pool);
+  const char *config_path;
 
-  /* xgettext: the %s is for SVN_VER_NUMBER. */
-  char help_header_template[] =
+  char help_header[] =
   N_("usage: svn <subcommand> [options] [args]\n"
-     "Subversion command-line client, version %s.\n"
+     "Subversion command-line client.\n"
      "Type 'svn help <subcommand>' for help on a specific subcommand.\n"
-     "Type 'svn --version' to see the program version and RA modules\n"
-     "  or 'svn --version --quiet' to see just the version number.\n"
+     "Type 'svn --version' to see the program version and RA modules,\n"
+     "     'svn --version --verbose' to see dependency versions as well,\n"
+     "     'svn --version --quiet' to see just the version number.\n"
      "\n"
      "Most subcommands take file and/or directory arguments, recursing\n"
      "on the directories.  If no arguments are supplied to such a\n"
@@ -61,30 +91,136 @@ svn_cl__help(apr_getopt_t *os,
 
   char help_footer[] =
   N_("Subversion is a tool for version control.\n"
-     "For additional information, see http://subversion.apache.org/\n");
-
-  char *help_header =
-    apr_psprintf(pool, _(help_header_template), SVN_VER_NUMBER);
-
-  const char *ra_desc_start
-    = _("The following repository access (RA) modules are available:\n\n");
-
-  svn_stringbuf_t *version_footer;
+     "For additional information, see https://subversion.apache.org/\n");
 
   if (baton)
-    opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
-  else
-    opt_state = NULL;
+    {
+      svn_cl__cmd_baton_t *const cmd_baton = baton;
+#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
+      /* Windows never actually stores plaintext passwords, it
+         encrypts the contents using CryptoAPI. ...
 
-  version_footer = svn_stringbuf_create(ra_desc_start, pool);
+         ... If CryptoAPI is available ... but it should be on all
+         versions of Windows that are even remotely interesting two
+         days before the scheduled end of the world, when this comment
+         is being written. */
+#  ifndef WIN32
+      svn_boolean_t store_auth_creds =
+        SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS;
+      svn_boolean_t store_passwords =
+        SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS;
+      svn_boolean_t store_plaintext_passwords = FALSE;
+      svn_config_t *cfg;
+
+      if (cmd_baton->ctx->config)
+        {
+          cfg = svn_hash_gets(cmd_baton->ctx->config,
+                              SVN_CONFIG_CATEGORY_CONFIG);
+          if (cfg)
+            {
+              SVN_ERR(svn_config_get_bool(cfg, &store_auth_creds,
+                                          SVN_CONFIG_SECTION_AUTH,
+                                          SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
+                                          store_auth_creds));
+              SVN_ERR(svn_config_get_bool(cfg, &store_passwords,
+                                          SVN_CONFIG_SECTION_AUTH,
+                                          SVN_CONFIG_OPTION_STORE_PASSWORDS,
+                                          store_passwords));
+            }
+          cfg = svn_hash_gets(cmd_baton->ctx->config,
+                              SVN_CONFIG_CATEGORY_SERVERS);
+          if (cfg)
+            {
+              const char *value;
+              SVN_ERR(svn_config_get_yes_no_ask
+                      (cfg, &value,
+                       SVN_CONFIG_SECTION_GLOBAL,
+                       SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
+                       SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS));
+              if (0 == svn_cstring_casecmp(value, SVN_CONFIG_TRUE))
+                store_plaintext_passwords = TRUE;
+            }
+        }
+
+      if (store_plaintext_passwords && store_auth_creds && store_passwords)
+        {
+          svn_stringbuf_appendcstr(
+              version_footer,
+              _("WARNING: Plaintext password storage is enabled!\n\n"));
+        }
+#  endif /* !WIN32 */
+#endif /* !SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE */
+
+      opt_state = cmd_baton->opt_state;
+    }
+
+  /*
+   * Show supported working copy versions.
+   */
+  svn_stringbuf_appendcstr(version_footer,
+                           _("Supported working copy (WC) formats:\n\n"));
+  SVN_ERR(print_supported_wc_formats(version_footer, "* ", pool));
+  svn_stringbuf_appendcstr(version_footer, "\n");
+
+  /*
+   * Show available repository access modules.
+   */
+  svn_stringbuf_appendcstr(
+      version_footer,
+      _("The following repository access (RA) modules are available:\n\n"));
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
-  return svn_opt_print_help3(os,
+  /*
+   * Show auth creds storage providers.
+   */
+  SVN_ERR(svn_config_get_user_config_path(&config_path,
+                                          opt_state ? opt_state->config_dir
+                                                    : NULL,
+                                          NULL,
+                                          pool));
+  svn_stringbuf_appendcstr(
+      version_footer,
+      _("\nThe following authentication credential caches are available:\n\n"));
+
+  /*### There is no API to query available providers at run time. */
+  if (config_path)
+    {
+#if (defined(WIN32) && !defined(__MINGW32__))
+      version_footer =
+        svn_stringbuf_create(apr_psprintf(pool, _("%s* Wincrypt cache in %s\n"),
+                                          version_footer->data,
+                                          svn_dirent_local_style(config_path,
+                                                                 pool)),
+                             pool);
+#elif !defined(SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE)
+      version_footer =
+        svn_stringbuf_create(apr_psprintf(pool, _("%s* Plaintext cache in %s\n"),
+                                          version_footer->data,
+                                          svn_dirent_local_style(config_path,
+                                                                 pool)),
+                             pool);
+#endif
+    }
+#if (defined(SVN_HAVE_GNOME_KEYRING) || defined(SVN_HAVE_LIBSECRET))
+  svn_stringbuf_appendcstr(version_footer, "* Gnome Keyring\n");
+#endif
+#ifdef SVN_HAVE_GPG_AGENT
+  svn_stringbuf_appendcstr(version_footer, "* GPG-Agent\n");
+#endif
+#ifdef SVN_HAVE_KEYCHAIN_SERVICES
+  svn_stringbuf_appendcstr(version_footer, "* macOS Keychain\n");
+#endif
+#ifdef SVN_HAVE_KWALLET
+  svn_stringbuf_appendcstr(version_footer, "* KWallet (KDE)\n");
+#endif
+
+  return svn_opt_print_help5(os,
                              "svn",   /* ### erm, derive somehow? */
                              opt_state ? opt_state->version : FALSE,
                              opt_state ? opt_state->quiet : FALSE,
+                             opt_state ? opt_state->verbose : FALSE,
                              version_footer->data,
-                             help_header,   /* already gettext()'d */
+                             _(help_header),
                              svn_cl__cmd_table,
                              svn_cl__options,
                              svn_cl__global_options,

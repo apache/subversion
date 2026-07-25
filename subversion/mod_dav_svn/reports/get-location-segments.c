@@ -48,7 +48,7 @@
 struct location_segment_baton
 {
   svn_boolean_t sent_opener;
-  ap_filter_t *output;
+  dav_svn__output *output;
   apr_bucket_brigade *bb;
   dav_svn__authz_read_baton arb;
 };
@@ -79,28 +79,26 @@ location_segment_receiver(svn_location_segment_t *segment,
                           apr_pool_t *pool)
 {
   struct location_segment_baton *b = baton;
-  apr_status_t apr_err;
 
   SVN_ERR(maybe_send_opener(b));
 
   if (segment->path)
     {
       const char *path_quoted = apr_xml_quote_string(pool, segment->path, 1);
-      apr_err = ap_fprintf(b->output, b->bb,
+
+      SVN_ERR(dav_svn__brigade_printf(b->bb, b->output,
                            "<S:location-segment path=\"%s\" "
                            "range-start=\"%ld\" range-end=\"%ld\"/>" DEBUG_CR,
                            path_quoted,
-                           segment->range_start, segment->range_end);
+                           segment->range_start, segment->range_end));
     }
   else
     {
-      apr_err = ap_fprintf(b->output, b->bb,
+      SVN_ERR(dav_svn__brigade_printf(b->bb, b->output,
                            "<S:location-segment "
                            "range-start=\"%ld\" range-end=\"%ld\"/>" DEBUG_CR,
-                           segment->range_start, segment->range_end);
+                           segment->range_start, segment->range_end));
     }
-  if (apr_err)
-    return svn_error_create(apr_err, 0, NULL);
   return SVN_NO_ERROR;
 }
 
@@ -108,7 +106,7 @@ location_segment_receiver(svn_location_segment_t *segment,
 dav_error *
 dav_svn__get_location_segments_report(const dav_resource *resource,
                                       const apr_xml_doc *doc,
-                                      ap_filter_t *output)
+                                      dav_svn__output *output)
 {
   svn_error_t *serr;
   dav_error *derr = NULL;
@@ -123,15 +121,16 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
   struct location_segment_baton location_segment_baton;
 
   /* Sanity check. */
+  if (!resource->info->repos_path)
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0, 0,
+                              "The request does not specify a repository path");
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                     "The request does not contain the 'svn:' "
                                     "namespace, so it is not going to have "
-                                    "certain required elements.",
-                                    SVN_DAV_ERROR_NAMESPACE,
-                                    SVN_DAV_ERROR_TAG);
+                                    "certain required elements");
     }
 
   /* Gather the parameters. */
@@ -174,33 +173,49 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
 
   /* Check that all parameters are present and valid. */
   if (! abs_path)
-    return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-                                  "Not all parameters passed.",
-                                  SVN_DAV_ERROR_NAMESPACE,
-                                  SVN_DAV_ERROR_TAG);
-  if (SVN_IS_VALID_REVNUM(start_rev)
-      && SVN_IS_VALID_REVNUM(end_rev)
-      && (end_rev > start_rev))
-    return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
+                                  "Not all parameters passed");
+
+  /* No START_REV or PEG_REVISION?  We'll use HEAD. */
+  if (!SVN_IS_VALID_REVNUM(start_rev) || !SVN_IS_VALID_REVNUM(peg_revision))
+    {
+      svn_revnum_t youngest;
+
+      serr = dav_svn__get_youngest_rev(&youngest, resource->info->repos,
+                                       resource->pool);
+      if (serr != NULL)
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Could not determine youngest revision",
+                                    resource->pool);
+
+      if (!SVN_IS_VALID_REVNUM(start_rev))
+        start_rev = youngest;
+      if (!SVN_IS_VALID_REVNUM(peg_revision))
+        peg_revision = youngest;
+    }
+
+  /* No END_REV?  We'll use 0. */
+  if (!SVN_IS_VALID_REVNUM(end_rev))
+    end_rev = 0;
+
+  if (end_rev > start_rev)
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST,
+                                  SVN_ERR_FS_NO_SUCH_REVISION, 0,
                                   "End revision must not be younger than "
-                                  "start revision",
-                                  SVN_DAV_ERROR_NAMESPACE,
-                                  SVN_DAV_ERROR_TAG);
-  if (SVN_IS_VALID_REVNUM(peg_revision)
-      && SVN_IS_VALID_REVNUM(start_rev)
-      && (start_rev > peg_revision))
-    return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+                                  "start revision");
+  if (start_rev > peg_revision)
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST,
+                                  SVN_ERR_FS_NO_SUCH_REVISION, 0,
                                   "Start revision must not be younger than "
-                                  "peg revision",
-                                  SVN_DAV_ERROR_NAMESPACE,
-                                  SVN_DAV_ERROR_TAG);
+                                  "peg revision");
 
   /* Build an authz read baton. */
   arb.r = resource->info->r;
   arb.repos = resource->info->repos;
 
   /* Build the bucket brigade we'll use for output. */
-  bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+  bb = apr_brigade_create(resource->pool,
+                          dav_svn__output_get_bucket_alloc(output));
 
   /* Do what we came here for. */
   location_segment_baton.sent_opener = FALSE;
@@ -214,7 +229,7 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
                                                dav_svn__authz_read_func(&arb),
                                                &arb, resource->pool)))
     {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
                                   resource->pool);
       goto cleanup;
     }

@@ -88,9 +88,11 @@ started="$(date)"
 echo "Started at $started"
 
 echo "
-*Disclaimer* - This tests only file://-URL access on a GNU/Linux VM.
+*DISCLAIMER* - This tests only file://-URL access on a GNU/Linux VM.
 This is intended to measure changes in performance of the local working
-copy layer, *only*. These results are *not* generally true for everyone."
+copy layer, *only*. These results are *not* generally true for everyone.
+
+Charts of this data are available at http://svn-qavm.apache.org/charts/"
 
 if [ -z "$SVNBENCH_SUMMARY_ONLY" ]; then
   batch $al $as $N
@@ -139,6 +141,5 @@ done
 echo ""
 echo "Had started at $started,"
 echo "       done at $(date)"
-pwd
 } 2>&1 | tee results.txt
 

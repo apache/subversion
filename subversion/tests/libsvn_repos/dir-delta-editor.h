@@ -40,7 +40,18 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
+
+/* Get an editor that will edit an FS transaction via the libsvn_fs API.
+ *
+ * Set *EDITOR and *EDIT_BATON to a new editor that edits the subtree at
+ * PATH of the existing, open transaction TXN_ROOT in filesystem FS.
+ *
+ * Note: Related but more complex functions in the regular API include
+ * svn_fs__editor_create_for() and svn_repos_get_commit_editor*().
+ *
+ * Note: The only connection with dir-deltas is that a test for dir-deltas
+ * was the first user of this editor.
+ */
 svn_error_t *
 dir_delta_get_editor(const svn_delta_editor_t **editor,
                      void **edit_baton,

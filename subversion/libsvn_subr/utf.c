@@ -26,12 +26,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <limits.h>
 
 #include <apr_strings.h>
 #include <apr_lib.h>
 #include <apr_xlate.h>
 #include <apr_atomic.h>
+#include <apr_portable.h>       /* for apr_os_locale_encoding() */
 
+#include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -58,6 +61,12 @@ static const char *SVN_APR_UTF8_CHARSET = "UTF-8";
 static svn_mutex__t *xlate_handle_mutex = NULL;
 static svn_boolean_t assume_native_charset_is_utf8 = FALSE;
 
+#if defined(WIN32)
+typedef svn_subr__win32_xlate_t xlate_handle_t;
+#else
+typedef apr_xlate_t xlate_handle_t;
+#endif
+
 /* The xlate handle cache is a global hash table with linked lists of xlate
  * handles.  In multi-threaded environments, a thread "borrows" an xlate
  * handle from the cache during a translation and puts it back afterwards.
@@ -65,10 +74,10 @@ static svn_boolean_t assume_native_charset_is_utf8 = FALSE;
  * If there is no handle for a particular key when needed, a new is
  * handle is created and put in the cache after use.
  * This means that there will be at most N handles open for a key, where N
- * is the number of simultanous handles in use for that key. */
+ * is the number of simultaneous handles in use for that key. */
 
 typedef struct xlate_handle_node_t {
-  apr_xlate_t *handle;
+  xlate_handle_t *handle;
   /* FALSE if the handle is not valid, since its pool is being
      destroyed. */
   svn_boolean_t valid;
@@ -120,8 +129,8 @@ xlate_handle_node_cleanup(void *arg)
 }
 
 void
-svn_utf_initialize2(apr_pool_t *pool,
-                    svn_boolean_t assume_native_utf8)
+svn_utf_initialize2(svn_boolean_t assume_native_utf8,
+                    apr_pool_t *pool)
 {
   if (!xlate_handle_hash)
     {
@@ -171,7 +180,7 @@ get_xlate_key(const char *topage,
     topage = "APR_DEFAULT_CHARSET";
 
   return apr_pstrcat(pool, "svn-utf-", frompage, "to", topage,
-                     "-xlate-handle", (char *)NULL);
+                     "-xlate-handle", SVN_VA_NULL);
 }
 
 /* Atomically replace the content in *MEM with NEW_VALUE and return
@@ -183,21 +192,24 @@ static APR_INLINE void*
 atomic_swap(void * volatile * mem, void *new_value)
 {
 #if APR_HAS_THREADS
-#if APR_VERSION_AT_LEAST(1,3,0)
-  /* Cast is necessary because of APR bug:
-     https://issues.apache.org/bugzilla/show_bug.cgi?id=50731 */
-   return apr_atomic_xchgptr((volatile void **)mem, new_value);
-#else
-   /* old APRs don't support atomic swaps. Simply return the
-    * input to the caller for further proccessing. */
-   return new_value;
-#endif
+   return svn_atomic_xchgptr(mem, new_value);
 #else
    /* no threads - no sync. necessary */
    void *old_value = (void*)*mem;
    *mem = new_value;
    return old_value;
 #endif
+}
+
+static const char *
+get_apr_xlate_charset(const char *charset)
+{
+  if (charset == SVN_APR_DEFAULT_CHARSET)
+    return APR_DEFAULT_CHARSET;
+  else if (charset == SVN_APR_LOCALE_CHARSET)
+    return APR_LOCALE_CHARSET;
+  else
+    return charset;
 }
 
 /* Set *RET to a newly created handle node for converting from FROMPAGE
@@ -210,7 +222,8 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
                    apr_pool_t *pool)
 {
   apr_status_t apr_err;
-  apr_xlate_t *handle;
+  xlate_handle_t *handle;
+  const char *name;
 
   /* The error handling doesn't support the following cases, since we don't
      use them currently.  Catch this here. */
@@ -221,10 +234,15 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
 
   /* Try to create a handle. */
 #if defined(WIN32)
-  apr_err = svn_subr__win32_xlate_open((win32_xlate_t **)&handle, topage,
+  apr_err = svn_subr__win32_xlate_open(&handle, topage,
                                        frompage, pool);
+  name = "win32-xlate: ";
 #else
-  apr_err = apr_xlate_open(&handle, topage, frompage, pool);
+  apr_err = apr_xlate_open(&handle,
+                           get_apr_xlate_charset(topage),
+                           get_apr_xlate_charset(frompage),
+                           pool);
+  name = "APR: ";
 #endif
 
   if (APR_STATUS_IS_EINVAL(apr_err) || APR_STATUS_IS_ENOTIMPL(apr_err))
@@ -232,6 +250,8 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
   else if (apr_err != APR_SUCCESS)
     {
       const char *errstr;
+      char apr_strerr[512];
+
       /* Can't use svn_error_wrap_apr here because it calls functions in
          this file, leading to infinite recursion. */
       if (frompage == SVN_APR_LOCALE_CHARSET)
@@ -247,7 +267,13 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
                               _("Can't create a character converter from "
                                 "'%s' to '%s'"), frompage, topage);
 
-      return svn_error_create(apr_err, NULL, errstr);
+      /* Just put the error on the stack, since svn_error_create duplicates it
+         later.  APR_STRERR will be in the local encoding, not in UTF-8, though.
+       */
+      svn_strerror(apr_err, apr_strerr, sizeof(apr_strerr));
+      return svn_error_createf(SVN_ERR_PLUGIN_LOAD_FAILURE,
+                               svn_error_create(apr_err, NULL, apr_strerr),
+                               "%s%s", name, errstr);
     }
 
   /* Allocate and initialize the node. */
@@ -292,9 +318,8 @@ get_xlate_handle_node_internal(xlate_handle_node_t **ret,
       xlate_handle_node_t *old_node = NULL;
 
       /* 2nd level: hash lookup */
-      xlate_handle_node_t **old_node_p = apr_hash_get(xlate_handle_hash,
-                                                      userdata_key,
-                                                      APR_HASH_KEY_STRING);
+      xlate_handle_node_t **old_node_p = svn_hash_gets(xlate_handle_hash,
+                                                       userdata_key);
       if (old_node_p)
         old_node = *old_node_p;
       if (old_node)
@@ -388,9 +413,7 @@ static svn_error_t *
 put_xlate_handle_node_internal(xlate_handle_node_t *node,
                                const char *userdata_key)
 {
-  xlate_handle_node_t **node_p = apr_hash_get(xlate_handle_hash,
-                                              userdata_key,
-                                              APR_HASH_KEY_STRING);
+  xlate_handle_node_t **node_p = svn_hash_gets(xlate_handle_hash, userdata_key);
   if (node_p == NULL)
     {
       userdata_key = apr_pstrdup(apr_hash_pool_get(xlate_handle_hash),
@@ -398,8 +421,7 @@ put_xlate_handle_node_internal(xlate_handle_node_t *node,
       node_p = apr_palloc(apr_hash_pool_get(xlate_handle_hash),
                           sizeof(*node_p));
       *node_p = NULL;
-      apr_hash_set(xlate_handle_hash, userdata_key,
-                    APR_HASH_KEY_STRING, node_p);
+      svn_hash_sets(xlate_handle_hash, userdata_key, node_p);
     }
   node->next = *node_p;
   *node_p = node;
@@ -472,58 +494,6 @@ get_uton_xlate_handle_node(xlate_handle_node_t **ret, apr_pool_t *pool)
 }
 
 
-/* Copy LEN bytes of SRC, converting non-ASCII and zero bytes to ?\nnn
-   sequences, allocating the result in POOL. */
-static const char *
-fuzzy_escape(const char *src, apr_size_t len, apr_pool_t *pool)
-{
-  const char *src_orig = src, *src_end = src + len;
-  apr_size_t new_len = 0;
-  char *new;
-  const char *new_orig;
-
-  /* First count how big a dest string we'll need. */
-  while (src < src_end)
-    {
-      if (! svn_ctype_isascii(*src) || *src == '\0')
-        new_len += 5;  /* 5 slots, for "?\XXX" */
-      else
-        new_len += 1;  /* one slot for the 7-bit char */
-
-      src++;
-    }
-
-  /* Allocate that amount, plus one slot for '\0' character. */
-  new = apr_palloc(pool, new_len + 1);
-
-  new_orig = new;
-
-  /* And fill it up. */
-  while (src_orig < src_end)
-    {
-      if (! svn_ctype_isascii(*src_orig) || src_orig == '\0')
-        {
-          /* This is the same format as svn_xml_fuzzy_escape uses, but that
-             function escapes different characters.  Please keep in sync!
-             ### If we add another fuzzy escape somewhere, we should abstract
-             ### this out to a common function. */
-          apr_snprintf(new, 6, "?\\%03u", (unsigned char) *src_orig);
-          new += 5;
-        }
-      else
-        {
-          *new = *src_orig;
-          new += 1;
-        }
-
-      src_orig++;
-    }
-
-  *new = '\0';
-
-  return new_orig;
-}
-
 /* Convert SRC_LENGTH bytes of SRC_DATA in NODE->handle, store the result
    in *DEST, which is allocated in POOL. */
 static svn_error_t *
@@ -536,9 +506,8 @@ convert_to_stringbuf(xlate_handle_node_t *node,
 #ifdef WIN32
   apr_status_t apr_err;
 
-  apr_err = svn_subr__win32_xlate_to_stringbuf((win32_xlate_t *) node->handle,
-                                               src_data, src_length,
-                                               dest, pool);
+  apr_err = svn_subr__win32_xlate_to_stringbuf(node->handle, src_data,
+                                               src_length, dest, pool);
 #else
   apr_size_t buflen = src_length * 2;
   apr_status_t apr_err;
@@ -601,8 +570,8 @@ convert_to_stringbuf(xlate_handle_node_t *node,
           (pool, _("Can't convert string from '%s' to '%s':"),
            node->frompage, node->topage);
 
-      err = svn_error_create(apr_err, NULL, fuzzy_escape(src_data,
-                                                         src_length, pool));
+      err = svn_error_create(
+          apr_err, NULL, svn_utf__fuzzy_escape(src_data, src_length, pool));
       return svn_error_create(apr_err, err, errstr);
     }
   /* Else, exited due to success.  Trim the result buffer down to the
@@ -683,7 +652,7 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
     valid_txt = apr_pstrcat(pool, valid_txt,
                             apr_psprintf(pool, " %02x",
                                          (unsigned char)last[i-valid]),
-                                         (char *)NULL);
+                                         SVN_VA_NULL);
 
   /* 4 invalid octets will guarantee that the faulty octet is displayed */
   invalid = data + len - last;
@@ -693,7 +662,7 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
     invalid_txt = apr_pstrcat(pool, invalid_txt,
                               apr_psprintf(pool, " %02x",
                                            (unsigned char)last[i]),
-                                           (char *)NULL);
+                                           SVN_VA_NULL);
 
   return svn_error_createf(APR_EINVAL, NULL,
                            _("Valid UTF-8 data\n(hex:%s)\n"
@@ -892,7 +861,9 @@ svn_utf_stringbuf_from_utf8(svn_stringbuf_t **dest,
         *dest = svn_stringbuf_dup(src, pool);
     }
 
-  put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool);
+  err = svn_error_compose_create(
+          err,
+          put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool));
 
   return err;
 }
@@ -903,7 +874,6 @@ svn_utf_string_from_utf8(const svn_string_t **dest,
                          const svn_string_t *src,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *dbuf;
   xlate_handle_node_t *node;
   svn_error_t *err;
 
@@ -913,10 +883,15 @@ svn_utf_string_from_utf8(const svn_string_t **dest,
     {
       err = check_utf8(src->data, src->len, pool);
       if (! err)
-        err = convert_to_stringbuf(node, src->data, src->len,
-                                   &dbuf, pool);
-      if (! err)
-        *dest = svn_stringbuf__morph_into_string(dbuf);
+        {
+          svn_stringbuf_t *dbuf;
+
+          err = convert_to_stringbuf(node, src->data, src->len,
+                                     &dbuf, pool);
+
+          if (! err)
+            *dest = svn_stringbuf__morph_into_string(dbuf);
+        }
     }
   else
     {
@@ -925,7 +900,9 @@ svn_utf_string_from_utf8(const svn_string_t **dest,
         *dest = svn_string_dup(src, pool);
     }
 
-  put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool);
+  err = svn_error_compose_create(
+          err,
+          put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool));
 
   return err;
 }
@@ -939,11 +916,13 @@ svn_utf_cstring_from_utf8(const char **dest,
   xlate_handle_node_t *node;
   svn_error_t *err;
 
-  SVN_ERR(check_utf8(src, strlen(src), pool));
+  SVN_ERR(check_cstring_utf8(src, pool));
 
   SVN_ERR(get_uton_xlate_handle_node(&node, pool));
   err = convert_cstring(dest, src, node, pool);
-  put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool);
+  err = svn_error_compose_create(
+          err,
+          put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool));
 
   return err;
 }
@@ -960,27 +939,17 @@ svn_utf_cstring_from_utf8_ex2(const char **dest,
   const char *convset_key = get_xlate_key(topage, SVN_APR_UTF8_CHARSET,
                                           pool);
 
-  SVN_ERR(check_utf8(src, strlen(src), pool));
+  SVN_ERR(check_cstring_utf8(src, pool));
 
   SVN_ERR(get_xlate_handle_node(&node, topage, SVN_APR_UTF8_CHARSET,
                                 convset_key, pool));
   err = convert_cstring(dest, src, node, pool);
-  put_xlate_handle_node(node, convset_key, pool);
+  err = svn_error_compose_create(
+          err,
+          put_xlate_handle_node(node, convset_key, pool));
 
   return err;
 }
-
-
-svn_error_t *
-svn_utf_cstring_from_utf8_ex(const char **dest,
-                             const char *src,
-                             const char *topage,
-                             const char *convset_key,
-                             apr_pool_t *pool)
-{
-  return svn_utf_cstring_from_utf8_ex2(dest, src, topage, pool);
-}
-
 
 const char *
 svn_utf__cstring_from_utf8_fuzzy(const char *src,
@@ -991,7 +960,7 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
   const char *escaped, *converted;
   svn_error_t *err;
 
-  escaped = fuzzy_escape(src, strlen(src), pool);
+  escaped = svn_utf__fuzzy_escape(src, strlen(src), pool);
 
   /* Okay, now we have a *new* UTF-8 string, one that's guaranteed to
      contain only 7-bit bytes :-).  Recode to native... */
@@ -1007,7 +976,7 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
 
   /* ### Check the client locale, maybe we can avoid that second
    * conversion!  See Ulrich Drepper's patch at
-   * http://subversion.tigris.org/issues/show_bug.cgi?id=807.
+   * https://issues.apache.org/jira/browse/SVN-807.
    */
 }
 
@@ -1040,7 +1009,6 @@ svn_utf_cstring_from_utf8_string(const char **dest,
                                  const svn_string_t *src,
                                  apr_pool_t *pool)
 {
-  svn_stringbuf_t *dbuf;
   xlate_handle_node_t *node;
   svn_error_t *err;
 
@@ -1050,10 +1018,14 @@ svn_utf_cstring_from_utf8_string(const char **dest,
     {
       err = check_utf8(src->data, src->len, pool);
       if (! err)
-        err = convert_to_stringbuf(node, src->data, src->len,
-                                   &dbuf, pool);
-      if (! err)
-        *dest = dbuf->data;
+        {
+          svn_stringbuf_t *dbuf;
+
+          err = convert_to_stringbuf(node, src->data, src->len,
+                                     &dbuf, pool);
+          if (! err)
+            *dest = dbuf->data;
+        }
     }
   else
     {
@@ -1062,7 +1034,358 @@ svn_utf_cstring_from_utf8_string(const char **dest,
         *dest = apr_pstrmemdup(pool, src->data, src->len);
     }
 
-  put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool);
+  err = svn_error_compose_create(
+          err,
+          put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool));
 
   return err;
 }
+
+int
+svn_utf_cstring_utf8_width(const char *cstr)
+{
+  const apr_ssize_t width = svn_utf__cstring_width(NULL, cstr);
+
+  /* Check for return value overflow. It's unfortunate that we chose
+     to use 'int' for what is essentially a string length value. */
+  if (width > INT_MAX)
+    return -1;
+
+  return (int)width;
+}
+
+/* Insert the given UCS-4 VALUE into BUF at the given OFFSET. */
+static void
+membuf_insert_ucs4(svn_membuf_t *buf, apr_size_t offset, apr_int32_t value)
+{
+  svn_membuf__resize(buf, (offset + 1) * sizeof(value));
+  ((apr_int32_t*)buf->data)[offset] = value;
+}
+
+/* Modern compilers with -O2 optimise it out and replace these with special
+ * instructions (bswap or rev). */
+#define SWAP_SHORT(x)  ((((x) & 0xff) << 8) | (((x) >> 8) & 0xff))
+#define SWAP_LONG(x)   ((((x) & 0xff) << 24) | (((x) & 0xff00) << 8)    \
+                        | (((x) >> 8) & 0xff00) | (((x) >> 24) & 0xff))
+
+#define IS_UTF16_LEAD_SURROGATE(c)   ((c) >= 0xd800 && (c) <= 0xdbff)
+#define IS_UTF16_TRAIL_SURROGATE(c)  ((c) >= 0xdc00 && (c) <= 0xdfff)
+
+svn_error_t *
+svn_utf__utf16_to_utf8(const svn_string_t **result,
+                       const apr_uint16_t *utf16str,
+                       apr_size_t utf16len,
+                       svn_boolean_t big_endian,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  static const apr_uint16_t endiancheck = 0xa55a;
+  const svn_boolean_t arch_big_endian =
+    (((const char*)&endiancheck)[sizeof(endiancheck) - 1] == '\x5a');
+  const svn_boolean_t swap_order = (!big_endian != !arch_big_endian);
+
+  apr_uint16_t lead_surrogate;
+  apr_size_t length;
+  apr_size_t offset;
+  svn_membuf_t ucs4buf;
+  svn_membuf_t resultbuf;
+  svn_string_t *res;
+
+  if (utf16len == SVN_UTF__UNKNOWN_LENGTH)
+    {
+      const apr_uint16_t *endp = utf16str;
+      while (*endp++)
+        ;
+      utf16len = (endp - utf16str);
+    }
+
+  svn_membuf__create(&ucs4buf, utf16len * sizeof(apr_int32_t), scratch_pool);
+
+  for (lead_surrogate = 0, length = 0, offset = 0;
+       offset < utf16len; ++offset)
+    {
+      const apr_uint16_t code =
+        (swap_order ? SWAP_SHORT(utf16str[offset]) : utf16str[offset]);
+
+      if (lead_surrogate)
+        {
+          if (IS_UTF16_TRAIL_SURROGATE(code))
+            {
+              /* Combine the lead and trail currogates into a 32-bit code. */
+              membuf_insert_ucs4(&ucs4buf, length++,
+                                 (0x010000
+                                  + (((lead_surrogate & 0x03ff) << 10)
+                                     | (code & 0x03ff))));
+              lead_surrogate = 0;
+              continue;
+            }
+          else
+            {
+              /* If we didn't find a surrogate pair, just dump the
+                 lead surrogate into the stream. */
+              membuf_insert_ucs4(&ucs4buf, length++, lead_surrogate);
+              lead_surrogate = 0;
+            }
+        }
+
+      if ((offset + 1) < utf16len && IS_UTF16_LEAD_SURROGATE(code))
+        {
+          /* Store a lead surrogate that is followed by at least one
+             code for the next iteration. */
+          lead_surrogate = code;
+          continue;
+        }
+      else
+        membuf_insert_ucs4(&ucs4buf, length++, code);
+    }
+
+  /* Convert the UCS-4 buffer to UTF-8, assuming an average of 2 bytes
+     per code point for encoding. The buffer will grow as
+     necessary. */
+  svn_membuf__create(&resultbuf, length * 2, result_pool);
+  SVN_ERR(svn_utf__encode_ucs4_string(
+              &resultbuf, ucs4buf.data, length, &length));
+
+  res = apr_palloc(result_pool, sizeof(*res));
+  res->data = resultbuf.data;
+  res->len = length;
+  *result = res;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_utf__utf32_to_utf8(const svn_string_t **result,
+                       const apr_int32_t *utf32str,
+                       apr_size_t utf32len,
+                       svn_boolean_t big_endian,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  static const apr_int32_t endiancheck = 0xa5cbbc5a;
+  const svn_boolean_t arch_big_endian =
+    (((const char*)&endiancheck)[sizeof(endiancheck) - 1] == '\x5a');
+  const svn_boolean_t swap_order = (!big_endian != !arch_big_endian);
+
+  apr_size_t length;
+  svn_membuf_t resultbuf;
+  svn_string_t *res;
+
+  if (utf32len == SVN_UTF__UNKNOWN_LENGTH)
+    {
+      const apr_int32_t *endp = utf32str;
+      while (*endp++)
+        ;
+      utf32len = (endp - utf32str);
+    }
+
+  if (swap_order)
+    {
+      apr_size_t offset;
+      svn_membuf_t ucs4buf;
+
+      svn_membuf__create(&ucs4buf, utf32len * sizeof(apr_int32_t),
+                         scratch_pool);
+
+      for (offset = 0; offset < utf32len; ++offset)
+        {
+          const apr_int32_t code = SWAP_LONG(utf32str[offset]);
+          membuf_insert_ucs4(&ucs4buf, offset, code);
+        }
+      utf32str = ucs4buf.data;
+    }
+
+  /* Convert the UCS-4 buffer to UTF-8, assuming an average of 2 bytes
+     per code point for encoding. The buffer will grow as
+     necessary. */
+  svn_membuf__create(&resultbuf, utf32len * 2, result_pool);
+  SVN_ERR(svn_utf__encode_ucs4_string(
+              &resultbuf, utf32str, utf32len, &length));
+
+  res = apr_palloc(result_pool, sizeof(*res));
+  res->data = resultbuf.data;
+  res->len = length;
+  *result = res;
+  return SVN_NO_ERROR;
+}
+
+const char *
+svn_utf__locale_encoding(apr_pool_t *pool)
+{
+#if defined(WIN32)
+  /* We have special code for xlate on Windows. */
+  return svn_subr__win32_xlate_locale_encoding(pool);
+#else
+  return apr_os_locale_encoding(pool);
+#endif
+}
+
+/* Return a UTF-8 string allocated in POOL of exactly MAX_WIDTH printable
+ * characters, containing up to four U+FFFD replacement characters aligned
+ * left or right according to ALIGN_LEFT. The rest of the string is padded
+ * with spaces.
+ */
+static char *
+replacement_chars(apr_size_t max_width,
+                  svn_boolean_t align_left,
+                  apr_pool_t *pool)
+{
+  /* String of four Unicode replacement characters, U+FFFD. */
+  static const char fffds[13] =
+    "\xef\xbf\xbd" "\xef\xbf\xbd" "\xef\xbf\xbd" "\xef\xbf\xbd";
+
+  const apr_ssize_t length = max_width >= 4 ? 12 : 3 * max_width;
+  const apr_ssize_t spaces = max_width <= 4 ? 0 : max_width - 4;
+  char *const result = apr_palloc(pool, length + spaces + 1);
+
+  if (align_left)
+    {
+      memcpy(result, fffds, length);
+      memset(result + length, ' ', spaces);
+    }
+  else
+    {
+      memset(result, ' ', spaces);
+      memcpy(result + spaces, fffds, length);
+    }
+  result[length + spaces] = '\0';
+  return result;
+}
+
+/* Return a UTF-8 string allocated in POOL of exactly MAX_WIDTH printable
+ * characters, containing the substring from START to END with display width
+ * WIDTH aligned left or right according to ALIGN_LEFT. The rest of the
+ * string is padded with spaces.
+ */
+static char *
+align_substring(const char *start, const char *end,
+                apr_ssize_t width, apr_ssize_t max_width,
+                svn_boolean_t align_left, apr_pool_t *pool)
+{
+  const apr_ssize_t length = end - start;
+  const apr_ssize_t spaces = max_width - width;
+  char *const result = apr_palloc(pool, length + spaces + 1);
+
+  if (align_left)
+    {
+      memcpy(result, start, length);
+      memset(result + length, ' ', spaces);
+    }
+  else
+    {
+      memset(result, ' ', spaces);
+      memcpy(result + spaces, start, length);
+    }
+  result[length + spaces] = '\0';
+  return result;
+}
+
+char *
+svn_utf__cstring_align_right_trim_left(const char *cstr,
+                                       apr_size_t max_width,
+                                       apr_pool_t *pool)
+{
+  const char *start, *end;
+  const apr_ssize_t width =
+    svn_utf__cstring_trim_left(&start, &end, cstr, max_width);
+
+  if (width < 0)
+    return replacement_chars(max_width, FALSE, pool);
+
+  return align_substring(start, end, width, max_width, FALSE, pool);
+}
+
+char *
+svn_utf__cstring_align_left(const char *cstr,
+                            apr_size_t max_width,
+                            apr_pool_t *pool)
+{
+  const char *start, *end;
+  const apr_ssize_t width =
+    svn_utf__cstring_trim_right(&start, &end, cstr, max_width);
+
+  if (width < 0)
+    return replacement_chars(max_width, TRUE, pool);
+
+  return align_substring(start, end, width, max_width, TRUE, pool);
+}
+
+#ifdef WIN32
+
+svn_error_t *
+svn_utf__win32_utf8_to_utf16(const WCHAR **result,
+                             const char *src,
+                             const WCHAR *prefix,
+                             apr_pool_t *result_pool)
+{
+  const int utf8_count = strlen(src);
+  const int prefix_len = (prefix ? lstrlenW(prefix) : 0);
+  WCHAR *wide_str;
+  int wide_count;
+
+  if (0 == prefix_len + utf8_count)
+    {
+      *result = L"";
+      return SVN_NO_ERROR;
+    }
+
+  wide_count = MultiByteToWideChar(CP_UTF8, 0, src, utf8_count, NULL, 0);
+  if (wide_count == 0)
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion to UTF-16 failed"));
+
+  wide_str = apr_palloc(result_pool,
+                        (prefix_len + wide_count + 1) * sizeof(*wide_str));
+  if (prefix_len)
+    memcpy(wide_str, prefix, prefix_len * sizeof(*wide_str));
+  if (0 == MultiByteToWideChar(CP_UTF8, 0, src, utf8_count,
+                               wide_str + prefix_len, wide_count))
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion to UTF-16 failed"));
+
+  wide_str[prefix_len + wide_count] = 0;
+  *result = wide_str;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_utf__win32_utf16_to_utf8(const char **result,
+                             const WCHAR *src,
+                             const char *prefix,
+                             apr_pool_t *result_pool)
+{
+  const int wide_count = lstrlenW(src);
+  const int prefix_len = (prefix ? strlen(prefix) : 0);
+  char *utf8_str;
+  int utf8_count;
+
+  if (0 == prefix_len + wide_count)
+    {
+      *result = "";
+      return SVN_NO_ERROR;
+    }
+
+  utf8_count = WideCharToMultiByte(CP_UTF8, 0, src, wide_count,
+                                   NULL, 0, NULL, FALSE);
+  if (utf8_count == 0)
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion from UTF-16 failed"));
+
+  utf8_str = apr_palloc(result_pool,
+                        (prefix_len + utf8_count + 1) * sizeof(*utf8_str));
+  if (prefix_len)
+    memcpy(utf8_str, prefix, prefix_len * sizeof(*utf8_str));
+  if (0 == WideCharToMultiByte(CP_UTF8, 0, src, wide_count,
+                               utf8_str + prefix_len, utf8_count,
+                               NULL, FALSE))
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion from UTF-16 failed"));
+
+  utf8_str[prefix_len + utf8_count] = 0;
+  *result = utf8_str;
+
+  return SVN_NO_ERROR;
+}
+
+#endif /* WIN32 */

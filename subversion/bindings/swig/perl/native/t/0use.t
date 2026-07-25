@@ -22,10 +22,17 @@
 
 use Test::More tests => 7;
 use strict;
+# TEST
 use_ok 'SVN::Core';
+# TEST
 use_ok 'SVN::Repos';
+# TEST
 use_ok 'SVN::Fs';
+# TEST
 use_ok 'SVN::Delta';
+# TEST
 use_ok 'SVN::Ra';
+# TEST
 use_ok 'SVN::Wc';
+# TEST
 use_ok 'SVN::Client';

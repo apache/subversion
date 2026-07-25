@@ -65,7 +65,7 @@ typedef struct svn_client__merge_path_t
      with the youngest start revisions come first.  In both the forward and
      reverse merge cases the ranges should never overlap.  This rangelist
      may be empty but should never be NULL unless ABSENT is true. */
-  apr_array_header_t *remaining_ranges;
+  svn_rangelist_t *remaining_ranges;
 
   svn_mergeinfo_t pre_merge_mergeinfo;  /* Explicit or inherited mergeinfo
                                            on ABSPATH prior to a merge.
@@ -74,8 +74,6 @@ typedef struct svn_client__merge_path_t
                                            prior to a merge.  May be NULL. */
   svn_boolean_t inherited_mergeinfo;    /* Whether PRE_MERGE_MERGEINFO was
                                            explicit or inherited. */
-  svn_boolean_t scheduled_for_deletion; /* ABSPATH is scheduled for
-                                           deletion. */
   svn_boolean_t immediate_child_dir;    /* ABSPATH is an immediate child
                                            directory of the merge target,
                                            has no explicit mergeinfo prior
@@ -292,9 +290,10 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
 /* Set *MERGEINFO_P to a mergeinfo constructed solely from the
    natural history of PATHREV.
 
-   If RANGE_YOUNGEST and RANGE_OLDEST are valid, use them to bound the
-   revision ranges of returned mergeinfo.  They are governed by the same
-   rules as the PEG_REVISION, START_REV, and END_REV parameters of
+   If RANGE_YOUNGEST and RANGE_OLDEST are valid, use them as inclusive
+   bounds on the revision ranges of returned mergeinfo.  PATHREV->rev,
+   RANGE_YOUNGEST and RANGE_OLDEST are governed by the same rules as the
+   PEG_REVISION, START_REV, and END_REV parameters (respectively) of
    svn_ra_get_location_segments().
 
    If HAS_REV_ZERO_HISTORY is not NULL, then set *HAS_REV_ZERO_HISTORY to
@@ -315,7 +314,9 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
 
 /* Parse any explicit mergeinfo on LOCAL_ABSPATH and store it in
    *MERGEINFO.  If no record of any mergeinfo exists, set *MERGEINFO to NULL.
-   Does not acount for inherited mergeinfo. */
+   Does not account for inherited mergeinfo.
+
+   Allocate the result deeply in @a result_pool. */
 svn_error_t *
 svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
                             svn_wc_context_t *wc_ctx,
@@ -338,49 +339,52 @@ svn_client__record_wc_mergeinfo(const char *local_abspath,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *scratch_pool);
 
-/* Write mergeinfo into the WC.  RESULT_CATALOG maps (const char *) WC paths
+/* Write mergeinfo into the WC.
+ *
+ * For each path in RESULT_CATALOG, set the SVN_PROP_MERGEINFO
+ * property to represent the given mergeinfo, or remove the property
+ * if the given mergeinfo is null, and notify the change.  Leave
+ * other paths unchanged.  RESULT_CATALOG maps (const char *) WC paths
  * to (svn_mergeinfo_t) mergeinfo. */
 svn_error_t *
 svn_client__record_wc_mergeinfo_catalog(apr_hash_t *result_catalog,
                                         svn_client_ctx_t *ctx,
                                         apr_pool_t *scratch_pool);
 
-/* Elide any svn:mergeinfo set on TARGET_WCPATH to its nearest working
+/* Elide any svn:mergeinfo set on TARGET_ABSPATH to its nearest working
    copy (or possibly repository) ancestor with equivalent mergeinfo.
 
-   If WC_ELISION_LIMIT_PATH is NULL check up to the root of the
+   If WC_ELISION_LIMIT_ABSPATH is NULL check up to the root of the
    working copy or the nearest switched parent for an elision
    destination, if none is found check the repository, otherwise check
-   as far as WC_ELISION_LIMIT_PATH within the working copy.
-   TARGET_WCPATH and WC_ELISION_LIMIT_PATH, if it exists, must both be
-   absolute or relative to the working directory.
+   as far as WC_ELISION_LIMIT_ABSPATH within the working copy.
 
    Elision occurs if:
 
-     A) TARGET_WCPATH has empty mergeinfo and no parent path with
+     A) TARGET_ABSPATH has empty mergeinfo and no parent path with
         explicit mergeinfo can be found in either the WC or the
         repository (WC_ELISION_LIMIT_PATH must be NULL for this to
         occur).
 
-     B) TARGET_WCPATH has empty mergeinfo and its nearest parent also
+     B) TARGET_ABSPATH has empty mergeinfo and its nearest parent also
         has empty mergeinfo.
 
-     C) TARGET_WCPATH has the same mergeinfo as its nearest parent
+     C) TARGET_ABSPATH has the same mergeinfo as its nearest parent
         when that parent's mergeinfo is adjusted for the path
         difference between the two, e.g.:
 
-           TARGET_WCPATH                = A_COPY/D/H
-           TARGET_WCPATH's mergeinfo    = '/A/D/H:3'
-           TARGET_WCPATH nearest parent = A_COPY
-           Parent's mergeinfo           = '/A:3'
-           Path differece               = 'D/H'
-           Parent's adjusted mergeinfo  = '/A/D/H:3'
+           TARGET_ABSPATH                = A_COPY/D/H
+           TARGET_ABSPATH's mergeinfo    = '/A/D/H:3'
+           TARGET_ABSPATH nearest parent = A_COPY
+           Parent's mergeinfo            = '/A:3'
+           Path difference               = 'D/H'
+           Parent's adjusted mergeinfo   = '/A/D/H:3'
 
    If Elision occurs remove the svn:mergeinfo property from
-   TARGET_WCPATH. */
+   TARGET_ABSPATH. */
 svn_error_t *
-svn_client__elide_mergeinfo(const char *target_wcpath,
-                            const char *wc_elision_limit_path,
+svn_client__elide_mergeinfo(const char *target_abspath,
+                            const char *wc_elision_limit_abspath,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 

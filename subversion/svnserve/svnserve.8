@@ -110,12 +110,12 @@ still backgrounds itself at startup time.
 .TP 5
 \fB\-\-config\-file\fP=\fIfilename\fP
 When specified, \fBsvnserve\fP reads \fIfilename\fP once at program
-startup and caches the \fBsvnserve\fP configuration and any passwords
-and authorization configuration referenced from \fIfilename\fP.
-\fBsvnserve\fP will not read any per-repository
-\fBconf/svnserve.conf\fP files when this option is used.  See the
-\fBsvnserve.conf\fP(5) man page for details of the file format for
-this option.
+startup and caches the \fBsvnserve\fP configuration.  The password
+and authorization configurations referenced from \fIfilename\fP will
+be loaded on each connection.  \fBsvnserve\fP will not read any
+per-repository \fBconf/svnserve.conf\fP files when this option is
+used.  See the \fBsvnserve.conf\fP(5) man page for details of the
+file format for this option.
 .PP
 .TP 5
 \fB\-\-pid\-file\fP=\fIfilename\fP

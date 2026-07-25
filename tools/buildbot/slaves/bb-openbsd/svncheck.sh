@@ -22,9 +22,11 @@
 set -e
 set -x
 
-branch="$(basename $(svn info . | grep ^URL  | cut -d' ' -f2))"
+url="$(svn info --show-item url)"
+branch="${url##*/}"
 export MALLOC_OPTIONS=S
-(cd .. && gmake BRANCH="$branch" PARALLEL="" THREADING="no" \
+(cd .. && gmake BRANCH="$branch" PARALLEL="4" THREADING="no" JAVA="no" \
+                EXCLUSIVE_WC_LOCKS=1 SVN_CHECK_FS_BACKENDS=fsfs \
                                   svn-check-local \
                                   svn-check-svn \
                                   svn-check-neon \

@@ -30,8 +30,6 @@
 #include <jni.h>
 #include "svn_client.h"
 
-struct info_entry;
-
 /**
  * This class holds a Java callback object, which will receive every line of
  * the file for which the callback information is requested.

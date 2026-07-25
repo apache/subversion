@@ -21,15 +21,16 @@
  * svn_wc.i: SWIG interface file for svn_wc.h
  */
 
+%include svn_global.swg
+
 #if defined(SWIGPYTHON)
-%module(package="libsvn") wc
+%module(package="libsvn", moduleimport=SVN_PYTHON_MODULEIMPORT) wc
 #elif defined(SWIGPERL)
 %module "SVN::_Wc"
 #elif defined(SWIGRUBY)
 %module "svn::ext::wc"
 #endif
 
-%include svn_global.swg
 %import core.i
 %import svn_delta.i
 %import svn_ra.i
@@ -40,8 +41,10 @@
 */
 %ignore svn_wc_set_auth_file;
 
-/* ### ignore this structure because the accessors will need a pool */
+/* ### ignore these structures because the accessors will need a pool */
 %ignore svn_wc_keywords_t;
+%ignore svn_wc_conflict_description2_t;
+%ignore svn_wc_conflict_result_t;
 
 #ifdef SWIGRUBY
 %ignore svn_wc_external_item_create;
@@ -155,11 +158,16 @@
                   )
 #endif
 
-#ifndef SWIGPERL
 %callback_typemap(svn_wc_status_func2_t status_func, void *status_baton,
                   svn_swig_py_status_func2,
-                  ,
+                  svn_swig_pl_status_func2,
                   svn_swig_rb_wc_status_func)
+
+#ifdef SWIGPERL
+%callback_typemap(svn_wc_status_func3_t status_func, void *status_baton,
+                  ,
+                  svn_swig_pl_status_func3,
+                  ) 
 #endif
 
 #ifndef SWIGPERL
@@ -224,7 +232,7 @@
 
 %typemap(argout) svn_revnum_t *target_revision
 {
-  %append_output(LONG2NUM((long)$1));
+  %append_output(SWIG2NUM($1));
 }
 #endif
 
@@ -234,6 +242,8 @@
 {
   $result = $1 ? svn_swig_rb_svn_error_to_rb_error($1) : Qnil;
 }
+
+%typemap(ret) svn_error_t *err "";
 #endif
 
 

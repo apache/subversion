@@ -39,19 +39,24 @@
    URI_SEGMENT is the URI bits relative to the repository root (but if
    non-empty, *does* have a leading slash delimiter).
    MASTER_URI and URI_SEGMENT are not URI-encoded. */
-static void proxy_request_fixup(request_rec *r,
-                                const char *master_uri,
-                                const char *uri_segment)
+static int proxy_request_fixup(request_rec *r,
+                               const char *master_uri,
+                               const char *uri_segment)
 {
-    assert((uri_segment[0] == '\0')
-           || (uri_segment[0] == '/'));
+    if (uri_segment[0] != '\0' && uri_segment[0] != '/')
+      {
+        ap_log_rerror(APLOG_MARK, APLOG_ERR, SVN_ERR_BAD_CONFIG_VALUE, r,
+                     "Invalid URI segment '%s' in slave fixup",
+                      uri_segment);
+        return HTTP_INTERNAL_SERVER_ERROR;
+      }
 
     r->proxyreq = PROXYREQ_REVERSE;
     r->uri = r->unparsed_uri;
     r->filename = (char *) svn_path_uri_encode(apr_pstrcat(r->pool, "proxy:",
                                                            master_uri,
                                                            uri_segment,
-                                                           (char *)NULL),
+                                                           SVN_VA_NULL),
                                                r->pool);
     r->handler = "proxy-server";
 
@@ -67,6 +72,7 @@ static void proxy_request_fixup(request_rec *r,
     ap_add_output_filter("LocationRewrite", NULL, r, r->connection);
     ap_add_output_filter("ReposRewrite", NULL, r, r->connection);
     ap_add_input_filter("IncomingRewrite", NULL, r, r->connection);
+    return OK;
 }
 
 
@@ -91,18 +97,20 @@ int dav_svn__proxy_request_fixup(request_rec *r)
            ourselves -- but we need to make sure they aren't aimed at
            resources that only exist on the master server such as
            working resource URIs or the HTTPv2 transaction root and
-           transaction tree resouces. */
+           transaction tree resources. */
         if (r->method_number == M_PROPFIND ||
             r->method_number == M_GET) {
             if ((seg = ap_strstr(r->uri, root_dir))) {
                 if (ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
-                                                 "/wrk/", (char *)NULL))
+                                                 "/wrk/", SVN_VA_NULL))
                     || ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
-                                                    "/txn/", (char *)NULL))
+                                                    "/txn/", SVN_VA_NULL))
                     || ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
-                                                    "/txr/", (char *)NULL))) {
+                                                    "/txr/", SVN_VA_NULL))) {
+                    int rv;
                     seg += strlen(root_dir);
-                    proxy_request_fixup(r, master_uri, seg);
+                    rv = proxy_request_fixup(r, master_uri, seg);
+                    if (rv) return rv;
                 }
             }
             return OK;
@@ -116,8 +124,10 @@ int dav_svn__proxy_request_fixup(request_rec *r)
                     r->method_number == M_LOCK ||
                     r->method_number == M_UNLOCK ||
                     ap_strstr_c(seg, special_uri))) {
+            int rv;
             seg += strlen(root_dir);
-            proxy_request_fixup(r, master_uri, seg);
+            rv = proxy_request_fixup(r, master_uri, seg);
+            if (rv) return rv;
             return OK;
         }
     }
@@ -249,7 +259,7 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
         new_uri = ap_construct_url(r->pool,
                                    apr_pstrcat(r->pool,
                                                dav_svn__get_root_dir(r), "/",
-                                               start_foo, (char *)NULL),
+                                               start_foo, SVN_VA_NULL),
                                    r);
         apr_table_set(r->headers_out, "Location", new_uri);
     }

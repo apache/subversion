@@ -33,9 +33,8 @@
  * @param jthis the Java object to be stored
  */
 OutputStream::OutputStream(jobject jthis)
-{
-  m_jthis = jthis;
-}
+  : m_jthis(jthis)
+{}
 
 /**
  * Destroy an Inputer object.
@@ -54,6 +53,9 @@ OutputStream::~OutputStream()
  */
 svn_stream_t *OutputStream::getStream(const SVN::Pool &pool)
 {
+  if (m_jthis == NULL)
+    return svn_stream_empty(pool.getPool());
+
   // Create a stream with this as the baton and set the write and
   // close functions.
   svn_stream_t *ret = svn_stream_create(this, pool.getPool());
@@ -76,7 +78,7 @@ svn_error_t *OutputStream::write(void *baton, const char *buffer,
   JNIEnv *env = JNIUtil::getEnv();
 
   // An object of our class is passed in as the baton.
-  OutputStream *that = (OutputStream*)baton;
+  OutputStream *stream = static_cast<OutputStream *>(baton);
 
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
@@ -95,13 +97,12 @@ svn_error_t *OutputStream::write(void *baton, const char *buffer,
     }
 
   // convert the data to a Java byte array
-  jbyteArray data = JNIUtil::makeJByteArray((const signed char*)buffer,
-                                            *len);
+  jbyteArray data = JNIUtil::makeJByteArray(buffer, static_cast<int>(*len));
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
   // write the data
-  env->CallObjectMethod(that->m_jthis, mid, data);
+  env->CallObjectMethod(stream->m_jthis, mid, data);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
@@ -120,7 +121,7 @@ svn_error_t *OutputStream::close(void *baton)
   JNIEnv *env = JNIUtil::getEnv();
 
   // An object of our class is passed in as the baton
-  OutputStream *that = (OutputStream*)baton;
+  OutputStream *stream = static_cast<OutputStream*>(baton);
 
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
@@ -139,7 +140,7 @@ svn_error_t *OutputStream::close(void *baton)
     }
 
   // Call the Java object, to close the stream.
-  env->CallVoidMethod(that->m_jthis, mid);
+  env->CallVoidMethod(stream->m_jthis, mid);
   // No need to check for exception here because we return anyway.
 
   return SVN_NO_ERROR;

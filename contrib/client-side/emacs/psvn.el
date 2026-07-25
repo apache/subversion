@@ -1,4 +1,11 @@
 ;;; psvn.el --- Subversion interface for emacs
+
+;; This file is known to be out of date but has been kept to not break scripts
+;; that might rely on it.
+;;
+;; The latest version is hosted here:
+;; http://www.xsteve.at/prg/emacs/
+
 ;; Copyright (C) 2002-2009 by Stefan Reichoer
 
 ;; Author: Stefan Reichoer <stefan@xsteve.at>
@@ -28,7 +35,7 @@
 ;; if you upgrade to a higher version, you need to do a fresh checkout
 
 ;; psvn.el is an interface for the revision control tool subversion
-;; (see http://subversion.apache.org)
+;; (see https://subversion.apache.org)
 ;; psvn.el provides a similar interface for subversion as pcl-cvs for cvs.
 ;; At the moment the following commands are implemented:
 ;;
@@ -137,8 +144,6 @@
 
 ;; The latest version of psvn.el can be found at:
 ;;   http://www.xsteve.at/prg/emacs/psvn.el
-;; Or you can check it out from the subversion repository:
-;;   svn co http://svn.apache.org/repos/asf/subversion/trunk/contrib/client-side/emacs emacs-svn
 
 ;; TODO:
 ;; * shortcut for svn propset svn:keywords "Date" psvn.el
@@ -1347,7 +1352,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                 (setq svn-pre-run-mode-line-process nil))))))
     (error "You can only run one svn process at once!")))
 
-(defun svn-process-sentinel-fixup-path-seperators ()
+(defun svn-process-sentinel-fixup-path-separators ()
     "Convert all path separators to UNIX style.
 \(This is a no-op unless `system-type' is windows-nt\)"
   (when (eq system-type 'windows-nt)
@@ -1371,7 +1376,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
            (run-hooks 'svn-post-process-svn-output-hook)
            (cond ((eq svn-process-cmd 'status)
                   ;;(message "svn status finished")
-                  (svn-process-sentinel-fixup-path-seperators)
+                  (svn-process-sentinel-fixup-path-separators)
                   (svn-parse-status-result)
                   (svn-status-apply-elide-list)
                   (when svn-status-update-previous-process-output
@@ -1423,7 +1428,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                     (svn-status-activate-blame-mode))
                   (message "svn blame finished"))
                  ((eq svn-process-cmd 'commit)
-                  (svn-process-sentinel-fixup-path-seperators)
+                  (svn-process-sentinel-fixup-path-separators)
                   (svn-status-remove-temp-file-maybe)
                   (when (member 'commit svn-status-unmark-files-after-list)
                     (svn-status-unset-all-usermarks))
@@ -3575,7 +3580,7 @@ If the file is not found, return nil."
     (and found start-pos)))
 
 (defun svn-status-goto-file-name (name)
-  "Move the cursor the the line that displays NAME."
+  "Move the cursor to the line that displays NAME."
   (let ((pos (svn-status-get-file-name-buffer-position name)))
     (if pos
         (goto-char pos)
@@ -4071,7 +4076,7 @@ user can enter a new file name, or an existing directory: this is used as the ar
 ;;              ;; run  svn-status-goto-file-name to move point to line of file
 ;;              ;; run  svn-status-unset-user-mark to unmark dir+all contents
 ;;              ;; run  svn-status-set-user-mark   to remark dir
-;;              ;; maybe check for local mods here, and unmark if user does't say --force?
+;;              ;; maybe check for local mods here, and unmark if user doesn't say --force?
 ;;              ))
     (dolist (original marked-files)
       (let ((original-name (svn-status-line-info->filename original))

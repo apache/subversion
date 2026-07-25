@@ -41,7 +41,7 @@ extern "C" {
 /* Set inheritability of all ranges in RANGELIST to INHERITABLE.
    If RANGELIST is NULL do nothing. */
 void
-svn_rangelist__set_inheritance(apr_array_header_t *rangelist,
+svn_rangelist__set_inheritance(svn_rangelist_t *rangelist,
                                svn_boolean_t inheritable);
 
 /* Parse a rangelist from the string STR. Set *RANGELIST to the result,
@@ -50,11 +50,44 @@ svn_rangelist__set_inheritance(apr_array_header_t *rangelist,
  * R1 >= R2 in a "R1-R2" range element).
  *
  * Unlike svn_mergeinfo_parse(), this does not sort the ranges into order
- * or combine adjacent and overlapping ranges. */
+ * or combine adjacent and overlapping ranges.
+ *
+ * The compaction can be done with svn_rangelist__canonicalize().
+ */
 svn_error_t *
-svn_rangelist__parse(apr_array_header_t **rangelist,
+svn_rangelist__parse(svn_rangelist_t **rangelist,
                      const char *str,
                      apr_pool_t *result_pool);
+
+/* Return TRUE, if all ranges in RANGELIST are in ascending order and do
+* not overlap and are not adjacent.
+*
+* If this returns FALSE, you probably want to call
+* svn_rangelist__canonicalize().
+*/
+svn_boolean_t
+svn_rangelist__is_canonical(const svn_rangelist_t *rangelist);
+
+/** Canonicalize the @a rangelist: sort the ranges, and combine adjacent or
+ * overlapping ranges into single ranges where possible.
+ *
+ * If overlapping ranges have different inheritability, return an error.
+ *
+ * Modify @a rangelist in place. Use @a scratch_pool for temporary
+ * allocations.
+ */
+svn_error_t *
+svn_rangelist__canonicalize(svn_rangelist_t *rangelist,
+                            apr_pool_t *scratch_pool);
+
+/** Canonicalize the revision range lists in the @a mergeinfo.
+ *
+ * Modify @a mergeinfo in place. Use @a scratch_pool for temporary
+ * allocations.
+ */
+svn_error_t *
+svn_mergeinfo__canonicalize_ranges(svn_mergeinfo_t mergeinfo,
+                                   apr_pool_t *scratch_pool);
 
 /* Set inheritability of all rangelists in MERGEINFO to INHERITABLE.
    If MERGEINFO is NULL do nothing.  If a rangelist in MERGEINFO is
@@ -89,13 +122,13 @@ svn_mergeinfo__equals(svn_boolean_t *is_equal,
                       svn_boolean_t consider_inheritance,
                       apr_pool_t *pool);
 
-/* Examine MERGEINFO, removing all paths from the hash which map to
-   empty rangelists.  POOL is used only to allocate the apr_hash_index_t
-   iterator.  Returns TRUE if any paths were removed and FALSE if none were
+/* Remove all paths from MERGEINFO which map to empty rangelists.
+
+   Return TRUE if any paths were removed and FALSE if none were
    removed or MERGEINFO is NULL. */
 svn_boolean_t
 svn_mergeinfo__remove_empty_rangelists(svn_mergeinfo_t mergeinfo,
-                                       apr_pool_t *pool);
+                                       apr_pool_t *scratch_pool);
 
 /* Make a shallow (ie, mergeinfos are not duped, or altered at all;
    keys share storage) copy of IN_CATALOG in *OUT_CATALOG, removing
@@ -124,20 +157,6 @@ svn_mergeinfo__add_prefix_to_catalog(svn_mergeinfo_catalog_t *out_catalog,
                                      const char *prefix_path,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
-
-/* Set *OUT_MERGEINFO to a shallow copy of MERGEINFO with each source path
-   converted to a (URI-encoded) URL based on REPOS_ROOT_URL. *OUT_MERGEINFO
-   is declared as 'apr_hash_t *' because its key do not obey the rules of
-   'svn_mergeinfo_t'.
-
-   Allocate *OUT_MERGEINFO and the new keys in RESULT_POOL.  Use
-   SCRATCH_POOL for any temporary allocations. */
-svn_error_t *
-svn_mergeinfo__relpaths_to_urls(apr_hash_t **out_mergeinfo,
-                                svn_mergeinfo_t mergeinfo,
-                                const char *repos_root_url,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
 
 /* Set *OUT_MERGEINFO to a shallow copy of MERGEINFO with the relpath
    SUFFIX_RELPATH added to the end of each key path.
@@ -169,20 +188,6 @@ svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
                                            const char *key_prefix,
                                            const char *val_prefix,
                                            apr_pool_t *pool);
-
-/* Create a string representation of MERGEINFO in *OUTPUT, allocated in POOL.
-   Unlike svn_mergeinfo_to_string(), NULL MERGEINFO is tolerated and results
-   in *OUTPUT set to "\n".  If SVN_DEBUG is true, then NULL or empty MERGEINFO
-   causes *OUTPUT to be set to an appropriate newline terminated string.  If
-   PREFIX is not NULL then prepend PREFIX to each line in *OUTPUT.
-
-   Any relative merge source paths in MERGEINFO are converted to absolute
-   paths in *OUTPUT.*/
-svn_error_t *
-svn_mergeinfo__to_formatted_string(svn_string_t **output,
-                                   svn_mergeinfo_t mergeinfo,
-                                   const char *prefix,
-                                   apr_pool_t *pool);
 
 /* Set *YOUNGEST_REV and *OLDEST_REV to the youngest and oldest revisions
    found in the rangelists within MERGEINFO.  Note that *OLDEST_REV is
@@ -239,7 +244,7 @@ svn_mergeinfo__is_noninheritable(svn_mergeinfo_t mergeinfo,
 /* Return a rangelist with one svn_merge_range_t * element defined by START,
    END, and INHERITABLE.  The rangelist and its contents are allocated in
    RESULT_POOL. */
-apr_array_header_t *
+svn_rangelist_t *
 svn_rangelist__initialize(svn_revnum_t start,
                           svn_revnum_t end,
                           svn_boolean_t inheritable,
@@ -277,7 +282,7 @@ svn_mergeinfo__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
  * RESULT_POOL. See svn_rangelist_merge2() for details of inheritability
  * etc. */
 svn_error_t *
-svn_rangelist__merge_many(apr_array_header_t *merged_rangelist,
+svn_rangelist__merge_many(svn_rangelist_t *merged_rangelist,
                           svn_mergeinfo_t mergeinfo,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);

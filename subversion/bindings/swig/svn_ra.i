@@ -21,15 +21,16 @@
  * svn_ra.i: SWIG interface file for svn_ra.h
  */
 
+%include svn_global.swg
+
 #if defined(SWIGPYTHON)
-%module(package="libsvn") ra
+%module(package="libsvn", moduleimport=SVN_PYTHON_MODULEIMPORT) ra
 #elif defined(SWIGPERL)
 %module "SVN::_Ra"
 #elif defined(SWIGRUBY)
 %module "svn::ext::ra"
 #endif
 
-%include svn_global.swg
 %import core.i
 %import svn_delta.i
 
@@ -65,7 +66,7 @@
 #ifdef SWIGPERL
 /* FIXME: svn_ra_callbacks2_t ? */
 %typemap(in) (const svn_ra_callbacks_t *callbacks, void *callback_baton) {
-  svn_ra_make_callbacks(&$1, &$2, $input, _global_pool);
+  svn_swig_pl_make_callbacks(&$1, &$2, $input, _global_pool);
 }
 #endif
 #ifdef SWIGRUBY
@@ -77,7 +78,7 @@
 
 #ifdef SWIGPYTHON
 %callback_typemap(const svn_ra_reporter2_t *reporter, void *report_baton,
-                  (svn_ra_reporter2_t *)&swig_py_ra_reporter2,
+                  svn_swig_py_get_ra_reporter2(),
                   ,
                   )
 %callback_typemap(svn_location_segment_receiver_t receiver, void *receiver_baton,
@@ -90,7 +91,7 @@
 %callback_typemap(const svn_ra_reporter3_t *reporter, void *report_baton,
                   ,
                   ,
-                  svn_swig_rb_ra_reporter3)
+                  svn_swig_rb_get_ra_reporter3())
 #endif
 
 #ifndef SWIGPERL

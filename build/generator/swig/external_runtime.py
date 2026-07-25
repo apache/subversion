@@ -24,13 +24,17 @@
 # external_runtime.py: Generate external runtime files for SWIG
 #
 
-import sys, os, re, fileinput
+import sys
+import os
+import re
+import fileinput
+import filecmp
+import subprocess
+
 if __name__ == "__main__":
   parent_dir = os.path.dirname(os.path.abspath(os.path.dirname(sys.argv[0])))
   sys.path[0:0] = [ parent_dir, os.path.dirname(parent_dir) ]
 import generator.swig
-import generator.util.executable
-_exec = generator.util.executable
 
 class Generator(generator.swig.Generator):
   """Generate external runtime files for SWIG"""
@@ -63,8 +67,10 @@ class Generator(generator.swig.Generator):
       "python": "pyrun.swg", "perl":"perlrun.swg", "ruby":"rubydef.swg"
     }
 
-    # Build runtime files
-    out = self._output_file(lang)
+    # Build runtime files to temporary location
+    dest = self._output_file(lang)
+    out = dest + '.tmp'
+
     if self.version() == (1, 3, 24):
       out_file = open(out, "w")
       out_file.write(open("%s/swigrun.swg" % self.proxy_dir).read())
@@ -75,7 +81,7 @@ class Generator(generator.swig.Generator):
         out_file.write(open("%s/runtime.swg" % self.proxy_dir).read())
       out_file.close()
     else:
-      _exec.run("%s -%s -external-runtime %s" % (self.swig_path, lang, out))
+      subprocess.check_call([self.swig_path, "-"+lang, "-external-runtime", out])
 
     # SWIG 1.3.24-27 should include rubyhead.swg in their
     # external runtime, but they don't.
@@ -99,6 +105,26 @@ class Generator(generator.swig.Generator):
         sys.stdout.write(
           re.sub(r"SWIG_GetModule\(\)", "SWIG_GetModule(NULL)", line)
         )
+
+    # Did the output change?
+    try:
+      if filecmp.cmp(dest, out):
+        identical = True
+      else:
+        identical = False
+    except:
+      identical = False
+
+    # Only overwrite file if changed
+    if identical:
+      os.remove(out)
+    else:
+      try:
+        os.remove(dest)
+      except: pass
+      os.rename(out, dest)
+      print('Wrote %s' % (dest,))
+
   def _output_file(self, lang):
     """Return the output filename of the runtime for the given language"""
     return '%s/swig_%s_external_runtime.swg' % (self.proxy_dir, lang)

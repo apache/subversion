@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl;
@@ -29,13 +27,10 @@ package org.apache.subversion.javahl;
  */
 class NativeException extends SubversionException
 {
-    // Update the serialVersionUID when there is a incompatible change
-    // made to this class.  See any of the following, depending upon
-    // the Java release.
-    // http://java.sun.com/j2se/1.3/docs/guide/serialization/spec/version.doc7.html
-    // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
-    // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
-    // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
+    // Update the serialVersionUID when there is an incompatible change made to
+    // this class.  See the Java documentation (following link or its counter-
+    // part in your specific Java release) for when a change is incompatible.
+    // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
     private static final long serialVersionUID = 1L;
 
     /**
@@ -58,9 +53,10 @@ class NativeException extends SubversionException
      * @param aprError Any associated APR error code for a wrapped
      * <code>svn_error_t</code>.
      */
-    NativeException(String message, String source, int aprError)
+    NativeException(String message, String source, Throwable cause,
+                    int aprError)
     {
-        super(message);
+        super(message, cause);
         this.source = source;
         this.aprError = aprError;
     }
@@ -88,7 +84,11 @@ class NativeException extends SubversionException
      */
     public String getMessage()
     {
-        StringBuffer msg = new StringBuffer(super.getMessage());
+        StringBuilder msg = new StringBuilder();
+        String message = super.getMessage();
+        if (message != null) {
+            msg.append(message);
+        }
         // ### This might be better off in JNIUtil::handleSVNError().
         String src = getSource();
         if (src != null)

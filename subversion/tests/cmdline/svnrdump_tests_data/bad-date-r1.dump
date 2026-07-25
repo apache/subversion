@@ -1,0 +1,24 @@
+SVN-fs-dump-format-version: 3
+
+UUID: 0e893bae-2d4c-452c-8616-b774d5b9104e
+
+Revision-number: 0
+Prop-content-length: 36
+Content-length: 36
+
+K 8
+property
+V 8
+anything
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 36
+Content-length: 36
+
+K 8
+svn:date
+V 8
+bad date
+PROPS-END
+

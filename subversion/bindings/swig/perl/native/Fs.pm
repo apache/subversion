@@ -100,7 +100,7 @@ base revision will be $rev, which should be a number.
 Generate a unique lock-token using C<$fs>.
 
 TODO - translate this to apply to Perl:
-This can be used in to populate lock->token before calling
+This can be used in to populate lock-E<gt>token before calling
 svn_fs_attach_lock().
 
 =item $fs-E<gt>get_access()

@@ -28,14 +28,13 @@
 #define SVN_VERSION_H
 
 /* Hack to prevent the resource compiler from including
-   apr_general.h.  It doesn't resolve the include paths
-   correctly and blows up without this.
- */
-#ifndef APR_STRINGIFY
+   apr and other headers. */
+#ifndef SVN_WIN32_RESOURCE_COMPILATION
 #include <apr_general.h>
-#endif
+#include <apr_tables.h>
 
 #include "svn_types.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -62,7 +61,7 @@ extern "C" {
  * Modify when new functionality is added or new interfaces are
  * defined, but all changes are backward compatible.
  */
-#define SVN_VER_MINOR      8
+#define SVN_VER_MINOR      16
 
 /**
  * Patch number.
@@ -83,7 +82,7 @@ extern "C" {
 
 /** Version tag: a string describing the version.
  *
- * This tag remains " (dev build)" in the repository so that we can
+ * This tag remains " (under development)" in the repository so that we can
  * always see from "svn --version" that the software has been built
  * from the repository rather than a "blessed" distribution.
  *
@@ -115,10 +114,8 @@ extern "C" {
 /** Revision number: The repository revision number of this release.
  *
  * This constant is used to generate the build number part of the Windows
- * file version. Its value remains 0 in the repository.
- *
- * When rolling a tarball, we automatically replace it with what we
- * guess to be the correct revision number.
+ * file version. Its value remains 0 in the repository except in release
+ * tags where it is the revision from which the tag was created.
  */
 #define SVN_VER_REVISION   0
 
@@ -178,10 +175,25 @@ struct svn_version_t
  * Generate the implementation of a version query function.
  *
  * @since New in 1.1.
+ * @since Since 1.9, embeds a string into the compiled object
+ *        file that can be queried with the 'what' utility.
  */
-#define SVN_VERSION_BODY \
-  SVN_VERSION_DEFINE(versioninfo);              \
-  return &versioninfo
+#define SVN_VERSION_BODY            \
+  static struct versioninfo_t       \
+    {                               \
+      const char *const str;        \
+      const svn_version_t num;      \
+    } const versioninfo =           \
+    {                               \
+      "@(#)" SVN_VERSION,           \
+      {                             \
+        SVN_VER_MAJOR,              \
+        SVN_VER_MINOR,              \
+        SVN_VER_PATCH,              \
+        SVN_VER_NUMTAG              \
+      }                             \
+    };                              \
+  return &versioninfo.num
 
 /**
  * Check library version compatibility. Return #TRUE if the client's
@@ -193,6 +205,8 @@ struct svn_version_t
  * unreleased library. A development client is always compatible with
  * a previous released library.
  *
+ * @note Implements the #svn_ver_check_list2.@a comparator interface.
+ *
  * @since New in 1.1.
  */
 svn_boolean_t
@@ -201,6 +215,8 @@ svn_ver_compatible(const svn_version_t *my_version,
 
 /**
  * Check if @a my_version and @a lib_version encode the same version number.
+ *
+ * @note Implements the #svn_ver_check_list2.@a comparator interface.
  *
  * @since New in 1.2.
  */
@@ -229,10 +245,31 @@ typedef struct svn_version_checklist_t
  * my_version is compatible with each entry in @a checklist. @a
  * checklist must end with an entry whose label is @c NULL.
  *
- * @see svn_ver_compatible()
+ * @a my_version is considered to be compatible with a version in @a checklist
+ * if @a comparator returns #TRUE when called with @a my_version as the first
+ * parammeter and the @a checklist version as the second parameter.
  *
- * @since New in 1.1.
+ * @see svn_ver_compatible(), svn_ver_equal()
+ *
+ * @note Subversion's own code invariably uses svn_ver_equal() as @a comparator,
+ * since the cmdline tools sometimes use non-public APIs (such as utility
+ * functions that haven't been promoted to svn_cmdline.h).  Third-party code
+ * SHOULD use svn_ver_compatible() as @a comparator.
+ *
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_ver_check_list2(const svn_version_t *my_version,
+                    const svn_version_checklist_t *checklist,
+                    svn_boolean_t (*comparator)(const svn_version_t *,
+                                                const svn_version_t *));
+
+/** Similar to svn_ver_check_list2(), with @a comparator set to
+ * #svn_ver_compatible.
+ *
+ * @deprecated Provided for backward compatibility with 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ver_check_list(const svn_version_t *my_version,
                    const svn_version_checklist_t *checklist);
@@ -254,6 +291,168 @@ typedef const svn_version_t *(*svn_version_func_t)(void);
  */
 const svn_version_t *
 svn_subr_version(void);
+
+
+/**
+ * Extended version information, including info about the running system.
+ *
+ * @since New in 1.8.
+ */
+typedef struct svn_version_extended_t svn_version_extended_t;
+
+/**
+ * Return version information for the running program.  If @a verbose
+ * is #TRUE, collect extra information that may be expensive to
+ * retrieve (for example, the OS release name, list of shared
+ * libraries, etc.).  Use @a pool for all allocations.
+ *
+ * @note This function may allocate significant auxiliary resources
+ * (memory and file descriptors) in @a pool.  It is recommended to
+ * copy the returned data to suitable longer-lived memory and clear
+ * @a pool after calling this function.
+ *
+ * @since New in 1.8.
+ */
+const svn_version_extended_t *
+svn_version_extended(svn_boolean_t verbose,
+                     apr_pool_t *pool);
+
+
+/**
+ * Accessor for svn_version_extended_t.
+ *
+ * @return The date when the libsvn_subr library was compiled, in the
+ * format defined by the C standard macro @c __DATE__.
+ *
+ * @since New in 1.8.
+ */
+const char *
+svn_version_ext_build_date(const svn_version_extended_t *ext_info);
+
+/**
+ * Accessor for svn_version_extended_t.
+ *
+ * @return The time when the libsvn_subr library was compiled, in the
+ * format defined by the C standard macro @c __TIME__.
+ *
+ * @since New in 1.8.
+ */
+const char *
+svn_version_ext_build_time(const svn_version_extended_t *ext_info);
+
+/**
+ * Accessor for svn_version_extended_t.
+ *
+ * @return The canonical host triplet (arch-vendor-osname) of the
+ * system where libsvn_subr was compiled.
+ *
+ * @note On Unix-like systems (including Mac OS X), this string is the
+ * same as the output of the config.guess script.
+ *
+ * @since New in 1.8.
+ */
+const char *
+svn_version_ext_build_host(const svn_version_extended_t *ext_info);
+
+/**
+ * Accessor for svn_version_extended_t.
+ *
+ * @return The localized copyright notice.
+ *
+ * @since New in 1.8.
+ */
+const char *
+svn_version_ext_copyright(const svn_version_extended_t *ext_info);
+
+/**
+ * Accessor for svn_version_extended_t.
+ *
+ * @return The canonical host triplet (arch-vendor-osname) of the
+ * system where the current process is running.
+ *
+ * @note This string may not be the same as the output of config.guess
+ * on the same system.
+ *
+ * @since New in 1.8.
+ */
+const char *
+svn_version_ext_runtime_host(const svn_version_extended_t *ext_info);
+
+/**
+ * Accessor for svn_version_extended_t.
+ *
+ * @return The "commercial" release name of the running operating
+ * system, if available.  Not to be confused with, e.g., the output of
+ * "uname -v" or "uname -r".  The returned value may be @c NULL.
+ *
+ * @since New in 1.8.
+ */
+const char *
+svn_version_ext_runtime_osname(const svn_version_extended_t *ext_info);
+
+/**
+ * Accessor for svn_version_extended_t.
+ *
+ * @return The name of the current locale character set.
+ *
+ * @since New in 1.15.
+ */
+const char *
+svn_version_ext_character_encoding(const svn_version_extended_t *ext_info);
+
+/**
+ * Dependent library information.
+ * Describes the name and versions of known dependencies
+ * used by libsvn_subr.
+ *
+ * @since New in 1.8.
+ */
+typedef struct svn_version_ext_linked_lib_t
+{
+  const char *name;             /**< Library name */
+  const char *compiled_version; /**< Compile-time version string */
+  const char *runtime_version;  /**< Run-time version string (optional) */
+} svn_version_ext_linked_lib_t;
+
+/**
+ * Accessor for svn_version_extended_t.
+ *
+ * @return Array of svn_version_ext_linked_lib_t describing dependent
+ * libraries.  The returned value may be @c NULL.
+ *
+ * @since New in 1.8.
+ */
+const apr_array_header_t *
+svn_version_ext_linked_libs(const svn_version_extended_t *ext_info);
+
+
+/**
+ * Loaded shared library information.
+ * Describes the name and, where available, version of the shared libraries
+ * loaded by the running program.
+ *
+ * @since New in 1.8.
+ */
+typedef struct svn_version_ext_loaded_lib_t
+{
+  const char *name;             /**< Library name */
+  const char *version;          /**< Library version (optional) */
+} svn_version_ext_loaded_lib_t;
+
+
+/**
+ * Accessor for svn_version_extended_t.
+ *
+ * @return Array of svn_version_ext_loaded_lib_t describing loaded
+ * shared libraries.  The returned value may be @c NULL.
+ *
+ * @note On Mac OS X, the loaded frameworks, private frameworks and
+ * system libraries will not be listed.
+ *
+ * @since New in 1.8.
+ */
+const apr_array_header_t *
+svn_version_ext_loaded_libs(const svn_version_extended_t *ext_info);
 
 
 #ifdef __cplusplus

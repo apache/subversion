@@ -21,15 +21,16 @@
  * svn_delta.i: SWIG interface file for svn_delta.h
  */
 
+%include svn_global.swg
+
 #if defined(SWIGPYTHON)
-%module(package="libsvn") delta
+%module(package="libsvn", moduleimport=SVN_PYTHON_MODULEIMPORT) delta
 #elif defined(SWIGPERL)
 %module "SVN::_Delta"
 #elif defined(SWIGRUBY)
 %module "svn::ext::delta"
 #endif
 
-%include svn_global.swg
 %import core.i
 
 #ifdef SWIGRUBY
@@ -63,22 +64,17 @@
 */
 
 #ifdef SWIGPYTHON
+/* Make swig wrap this function for us, to allow making an editor in python
+   ### There must be a cleaner way to implement this? 
+   ### Maybe follow Ruby by wrapping it where passing an editor? */
 void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
-                             void **edit_baton,
-                             PyObject *py_editor,
                              apr_pool_t *pool);
 #endif
 
 #ifdef SWIGPERL
 %typemap(in) (const svn_delta_editor_t *EDITOR, void *BATON) {
-    svn_delta_make_editor(&$1, &$2, $input, _global_pool);
+    svn_swig_pl_make_editor(&$1, &$2, $input, _global_pool);
 }
-
-void svn_delta_wrap_window_handler(svn_txdelta_window_handler_t *handler,
-                                   void **handler_baton,
-                                   SV *callback,
-                                   apr_pool_t *pool);
-
 #endif
 
 #ifdef SWIGRUBY
@@ -174,60 +170,90 @@ svn_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
 
 #ifdef SWIGPYTHON
 %ignore svn_txdelta_window_t::ops;
-%inline %{
-static PyObject *
-svn_txdelta_window_t_ops_get(PyObject *window_ob)
-{
-  void *window;
-  PyObject *ops_list, *window_pool;
-  int status;
-  
-  /* Kludge alert!
-     Normally, these kinds of conversions would belong in a typemap.
-     However, typemaps won't allow us to change the result type to an array,
-     so we have to make this custom accessor function.
-     A cleaner approach would be to use something like: 
-     
-     %extend svn_txdelta_window_t { void get_ops(apr_array_header_t ** ops); }
-     
-     But that means unnecessary copying, plus more hacks to get the pool for the
-     array and for wrapping the individual op objects. So we just don't bother.
-  */
-  
-  /* Note: the standard svn-python typemap releases the GIL while calling the
-     wrapped function, but this function does Python stuff, so we have to
-     reacquire it again. */
-  svn_swig_py_acquire_py_lock();
-  status = svn_swig_ConvertPtr(window_ob, &window,
-    SWIG_TypeQuery("svn_txdelta_window_t *"));
-    
-  if (status != 0)
-    {
-      PyErr_SetString(PyExc_TypeError,
-                      "expected an svn_txdelta_window_t* proxy");
-      svn_swig_py_release_py_lock();
-      return NULL;
-    }
-    
-  window_pool = PyObject_GetAttrString(window_ob, "_parent_pool");
+%extend svn_txdelta_window_t {
 
-  if (window_pool == NULL)
-    {
-      svn_swig_py_release_py_lock();
-      return NULL;
-    }
-    
-  ops_list = svn_swig_py_txdelta_window_t_ops_get(window,
-    SWIG_TypeQuery("svn_txdelta_op_t *"), window_pool);
-    
-  svn_swig_py_release_py_lock();
-  
-  return ops_list;
+void _ops_get(int *num_ops, const svn_txdelta_op_t **ops)
+{
+  *num_ops = self->num_ops;
+  *ops = self->ops;
 }
-%}
+
+%pythoncode {
+  ops = property(_ops_get)
+}
+}
+
+%typemap(argout) (int *num_ops, svn_txdelta_op_t **ops) {
+  apr_pool_t *parent_pool;
+  PyObject *parent_py_pool;
+  PyObject *ops_list;
+  
+  if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                  &parent_py_pool, &parent_pool))
+    SWIG_fail;
+  
+  ops_list = svn_swig_py_convert_txdelta_op_c_array(*$1, *$2,
+    $descriptor(svn_txdelta_op_t *), parent_py_pool);
+
+  if (!ops_list) SWIG_fail;
+
+  %append_output(ops_list);
+}
 #endif
 
 %include svn_delta_h.swg
+
+#ifdef SWIGPYTHON
+%pythoncode %{
+# Baton container class for editor/parse_fns3 batons and their decendants.
+class _ItemBaton:
+  def __init__(self, editor, pool, baton=None):
+    import libsvn.core
+    self.pool = pool if pool else libsvn.core.svn_pool_create()
+    self.baton = baton
+    self.editor = editor
+
+  def get_ancestor(self):
+    raise NotImplementedError
+
+  def make_decendant(self, pool, baton=None):
+    return _DecBaton(self, pool, baton)
+
+
+class _DecBaton(_ItemBaton):
+  def __init__(self, parent, pool, baton=None):
+    import weakref
+    _ItemBaton.__init__(self, parent.editor, pool, baton)
+    self._anc = weakref.ref(parent.get_ancestor())
+    self._anc().hold_baton(self)
+
+  def get_ancestor(self):
+    return self._anc()
+
+  def release_self(self):
+    self._anc().release_baton(self)
+
+
+class _AncBaton(_ItemBaton):
+  def __init__(self, editor, pool, baton=None):
+    _ItemBaton.__init__(self, editor, pool, baton)
+    self._dec = {}     # hold decendant batons.
+
+  def get_ancestor(self):
+    return self
+
+  def hold_baton(self, baton):
+    self._dec[id(baton)] = baton
+
+  def release_baton(self, baton):
+    del self._dec[id(baton)]
+
+
+# This function is for backwards compatibility only.
+# Use svn_txdelta_window_t.ops instead.
+svn_txdelta_window_t_ops_get = svn_txdelta_window_t._ops_get
+%}
+#endif
 
 #ifdef SWIGRUBY
 %inline %{
@@ -248,7 +274,7 @@ svn_swig_rb_delta_editor_get_target_revision(VALUE editor)
   if (NIL_P(rb_target_address))
     return Qnil;
 
-  target_address = (svn_revnum_t *)(NUM2LONG(rb_target_address));
+  target_address = (svn_revnum_t *)(NUM2SWIG(rb_target_address));
   if (!target_address)
     return Qnil;
 

@@ -24,6 +24,6 @@ set -x
 
 echo "========= make extraclean"
 cd build
-test -e Makefile && (make extraclean || exit $?)
+test -e Makefile && { make extraclean || exit $?; }
 
 exit 0

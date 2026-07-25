@@ -37,8 +37,11 @@
 #ifndef SVN_WC_PRIVATE_H
 #define SVN_WC_PRIVATE_H
 
+#include "svn_subst.h"
 #include "svn_types.h"
+#include "svn_version.h"
 #include "svn_wc.h"
+#include "private/svn_diff_tree.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,7 +58,14 @@ svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
                          apr_pool_t *scratch_pool);
 
 /* Like svn_wc_get_update_editorX and svn_wc_get_status_editorX, but only
-   allows updating a file external LOCAL_ABSPATH */
+   allows updating a file external LOCAL_ABSPATH.
+
+   Since this only deals with files, the WCROOT_IPROPS argument in
+   svn_wc_get_update_editorX and svn_wc_get_status_editorX (hashes mapping
+   const char * absolute working copy paths, which are working copy roots, to
+   depth-first ordered arrays of svn_prop_inherited_item_t * structures) is
+   simply IPROPS here, a depth-first ordered arrays of
+   svn_prop_inherited_item_t * structs. */
 svn_error_t *
 svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  void **edit_baton,
@@ -66,6 +76,7 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  const char *url,
                                  const char *repos_root_url,
                                  const char *repos_uuid,
+                                 apr_array_header_t *iprops,
                                  svn_boolean_t use_commit_times,
                                  const char *diff3_cmd,
                                  const apr_array_header_t *preserved_exts,
@@ -145,8 +156,8 @@ typedef struct svn_wc__committable_external_info_t {
    * from. */
   const char *repos_root_url;
 
-  /* Set to either svn_kind_file or svn_kind_dir. */
-  svn_kind_t kind;
+  /* Set to either svn_node_file or svn_node_dir. */
+  svn_node_kind_t kind;
 
 } svn_wc__committable_external_info_t;
 
@@ -293,6 +304,12 @@ svn_wc__get_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
 /** Record the tree conflict described by @a conflict in the WC for
  * @a conflict->local_abspath.  Use @a scratch_pool for all temporary
  * allocations.
+ *
+ * Returns an SVN_ERR_WC_PATH_UNEXPECTED_STATUS error when
+ * CONFLICT->LOCAL_ABSPATH is already tree conflicted.
+ *
+ * ### This function can't set moved_away, moved_here conflicts for
+ *     any operation, except merges.
  */
 svn_error_t *
 svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
@@ -309,32 +326,51 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *scratch_pool);
 
-/** Like svn_wc_is_wc_root(), but it doesn't consider switched subdirs or
+/** Check whether LOCAL_ABSPATH has a parent directory that knows about its
+ * existence. Set *IS_WCROOT to FALSE if a parent is found, and to TRUE
+ * if there is no such parent.
+ *
+ * Like svn_wc_is_wc_root2(), but doesn't consider switched subdirs or
  * deleted entries as working copy roots.
  */
 svn_error_t *
-svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            apr_pool_t *scratch_pool);
+svn_wc__is_wcroot(svn_boolean_t *is_wcroot,
+                  svn_wc_context_t *wc_ctx,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool);
 
 
 /** Set @a *wcroot_abspath to the local abspath of the root of the
  * working copy in which @a local_abspath resides.
  */
 svn_error_t *
-svn_wc__get_wc_root(const char **wcroot_abspath,
-                    svn_wc_context_t *wc_ctx,
-                    const char *local_abspath,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool);
+svn_wc__get_wcroot(const char **wcroot_abspath,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
+
+/** Set @a *dir to the abspath of the directory in which administrative
+ * data for experimental features may be stored. This directory is inside
+ * the WC's administrative directory. Ensure the directory exists.
+ *
+ * @a local_abspath is any path in the WC, and is used to find the WC root.
+ *
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_wc__get_experimental_dir(char **dir,
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 /**
  * The following are temporary APIs to aid in the transition from wc-1 to
  * wc-ng.  Use them for new development now, but they may be disappearing
  * before the 1.7 release.
  */
-
 
 /*
  * Convert from svn_wc_conflict_description2_t to
@@ -351,7 +387,11 @@ svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
 /*
  * Convert from svn_wc_status3_t to svn_wc_status2_t.
  * Allocate the result in RESULT_POOL.
+ *
+ * Deprecated because svn_wc_status2_t is deprecated and the only
+ * calls are from other deprecated functions.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc__status2_from_3(svn_wc_status2_t **status,
                        const svn_wc_status3_t *old_status,
@@ -360,20 +400,18 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
-
 /**
  * Set @a *children to a new array of the immediate children of the working
  * node at @a dir_abspath.  The elements of @a *children are (const char *)
  * absolute paths.
  *
- * Include children that are scheduled for deletion.  Iff @a show_hidden
- * is true, also include children that are 'excluded' or 'server-excluded' or
- * 'not-present'.
+ * Include children that are scheduled for deletion, but not those that
+ * are excluded, server-excluded or not-present.
  *
  * Return every path that refers to a child of the working node at
  * @a dir_abspath.  Do not include a path just because it was a child of a
  * deleted directory that existed at @a dir_abspath if that directory is now
- * sheduled to be replaced by the working node at @a dir_abspath.
+ * scheduled to be replaced by the working node at @a dir_abspath.
  *
  * Allocate @a *children in @a result_pool.  Use @a wc_ctx to access the
  * working copy, and @a scratch_pool for all temporary allocations.
@@ -382,55 +420,42 @@ svn_error_t *
 svn_wc__node_get_children_of_working_node(const apr_array_header_t **children,
                                           svn_wc_context_t *wc_ctx,
                                           const char *dir_abspath,
-                                          svn_boolean_t show_hidden,
                                           apr_pool_t *result_pool,
                                           apr_pool_t *scratch_pool);
 
 /**
- * Like svn_wc__node_get_children_of_working_node(), except also include any
- * path that was a child of a deleted directory that existed at
- * @a dir_abspath, even if that directory is now scheduled to be replaced by
- * the working node at @a dir_abspath.
+ * Gets the immediate 'not-present' children of a node.
+ *
+ * #### Needed during 'svn cp WC URL' to handle mixed revision cases
  */
 svn_error_t *
-svn_wc__node_get_children(const apr_array_header_t **children,
-                          svn_wc_context_t *wc_ctx,
-                          const char *dir_abspath,
-                          svn_boolean_t show_hidden,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
-
+svn_wc__node_get_not_present_children(const apr_array_header_t **children,
+                                      svn_wc_context_t *wc_ctx,
+                                      const char *dir_abspath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
 
 /**
- * Fetch the repository root information for the working version
- * of the node at @a local_abspath into @a *repos_root_url
- * and @a *repos_uuid. Use @a wc_ctx to access the working copy
- * for @a local_abspath, @a scratch_pool for all temporary allocations,
- * @a result_pool for result allocations. Note: the results will be NULL if
- * the node does not exist or is not under version control. If the node is
- * locally added, return the repository root it will have if committed.
+ * Fetch the repository information for the working version
+ * of the node at @a local_abspath into @a *revision, @a *repos_relpath,
+ * @a *repos_root_url and @a *repos_uuid. Use @a wc_ctx to access the working
+ * copy. Allocate results in @a result_pool.
  *
- * Either output argument may be NULL, indicating no interest.
+ * @a *revision will be set to SVN_INVALID_REVNUM for any shadowed node (including
+ * added and deleted nodes). All other output values will be set to the current
+ * values or those they would have after a commit.
+ *
+ * All output argument may be NULL, indicating no interest.
  */
 svn_error_t *
-svn_wc__node_get_repos_info(const char **repos_root_url,
+svn_wc__node_get_repos_info(svn_revnum_t *revision,
+                            const char **repos_relpath,
+                            const char **repos_root_url,
                             const char **repos_uuid,
                             svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
-
-
-
-/**
- * Get the depth of @a local_abspath using @a wc_ctx.  If @a local_abspath is
- * not in the working copy, return @c SVN_ERR_WC_PATH_NOT_FOUND.
- */
-svn_error_t *
-svn_wc__node_get_depth(svn_depth_t *depth,
-                       svn_wc_context_t *wc_ctx,
-                       const char *local_abspath,
-                       apr_pool_t *scratch_pool);
 
 /**
  * Get the changed revision, date and author for @a local_abspath using @a
@@ -479,6 +504,8 @@ svn_wc__node_get_url(const char **url,
  * If not NULL, sets @a revision, @a repos_relpath, @a repos_root_url and
  * @a repos_uuid to the original (if a copy) or their current values.
  *
+ * If not NULL, set @a depth, to the recorded depth on @a local_abspath.
+ *
  * If @a copy_root_abspath is not NULL, and @a *is_copy indicates that the
  * node was copied, set @a *copy_root_abspath to the local absolute path of
  * the root of the copied subtree containing the node. If the copied node is
@@ -497,6 +524,7 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
                         const char **repos_relpath,
                         const char **repos_root_url,
                         const char **repos_uuid,
+                        svn_depth_t *depth,
                         const char **copy_root_abspath,
                         svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
@@ -504,87 +532,29 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
-
 /**
- * Set @a *repos_relpath to the corresponding repos_relpath for @a
- * local_abspath, using @a wc_ctx. If the node is added, return the
- * repos_relpath it will have in the repository.
+ * Set @a *not_present to TRUE when @a local_abspath has status
+ * svn_wc__db_status_not_present. Set @a *user_excluded to TRUE when
+ * @a local_abspath has status svn_wc__db_status_excluded. Set
+ * @a *server_excluded to TRUE when @a local_abspath has status
+ * svn_wc__db_status_server_excluded. Otherwise set these values to FALSE.
+ * If @a base_only is TRUE then only the base node will be examined,
+ * otherwise the current base or working node will be examined.
  *
- * If @a local_abspath is not in the working copy, return @c
- * SVN_ERR_WC_PATH_NOT_FOUND.
- * */
-svn_error_t *
-svn_wc__node_get_repos_relpath(const char **repos_relpath,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
-
-/**
- * Set @a *is_deleted to TRUE if @a local_abspath is deleted, using
- * @a wc_ctx.  If @a local_abspath is not in the working copy, return
- * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
- * allocations.
- */
-svn_error_t *
-svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool);
-
-/**
- * Set @a *deleted_ancestor_abspath to the root of the delete operation
- * that deleted @a local_abspath. If @a local_abspath itself was deleted
- * and has no deleted ancestor, @a *deleted_ancestor_abspath will equal
- * @a local_abspath. If @a local_abspath was not deleted,
- * set @a *deleted_ancestor_abspath to @c NULL.
- * @a *deleted_ancestor_abspath is allocated in @a result_pool.
- * Use @a scratch_pool for all temporary allocations.
- */
-svn_error_t *
-svn_wc__node_get_deleted_ancestor(const char **deleted_ancestor_abspath,
-                                  svn_wc_context_t *wc_ctx,
-                                  const char *local_abspath,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
-
-/**
- * Set @a *is_server_excluded to whether @a local_abspath has been
- * excluded by the server, using @a wc_ctx.  If @a local_abspath is not
- * in the working copy, return @c SVN_ERR_WC_PATH_NOT_FOUND.
- * Use @a scratch_pool for all temporary allocations.
- */
-svn_error_t *
-svn_wc__node_is_status_server_excluded(svn_boolean_t *is_server_excluded,
-                                       svn_wc_context_t *wc_ctx,
-                                       const char *local_abspath,
-                                       apr_pool_t *scratch_pool);
-
-/**
- * Set @a *is_not_present to whether the status of @a local_abspath is
- * #svn_wc__db_status_not_present, using @a wc_ctx.
+ * If a value is not interesting you can pass NULL.
+ *
  * If @a local_abspath is not in the working copy, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
  * allocations.
  */
 svn_error_t *
-svn_wc__node_is_status_not_present(svn_boolean_t *is_not_present,
-                                   svn_wc_context_t *wc_ctx,
-                                   const char *local_abspath,
-                                   apr_pool_t *scratch_pool);
-
-/**
- * Set @a *is_excluded to whether the status of @a local_abspath is
- * #svn_wc__db_status_excluded, using @a wc_ctx.
- * If @a local_abspath is not in the working copy, return
- * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
- * allocations.
- */
-svn_error_t *
-svn_wc__node_is_status_excluded(svn_boolean_t *is_excluded,
-                                   svn_wc_context_t *wc_ctx,
-                                   const char *local_abspath,
-                                   apr_pool_t *scratch_pool);
+svn_wc__node_is_not_present(svn_boolean_t *not_present,
+                            svn_boolean_t *user_excluded,
+                            svn_boolean_t *server_excluded,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            svn_boolean_t base_only,
+                            apr_pool_t *scratch_pool);
 
 /**
  * Set @a *is_added to whether @a local_abspath is added, using
@@ -620,14 +590,15 @@ svn_wc__node_has_working(svn_boolean_t *has_working,
 /**
  * Get the repository location of the base node at @a local_abspath.
  *
- * Set *REVISION, *REPOS_RELPATH, *REPOS_ROOT_URL and *REPOS_UUID to the
- * location that this node was checked out at or last updated/switched to,
- * regardless of any uncommitted changes (delete, replace and/or
- * copy-here/move-here).
+ * Set *REVISION, *REPOS_RELPATH, *REPOS_ROOT_URL *REPOS_UUID and *LOCK_TOKEN
+ * to the location that this node was checked out at or last updated/switched
+ * to, regardless of any uncommitted changes (delete, replace and/or copy-here/
+ * move-here).
  *
- * If there is no base node at @a local_abspath (such as when there is a
- * locally added/copied/moved-here node that is not part of a replace),
- * return @c SVN_INVALID_REVNUM/NULL/NULL/NULL.
+ * If there is no BASE node at @a local_abspath or if @a show_hidden is FALSE,
+ * no status 'normal' or 'incomplete' BASE node report
+ * SVN_ERR_WC_PATH_NOT_FOUND, or if @a ignore_enoent is TRUE, @a kind
+ * svn_node_unknown, @a revision SVN_INVALID_REVNUM and all other values NULL.
  *
  * All output arguments may be NULL.
  *
@@ -635,15 +606,54 @@ svn_wc__node_has_working(svn_boolean_t *has_working,
  * @a scratch_pool.
  */
 svn_error_t *
-svn_wc__node_get_base(svn_revnum_t *revision,
+svn_wc__node_get_base(svn_node_kind_t *kind,
+                      svn_revnum_t *revision,
                       const char **repos_relpath,
                       const char **repos_root_url,
                       const char **repos_uuid,
+                      const char **lock_token,
                       svn_wc_context_t *wc_ctx,
                       const char *local_abspath,
+                      svn_boolean_t ignore_enoent,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
+
+/* Return an array of const char * elements, which represent local absolute
+ * paths for nodes, within the working copy indicated by WRI_ABSPATH, which
+ * have a basename matching BASENAME and have node kind KIND.
+ * If no such nodes exist, return an empty array.
+ *
+ * This function returns only paths to nodes which are present in the highest
+ * layer of the WC. In other words, paths to deleted and/or excluded nodes are
+ * never returned.
+ */
+svn_error_t *
+svn_wc__find_working_nodes_with_basename(apr_array_header_t **abspaths,
+                                         const char *wri_abspath,
+                                         const char *basename,
+                                         svn_node_kind_t kind,
+                                         svn_wc_context_t *wc_ctx,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
+
+/* Return an array of const char * elements, which represent local absolute
+ * paths for nodes, within the working copy indicated by WRI_ABSPATH, which
+ * are copies of REPOS_RELPATH and have node kind KIND.
+ * If no such nodes exist, return an empty array.
+ *
+ * This function returns only paths to nodes which are present in the highest
+ * layer of the WC. In other words, paths to deleted and/or excluded nodes are
+ * never returned.
+ */
+svn_error_t *
+svn_wc__find_copies_of_repos_path(apr_array_header_t **abspaths,
+                                  const char *wri_abspath,
+                                  const char *repos_relpath,
+                                  svn_node_kind_t kind,
+                                  svn_wc_context_t *wc_ctx,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /* Get the working revision of @a local_abspath using @a wc_ctx. If @a
  * local_abspath is not in the working copy, return @c
@@ -677,59 +687,6 @@ svn_wc__node_get_pre_ng_status_data(svn_revnum_t *revision,
                                     const char *local_abspath,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
-
-
-/**
- * Return the location of the base for this node's next commit,
- * reflecting any local tree modifications affecting this node.
- *
- * Get the base location of @a local_abspath using @a wc_ctx.  If @a
- * local_abspath is not in the working copy, return @c
- * SVN_ERR_WC_PATH_NOT_FOUND.
- *
- * If this node has no uncommitted changes, return the same location as
- * svn_wc__node_get_base().
- *
- * If this node is moved-here or copied-here (possibly as part of a replace),
- * return the location of the copy/move source. Do the same even when the node
- * has been removed from a recursive copy (subpath excluded from the copy).
- *
- * Else, if this node is locally added, return SVN_INVALID_REVNUM/NULL, or
- * if locally deleted or replaced, return the revert-base location.
- */
-svn_error_t *
-svn_wc__node_get_commit_base(svn_revnum_t *revision,
-                             const char **repos_relpath,
-                             const char **repos_root_url,
-                             const char **repos_uuid,
-                             svn_wc_context_t *wc_ctx,
-                             const char *local_abspath,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
-
-/**
- * Fetch lock information (if any) for @a local_abspath using @a wc_ctx:
- *
- *   Set @a *lock_token to the lock token (or NULL)
- *   Set @a *lock_owner to the owner of the lock (or NULL)
- *   Set @a *lock_comment to the comment associated with the lock (or NULL)
- *   Set @a *lock_date to the timestamp of the lock (or 0)
- *
- * Any of the aforementioned return values may be NULL to indicate
- * that the caller doesn't care about those values.
- *
- * If @a local_abspath is not in the working copy, return @c
- * SVN_ERR_WC_PATH_NOT_FOUND.
- */
-svn_error_t *
-svn_wc__node_get_lock_info(const char **lock_token,
-                           const char **lock_owner,
-                           const char **lock_comment,
-                           apr_time_t *lock_date,
-                           svn_wc_context_t *wc_ctx,
-                           const char *local_abspath,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
 
 /**
  * Acquire a recursive write lock for @a local_abspath.  If @a lock_anchor
@@ -823,20 +780,6 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
   } while (0)
 
 
-/**
- * Calculates the schedule and copied status of a node as that would
- * have been stored in an svn_wc_entry_t instance.
- *
- * If not @c NULL, @a schedule and @a copied are set to their calculated
- * values.
- */
-svn_error_t *
-svn_wc__node_get_schedule(svn_wc_schedule_t *schedule,
-                          svn_boolean_t *copied,
-                          svn_wc_context_t *wc_ctx,
-                          const char *local_abspath,
-                          apr_pool_t *scratch_pool);
-
 /** A callback invoked by svn_wc__prop_list_recursive().
  * It is equivalent to svn_proplist_receiver_t declared in svn_client.h,
  * but kept private within the svn_wc__ namespace because it is used within
@@ -885,6 +828,30 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool);
 
+/**
+ * Set @a *inherited_props to a depth-first ordered array of
+ * #svn_prop_inherited_item_t * structures representing the properties
+ * inherited by @a local_abspath from the ACTUAL tree above
+ * @a local_abspath (looking through to the WORKING or BASE tree as
+ * required), up to and including the root of the working copy and
+ * any cached inherited properties inherited by the root.
+ *
+ * The #svn_prop_inherited_item_t->path_or_url members of the
+ * #svn_prop_inherited_item_t * structures in @a *inherited_props are
+ * paths relative to the repository root URL for cached inherited
+ * properties and absolute working copy paths otherwise.
+ *
+ * Allocate @a *inherited_props in @a result_pool.  Use @a scratch_pool
+ * for temporary allocations.
+ */
+svn_error_t *
+svn_wc__get_iprops(apr_array_header_t **inherited_props,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   const char *propname,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
+
 /** Obtain a mapping of const char * local_abspaths to const svn_string_t*
  * property values in *VALUES, of all PROPNAME properties on LOCAL_ABSPATH
  * and its descendants.
@@ -899,6 +866,24 @@ svn_wc__prop_retrieve_recursive(apr_hash_t **values,
                                 const char *propname,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
+
+/**
+ * Set @a *iprops_paths to a hash mapping const char * absolute working
+ * copy paths to the nodes repository root relative path for each path
+ * in the working copy at or below @a local_abspath, limited by @a depth,
+ * that has cached inherited properties for the base node of the path.
+ *
+ * Allocate @a *iprop_paths
+ * in @a result_pool.  Use @a scratch_pool for temporary allocations.
+ */
+svn_error_t *
+svn_wc__get_cached_iprop_children(apr_hash_t **iprop_paths,
+                                  svn_depth_t depth,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
 
 /**
  * For use by entries.c and entries-dump.c to read old-format working copies.
@@ -934,7 +919,7 @@ svn_wc__node_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
 /* Set @a *min_revision and @a *max_revision to the lowest and highest revision
  * numbers found within @a local_abspath, using context @a wc_ctx.
  * If @a committed is TRUE, set @a *min_revision and @a *max_revision
- * to the lowest and highest comitted (i.e. "last changed") revision numbers,
+ * to the lowest and highest committed (i.e. "last changed") revision numbers,
  * respectively. Use @a scratch_pool for temporary allocations.
  *
  * Either of MIN_REVISION and MAX_REVISION may be passed as NULL if
@@ -988,15 +973,17 @@ svn_wc__get_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
 
 /* Indicate in @a *is_modified whether the working copy has local
  * modifications, using context @a wc_ctx.
- * Use @a scratch_pool for temporary allocations.
  *
- * This function provides a subset of the functionality of
- * svn_wc_revision_status2() and is more efficient if the caller
- * doesn't need all information returned by svn_wc_revision_status2(). */
+ * If IGNORE_UNVERSIONED, unversioned paths inside the tree rooted by
+ * LOCAL_ABSPATH are not seen as a change, otherwise they are.
+ * (svn:ignored paths are always ignored)
+ *
+ * Use @a scratch_pool for temporary allocations. */
 svn_error_t *
 svn_wc__has_local_mods(svn_boolean_t *is_modified,
                        svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
+                       svn_boolean_t ignore_unversioned,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool);
@@ -1054,7 +1041,7 @@ svn_wc__node_get_md5_from_sha1(const svn_checksum_t **md5_checksum,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* Like svn_wc_get_pristine_contents2(), but keyed on the CHECKSUM
+/* Like svn_wc_get_pristine_contents3(), but keyed on the CHECKSUM
    rather than on the local absolute path of the working file.
    WRI_ABSPATH is any versioned path of the working copy in whose
    pristine database we'll be looking for these contents.  */
@@ -1095,13 +1082,16 @@ svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
  * If KIND is not NULL, set *KIND to the kind of node registered in the working
  * copy, or SVN_NODE_NONE if the node doesn't
  *
- * If ADDED is not NULL, set *ADDED to TRUE if the node is added. (Addition,
- * copy or moved).
- *
  * If DELETED is not NULL, set *DELETED to TRUE if the node is marked as
  * deleted in the working copy.
  *
- * All output arguments except OBSTRUCTION_STATE can be NULL to ommit the
+ * If EXCLUDED is not NULL, set *EXCLUDED to TRUE if the node is marked as
+ * user or server excluded.
+ *
+ * If PARENT_DEPTH is not NULL, set *PARENT_DEPTH to the depth stored on the
+ * parent. (Set to svn_depth_unknown if LOCAL_ABSPATH itself exists as node)
+ *
+ * All output arguments except OBSTRUCTION_STATE can be NULL to omit the
  * result.
  *
  * This function performs temporary allocations in SCRATCH_POOL.
@@ -1109,8 +1099,9 @@ svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
 svn_error_t *
 svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
                                svn_node_kind_t *kind,
-                               svn_boolean_t *added,
                                svn_boolean_t *deleted,
+                               svn_boolean_t *excluded,
+                               svn_depth_t *parent_depth,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
                                svn_boolean_t no_wcroot_check,
@@ -1199,25 +1190,14 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool);
 
-/* Internal version of svn_wc_delete4(). It has one additional parameter,
- * MOVED_TO_ABSPATH. If not NULL, this parameter indicates that the
- * delete operation is the delete-half of a move. */
-svn_error_t *
-svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
-                        const char *local_abspath,
-                        svn_boolean_t keep_local,
-                        svn_boolean_t delete_unversioned_target,
-                        const char *moved_to_abspath,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        svn_wc_notify_func2_t notify_func,
-                        void *notify_baton,
-                        apr_pool_t *scratch_pool);
-
-
 /* Alternative version of svn_wc_delete4().
  * It can delete multiple TARGETS more efficiently (within a single sqlite
- * transaction per working copy), but lacks support for moves. */
+ * transaction per working copy), but lacks support for moves.
+ *
+ * ### Inconsistency: if DELETE_UNVERSIONED_TARGET is FALSE and a target is
+ *     unversioned, svn_wc__delete_many() will continue whereas
+ *     svn_wc_delete4() will throw an error.
+ */
 svn_error_t *
 svn_wc__delete_many(svn_wc_context_t *wc_ctx,
                     const apr_array_header_t *targets,
@@ -1311,6 +1291,44 @@ svn_wc__resolve_relative_external_url(const char **resolved_url,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
 
+typedef enum svn_wc__external_description_format_t
+{
+  /* LOCALPATH [-r PEG] URL */
+  svn_wc__external_description_format_1 = 0,
+
+  /* [-r REV] URL[@PEG] LOCALPATH, introduced in Subversion 1.5 */
+  svn_wc__external_description_format_2
+} svn_wc__external_description_format_t;
+
+/* Additional information about what the external's parser has parsed. */
+typedef struct svn_wc__externals_parser_info_t
+{
+  /* The syntax format used by the external description. */
+  svn_wc__external_description_format_t format;
+
+  /* The string used for defining the operative revision, i.e.
+     "-rN", "-rHEAD", or "-r{DATE}".
+     NULL if revision was not given. */
+  const char *rev_str;
+
+  /* The string used for defining the peg revision (equals rev_str in
+     format 1, is "@N", or "@HEAD" or "@{DATE}" in format 2).
+     NULL if peg revision was not given. */
+  const char *peg_rev_str;
+
+} svn_wc__externals_parser_info_t;
+
+/* Like svn_wc_parse_externals_description3() but returns an additional array
+ * with elements of type svn_wc__externals_parser_info_t in @a *parser_infos_p.
+ * @a parser_infos_p may be NULL if not required by the caller.
+ */
+svn_error_t *
+svn_wc__parse_externals_description(apr_array_header_t **externals_p,
+                                    apr_array_header_t **parser_infos_p,
+                                    const char *defining_directory,
+                                    const char *desc,
+                                    svn_boolean_t canonicalize_url,
+                                    apr_pool_t *pool);
 
 /**
  * Set @a *editor and @a *edit_baton to an editor that generates
@@ -1335,8 +1353,8 @@ svn_wc__resolve_relative_external_url(const char **resolved_url,
  *
  * Assuming the target is a directory, then:
  *
- *   - If @a get_all is FALSE, then only locally-modified entries will be
- *     returned.  If TRUE, then all entries will be returned.
+ *   - If @a get_all is @c FALSE, then only locally-modified entries will be
+ *     returned.  If @c TRUE, then all entries will be returned.
  *
  *   - If @a depth is #svn_depth_empty, a status structure will
  *     be returned for the target only; if #svn_depth_files, for the
@@ -1350,6 +1368,9 @@ svn_wc__resolve_relative_external_url(const char **resolved_url,
  *
  *     If the given @a depth is incompatible with the depth found in a
  *     working copy directory, the found depth always governs.
+ *
+ * If @a check_working_copy is not set, do not scan the working copy
+ * for local modifications, taking only the BASE tree into account.
  *
  * If @a no_ignore is set, statuses that would typically be ignored
  * will instead be reported.
@@ -1385,6 +1406,7 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
                           const char *target_basename,
                           svn_depth_t depth,
                           svn_boolean_t get_all,
+                          svn_boolean_t check_working_copy,
                           svn_boolean_t no_ignore,
                           svn_boolean_t depth_as_sticky,
                           svn_boolean_t server_performs_filtering,
@@ -1438,6 +1460,15 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
  * successful completion of the drive of this editor, will be
  * populated with the revision to which the working copy was updated.
  *
+ * @a wcroot_iprops is a hash mapping const char * absolute working copy
+ * paths which are working copy roots (at or under the target within the
+ * constraints dictated by @a depth) to depth-first ordered arrays of
+ * svn_prop_inherited_item_t * structures which represent the inherited
+ * properties for the base of those paths at @a target_revision.  After a
+ * successful drive of this editor, the base nodes for these paths will
+ * have their inherited properties cache updated with the values from
+ * @a wcroot_iprops.
+ *
  * If @a use_commit_times is TRUE, then all edited/added files will
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
@@ -1466,6 +1497,10 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
  *
+ * If @a clean_checkout is TRUE, assume that we are checking out into an
+ * empty directory, and so bypass a number of conflict checks that are
+ * unnecessary in this case.
+ *
  * If @a fetch_dirents_func is not NULL, the update editor may call this
  * callback, when asked to perform a depth restricted update. It will do this
  * before returning the editor to allow using the primary ra session for this.
@@ -1479,6 +1514,7 @@ svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                           svn_wc_context_t *wc_ctx,
                           const char *anchor_abspath,
                           const char *target_basename,
+                          apr_hash_t *wcroot_iprops,
                           svn_boolean_t use_commit_times,
                           svn_depth_t depth,
                           svn_boolean_t depth_is_sticky,
@@ -1522,6 +1558,7 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                           const char *anchor_abspath,
                           const char *target_basename,
                           const char *switch_url,
+                          apr_hash_t *wcroot_iprops,
                           svn_boolean_t use_commit_times,
                           svn_depth_t depth,
                           svn_boolean_t depth_is_sticky,
@@ -1559,14 +1596,18 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
  * Diffs will be reported as valid relpaths, with @a anchor_abspath being
  * the root ("").
  *
- * @a callbacks/@a callback_baton is the callback table to use.
+ * @a diff_processor will retrieve the diff report.
  *
  * If @a depth is #svn_depth_empty, just diff exactly @a target or
  * @a anchor_path if @a target is empty.  If #svn_depth_files then do the same
  * and for top-level file entries as well (if any).  If
  * #svn_depth_immediates, do the same as #svn_depth_files but also diff
  * top-level subdirectories at #svn_depth_empty.  If #svn_depth_infinity,
- * then diff fully recursively.
+ * then diff fully recursively. If @a depth is #svn_depth_unknown, then...
+ *
+ *   ### ... then the @a server_performs_filtering option is meaningful.
+ *   ### But what does this depth mean exactly? Something about 'ambient'
+ *   ### depth? How does it compare with depth 'infinity'?
  *
  * @a ignore_ancestry determines whether paths that have discontinuous node
  * ancestry are treated as delete/add or as simple modifications.  If
@@ -1581,8 +1622,12 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
  * if they weren't modified after being copied. This allows the callbacks
  * to generate appropriate --git diff headers for such files.
  *
- * Normally, the difference from repository->working_copy is shown.
- * If @a reverse_order is TRUE, then show working_copy->repository diffs.
+ * Normally, the difference from repository->working_copy is shown. If
+ * @a reverse_order is TRUE, then we want to show working_copy->repository
+ * diffs. Most of the reversal is done by the caller; here we just swap the
+ * order of reporting a replacement so that the local addition is reported
+ * before the remote delete. (The caller's diff processor can then transform
+ * adds into deletes and deletes into adds, but it can't reorder the output.)
  *
  * If @a cancel_func is non-NULL, it will be used along with @a cancel_baton
  * to periodically check if the client has canceled the operation.
@@ -1593,9 +1638,28 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
  * it's a member of one of those changelists.  If @a changelist_filter is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
-  * If @a server_performs_filtering is TRUE, assume that the server handles
+ * If @a server_performs_filtering is TRUE, assume that the server handles
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
+ *
+ *
+ * A diagram illustrating how this function is used.
+ *
+ *   Steps 1 and 2 create the chain; step 3 drives it.
+ *
+ *   1.                    svn_wc__get_diff_editor(diff_cbs)
+ *                                       |           ^
+ *   2.         svn_ra_do_diff3(editor)  |           |
+ *                    |           ^      |           |
+ *                    v           |      v           |
+ *           +----------+       +----------+       +----------+
+ *           |          |       |          |       |          |
+ *      +--> | reporter | ----> |  editor  | ----> | diff_cbs | ----> text
+ *      |    |          |       |          |       |          |       out
+ *      |    +----------+       +----------+       +----------+
+ *      |
+ *   3. svn_wc_crawl_revisions6(WC,reporter)
+ *
  *
  * @since New in 1.8.
  */
@@ -1607,23 +1671,70 @@ svn_wc__get_diff_editor(const svn_delta_editor_t **editor,
                         const char *target,
                         svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
-                        svn_boolean_t show_copies_as_adds,
-                        svn_boolean_t use_git_diff_format,
                         svn_boolean_t use_text_base,
                         svn_boolean_t reverse_order,
                         svn_boolean_t server_performs_filtering,
                         const apr_array_header_t *changelist_filter,
-                        const svn_wc_diff_callbacks4_t *callbacks,
-                        void *callback_baton,
+                        const svn_diff_tree_processor_t *diff_processor,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+/** Callback for the svn_diff_tree_processor_t wrapper, to allow handling
+ *  notifications like how the repos diff in libsvn_client does.
+ *
+ * Probably only necessary while transitioning to svn_diff_tree_processor_t
+ */
+typedef svn_error_t *
+        (*svn_wc__diff_state_handle_t)(svn_boolean_t tree_conflicted,
+                                       svn_wc_notify_state_t *state,
+                                       svn_wc_notify_state_t *prop_state,
+                                       const char *relpath,
+                                       svn_node_kind_t kind,
+                                       svn_boolean_t before_op,
+                                       svn_boolean_t for_add,
+                                       svn_boolean_t for_delete,
+                                       void *state_baton,
+                                       apr_pool_t *scratch_pool);
+
+/** Callback for the svn_diff_tree_processor_t wrapper, to allow handling
+ *  notifications like how the repos diff in libsvn_client does.
+ *
+ * Probably only necessary while transitioning to svn_diff_tree_processor_t
+ */
+typedef svn_error_t *
+        (*svn_wc__diff_state_close_t)(const char *relpath,
+                                      svn_node_kind_t kind,
+                                      void *state_baton,
+                                      apr_pool_t *scratch_pool);
+
+/** Callback for the svn_diff_tree_processor_t wrapper, to allow handling
+ *  absent nodes.
+ *
+ * Probably only necessary while transitioning to svn_diff_tree_processor_t
+ */
+typedef svn_error_t *
+        (*svn_wc__diff_state_absent_t)(const char *relpath,
+                                       void *state_baton,
+                                       apr_pool_t *scratch_pool);
+
+/** Obtains a diff processor that will drive the diff callbacks when it
+ * is invoked.
+ */
+svn_error_t *
+svn_wc__wrap_diff_callbacks(const svn_diff_tree_processor_t **diff_processor,
+                            const svn_wc_diff_callbacks4_t *callbacks,
+                            void *callback_baton,
+                            svn_boolean_t walk_deleted_dirs,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+
 /**
  * Assuming @a local_abspath itself or any of its children are under version
  * control or a tree conflict victim and in a state of conflict, take these
- * nodes out of this state. 
+ * nodes out of this state.
  *
  * If @a resolve_text is TRUE then any text conflict is resolved,
  * if @a resolve_tree is TRUE then any tree conflicts are resolved.
@@ -1690,6 +1801,562 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
                           apr_pool_t *scratch_pool);
+
+/**
+ * Resolve the text conflict at LOCAL_ABSPATH as per CHOICE, and then
+ * mark the conflict resolved.
+ * The working copy must already be locked for resolving, e.g. by calling
+ * svn_wc__acquire_write_lock_for_resolve() first.
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_wc__conflict_text_mark_resolved(svn_wc_context_t *wc_ctx,
+                                    const char *local_abspath,
+                                    svn_wc_conflict_choice_t choice,
+                                    svn_cancel_func_t cancel_func,
+                                    void *cancel_baton,
+                                    svn_wc_notify_func2_t notify_func,
+                                    void *notify_baton,
+                                    apr_pool_t *scratch_pool);
+
+/**
+ * Resolve the conflicted property PROPNAME at LOCAL_ABSPATH as per CHOICE,
+ * and then mark the conflict resolved.  If MERGED_VALUE is not NULL, this is
+ * the new merged property, used when choosing #svn_wc_conflict_choose_merged.
+ *
+ * The working copy must already be locked for resolving, e.g. by calling
+ * svn_wc__acquire_write_lock_for_resolve() first.
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_wc__conflict_prop_mark_resolved(svn_wc_context_t *wc_ctx,
+                                    const char *local_abspath,
+                                    const char *propname,
+                                    svn_wc_conflict_choice_t choice,
+                                    const svn_string_t *merged_value,
+                                    svn_wc_notify_func2_t notify_func,
+                                    void *notify_baton,
+                                    apr_pool_t *scratch_pool);
+
+/* Resolve a tree conflict where the victim at LOCAL_ABSPATH is a directory
+ * which was locally deleted, replaced or moved away, and which received an
+ * arbitrary incoming change during an update or switch operation.
+ *
+ * The conflict is resolved by accepting the current working copy state and
+ * breaking the 'moved-here' link for any files or directories which were
+ * moved out of the victim directory before the update operation.
+ * As a result, any such files or directories become copies (rather than moves)
+ * of content which the victim directory contained before it was updated.
+ *
+ * The tree conflict at LOCAL_ABSPATH must have the following properties or
+ * SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE will be returned:
+ *
+ * operation: svn_wc_operation_update or svn_wc_operation_switch
+ * local change: svn_wc_conflict_reason_deleted or
+ *               svn_wc_conflict_reason_replaced or
+ *               svn_wc_conflict_reason_moved_away
+ * incoming change: any
+ *
+ * The working copy must already be locked for resolving, e.g. by calling
+ * svn_wc__acquire_write_lock_for_resolve() first.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_wc__conflict_tree_update_break_moved_away(svn_wc_context_t *wc_ctx,
+                                              const char *local_abspath,
+                                              svn_cancel_func_t cancel_func,
+                                              void *cancel_baton,
+                                              svn_wc_notify_func2_t notify_func,
+                                              void *notify_baton,
+                                              apr_pool_t *scratch_pool);
+
+
+/* Resolve a tree conflict where the victim at LOCAL_ABSPATH is a directory
+ * which was locally deleted or replaced, and which received an edit (some
+ * change inside the directory, or a change to the direcotory's properties)
+ * during an update or switch operation.
+ *
+ * The conflict is resolved by keeping the victim deleted, and propagating
+ * its tree conflict to any children which were moved out of the directory
+ * before the update operation.
+ * As a result, any such files or directories become victims of the tree
+ * conflict as well and must be resolved independently.
+ * Additionally, LOCAL_ABSPATH itself may become the victim of a different
+ * tree conflict as a result of resolving the existing tree conflict.
+ *
+ * The tree conflict at LOCAL_ABSPATH must have the following properties or
+ * SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE will be returned:
+ *
+ * operation: svn_wc_operation_update or svn_wc_operation_switch
+ * local change: svn_wc_conflict_reason_deleted or
+ *               svn_wc_conflict_reason_replaced
+ * incoming change: svn_wc_conflict_action_edit
+ *
+ * If this conflict cannot be resolved because the conflict cannot be
+ * propagated to moved-away children, this function returns
+ * SVN_ERR_WC_OBSTRUCTED_UPDATE or SVN_ERR_WC_FOUND_CONFLICT.
+ * The caller should continue by resolving other conflicts and attempt to
+ * resolve this conflict again later.
+ *
+ * The working copy must already be locked for resolving, e.g. by calling
+ * svn_wc__acquire_write_lock_for_resolve() first.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_wc__conflict_tree_update_raise_moved_away(svn_wc_context_t *wc_ctx,
+                                              const char *local_abspath,
+                                              svn_cancel_func_t cancel_func,
+                                              void *cancel_baton,
+                                              svn_wc_notify_func2_t notify_func,
+                                              void *notify_baton,
+                                              apr_pool_t *scratch_pool);
+
+/* Resolve a tree conflict where the victim at LOCAL_ABSPATH is a file or
+ * directory which was locally moved away, and which received an edit (some
+ * change inside the directory or file, or a change to properties) during an
+ * update or switch operation.
+ *
+ * The conflict is resolved by keeping the victim moved-away, and propagating
+ * the incoming edits to the victim's moved-to location.
+ *
+ * The tree conflict at LOCAL_ABSPATH must have the following properties or
+ * SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE will be returned:
+ *
+ * operation: svn_wc_operation_update or svn_wc_operation_switch
+ * local change: svn_wc_conflict_reason_moved_away
+ * incoming change: svn_wc_conflict_action_edit
+ *
+ * If this conflict cannot be resolved this function returns
+ * SVN_ERR_WC_OBSTRUCTED_UPDATE or SVN_ERR_WC_FOUND_CONFLICT.
+ * The caller should continue by resolving other conflicts and attempt to
+ * resolve this conflict again later.
+ *
+ * The working copy must already be locked for resolving, e.g. by calling
+ * svn_wc__acquire_write_lock_for_resolve() first.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_wc__conflict_tree_update_moved_away_node(svn_wc_context_t *wc_ctx,
+                                             const char *local_abspath,
+                                             svn_cancel_func_t cancel_func,
+                                             void *cancel_baton,
+                                             svn_wc_notify_func2_t notify_func,
+                                             void *notify_baton,
+                                             apr_pool_t *scratch_pool);
+
+/* Merge local changes from a tree conflict victim of an incoming deletion
+ * to the specified DEST_ABSPATH added during an update. Both LOCAL_ABSPATH
+ * and DEST_ABSPATH must be directories.
+ *
+ * Assuming DEST_ABSPATH is the correct move destination, this function
+ * allows local changes to "follow" incoming moves during updates.
+ *
+ * @since New in 1.10. */
+svn_error_t *
+svn_wc__conflict_tree_update_incoming_move(svn_wc_context_t *wc_ctx,
+                                           const char *local_abspath,
+                                           const char *dest_abspath,
+                                           svn_cancel_func_t cancel_func,
+                                           void *cancel_baton,
+                                           svn_wc_notify_func2_t notify_func,
+                                           void *notify_baton,
+                                           apr_pool_t *scratch_pool);
+
+/* Resolve a 'local dir add vs incoming dir add' tree conflict upon update
+ * by merging the locally added directory with the incoming added directory.
+ *
+ * @since New in 1.10. */
+svn_error_t *
+svn_wc__conflict_tree_update_local_add(svn_wc_context_t *wc_ctx,
+                                       const char *local_abspath,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
+                                       svn_wc_notify_func2_t notify_func,
+                                       void *notify_baton,
+                                       apr_pool_t *scratch_pool);
+
+/* Find nodes in the working copy which corresponds to the new location
+ * MOVED_TO_REPOS_RELPATH of the tree conflict victim at VICTIM_ABSPATH.
+ * The nodes must be of the same node kind as VICTIM_NODE_KIND.
+ * If no such node can be found, set *POSSIBLE_TARGETS to an empty array.
+ *
+ * The nodes should be useful for conflict resolution, e.g. it should be
+ * possible to merge changes into these nodes to resolve an incoming-move
+ * tree conflict. But the exact criteria for selecting a node are left
+ * to the implementation of this function.
+ * Note that this function may not necessarily return a node which was
+ * actually moved. The only hard guarantee is that the node corresponds to
+ * the repository relpath MOVED_TO_REPOS_RELPATH specified by the caller.
+ * Users should perform a sanity check on the results returned from this
+ * function, e.g. establish whether the MOVED_TO_REPOS_RELPATH at its
+ * current checked-out revision shares ancestry with the conflict victim.
+ */
+svn_error_t *
+svn_wc__guess_incoming_move_target_nodes(apr_array_header_t **possible_targets,
+                                         svn_wc_context_t *wc_ctx,
+                                         const char *victim_abspath,
+                                         svn_node_kind_t victim_node_kind,
+                                         const char *moved_to_repos_relpath,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
+
+/**
+ * Move @a src_abspath to @a dst_abspath, by scheduling @a dst_abspath
+ * for addition to the repository, remembering the history. Mark @a src_abspath
+ * as deleted after moving.@a wc_ctx is used for accessing the working copy and
+ * must contain a write lock for the parent directory of @a src_abspath and
+ * @a dst_abspath.
+ *
+ * If @a metadata_only is TRUE then this is a database-only operation and
+ * the working directories and files are not changed.
+ *
+ * @a src_abspath must be a file or directory under version control;
+ * the parent of @a dst_abspath must be a directory under version control
+ * in the same working copy; @a dst_abspath will be the name of the copied
+ * item, and it must not exist already if @a metadata_only is FALSE.  Note that
+ * when @a src points to a versioned file, the working file doesn't
+ * necessarily exist in which case its text-base is used instead.
+ *
+ * If @a allow_mixed_revisions is @c FALSE, #SVN_ERR_WC_MIXED_REVISIONS
+ * will be raised if the move source is a mixed-revision subtree.
+ * If @a allow_mixed_revisions is TRUE, a mixed-revision move source is
+ * allowed but the move will degrade to a copy and a delete without local
+ * move tracking. This parameter should be set to FALSE except where backwards
+ * compatibility to svn_wc_move() is required.
+ *
+ * If @a cancel_func is non-NULL, call it with @a cancel_baton at
+ * various points during the operation.  If it returns an error
+ * (typically #SVN_ERR_CANCELLED), return that error immediately.
+ *
+ * If @a notify_func is non-NULL, call it with @a notify_baton and the path
+ * of the root node (only) of the destination.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc__move2(svn_wc_context_t *wc_ctx,
+              const char *src_abspath,
+              const char *dst_abspath,
+              svn_boolean_t metadata_only,
+              svn_boolean_t allow_mixed_revisions,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              svn_wc_notify_func2_t notify_func,
+              void *notify_baton,
+              apr_pool_t *scratch_pool);
+
+
+/* During merge when we encounter added directories, we add them using
+   svn_wc_add4(), recording its original location, etc. But at that time
+   we don't have its original properties. This function allows updating the
+   BASE properties of such a special added node, but only before it receives
+   other changes.
+
+   NEW_ORIGINAL_PROPS is a new set of properties, including entry props that
+   will be applied to LOCAL_ABSPATH as pristine properties.
+
+   The copyfrom_* arguments are used to verify (some of) the assumptions of
+   this function */
+svn_error_t *
+svn_wc__complete_directory_add(svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_hash_t *new_original_props,
+                               const char *copyfrom_url,
+                               svn_revnum_t copyfrom_rev,
+                               apr_pool_t *scratch_pool);
+
+
+/* Acquire a write lock on LOCAL_ABSPATH or an ancestor that covers
+   all possible paths affected by resolving the conflicts in the tree
+   LOCAL_ABSPATH.  Set *LOCK_ROOT_ABSPATH to the path of the lock
+   obtained. */
+svn_error_t *
+svn_wc__acquire_write_lock_for_resolve(const char **lock_root_abspath,
+                                       svn_wc_context_t *wc_ctx,
+                                       const char *local_abspath,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool);
+
+/* The implementation of svn_wc_diff7(), but reporting to a diff processor
+ *
+ * New mode, when ANCHOR_AT_GIVEN_PATHS is true:
+ *
+ *   Anchor the DIFF_PROCESSOR at LOCAL_ABSPATH.
+ *
+ * Backward compatibility mode for svn_wc_diff7(),
+ * when ANCHOR_AT_GIVEN_PATHS is false:
+ *
+ *   Send diff processor relpaths relative to LOCAL_ABSPATH if it is a
+ *   directory; otherwise, relative to the parent of LOCAL_ABSPATH.
+ *   This matches the "anchor and target" semantics of svn_wc_diff7().
+ */
+svn_error_t *
+svn_wc__diff7(svn_boolean_t anchor_at_given_paths,
+              svn_wc_context_t *wc_ctx,
+              const char *local_abspath,
+              svn_depth_t depth,
+              svn_boolean_t ignore_ancestry,
+              const apr_array_header_t *changelist_filter,
+              const svn_diff_tree_processor_t *diff_processor,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool);
+
+/**
+ * Read all conflicts at LOCAL_ABSPATH into an array containing pointers to
+ * svn_wc_conflict_description2_t data structures allocated in RESULT_POOL.
+ */
+svn_error_t *
+svn_wc__read_conflict_descriptions2_t(const apr_array_header_t **conflicts,
+                                      svn_wc_context_t *wc_ctx,
+                                      const char *local_abspath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
+
+/* Internal version of svn_wc_translated_stream(), accepting a working
+   copy context. */
+svn_error_t *
+svn_wc__translated_stream(svn_stream_t **stream,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          const char *versioned_abspath,
+                          apr_uint32_t flags,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+/* Context of the working file writer. */
+typedef struct svn_wc__working_file_writer_t svn_wc__working_file_writer_t;
+
+/* Create a write context for the (provisioned) working file with the specified
+   properties.  The file writer must be given data in the repository-normal
+   form and will handle its translation according to the specified properties.
+   Place the temporary file in the TMP_ABSPATH directory.  If FINAL_MTIME is
+   non-negative, it will be set as the last modification time on the installed
+   file. */
+svn_error_t *
+svn_wc__working_file_writer_open(svn_wc__working_file_writer_t **writer_p,
+                                 const char *tmp_abspath,
+                                 apr_time_t final_mtime,
+                                 svn_subst_eol_style_t eol_style,
+                                 const char *eol,
+                                 svn_boolean_t repair_eol,
+                                 apr_hash_t *keywords,
+                                 svn_boolean_t is_special,
+                                 svn_boolean_t is_executable,
+                                 svn_boolean_t is_readonly,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
+/* Get the writable stream for WRITER.  The returned stream supports reset
+   and is configured to be truncated on seek. */
+svn_stream_t *
+svn_wc__working_file_writer_get_stream(svn_wc__working_file_writer_t *writer);
+
+/* Finalize the content, attributes and the timestamps of the underlying
+   temporary file.  Return the properties of the finalized file in MTIME_P
+   and SIZE_P.  MTIME_P and SIZE_P both may be NULL. */
+svn_error_t *
+svn_wc__working_file_writer_finalize(apr_time_t *mtime_p,
+                                     apr_off_t *size_p,
+                                     svn_wc__working_file_writer_t *writer,
+                                     apr_pool_t *scratch_pool);
+
+/* Atomically install the contents of WRITER to TARGET_ABSPATH.
+   If the writer has not been previously finalized with a call to
+   svn_wc__working_file_writer_finalize(), the behavior is undefined. */
+svn_error_t *
+svn_wc__working_file_writer_install(svn_wc__working_file_writer_t *writer,
+                                    const char *target_abspath,
+                                    apr_pool_t *scratch_pool);
+
+/* Cleanup WRITER by closing and removing the underlying file. */
+svn_error_t *
+svn_wc__working_file_writer_close(svn_wc__working_file_writer_t *writer);
+
+
+/**
+ * Convert @a version to that version's newest working copy
+ * format, returned in @a format.
+ *
+ * A NULL @a version translates to the library's default version.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_wc__format_from_version(int *format,
+                            const svn_version_t* version,
+                            apr_pool_t *scratch_pool);
+
+/* Return a string indicating the released version (or versions) of
+ * Subversion that used WC format number WC_FORMAT, or some other
+ * suitable string if no released version used WC_FORMAT.
+ *
+ * ### It's not ideal to encode this sort of knowledge in this low-level
+ * library.  On the other hand, it doesn't need to be updated often and
+ * should be easily found when it does need to be updated.
+ *
+ * ### However, it's even less ideal to have this sort of knowledge
+ * in two places, both libsvn_wc and libsvn_client. Therefores, since
+ * libsvn_wc needs this info, we'll keep it there.
+ */
+const char *
+svn_wc__version_string_from_format(int wc_format);
+
+/* As above, but return a tuple containing the string and an
+   svn_version_t. If the returned tuple has a NULL string, the
+   format is not known. */
+typedef struct svn_wc__version_info svn_wc__version_info_t;
+struct svn_wc__version_info
+{
+  const char *text;
+  svn_version_t version;
+};
+const svn_wc__version_info_t *
+svn_wc__version_info_from_format(int wc_format);
+
+/**
+ * Return true iff @a format is a supported format.
+ */
+svn_boolean_t
+svn_wc__is_supported_format(int format);
+
+/**
+ * Return the highest WC format supported by this client.
+ */
+int
+svn_wc__max_supported_format(void);
+
+/**
+ * Return the lowest WC format supported by this client.
+ */
+int
+svn_wc__min_supported_format(void);
+
+/**
+ * Return true iff @a version is a supported format version.
+ */
+svn_boolean_t
+svn_wc__is_supported_format_version(const svn_version_t *version);
+
+/**
+ * Return the highest WC format supported by this client.
+ */
+const svn_version_t *
+svn_wc__max_supported_format_version(void);
+
+/**
+ * Return the lowest WC format supported by this client.
+ */
+const svn_version_t *
+svn_wc__min_supported_format_version(void);
+
+/**
+ * Set @a *format_p and @a *store_pristine_p to the settings of the
+ * nearest parent working copy root of @a local_abspath in @a wc_ctx,
+ * or to the library's default settings if there are no such roots.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_wc__settings_from_context(int *format_p,
+                              svn_boolean_t *store_pristine_p,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
+
+/**
+ * Ensure that an administrative area exists for @a local_abspath, so that @a
+ * local_abspath is a working copy subdir with schema version @a target_format
+ * based on @a url at @a revision, with depth @a depth, with repository UUID
+ * @a repos_uuid and repository root URL @a repos_root_url, and with the
+ * @a store_pristine setting value.
+ *
+ * @a depth must be a definite depth, it cannot be #svn_depth_unknown.
+ * @a repos_uuid and @a repos_root_url MUST NOT be @c NULL, and
+ * @a repos_root_url must be a prefix of @a url.
+ *
+ * If the administrative area does not exist, then create it and
+ * initialize it to an unlocked state.
+ *
+ * If the administrative area already exists then the given @a url
+ * must match the URL in the administrative area and the given
+ * @a revision must match the BASE of the working copy dir unless
+ * the admin directory is scheduled for deletion or the
+ * #SVN_ERR_WC_OBSTRUCTED_UPDATE error will be returned.
+ *
+ * Do not ensure existence of @a local_abspath itself; if @a local_abspath
+ * does not exist, return error.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_wc__ensure_adm(svn_wc_context_t *wc_ctx,
+                   int target_format,
+                   const char *local_abspath,
+                   const char *url,
+                   const char *repos_root_url,
+                   const char *repos_uuid,
+                   svn_revnum_t revision,
+                   svn_depth_t depth,
+                   svn_boolean_t store_pristine,
+                   apr_pool_t *scratch_pool);
+
+/**
+ * Upgrade the working copy at @a local_abspath to the metadata storage
+ * format indicated by @a target_format.  @a local_abspath should be
+ * an absolute path to the root of the working copy.
+ *
+ * If @a result_format_p is non-NULL, it will be set to the resulting
+ * format of the working copy after the upgrade.
+ *
+ * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at
+ * various points during the operation.  If it returns an error
+ * (typically #SVN_ERR_CANCELLED), return that error immediately.
+ *
+ * For each directory converted, @a notify_func will be called with
+ * in @a notify_baton action #svn_wc_notify_upgraded_path and as path
+ * the path of the upgraded directory. @a notify_func may be @c NULL
+ * if this notification is not needed.
+ *
+ * If the old working copy doesn't contain a repository root and/or
+ * repository uuid, @a repos_info_func (if non-NULL) will be called
+ * with @a repos_info_baton to provide the missing information.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_wc__upgrade(int *result_format_p,
+                svn_wc_context_t *wc_ctx,
+                const char *local_abspath,
+                int target_format,
+                svn_wc_upgrade_get_repos_info_t repos_info_func,
+                void *repos_info_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                svn_wc_notify_func2_t notify_func,
+                void *notify_baton,
+                apr_pool_t *scratch_pool);
+
+/* Return the working copy settings *FORMAT_P and *STORE_PRISTINE_P for
+   LOCAL_ABSPATH in WC_CTX. */
+svn_error_t *
+svn_wc__get_settings(int *format_p,
+                     svn_boolean_t *store_pristine_p,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

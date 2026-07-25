@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 package org.tigris.subversion.javahl;
 
@@ -627,6 +625,7 @@ public class WC
          * @param path      the path of the item.
          * @param content   the content of the item. A null signals a directory.
          */
+        @SuppressWarnings("unchecked")
         private Item(String path, String content)
         {
             myPath = path;
@@ -639,6 +638,7 @@ public class WC
          * @param source    the copy source.
          * @param owner     the WC of the copy
          */
+        @SuppressWarnings("unchecked")
         private Item(Item source, WC owner)
         {
             myPath = source.myPath;

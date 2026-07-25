@@ -106,14 +106,14 @@ def location_segment_callback(segment, pool):
 # This function does the authentication in an interactive way
 ##
 def prompt_func_ssl_unknown_cert(realm, failures, cert_info, may_save, pool):
-  print "The certificate details are as follows:"
-  print "--------------------------------------"
-  print "Issuer     : " + str(cert_info.issuer_dname)
-  print "Hostname   : " + str(cert_info.hostname)
-  print "ValidFrom  : " + str(cert_info.valid_from)
-  print "ValidUpto  : " + str(cert_info.valid_until)
-  print "Fingerprint: " + str(cert_info.fingerprint)
-  print ""
+  print("The certificate details are as follows:")
+  print("--------------------------------------")
+  print("Issuer     : " + str(cert_info.issuer_dname))
+  print("Hostname   : " + str(cert_info.hostname))
+  print("ValidFrom  : " + str(cert_info.valid_from))
+  print("ValidUpto  : " + str(cert_info.valid_until))
+  print("Fingerprint: " + str(cert_info.fingerprint))
+  print("")
   ssl_trust = core.svn_auth_cred_ssl_server_trust_t()
   if may_save:
     choice = raw_input( "accept (t)temporarily   (p)permanently: ")
@@ -166,7 +166,7 @@ def get_new_location_segments(parsed_original_mergeinfo, repo_root,
                                      revision_range.end, revision_range.start + 1, location_segment_callback)
           except svn.core.SubversionException:
             sys.stderr.write(" Could not find location segments for %s \n" % path)
-      except Exception, e:
+      except Exception as e:
         sys.stderr.write("")
 
 
@@ -182,13 +182,13 @@ def sanitize_mergeinfo(parsed_original_mergeinfo, repo_root, wcpath,
                                            mergeinfo, 1, temp_pool)
   #There should be no mergeinfo added by our population. There should only
   #be deletion of mergeinfo. so take it from diff_mergeinfo[0]
-  print "The bogus mergeinfo summary:"
+  print("The bogus mergeinfo summary:")
   bogus_mergeinfo_deleted = diff_mergeinfo[0]
   for bogus_mergeinfo_path in bogus_mergeinfo_deleted:
     sys.stdout.write(bogus_mergeinfo_path + ": ")
     for revision_range in bogus_mergeinfo_deleted[bogus_mergeinfo_path]:
       sys.stdout.write(str(revision_range.start + 1) + "-" + str(revision_range.end) + ",")
-    print ""
+    print("")
 
 ##
 # This function tries to 'propset the new mergeinfo into the working copy.
@@ -204,7 +204,7 @@ def fix_sanitized_mergeinfo(parsed_original_mergeinfo, repo_root, wcpath,
     with open(hash_file, "r") as f:
       old_hash = pickle.load(f)
     f.close
-  except IOError, e:
+  except IOError as e:
     get_new_location_segments(parsed_original_mergeinfo, repo_root, wcpath, ctx)
     hasher(hash_file, newmergeinfo_file)
     try:
@@ -217,7 +217,7 @@ def fix_sanitized_mergeinfo(parsed_original_mergeinfo, repo_root, wcpath,
     with open(newmergeinfo_file, "r") as f:
       new_hash = md5_of_file(f)
     f.close
-  except IOError, e:
+  except IOError as e:
     if not mergeinfo:
       get_new_location_segments(parsed_original_mergeinfo, repo_root, wcpath, ctx)
     hasher(hash_file, newmergeinfo_file)
@@ -233,7 +233,7 @@ def fix_sanitized_mergeinfo(parsed_original_mergeinfo, repo_root, wcpath,
       os.remove(newmergeinfo_file)
       os.remove(hash_file)
   else:
-    print "The hashes are not matching. Probable chance of unwanted tweaking in the mergeinfo"
+    print("The hashes are not matching. Probable chance of unwanted tweaking in the mergeinfo")
 
 
 ##
@@ -242,8 +242,8 @@ def fix_sanitized_mergeinfo(parsed_original_mergeinfo, repo_root, wcpath,
 def check_local_modifications(wcpath, temp_pool):
   has_local_mod = wc.svn_wc_revision_status(wcpath, None, 0, None, temp_pool)
   if has_local_mod.modified:
-    print """The working copy has local modifications. Please revert them or clean
-the working copy before running the script."""
+    print("""The working copy has local modifications. Please revert them or clean
+the working copy before running the script.""")
     sys.exit(1)
 
 def get_original_mergeinfo(wcpath, revision, depth, ctx, temp_pool):
@@ -263,7 +263,7 @@ def get_original_mergeinfo(wcpath, revision, depth, ctx, temp_pool):
 def main():
   try:
     opts, args = my_getopt(sys.argv[1:], "h?f", ["help", "fix"])
-  except Exception, e:
+  except Exception as e:
     sys.stderr.write(""" Improperly used """)
     sys.exit(1)
 
@@ -313,7 +313,7 @@ if __name__ == "__main__":
   try:
     main()
   except KeyboardInterrupt:
-    print ""
+    print("")
     sys.stderr.write("The script is interrupted and stopped manually.")
-    print ""
+    print("")
 

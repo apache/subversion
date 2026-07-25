@@ -36,6 +36,8 @@
 #include "svn_private_config.h"
 
 #include "private/svn_delta_private.h"
+#include "private/svn_sorts_private.h"
+#include "svn_private_config.h"
 
 
 struct file_rev_handler_wrapper_baton {
@@ -106,7 +108,7 @@ svn_compat_wrap_file_rev_handler(svn_file_rev_handler_t *handler2,
  * deletion has side effects (unlike deleting a non-existent regular property
  * would).  To solve this, we introduce *another* function into the API, not
  * a part of the Ev2 callbacks, but a companion which is used to register
- * the unlock of a path.  See ev2_change_file_prop() for implemenation
+ * the unlock of a path.  See ev2_change_file_prop() for implementation
  * details.
  */
 
@@ -163,7 +165,7 @@ enum restructure_action_t
   RESTRUCTURE_NONE = 0,
   RESTRUCTURE_ADD,         /* add the node, maybe replacing. maybe copy  */
   RESTRUCTURE_ADD_ABSENT,  /* add an absent node, possibly replacing  */
-  RESTRUCTURE_DELETE,      /* delete this node  */
+  RESTRUCTURE_DELETE       /* delete this node  */
 };
 
 /* Records everything about how this node is to be changed.  */
@@ -172,7 +174,7 @@ struct change_node
   /* what kind of (tree) restructure is occurring at this node?  */
   enum restructure_action_t action;
 
-  svn_kind_t kind;  /* the NEW kind of this node  */
+  svn_node_kind_t kind;  /* the NEW kind of this node  */
 
   /* We need two revisions: one to specify the revision we are altering,
      and a second to specify the revision to delete/replace. These are
@@ -188,6 +190,7 @@ struct change_node
 
   apr_hash_t *props;  /* new/final set of props to apply  */
 
+  svn_boolean_t contents_changed; /* the file contents changed */
   const char *contents_abspath;  /* file containing new fulltext  */
   svn_checksum_t *checksum;  /* checksum of new fulltext  */
 
@@ -205,8 +208,7 @@ static struct change_node *
 locate_change(struct ev2_edit_baton *eb,
               const char *relpath)
 {
-  struct change_node *change = apr_hash_get(eb->changes, relpath,
-                                            APR_HASH_KEY_STRING);
+  struct change_node *change = svn_hash_gets(eb->changes, relpath);
 
   if (change != NULL)
     return change;
@@ -219,8 +221,9 @@ locate_change(struct ev2_edit_baton *eb,
   change = apr_pcalloc(eb->edit_pool, sizeof(*change));
   change->changing = SVN_INVALID_REVNUM;
   change->deleting = SVN_INVALID_REVNUM;
+  change->kind = svn_node_unknown;
 
-  apr_hash_set(eb->changes, relpath, APR_HASH_KEY_STRING, change);
+  svn_hash_sets(eb->changes, relpath, change);
 
   return change;
 }
@@ -229,7 +232,7 @@ locate_change(struct ev2_edit_baton *eb,
 static svn_error_t *
 apply_propedit(struct ev2_edit_baton *eb,
                const char *relpath,
-               svn_kind_t kind,
+               svn_node_kind_t kind,
                svn_revnum_t base_revision,
                const char *name,
                const svn_string_t *value,
@@ -237,7 +240,7 @@ apply_propedit(struct ev2_edit_baton *eb,
 {
   struct change_node *change = locate_change(eb, relpath);
 
-  SVN_ERR_ASSERT(change->kind == svn_kind_unknown || change->kind == kind);
+  SVN_ERR_ASSERT(change->kind == svn_node_unknown || change->kind == kind);
   change->kind = kind;
 
   /* We're now changing the node. Record the revision.  */
@@ -270,11 +273,11 @@ apply_propedit(struct ev2_edit_baton *eb,
     }
 
   if (value == NULL)
-    apr_hash_set(change->props, name, APR_HASH_KEY_STRING, NULL);
+    svn_hash_sets(change->props, name, NULL);
   else
-    apr_hash_set(change->props,
-                 apr_pstrdup(eb->edit_pool, name), APR_HASH_KEY_STRING,
-                 svn_string_dup(value, eb->edit_pool));
+    svn_hash_sets(change->props,
+                  apr_pstrdup(eb->edit_pool, name),
+                  svn_string_dup(value, eb->edit_pool));
 
   return SVN_NO_ERROR;
 }
@@ -292,7 +295,7 @@ get_children(struct ev2_edit_baton *eb,
 
   for (hi = apr_hash_first(pool, eb->changes); hi; hi = apr_hash_next(hi))
     {
-      const char *repos_relpath = svn__apr_hash_index_key(hi);
+      const char *repos_relpath = apr_hash_this_key(hi);
       const char *child;
 
       /* Find potential children. */
@@ -321,7 +324,7 @@ process_actions(struct ev2_edit_baton *eb,
   apr_hash_t *props = NULL;
   svn_stream_t *contents = NULL;
   svn_checksum_t *checksum = NULL;
-  svn_kind_t kind = svn_kind_unknown;
+  svn_node_kind_t kind = svn_node_unknown;
 
   SVN_ERR_ASSERT(change != NULL);
 
@@ -347,17 +350,26 @@ process_actions(struct ev2_edit_baton *eb,
       return SVN_NO_ERROR;
     }
 
-  if (change->contents_abspath != NULL)
+  if (change->contents_changed)
     {
       /* We can only set text on files. */
       /* ### validate we aren't overwriting KIND?  */
-      kind = svn_kind_file;
+      kind = svn_node_file;
 
-      /* ### the checksum might be in CHANGE->CHECKSUM  */
-      SVN_ERR(svn_io_file_checksum2(&checksum, change->contents_abspath,
-                                    svn_checksum_sha1, scratch_pool));
-      SVN_ERR(svn_stream_open_readonly(&contents, change->contents_abspath,
-                                       scratch_pool, scratch_pool));
+      if (change->contents_abspath)
+        {
+          /* ### the checksum might be in CHANGE->CHECKSUM  */
+          SVN_ERR(svn_io_file_checksum2(&checksum, change->contents_abspath,
+                                        svn_checksum_sha1, scratch_pool));
+          SVN_ERR(svn_stream_open_readonly(&contents, change->contents_abspath,
+                                           scratch_pool, scratch_pool));
+        }
+      else
+        {
+          contents = svn_stream_empty(scratch_pool);
+          checksum = svn_checksum_empty_checksum(svn_checksum_sha1,
+                                                 scratch_pool);
+        }
     }
 
   if (change->props != NULL)
@@ -387,7 +399,7 @@ process_actions(struct ev2_edit_baton *eb,
           if (props == NULL)
             props = apr_hash_make(scratch_pool);
 
-          if (kind == svn_kind_dir)
+          if (kind == svn_node_dir)
             {
               const apr_array_header_t *children;
 
@@ -399,7 +411,7 @@ process_actions(struct ev2_edit_baton *eb,
           else
             {
               /* If this file was added, but apply_txdelta() was not
-                 called (ie. no CONTENTS_ABSPATH), then we're adding
+                 called (i.e., CONTENTS_CHANGED is FALSE), then we're adding
                  an empty file.  */
               if (change->contents_abspath == NULL)
                 {
@@ -435,13 +447,13 @@ process_actions(struct ev2_edit_baton *eb,
 
       /* ### we need to gather up the target set of children  */
 
-      if (kind == svn_kind_dir)
+      if (kind == svn_node_dir)
         SVN_ERR(svn_editor_alter_directory(eb->editor, repos_relpath,
                                            change->changing, NULL, props));
       else
         SVN_ERR(svn_editor_alter_file(eb->editor, repos_relpath,
-                                      change->changing, props,
-                                      checksum, contents));
+                                      change->changing,
+                                      checksum, contents, props));
     }
 
   return SVN_NO_ERROR;
@@ -455,16 +467,15 @@ run_ev2_actions(struct ev2_edit_baton *eb,
 
   iterpool = svn_pool_create(scratch_pool);
 
-  /* Possibly pick up where we left off. Ocassionally, we do some of these
+  /* Possibly pick up where we left off. Occasionally, we do some of these
      as part of close_edit() and then some more as part of abort_edit()  */
   for (; eb->paths_processed < eb->path_order->nelts; ++eb->paths_processed)
     {
       const char *repos_relpath = APR_ARRAY_IDX(eb->path_order,
                                                 eb->paths_processed,
                                                 const char *);
-      const struct change_node *change = apr_hash_get(eb->changes,
-                                                      repos_relpath,
-                                                      APR_HASH_KEY_STRING);
+      const struct change_node *change = svn_hash_gets(eb->changes,
+                                                       repos_relpath);
 
       svn_pool_clear(iterpool);
 
@@ -573,7 +584,7 @@ ev2_add_directory(const char *path,
 
   /* ### assert that RESTRUCTURE is NONE or DELETE?  */
   change->action = RESTRUCTURE_ADD;
-  change->kind = svn_kind_dir;
+  change->kind = svn_node_dir;
 
   cb->eb = pb->eb;
   cb->path = apr_pstrdup(result_pool, relpath);
@@ -644,7 +655,7 @@ ev2_change_dir_prop(void *dir_baton,
 {
   struct ev2_dir_baton *db = dir_baton;
 
-  SVN_ERR(apply_propedit(db->eb, db->path, svn_kind_dir, db->base_revision,
+  SVN_ERR(apply_propedit(db->eb, db->path, svn_node_dir, db->base_revision,
                          name, value, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -668,7 +679,7 @@ ev2_absent_directory(const char *path,
 
   /* ### assert that RESTRUCTURE is NONE or DELETE?  */
   change->action = RESTRUCTURE_ADD_ABSENT;
-  change->kind = svn_kind_dir;
+  change->kind = svn_node_dir;
 
   return SVN_NO_ERROR;
 }
@@ -690,7 +701,7 @@ ev2_add_file(const char *path,
 
   /* ### assert that RESTRUCTURE is NONE or DELETE?  */
   change->action = RESTRUCTURE_ADD;
-  change->kind = svn_kind_file;
+  change->kind = svn_node_file;
 
   fb->eb = pb->eb;
   fb->path = apr_pstrdup(result_pool, relpath);
@@ -790,6 +801,27 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   return svn_error_trace(err);
 }
 
+/* Lazy-open handler for getting a read-only stream of the delta base. */
+static svn_error_t *
+open_delta_base(svn_stream_t **stream, void *baton,
+                apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  const char *const delta_base = baton;
+  return svn_stream_open_readonly(stream, delta_base,
+                                  result_pool, scratch_pool);
+}
+
+/* Lazy-open handler for opening a stream for the delta result. */
+static svn_error_t *
+open_delta_target(svn_stream_t **stream, void *baton,
+                apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  struct change_node *change = baton;
+  return svn_stream_open_unique(stream, &change->contents_abspath,
+                                NULL,
+                                svn_io_file_del_on_pool_cleanup,
+                                result_pool, scratch_pool);
+}
 
 static svn_error_t *
 ev2_apply_textdelta(void *file_baton,
@@ -803,10 +835,9 @@ ev2_apply_textdelta(void *file_baton,
   struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
   struct change_node *change;
   svn_stream_t *target;
-  /* ### fix this. for now, we know this has a "short" lifetime.  */
-  apr_pool_t *scratch_pool = handler_pool;
 
   change = locate_change(fb->eb, fb->path);
+  SVN_ERR_ASSERT(!change->contents_changed);
   SVN_ERR_ASSERT(change->contents_abspath == NULL);
   SVN_ERR_ASSERT(!SVN_IS_VALID_REVNUM(change->changing)
                  || change->changing == fb->base_revision);
@@ -815,17 +846,20 @@ ev2_apply_textdelta(void *file_baton,
   if (! fb->delta_base)
     hb->source = svn_stream_empty(handler_pool);
   else
-    SVN_ERR(svn_stream_open_readonly(&hb->source, fb->delta_base, handler_pool,
-                                     scratch_pool));
+    hb->source = svn_stream_lazyopen_create(open_delta_base,
+                                            (char*)fb->delta_base,
+                                            FALSE, handler_pool);
 
-  SVN_ERR(svn_stream_open_unique(&target, &change->contents_abspath, NULL,
-                                 svn_io_file_del_on_pool_cleanup,
-                                 fb->eb->edit_pool, scratch_pool));
+  change->contents_changed = TRUE;
+  target = svn_stream_lazyopen_create(open_delta_target, change,
+                                      FALSE, fb->eb->edit_pool);
 
-  svn_txdelta_apply(hb->source, target,
-                    NULL, NULL,
-                    handler_pool,
-                    &hb->apply_handler, &hb->apply_baton);
+  /* Keep historical behavior by disowning the stream; adjust if needed. */
+  svn_txdelta_apply2(svn_stream_disown(hb->source, handler_pool),
+                     target,
+                     NULL, NULL,
+                     handler_pool,
+                     &hb->apply_handler, &hb->apply_baton);
 
   hb->pool = handler_pool;
 
@@ -845,7 +879,7 @@ ev2_change_file_prop(void *file_baton,
 
   if (!strcmp(name, SVN_PROP_ENTRY_LOCK_TOKEN) && value == NULL)
     {
-      /* We special case the lock token propery deletion, which is the
+      /* We special case the lock token property deletion, which is the
          server's way of telling the client to unlock the path. */
 
       /* ### this duplicates much of apply_propedit(). fix in future.  */
@@ -856,7 +890,7 @@ ev2_change_file_prop(void *file_baton,
       change->unlock = TRUE;
     }
 
-  SVN_ERR(apply_propedit(fb->eb, fb->path, svn_kind_file, fb->base_revision,
+  SVN_ERR(apply_propedit(fb->eb, fb->path, svn_node_file, fb->base_revision,
                          name, value, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -881,7 +915,7 @@ ev2_absent_file(const char *path,
 
   /* ### assert that RESTRUCTURE is NONE or DELETE?  */
   change->action = RESTRUCTURE_ADD_ABSENT;
-  change->kind = svn_kind_file;
+  change->kind = svn_node_file;
 
   return SVN_NO_ERROR;
 }
@@ -911,7 +945,7 @@ ev2_abort_edit(void *edit_baton,
 }
 
 /* Return a svn_delta_editor_t * in DEDITOR, with an accompanying baton in
- * DEDITOR_BATON, which will be driven by EDITOR.  These will both be
+ * DEDITOR_BATON, which will drive EDITOR.  These will both be
  * allocated in RESULT_POOL, which may become large and long-lived;
  * SCRATCH_POOL is used for temporary allocations.
  *
@@ -1037,7 +1071,7 @@ insert_change(const char *relpath,
   apr_pool_t *result_pool;
   struct change_node *change;
 
-  change = apr_hash_get(changes, relpath, APR_HASH_KEY_STRING);
+  change = svn_hash_gets(changes, relpath);
   if (change != NULL)
     return change;
 
@@ -1048,9 +1082,7 @@ insert_change(const char *relpath,
   change->changing = SVN_INVALID_REVNUM;
   change->deleting = SVN_INVALID_REVNUM;
 
-  apr_hash_set(changes,
-               apr_pstrdup(result_pool, relpath), APR_HASH_KEY_STRING,
-               change);
+  svn_hash_sets(changes, apr_pstrdup(result_pool, relpath), change);
 
   return change;
 }
@@ -1069,7 +1101,7 @@ add_directory_cb(void *baton,
   struct change_node *change = insert_change(relpath, eb->changes);
 
   change->action = RESTRUCTURE_ADD;
-  change->kind = svn_kind_dir;
+  change->kind = svn_node_dir;
   change->deleting = replaces_rev;
   change->props = svn_prop_hash_dup(props, eb->edit_pool);
 
@@ -1106,9 +1138,10 @@ add_file_cb(void *baton,
   SVN_ERR(svn_stream_copy3(contents, tmp_stream, NULL, NULL, scratch_pool));
 
   change->action = RESTRUCTURE_ADD;
-  change->kind = svn_kind_file;
+  change->kind = svn_node_file;
   change->deleting = replaces_rev;
   change->props = svn_prop_hash_dup(props, eb->edit_pool);
+  change->contents_changed = TRUE;
   change->contents_abspath = tmp_filename;
   change->checksum = svn_checksum_dup(md5_checksum, eb->edit_pool);
 
@@ -1129,7 +1162,7 @@ add_symlink_cb(void *baton,
   struct change_node *change = insert_change(relpath, eb->changes);
 
   change->action = RESTRUCTURE_ADD;
-  change->kind = svn_kind_symlink;
+  change->kind = svn_node_symlink;
   change->deleting = replaces_rev;
   change->props = svn_prop_hash_dup(props, eb->edit_pool);
   /* ### target  */
@@ -1142,7 +1175,7 @@ add_symlink_cb(void *baton,
 static svn_error_t *
 add_absent_cb(void *baton,
               const char *relpath,
-              svn_kind_t kind,
+              svn_node_kind_t kind,
               svn_revnum_t replaces_rev,
               apr_pool_t *scratch_pool)
 {
@@ -1174,7 +1207,7 @@ alter_directory_cb(void *baton,
 
   /* Note: this node may already have information in CHANGE as a result
      of an earlier copy/move operation.  */
-  change->kind = svn_kind_dir;
+  change->kind = svn_node_dir;
   change->changing = revision;
   change->props = svn_prop_hash_dup(props, eb->edit_pool);
 
@@ -1186,28 +1219,36 @@ static svn_error_t *
 alter_file_cb(void *baton,
               const char *relpath,
               svn_revnum_t revision,
-              apr_hash_t *props,
               const svn_checksum_t *checksum,
               svn_stream_t *contents,
+              apr_hash_t *props,
               apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
-  const char *tmp_filename;
   svn_stream_t *tmp_stream;
-  svn_checksum_t *md5_checksum;
   struct change_node *change = insert_change(relpath, eb->changes);
 
+  /* Note: this node may already have information in CHANGE as a result
+     of an earlier copy/move operation.  */
+
   /* ### should we verify the kind is truly a file?  */
+  change->kind = svn_node_file;
+  change->changing = revision;
+  if (props != NULL)
+    change->props = svn_prop_hash_dup(props, eb->edit_pool);
 
   if (contents)
     {
+      const char *tmp_filename;
+      svn_checksum_t *md5_checksum;
+
       /* We may need to re-checksum these contents */
-      if (!(checksum && checksum->kind == svn_checksum_md5))
+      if (checksum && checksum->kind == svn_checksum_md5)
+        md5_checksum = (svn_checksum_t *)checksum;
+      else
         contents = svn_stream_checksummed2(contents, &md5_checksum, NULL,
                                            svn_checksum_md5, TRUE,
                                            scratch_pool);
-      else
-        md5_checksum = (svn_checksum_t *)checksum;
 
       /* Spool the contents to a tempfile, and provide that to the driver. */
       SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
@@ -1215,17 +1256,8 @@ alter_file_cb(void *baton,
                                      eb->edit_pool, scratch_pool));
       SVN_ERR(svn_stream_copy3(contents, tmp_stream, NULL, NULL,
                                scratch_pool));
-    }
 
-  /* Note: this node may already have information in CHANGE as a result
-     of an earlier copy/move operation.  */
-
-  change->kind = svn_kind_file;
-  change->changing = revision;
-  if (props != NULL)
-    change->props = svn_prop_hash_dup(props, eb->edit_pool);
-  if (contents != NULL)
-    {
+      change->contents_changed = TRUE;
       change->contents_abspath = tmp_filename;
       change->checksum = svn_checksum_dup(md5_checksum, eb->edit_pool);
     }
@@ -1238,8 +1270,8 @@ static svn_error_t *
 alter_symlink_cb(void *baton,
                  const char *relpath,
                  svn_revnum_t revision,
-                 apr_hash_t *props,
                  const char *target,
+                 apr_hash_t *props,
                  apr_pool_t *scratch_pool)
 {
   /* ### should we verify the kind is truly a symlink?  */
@@ -1260,7 +1292,7 @@ delete_cb(void *baton,
   struct change_node *change = insert_change(relpath, eb->changes);
 
   change->action = RESTRUCTURE_DELETE;
-  /* change->kind = svn_kind_unknown;  */
+  /* change->kind = svn_node_unknown;  */
   change->deleting = revision;
 
   return SVN_NO_ERROR;
@@ -1279,7 +1311,7 @@ copy_cb(void *baton,
   struct change_node *change = insert_change(dst_relpath, eb->changes);
 
   change->action = RESTRUCTURE_ADD;
-  /* change->kind = svn_kind_unknown;  */
+  /* change->kind = svn_node_unknown;  */
   change->deleting = replaces_rev;
   change->copyfrom_path = apr_pstrdup(eb->edit_pool, src_relpath);
   change->copyfrom_rev = src_revision;
@@ -1312,12 +1344,12 @@ move_cb(void *baton,
 
   change = insert_change(src_relpath, eb->changes);
   change->action = RESTRUCTURE_DELETE;
-  /* change->kind = svn_kind_unknown;  */
+  /* change->kind = svn_node_unknown;  */
   change->deleting = src_revision;
 
   change = insert_change(dst_relpath, eb->changes);
   change->action = RESTRUCTURE_ADD;
-  /* change->kind = svn_kind_unknown;  */
+  /* change->kind = svn_node_unknown;  */
   change->deleting = replaces_rev;
   change->copyfrom_path = apr_pstrdup(eb->edit_pool, src_relpath);
   change->copyfrom_rev = src_revision;
@@ -1333,17 +1365,6 @@ move_cb(void *baton,
 
   return SVN_NO_ERROR;
 }
-
-/* This implements svn_editor_cb_rotate_t */
-static svn_error_t *
-rotate_cb(void *baton,
-          const apr_array_header_t *relpaths,
-          const apr_array_header_t *revisions,
-          apr_pool_t *scratch_pool)
-{
-  SVN__NOT_IMPLEMENTED();
-}
-
 
 static int
 count_components(const char *relpath)
@@ -1531,7 +1552,7 @@ drive_ev1_props(const struct editor_baton *eb,
 
       svn_pool_clear(iterpool);
 
-      if (change->kind == svn_kind_dir)
+      if (change->kind == svn_node_dir)
         SVN_ERR(eb->deditor->change_dir_prop(node_baton,
                                              prop->name, prop->value,
                                              iterpool));
@@ -1544,7 +1565,7 @@ drive_ev1_props(const struct editor_baton *eb,
   /* Handle the funky unlock protocol. Note: only possibly on files.  */
   if (change->unlock)
     {
-      SVN_ERR_ASSERT(change->kind == svn_kind_file);
+      SVN_ERR_ASSERT(change->kind == svn_node_file);
       SVN_ERR(eb->deditor->change_file_prop(node_baton,
                                             SVN_PROP_ENTRY_LOCK_TOKEN, NULL,
                                             iterpool));
@@ -1558,6 +1579,8 @@ drive_ev1_props(const struct editor_baton *eb,
 /* Conforms to svn_delta_path_driver_cb_func_t  */
 static svn_error_t *
 apply_change(void **dir_baton,
+             const svn_delta_editor_t *deditor,
+             void *dedit_baton,
              void *parent_baton,
              void *callback_baton,
              const char *ev1_relpath,
@@ -1574,7 +1597,7 @@ apply_change(void **dir_baton,
   *dir_baton = NULL;
 
   relpath = svn_relpath_join(eb->base_relpath, ev1_relpath, scratch_pool);
-  change = apr_hash_get(eb->changes, relpath, APR_HASH_KEY_STRING);
+  change = svn_hash_gets(eb->changes, relpath);
 
   /* The callback should only be called for paths in CHANGES.  */
   SVN_ERR_ASSERT(change != NULL);
@@ -1595,24 +1618,24 @@ apply_change(void **dir_baton,
 
   if (change->action == RESTRUCTURE_DELETE)
     {
-      SVN_ERR(eb->deditor->delete_entry(ev1_relpath, change->deleting,
-                                        parent_baton, scratch_pool));
+      SVN_ERR(deditor->delete_entry(ev1_relpath, change->deleting,
+                                    parent_baton, scratch_pool));
 
-      /* No futher action possible for this node.  */
+      /* No further action possible for this node.  */
       return SVN_NO_ERROR;
     }
 
   /* If we're not deleting this node, then we should know its kind.  */
-  SVN_ERR_ASSERT(change->kind != svn_kind_unknown);
+  SVN_ERR_ASSERT(change->kind != svn_node_unknown);
 
   if (change->action == RESTRUCTURE_ADD_ABSENT)
     {
-      if (change->kind == svn_kind_dir)
-        SVN_ERR(eb->deditor->absent_directory(ev1_relpath, parent_baton,
-                                              scratch_pool));
+      if (change->kind == svn_node_dir)
+        SVN_ERR(deditor->absent_directory(ev1_relpath, parent_baton,
+                                          scratch_pool));
       else
-        SVN_ERR(eb->deditor->absent_file(ev1_relpath, parent_baton,
-                                         scratch_pool));
+        SVN_ERR(deditor->absent_file(ev1_relpath, parent_baton,
+                                     scratch_pool));
 
       /* No further action possible for this node.  */
       return SVN_NO_ERROR;
@@ -1626,8 +1649,8 @@ apply_change(void **dir_baton,
 
       /* Do we have an old node to delete first?  */
       if (SVN_IS_VALID_REVNUM(change->deleting))
-        SVN_ERR(eb->deditor->delete_entry(ev1_relpath, change->deleting,
-                                          parent_baton, scratch_pool));
+        SVN_ERR(deditor->delete_entry(ev1_relpath, change->deleting,
+                                      parent_baton, scratch_pool));
 
       /* Are we copying the node from somewhere?  */
       if (change->copyfrom_path)
@@ -1637,40 +1660,46 @@ apply_change(void **dir_baton,
                                                        change->copyfrom_path,
                                                        scratch_pool);
           else
-            /* ### prefix with "/" ?  */
-            copyfrom_url = change->copyfrom_path;
+            {
+              copyfrom_url = change->copyfrom_path;
+
+              /* Make this an FS path by prepending "/" */
+              if (copyfrom_url[0] != '/')
+                copyfrom_url = apr_pstrcat(scratch_pool, "/",
+                                           copyfrom_url, SVN_VA_NULL);
+            }
 
           copyfrom_rev = change->copyfrom_rev;
         }
 
-      if (change->kind == svn_kind_dir)
-        SVN_ERR(eb->deditor->add_directory(ev1_relpath, parent_baton,
-                                           copyfrom_url, copyfrom_rev,
-                                           result_pool, dir_baton));
+      if (change->kind == svn_node_dir)
+        SVN_ERR(deditor->add_directory(ev1_relpath, parent_baton,
+                                       copyfrom_url, copyfrom_rev,
+                                       result_pool, dir_baton));
       else
-        SVN_ERR(eb->deditor->add_file(ev1_relpath, parent_baton,
-                                      copyfrom_url, copyfrom_rev,
-                                      result_pool, &file_baton));
+        SVN_ERR(deditor->add_file(ev1_relpath, parent_baton,
+                                  copyfrom_url, copyfrom_rev,
+                                  result_pool, &file_baton));
     }
   else
     {
-      if (change->kind == svn_kind_dir)
-        SVN_ERR(eb->deditor->open_directory(ev1_relpath, parent_baton,
-                                            change->changing,
-                                            result_pool, dir_baton));
+      if (change->kind == svn_node_dir)
+        SVN_ERR(deditor->open_directory(ev1_relpath, parent_baton,
+                                        change->changing,
+                                        result_pool, dir_baton));
       else
-        SVN_ERR(eb->deditor->open_file(ev1_relpath, parent_baton,
-                                       change->changing,
-                                       result_pool, &file_baton));
+        SVN_ERR(deditor->open_file(ev1_relpath, parent_baton,
+                                   change->changing,
+                                   result_pool, &file_baton));
     }
 
   /* Apply any properties in CHANGE to the node.  */
-  if (change->kind == svn_kind_dir)
+  if (change->kind == svn_node_dir)
     SVN_ERR(drive_ev1_props(eb, relpath, change, *dir_baton, scratch_pool));
   else
     SVN_ERR(drive_ev1_props(eb, relpath, change, file_baton, scratch_pool));
 
-  if (change->contents_abspath)
+  if (change->contents_changed && change->contents_abspath)
     {
       svn_txdelta_window_handler_t handler;
       void *handler_baton;
@@ -1678,8 +1707,8 @@ apply_change(void **dir_baton,
 
       /* ### would be nice to have a BASE_CHECKSUM, but hey: this is the
          ### shim code...  */
-      SVN_ERR(eb->deditor->apply_textdelta(file_baton, NULL, scratch_pool,
-                                           &handler, &handler_baton));
+      SVN_ERR(deditor->apply_textdelta(file_baton, NULL, scratch_pool,
+                                       &handler, &handler_baton));
       SVN_ERR(svn_stream_open_readonly(&contents, change->contents_abspath,
                                        scratch_pool, scratch_pool));
       /* ### it would be nice to send a true txdelta here, but whatever.  */
@@ -1693,7 +1722,7 @@ apply_change(void **dir_baton,
       const char *digest = svn_checksum_to_cstring(change->checksum,
                                                    scratch_pool);
 
-      SVN_ERR(eb->deditor->close_file(file_baton, digest, scratch_pool));
+      SVN_ERR(deditor->close_file(file_baton, digest, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1717,32 +1746,13 @@ drive_changes(const struct editor_baton *eb,
      did in start_edit_func(). We can forge up a change record, if one
      does not already exist.  */
   change = insert_change(eb->base_relpath, eb->changes);
-  change->kind = svn_kind_dir;
+  change->kind = svn_node_dir;
   /* No property changes (tho they might exist from a real change).  */
 
   /* Get a sorted list of Ev1-relative paths.  */
   paths = get_sorted_paths(eb->changes, eb->base_relpath, scratch_pool);
-
-  /* We need to pass SVN_INVALID_REVNUM to the path_driver. It uses this
-     revision whenever it opens directory batons. If we specified a "real"
-     value, such as eb->root.base_revision, then it might use that for a
-     subdirectory *incorrectly*.
-
-     Specifically, log_tests 38 demonstrates that erroneous behavior when
-     it attempts to open "/A" at revision 0 (not there, of course).
-
-     All this said: passing SVN_INVALID_REVNUM to all of those
-     open_directory() calls is not the best behavior either, but it does
-     happen to magically work. (ugh)
-
-     Thankfully, we're moving away from this skitchy behavior to Ev2.
-
-     Final note: every other caller of svn_delta_path_driver() passes
-     SVN_INVALID_REVNUM, so we can't be the only goofball.
-
-     Note: dropping const on the callback_baton.  */
-  SVN_ERR(svn_delta_path_driver2(eb->deditor, eb->dedit_baton, paths,
-                                 apply_change, (void *)eb,
+  SVN_ERR(svn_delta_path_driver3(eb->deditor, eb->dedit_baton, paths,
+                                 FALSE, apply_change, (void *)eb,
                                  scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1848,7 +1858,7 @@ do_unlock(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Return an svn_editor_t * in EDITOR_P which will be driven by
+/* Return an svn_editor_t * in EDITOR_P which will drive
  * DEDITOR/DEDIT_BATON.  EDITOR_P is allocated in RESULT_POOL, which may
  * become large and long-lived; SCRATCH_POOL is used for temporary
  * allocations.
@@ -1905,7 +1915,6 @@ svn_delta__editor_from_delta(svn_editor_t **editor_p,
       delete_cb,
       copy_cb,
       move_cb,
-      rotate_cb,
       complete_cb,
       abort_cb
     };

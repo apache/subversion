@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,12 +17,15 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 package org.apache.subversion.javahl;
 
+import static org.junit.Assert.*;
+
 import org.apache.subversion.javahl.callback.*;
+import org.apache.subversion.javahl.remote.*;
 import org.apache.subversion.javahl.types.*;
+import org.apache.subversion.javahl.NativeException;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -33,6 +35,10 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.text.ParseException;
 import java.util.Collection;
 import java.util.Arrays;
@@ -131,6 +137,223 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test SVNClient.getVersionExtended().
+     * @throws Throwable
+     */
+    public void testVersionExtendedQuiet() throws Throwable
+    {
+        VersionExtended vx = null;
+        try
+        {
+            vx = client.getVersionExtended(false);
+            String result = vx.getBuildDate();
+            if (result == null || result.trim().length() == 0)
+                throw new Exception("Build date empty");
+            result = vx.getBuildTime();
+            if (result == null || result.trim().length() == 0)
+                throw new Exception("Build time empty");
+            result = vx.getBuildHost();
+            if (result == null || result.trim().length() == 0)
+                throw new Exception("Build host empty");
+            result = vx.getCopyright();
+            if (result == null || result.trim().length() == 0)
+                throw new Exception("Copyright empty");
+        }
+        catch (Exception e)
+        {
+            fail("VersionExtended should always be available unless the " +
+                 "native libraries failed to initialize: " + e);
+        }
+        finally
+        {
+            if (vx != null)
+                vx.dispose();
+        }
+    }
+
+    /**
+     * Test SVNClient.getVersionExtended().
+     * @throws Throwable
+     */
+    public void testVersionExtendedVerbose() throws Throwable
+    {
+        VersionExtended vx = null;
+        try
+        {
+            vx = client.getVersionExtended(true);
+            String result = vx.getRuntimeHost();
+            if (result == null || result.trim().length() == 0)
+                throw new Exception("Runtime host empty");
+
+            // OS name is allowed to be null, but not empty
+            result = vx.getRuntimeOSName();
+            if (result != null && result.trim().length() == 0)
+                throw new Exception("Runtime OS name empty");
+
+            java.util.Iterator<VersionExtended.LinkedLib> ikl;
+            ikl = vx.getLinkedLibs();
+            if (ikl.hasNext())
+            {
+                VersionExtended.LinkedLib lib = ikl.next();
+                result = lib.getName();
+                if (result == null || result.trim().length() == 0)
+                    throw new Exception("Linked lib name empty");
+                result = lib.getCompiledVersion();
+                if (result == null || result.trim().length() == 0)
+                    throw new Exception("Linked lib compiled version empty");
+                // Runtime version is allowed to be null, but not empty
+                result = lib.getRuntimeVersion();
+                if (result != null && result.trim().length() == 0)
+                    throw new Exception("Linked lib runtime version empty");
+            }
+
+            java.util.Iterator<VersionExtended.LoadedLib> ill;
+            ill = vx.getLoadedLibs();
+            if (ill.hasNext())
+            {
+                VersionExtended.LoadedLib lib = ill.next();
+                result = lib.getName();
+                if (result == null || result.trim().length() == 0)
+                    throw new Exception("Loaded lib name empty");
+                // Version is allowed to be null, but not empty
+                result = lib.getVersion();
+                if (result != null && result.trim().length() == 0)
+                    throw new Exception("Loaded lib version empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("VersionExtended should always be available unless the " +
+                 "native libraries failed to initialize: " + e);
+        }
+        finally
+        {
+            if (vx != null)
+                vx.dispose();
+        }
+    }
+
+    /**
+     * Test RuntimeVersion
+     */
+    public void testRuntimeVersion() throws Throwable
+    {
+        RuntimeVersion runtimeVersion = null;
+        try
+        {
+            runtimeVersion = client.getRuntimeVersion();
+            String versionString = runtimeVersion.toString();
+            if (versionString == null || versionString.trim().length() == 0)
+            {
+                throw new Exception("Version string empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("RuntimeVersion should always be available unless the " +
+                 "native libraries failed to initialize: " + e);
+        }
+
+        assertNotNull(runtimeVersion);
+        Version version = client.getVersion();
+        assertTrue(runtimeVersion.getMajor() > version.getMajor()
+                   || (runtimeVersion.getMajor() == version.getMajor()
+                       && runtimeVersion.getMinor() >= version.getMinor()));
+    }
+
+    /**
+     * Test defaultWcVersion
+     * @throws Throwable
+     */
+    public void testDefaultWcVersion() throws Throwable
+    {
+        try
+        {
+            Version defaultWcVersion = client.defaultWcVersion();
+            String versionString = defaultWcVersion.toString();
+            if (versionString == null || versionString.trim().length() == 0)
+            {
+                throw new Exception("Version string empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("defaultWcVersion should always be available unless " +
+                 "the native libraries failed to initialize: " + e);
+        }
+    }
+
+    /**
+     * Test oldestWcVersion
+     */
+    public void testOldestWcVersion()
+    {
+        try
+        {
+            Version oldestWcVersion = SVNClient.oldestWcVersion();
+            String versionString = oldestWcVersion.toString();
+            if (versionString == null || versionString.trim().length() == 0)
+            {
+                throw new Exception("Version string empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("oldestWcVersion should always be available unless " +
+                 "the native libraries failed to initialize: " + e);
+        }
+    }
+
+    /**
+     * Test latestWcVersion
+     */
+    public void testLatestWcVersion()
+    {
+        try
+        {
+            Version latestWcVersion = SVNClient.latestWcVersion();
+            String versionString = latestWcVersion.toString();
+            if (versionString == null || versionString.trim().length() == 0)
+            {
+                throw new Exception("Version string empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("latestWcVersion should always be available unless " +
+                 "the native libraries failed to initialize: " + e);
+        }
+
+    }
+
+    /**
+     * Test relationships between WC versions
+     * @throws Throwable
+     */
+    public void testWcVersionOrder() throws Throwable
+    {
+        Version defaultWcVersion = client.defaultWcVersion();
+        Version oldestWcVersion = SVNClient.oldestWcVersion();
+        Version latestWcVersion = SVNClient.latestWcVersion();
+
+        assertNotEquals(0, defaultWcVersion.getMajor());
+        assertNotEquals(0, defaultWcVersion.getMinor());
+        assertEquals(0, defaultWcVersion.getPatch());
+
+        assertNotEquals(0, oldestWcVersion.getMajor());
+        assertNotEquals(0, oldestWcVersion.getMinor());
+        assertEquals(0, oldestWcVersion.getPatch());
+
+        assertNotEquals(0, latestWcVersion.getMajor());
+        assertNotEquals(0, latestWcVersion.getMinor());
+        assertEquals(0, latestWcVersion.getPatch());
+
+        assertTrue(latestWcVersion.isAtLeast(oldestWcVersion));
+        assertTrue(latestWcVersion.isAtLeast(defaultWcVersion));
+        assertTrue(defaultWcVersion.isAtLeast(oldestWcVersion));
+    }
+
+    /**
      * Test the JNIError class functionality
      * @throws Throwable
      */
@@ -144,7 +367,7 @@ public class BasicTests extends SVNTests
         tempclient.dispose();
 
         // create Y and Y/Z directories in the repository
-        addExpectedCommitItem(null, thisTest.getUrl().toString(), "Y", NodeKind.none,
+        addExpectedCommitItem(null, thisTest.getUrl().toString(), "Y", NodeKind.dir,
                               CommitItemStateFlags.Add);
         Set<String> urls = new HashSet<String>(1);
         urls.add(thisTest.getUrl() + "/Y");
@@ -154,7 +377,7 @@ public class BasicTests extends SVNTests
         }
         catch(JNIError e)
         {
-	        return; // Test passes!
+            return; // Test passes!
         }
         fail("A JNIError should have been thrown here.");
     }
@@ -166,16 +389,17 @@ public class BasicTests extends SVNTests
     public void testMergeinfoParser() throws Throwable
     {
         String mergeInfoPropertyValue =
-            "/trunk:1-300,305,307,400-405\n/branches/branch:308-400";
+            "/trunk:1-300,305*,307,400-405*\n" +
+            "/branches/branch:308-400";
         Mergeinfo info = new Mergeinfo(mergeInfoPropertyValue);
         Set<String> paths = info.getPaths();
         assertEquals(2, paths.size());
         List<RevisionRange> trunkRange = info.getRevisionRange("/trunk");
         assertEquals(4, trunkRange.size());
         assertEquals("1-300", trunkRange.get(0).toString());
-        assertEquals("305", trunkRange.get(1).toString());
+        assertEquals("305*", trunkRange.get(1).toString());
         assertEquals("307", trunkRange.get(2).toString());
-        assertEquals("400-405", trunkRange.get(3).toString());
+        assertEquals("400-405*", trunkRange.get(3).toString());
         List<RevisionRange> branchRange =
             info.getRevisionRange("/branches/branch");
         assertEquals(1, branchRange.size());
@@ -191,17 +415,31 @@ public class BasicTests extends SVNTests
         OneTest thisTest = new OneTest();
 
         // check the status of the working copy
+        thisTest.getWc().setItemDepth("", Depth.infinity);
+        thisTest.getWc().setItemDepth("iota", Depth.unknown);
         thisTest.checkStatus();
 
         // Test status of non-existent file
         File fileC = new File(thisTest.getWorkingCopy() + "/A", "foo.c");
 
         MyStatusCallback statusCallback = new MyStatusCallback();
-        client.status(fileToSVNPath(fileC, false), Depth.unknown, false, true,
-                    false, false, null, statusCallback);
-        if (statusCallback.getStatusArray().length > 0)
-            fail("File foo.c should not return a status.");
+        client.status(fileToSVNPath(fileC, false), Depth.unknown,
+                      false, true, true, false, false, false,
+                      null, statusCallback);
 
+        final int statusCount = statusCallback.getStatusArray().length;
+        if (statusCount == 1)
+        {
+            Status st = statusCallback.getStatusArray()[0];
+            if (st.isConflicted()
+                || st.getNodeStatus() != Status.Kind.none
+                || st.getRepositoryNodeStatus() != Status.Kind.none)
+                fail("File foo.c should return empty status.");
+        }
+        else if (statusCount > 1)
+            fail("File foo.c should not return more than one status.");
+        else
+            fail("File foo.c should return exactly one empty status.");
     }
 
     /**
@@ -272,7 +510,8 @@ public class BasicTests extends SVNTests
 
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/D/G/rho", Depth.immediates,
-                        false, true, false, false, null, statusCallback);
+                      false, true, true, false, false, false,
+                      null, statusCallback);
         status = statusCallback.getStatusArray()[0];
         long rhoCommitDate = status.getLastChangedDate().getTime();
         long rhoCommitRev = rev;
@@ -309,7 +548,8 @@ public class BasicTests extends SVNTests
                 + "modification to tau");
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/D/G/tau", Depth.immediates,
-                      false, true, false, false, null, statusCallback);
+                      false, true, true, false, false, false,
+                      null, statusCallback);
         status = statusCallback.getStatusArray()[0];
         long tauCommitDate = status.getLastChangedDate().getTime();
         long tauCommitRev = rev;
@@ -338,7 +578,8 @@ public class BasicTests extends SVNTests
         thisTest.getWc().addItem("A/B/I", null);
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/B/I", Depth.immediates,
-                    false, true, false, false, null, statusCallback);
+                      false, true, true, false, false, false,
+                      null, statusCallback);
         status = statusCallback.getStatusArray()[0];
         long ICommitDate = status.getLastChangedDate().getTime();
         long ICommitRev = rev;
@@ -373,7 +614,8 @@ public class BasicTests extends SVNTests
         thisTest.getWc().addItem("A/D/H/nu", "This is the file 'nu'.");
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/D/H/nu", Depth.immediates,
-                    false, true, false, false, null, statusCallback);
+                      false, true, true, false, false, false,
+                      null, statusCallback);
         status = statusCallback.getStatusArray()[0];
         long nuCommitDate = status.getLastChangedDate().getTime();
         long nuCommitRev = rev;
@@ -390,7 +632,8 @@ public class BasicTests extends SVNTests
         thisTest.getWc().setItemWorkingCopyRevision("A/B/F", rev);
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/B/F", Depth.immediates,
-                    false, true, false, false, null, statusCallback);
+                      false, true, true, false, false, false,
+                      null, statusCallback);
         status = statusCallback.getStatusArray()[0];
         long FCommitDate = status.getLastChangedDate().getTime();
         long FCommitRev = rev;
@@ -421,7 +664,8 @@ public class BasicTests extends SVNTests
                                  "This is the replacement file 'chi'.");
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/D/H/chi", Depth.immediates,
-                    false, true, false, false, null, statusCallback);
+                      false, true, true, false, false, false,
+                      null, statusCallback);
         status = statusCallback.getStatusArray()[0];
         long chiCommitDate = status.getLastChangedDate().getTime();
         long chiCommitRev = rev;
@@ -472,7 +716,8 @@ public class BasicTests extends SVNTests
         assertEquals("wrong revision number from commit", rev, expectedRev++);
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/D/H/psi", Depth.immediates,
-                      false, true, false, false, null, statusCallback);
+                      false, true, true, false, false, false,
+                      null, statusCallback);
         status = statusCallback.getStatusArray()[0];
         long psiCommitDate = status.getLastChangedDate().getTime();
         long psiCommitRev = rev;
@@ -564,6 +809,47 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test SVNClient.status on externals.
+     * @throws Throwable
+     */
+    public void testExternalStatus() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+
+
+        // Add an externals reference to the working copy.
+        client.propertySetLocal(thisTest.getWCPathSet(), "svn:externals",
+                                "^/A/D/H ADHext".getBytes(),
+                                Depth.empty, null, false);
+
+        // Update the working copy to bring in the external subtree.
+        client.update(thisTest.getWCPathSet(), Revision.HEAD,
+                      Depth.unknown, false, false, false, false);
+
+        // Test status of an external file
+        File psi = new File(thisTest.getWorkingCopy() + "/ADHext", "psi");
+
+        MyStatusCallback statusCallback = new MyStatusCallback();
+        client.status(fileToSVNPath(psi, false), Depth.unknown,
+                      false, true, true, false, false, false,
+                      null, statusCallback);
+
+        final int statusCount = statusCallback.getStatusArray().length;
+        if (statusCount == 1)
+        {
+            Status st = statusCallback.getStatusArray()[0];
+            assertFalse(st.isConflicted());
+            assertEquals(Status.Kind.normal, st.getNodeStatus());
+            assertEquals(NodeKind.file, st.getNodeKind());
+        }
+        else if (statusCount > 1)
+            fail("File psi should not return more than one status.");
+        else
+            fail("File psi should return exactly one status.");
+    }
+
+    /**
      * Test the basic SVNClient.checkout functionality.
      * @throws Throwable
      */
@@ -575,7 +861,8 @@ public class BasicTests extends SVNTests
         {
             // obstructed checkout must fail
             client.checkout(thisTest.getUrl() + "/A", thisTest.getWCPath(),
-                            null, null, Depth.infinity, false, false);
+                            null, null, Depth.infinity, false, false,
+                            null, Tristate.Unknown);
             fail("missing exception");
         }
         catch (ClientException expected)
@@ -606,13 +893,87 @@ public class BasicTests extends SVNTests
 
         // recheckout the working copy
         client.checkout(thisTest.getUrl().toString(), thisTest.getWCPath(),
-                   null, null, Depth.infinity, false, false);
+                        null, null, Depth.infinity, false, false,
+                        null, Tristate.Unknown);
 
         // deleted file should reapear
         thisTest.getWc().setItemTextStatus("A/B/lambda", Status.Kind.normal);
 
         // check the status of the working copy
         thisTest.checkStatus();
+    }
+
+    /**
+     * Test checkout with the current runtime WC version
+     * @throws Throwable
+     */
+    public void testCurrentWcVersionCheckout() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        client.checkout(thisTest.getUrl() + "/A",
+                        thisTest.getWCPath()  + "/ZZZ",
+                        null, null, Depth.infinity, false, false,
+                        client.getRuntimeVersion(),
+                        Tristate.Unknown);
+    }
+
+    /**
+     * Test checkout with unsupported WC version
+     * @throws Throwable
+     */
+    public void testAncientWcVersionCheckout() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+
+        try
+        {
+            // Checkout with invalid version must fail
+            client.checkout(thisTest.getUrl() + "/A",
+                            thisTest.getWCPath()  + "/ZZZ",
+                            null, null, Depth.infinity, false, false,
+                            Version.getInstance(0, 9, 0),
+                            Tristate.Unknown);
+            fail("missing exception");
+        }
+        catch (ClientException expected)
+        {
+        }
+    }
+
+    /**
+     * Test the basic SVNClient.upgrade functionality.
+     * @throws Throwable
+     */
+    public void testBasicUpgrade() throws Throwable
+    {
+        OneTest thisTest = new OneTest(true, true, true);
+        Version oldestVersion = SVNClient.oldestWcVersion();
+        Version defaultVersion = client.defaultWcVersion();
+
+        Version upgradedVersion =
+            client.upgrade(thisTest.getWCPath(), null);
+
+        assertNotNull(upgradedVersion);
+        assertTrue(upgradedVersion.isAtLeast(oldestVersion));
+        assertTrue(upgradedVersion.isAtLeast(defaultVersion));
+        assertTrue(defaultVersion.isAtLeast(upgradedVersion));
+    }
+
+    /**
+     * Test SVNClient.upgrade to the latest version.
+     * @throws Throwable
+     */
+    public void testLatestUpgrade() throws Throwable
+    {
+        OneTest thisTest = new OneTest(true, true, true);
+        Version latestVersion = SVNClient.latestWcVersion();
+
+        Version upgradedVersion =
+            client.upgrade(thisTest.getWCPath(), latestVersion);
+
+        assertNotNull(upgradedVersion);
+        assertTrue(upgradedVersion.isAtLeast(latestVersion));
+        assertTrue(latestVersion.isAtLeast(upgradedVersion));
     }
 
     /**
@@ -711,6 +1072,49 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test property inheritance.
+     * @throws Throwable
+     */
+    public void testInheritedProperties() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        WC wc = thisTest.getWc();
+
+        String adirPath = fileToSVNPath(new File(thisTest.getWCPath(),
+                                                 "/A"),
+                                        false);
+        String alphaPath = fileToSVNPath(new File(thisTest.getWCPath(),
+                                                  "/A/B/E/alpha"),
+                                         false);
+
+        String propval = "ybg";
+        setprop(adirPath, "ahqrtz", propval.getBytes());
+
+        final Map<String, Collection<InheritedProplistCallback.InheritedItem>> ipropMaps =
+            new HashMap<String, Collection<InheritedProplistCallback.InheritedItem>>();
+
+        client.properties(alphaPath, null, null, Depth.empty, null,
+            new InheritedProplistCallback () {
+                public void singlePath(
+                    String path, Map<String, byte[]> props,
+                    Collection<InheritedProplistCallback.InheritedItem> iprops)
+                { ipropMaps.put(path, iprops); }
+            });
+        Collection<InheritedProplistCallback.InheritedItem> iprops = ipropMaps.get(alphaPath);
+        for (InheritedProplistCallback.InheritedItem item : iprops)
+        {
+            for (String key : item.properties.keySet())
+            {
+                assertEquals("ahqrtz", key);
+                assertEquals(propval, new String(item.properties.get(key)));
+            }
+        }
+
+        wc.setItemPropStatus("A", Status.Kind.modified);
+        thisTest.checkStatus();
+    }
+
+    /**
      * Test the basic SVNClient.update functionality.
      * @throws Throwable
      */
@@ -783,9 +1187,9 @@ public class BasicTests extends SVNTests
         OneTest thisTest = new OneTest();
 
         // create Y and Y/Z directories in the repository
-        addExpectedCommitItem(null, thisTest.getUrl().toString(), "Y", NodeKind.none,
+        addExpectedCommitItem(null, thisTest.getUrl().toString(), "Y", NodeKind.dir,
                               CommitItemStateFlags.Add);
-        addExpectedCommitItem(null, thisTest.getUrl().toString(), "Y/Z", NodeKind.none,
+        addExpectedCommitItem(null, thisTest.getUrl().toString(), "Y/Z", NodeKind.dir,
                               CommitItemStateFlags.Add);
         Set<String> urls = new HashSet<String>(2);
         urls.add(thisTest.getUrl() + "/Y");
@@ -839,7 +1243,7 @@ public class BasicTests extends SVNTests
         }
         client.copy(sources,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    true, false, false, null, null, null);
+                    true, false, false, false, false, null, null, null, null);
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,
@@ -856,12 +1260,227 @@ public class BasicTests extends SVNTests
                                         "A/B").getPath(), Revision.WORKING,
                                     Revision.WORKING));
         client.copy(wcSource, thisTest.getUrl() + "/parent/A/B",
-                    true, true, false, null,
+                    true, true, false, false, false, null, null,
                     new ConstMsg("Copy WC to URL"), null);
 
         // update the WC to get new folder and confirm the copy
         assertEquals("wrong revision number from update",
                      update(thisTest), 3);
+    }
+
+
+    // Set up externals references in the working copy for the
+    // pin-externals tests.
+    private void setupPinExternalsTest(OneTest thisTest) throws Throwable
+    {
+        byte[] extref = ("^/A/D/H ADHext\n" +
+                         "^/A/D/H ADHext2\n" +
+                         "^/A/D/H@1 peggedADHext\n" +
+                         "-r1 ^/A/D/H revvedADHext\n").getBytes();
+        Set<String> paths = new HashSet<String>();
+        paths.add(thisTest.getWCPath() + "/A/B");
+
+        // Add an externals reference to the working copy.
+        client.propertySetLocal(paths, "svn:externals", extref,
+                                Depth.empty, null, false);
+
+        // Commit the externals definition
+        client.commit(thisTest.getWCPathSet(), Depth.infinity,
+                      false, false, null, null,
+                      new ConstMsg("Set svn:externals"), null);
+
+        // Update the working copy to bring in the external subtree.
+        client.update(thisTest.getWCPathSet(), Revision.HEAD,
+                      Depth.unknown, false, false, false, false);
+    }
+
+    /**
+     * Test WC-to-WC copy with implicit pinned externals
+     * @throws Throwable
+     */
+    public void testCopyPinExternals_wc2wc() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        setupPinExternalsTest(thisTest);
+
+        List<CopySource> sources = new ArrayList<CopySource>(1);
+        sources.add(new CopySource(thisTest.getWCPath() + "/A/B", null, null));
+        String target = thisTest.getWCPath() + "/A/Bcopy";
+        client.copy(sources, target, true, false, false, false,
+                    true,       // pinExternals
+                    null,       // externalsToPin
+                    null, null, null);
+
+        // Verification
+        String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@2 ADHext2\n" +
+                           "^/A/D/H@1 peggedADHext\n" +
+                           "-r1 ^/A/D/H@2 revvedADHext\n");
+        String actual =
+            new String(client.propertyGet(target, "svn:externals", null, null));
+
+        assertEquals(expected, actual);
+    }
+
+    /**
+     * Test WC-to-REPO copy with implicit pinned externals
+     * @throws Throwable
+     */
+    public void testCopyPinExternals_wc2repo() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        setupPinExternalsTest(thisTest);
+
+        List<CopySource> sources = new ArrayList<CopySource>(1);
+        sources.add(new CopySource(thisTest.getWCPath() + "/A/B", null, null));
+        String target = thisTest.getUrl() + "/A/Bcopy";
+        client.copy(sources, target, true, false, false, false,
+                    true,       // pinExternals
+                    null,       // externalsToPin
+                    null, new ConstMsg("Copy WC to REPO"), null);
+
+        // Verification
+        String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@2 ADHext2\n" +
+                           "^/A/D/H@1 peggedADHext\n" +
+                           "-r1 ^/A/D/H@2 revvedADHext\n");
+        String actual =
+            new String(client.propertyGet(target, "svn:externals", null, null));
+
+        assertEquals(expected, actual);
+    }
+
+    /**
+     * Test REPO-to-WC copy with implicit pinned externals
+     * @throws Throwable
+     */
+    public void testCopyPinExternals_repo2wc() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        setupPinExternalsTest(thisTest);
+
+        List<CopySource> sources = new ArrayList<CopySource>(1);
+        sources.add(new CopySource(thisTest.getUrl() + "/A/B", null, null));
+        String target = thisTest.getWCPath() + "/A/Bcopy";
+        client.copy(sources, target, true, false, false, false,
+                    true,       // pinExternals
+                    null,       // externalsToPin
+                    null, null, null);
+
+        // Verification
+        String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@2 ADHext2\n" +
+                           "^/A/D/H@1 peggedADHext\n" +
+                           "-r1 ^/A/D/H@2 revvedADHext\n");
+        String actual =
+            new String(client.propertyGet(target, "svn:externals", null, null));
+
+        assertEquals(expected, actual);
+    }
+
+    /**
+     * Test REPO-to-REPO copy with implicit pinned externals
+     * @throws Throwable
+     */
+    public void testCopyPinExternals_repo2repo() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        setupPinExternalsTest(thisTest);
+
+        List<CopySource> sources = new ArrayList<CopySource>(1);
+        sources.add(new CopySource(thisTest.getUrl() + "/A/B", null, null));
+        String target = thisTest.getUrl() + "/A/Bcopy";
+        client.copy(sources, target, true, false, false, false,
+                    true,       // pinExternals
+                    null,       // externalsToPin
+                    null, new ConstMsg("Copy WC to REPO"), null);
+
+        // Verification
+        String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@2 ADHext2\n" +
+                           "^/A/D/H@1 peggedADHext\n" +
+                           "-r1 ^/A/D/H@2 revvedADHext\n");
+        String actual =
+            new String(client.propertyGet(target, "svn:externals", null, null));
+
+        assertEquals(expected, actual);
+    }
+
+    /**
+     * Test REPO-to-REPO copy with eplicit pinned externals
+     * @throws Throwable
+     */
+    public void testCopyPinExternals_repo2repo_explicit() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        setupPinExternalsTest(thisTest);
+
+        String sourceUrl = thisTest.getUrl() + "/A/B";
+        Map<String, List<ExternalItem>> externalsToPin =
+            new HashMap<String, List<ExternalItem>>();
+        List<ExternalItem> items = new ArrayList<ExternalItem>(1);
+        items.add(new ExternalItem("ADHext", "^/A/D/H", null, null));
+        externalsToPin.put(sourceUrl, items);
+
+        List<CopySource> sources = new ArrayList<CopySource>(1);
+        sources.add(new CopySource(sourceUrl, null, null));
+        String target = thisTest.getUrl() + "/A/Bcopy";
+        client.copy(sources, target, true, false, false, false,
+                    true,       // pinExternals
+                    externalsToPin,
+                    null, new ConstMsg("Copy WC to REPO"), null);
+
+        // Verification
+        String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H ADHext2\n" +
+                           "^/A/D/H@1 peggedADHext\n" +
+                           "-r1 ^/A/D/H revvedADHext\n");
+        String actual =
+            new String(client.propertyGet(target, "svn:externals", null, null));
+
+        assertEquals(expected, actual);
+    }
+
+    /**
+     * Test REPO-to-REPO copy with explicit pinned externals that
+     * don't correspond to actual externals
+     * @throws Throwable
+     */
+    public void testCopyPinExternals_repo2repo_corkscrew() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        setupPinExternalsTest(thisTest);
+
+        String sourceUrl = thisTest.getUrl() + "/A/B";
+        Map<String, List<ExternalItem>> externalsToPin =
+            new HashMap<String, List<ExternalItem>>();
+        List<ExternalItem> items = new ArrayList<ExternalItem>(1);
+        items.add(new ExternalItem("ADHext", "^/A/D/H", null, null));
+        externalsToPin.put(sourceUrl + "/A", items);
+
+        List<CopySource> sources = new ArrayList<CopySource>(1);
+        sources.add(new CopySource(sourceUrl, null, null));
+        String target = thisTest.getUrl() + "/A/Bcopy";
+        client.copy(sources, target, true, false, false, false,
+                    true,       // pinExternals
+                    externalsToPin,
+                    null, new ConstMsg("Copy WC to REPO"), null);
+
+        // Verification
+        String expected = ("^/A/D/H ADHext\n" +
+                           "^/A/D/H ADHext2\n" +
+                           "^/A/D/H@1 peggedADHext\n" +
+                           "-r1 ^/A/D/H revvedADHext\n");
+        String actual =
+            new String(client.propertyGet(target, "svn:externals", null, null));
+
+        assertEquals(expected, actual);
     }
 
     /**
@@ -899,7 +1518,22 @@ public class BasicTests extends SVNTests
         }
         client.move(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    false, true, false, null, null, null);
+                    false, true, false, false, false, null, null, null);
+
+        MyStatusCallback statusCallback = new MyStatusCallback();
+        String statusPath = fileToSVNPath(new File(thisTest.getWCPath() + "/A/B"), true);
+        client.status(statusPath, Depth.infinity,
+                      false, true, false, false, true, false,
+                      null, statusCallback);
+        Status[] statusList = statusCallback.getStatusArray();
+        assertEquals(statusPath + "/F/alpha",
+                     statusList[0].getMovedToAbspath());
+        assertEquals(statusPath + "/F/beta",
+                     statusList[1].getMovedToAbspath());
+        assertEquals(statusPath + "/E/alpha",
+                     statusList[2].getMovedFromAbspath());
+        assertEquals(statusPath + "/E/beta",
+                     statusList[3].getMovedFromAbspath());
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,
@@ -909,6 +1543,37 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         assertExpectedSuggestion(thisTest.getUrl() + "/A/B/E/alpha", "A/B/F/alpha", thisTest);
+    }
+
+    /**
+     * Check that half a move cannot be committed.
+     * @since 1.9
+     */
+    public void testCommitPartialMove() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        String root = thisTest.getWorkingCopy().getAbsolutePath();
+        ClientException caught = null;
+
+        Set<String> srcPaths = new HashSet<String>(1);
+        srcPaths.add(root + "/A/B/E/alpha");
+        client.move(srcPaths, root + "/moved-alpha",
+                    false, false, false, false, false, null, null, null);
+
+        try {
+            client.commit(srcPaths, Depth.infinity, false, false, null, null,
+                          new ConstMsg("Commit half of a move"), null);
+        } catch (ClientException ex) {
+            caught = ex;
+        }
+
+        assertNotNull("Commit of partial move did not fail", caught);
+
+        List<ClientException.ErrorMessage> msgs = caught.getAllMessages();
+        assertTrue(msgs.size() >= 3);
+        assertTrue(msgs.get(0).getMessage().startsWith("Illegal target"));
+        assertTrue(msgs.get(1).getMessage().startsWith("Commit failed"));
+        assertTrue(msgs.get(2).getMessage().startsWith("Cannot commit"));
     }
 
     /**
@@ -1226,7 +1891,7 @@ public class BasicTests extends SVNTests
     /**
      * Test the basic SVNClient.cleanup functionality.
      * Without a way to force a lock, this test just verifies
-     * the method can be called succesfully.
+     * the method can be called successfully.
      * @throws Throwable
      */
     public void testBasicCleanup() throws Throwable
@@ -1628,7 +2293,7 @@ public class BasicTests extends SVNTests
         // check the status of the working copy
         thisTest.checkStatus();
 
-        // confirm that the file are realy deleted
+        // confirm that the file are really deleted
         assertFalse("failed to remove text modified file",
                 new File(thisTest.getWorkingCopy(), "A/D/G/rho").exists());
         assertFalse("failed to remove prop modified file",
@@ -1656,7 +2321,7 @@ public class BasicTests extends SVNTests
 
         try
         {
-            // delete non-existant file foo
+            // delete non-existent file foo
             Set<String> paths = new HashSet<String>(1);
             paths.add(file.getAbsolutePath());
             client.remove(paths, true, false, null, null, null);
@@ -1718,8 +2383,9 @@ public class BasicTests extends SVNTests
 
         // check out the previous revision
         client.checkout(thisTest.getUrl()+"/A/D",
-                thisTest.getWCPath()+"/new_D", new Revision.Number(1),
-                new Revision.Number(1), Depth.infinity, false, false);
+                        thisTest.getWCPath()+"/new_D", new Revision.Number(1),
+                        new Revision.Number(1), Depth.infinity, false, false,
+                        null, Tristate.Unknown);;
     }
 
     /**
@@ -1941,6 +2607,13 @@ public class BasicTests extends SVNTests
                      Info.ScheduleKind.normal, info.getSchedule());
         assertEquals("wrong node kind from info", NodeKind.file,
                      info.getKind());
+        assertTrue("unexpected store-pristine", info.getStorePristine());
+
+        Version current = info.getWorkingCopyVersion();
+        assertNotNull("WC version not available", current);
+        Version expected = client.defaultWcVersion();
+        assertTrue("unexpected WC version", current.isAtLeast(expected));
+        assertTrue("unexpected WC version", expected.isAtLeast(current));
     }
 
     /**
@@ -2052,7 +2725,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test the basic SVNClient.info2 functionality.
+     * Test the basic SVNClient.info functionality.
      * @throws Throwable
      * @since 1.2
      */
@@ -2093,8 +2766,9 @@ public class BasicTests extends SVNTests
         String secondWC = thisTest.getWCPath() + ".empty";
         removeDirOrFile(new File(secondWC));
 
-        client.checkout(thisTest.getUrl().toString(), secondWC, null, null,
-                       Depth.empty, false, true);
+        client.checkout(thisTest.getUrl().toString(), secondWC,
+                        null, null, Depth.empty, false, true,
+                        null, Tristate.Unknown);
 
         infos = collectInfos(secondWC, null, null, Depth.empty, null);
 
@@ -2128,8 +2802,9 @@ public class BasicTests extends SVNTests
         assertTrue(changelists.equals(cl));
         // Does status report this changelist?
         MyStatusCallback statusCallback = new MyStatusCallback();
-        client.status(path, Depth.immediates, false, false, false, false,
-                    null, statusCallback);
+        client.status(path, Depth.immediates,
+                      false, true, false, false, false, false,
+                      null, statusCallback);
         Status[] status = statusCallback.getStatusArray();
         assertEquals(status[0].getChangelist(), changelistName);
 
@@ -2140,6 +2815,33 @@ public class BasicTests extends SVNTests
         client.getChangelists(thisTest.getWCPath(), changelists,
                               Depth.infinity, clCallback);
         assertTrue(clCallback.isEmpty());
+    }
+
+    public void testGetAllChangelists() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        final String cl1 = "changelist_one";
+        final String cl2 = "changelist_too";
+        MyChangelistCallback clCallback = new MyChangelistCallback();
+
+        String path = fileToSVNPath(new File(thisTest.getWCPath(), "iota"),
+                                    true);
+        Set<String> paths = new HashSet<String>(1);
+        paths.add(path);
+        client.addToChangelist(paths, cl1, Depth.infinity, null);
+        paths.remove(path);
+
+        path = fileToSVNPath(new File(thisTest.getWCPath(), "A/B/lambda"),
+                             true);
+        paths.add(path);
+        client.addToChangelist(paths, cl2, Depth.infinity, null);
+
+        client.getChangelists(thisTest.getWCPath(), null,
+                              Depth.infinity, clCallback);
+        Collection<String> changelists = clCallback.getChangelists();
+        assertEquals(2, changelists.size());
+        assertTrue("Contains " + cl1, changelists.contains(cl1));
+        assertTrue("Contains " + cl2, changelists.contains(cl2));
     }
 
     /**
@@ -2173,7 +2875,7 @@ public class BasicTests extends SVNTests
         List<RevisionRange> ranges = mergeInfo.getRevisions(mergeSrc);
         assertTrue("Missing merge info for source '" + mergeSrc + "' on '" +
                    targetPath + '\'', ranges != null && !ranges.isEmpty());
-        RevisionRange range = (RevisionRange) ranges.get(0);
+        RevisionRange range = ranges.get(0);
         String expectedMergedRevs = expectedMergeStart + "-" + expectedMergeEnd;
         assertEquals("Unexpected first merged revision range for '" +
                      mergeSrc + "' on '" + targetPath + '\'',
@@ -2214,7 +2916,7 @@ public class BasicTests extends SVNTests
                 public void singleMessage(Set<ChangePath> changedPaths,
                     long revision, Map<String, byte[]> revprops,
                     boolean hasChildren)
-                { revList.add(new Long(revision)); }
+                { revList.add(Long.valueOf(revision)); }
             });
 
         long[] revisions = new long[revList.size()];
@@ -2394,11 +3096,49 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test merge with automatic source and revision determination
+     * (e.g. 'svn merge -g) with implied revision range.
+     * @throws Throwable
+     * @since 1.8
+     */
+    public void testMergeUsingHistoryImpliedRange() throws Throwable
+    {
+        OneTest thisTest = setupAndPerformMerge();
+
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
+
+        // Merge and commit some changes (r4).
+        appendText(thisTest, "A/mu", "xxx", 4);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 4,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+        String branchPath = thisTest.getWCPath() + "/branches/A";
+        String modUrl = thisTest.getUrl() + "/A";
+        client.merge(modUrl, Revision.HEAD, null,
+                     branchPath, true, Depth.infinity, false, false, false);
+
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
+                              "branches/A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
+                              "branches/A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 5,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+    }
+
+    /**
      * Test reintegrating a branch with trunk
      * (e.g. 'svn merge --reintegrate').
      * @throws Throwable
      * @since 1.5
      */
+    @SuppressWarnings("deprecation")
     public void testMergeReintegrate() throws Throwable
     {
         OneTest thisTest = setupAndPerformMerge();
@@ -2457,6 +3197,74 @@ public class BasicTests extends SVNTests
             client.mergeReintegrate(branchUrl, Revision.HEAD,
                                     thisTest.getWCPath() + "/A", false);
         }
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(),
+                             thisTest.getUrl().toString(), "A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        addExpectedCommitItem(thisTest.getWCPath(),
+                             thisTest.getUrl().toString(), "A/D/G/rho",
+                             NodeKind.file, CommitItemStateFlags.TextMods);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 7,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+    }
+
+
+    /**
+     * Test reintegrating a branch with trunk, using automatic reintegrate.
+     */
+    public void testMergeAutoReintegrate() throws Throwable
+    {
+        OneTest thisTest = setupAndPerformMerge();
+
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
+
+        // Merge and commit some changes to main (r4).
+        appendText(thisTest, "A/mu", "xxx", 4);
+        checkCommitRevision(thisTest,
+                            "wrong revision number from main commit", 4,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+        // Merge and commit some changes to branch (r5).
+        appendText(thisTest, "branches/A/D/G/rho", "yyy", -1);
+        checkCommitRevision(thisTest,
+                            "wrong revision number from branch commit", 5,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+        // update the branch WC (to r5) before merge
+        update(thisTest, "/branches");
+
+        String branchPath = thisTest.getWCPath() + "/branches/A";
+        String modUrl = thisTest.getUrl() + "/A";
+        Revision unspec = new Revision(Revision.Kind.unspecified);
+        List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
+        ranges.add(new RevisionRange(unspec, unspec));
+        client.merge(modUrl, Revision.HEAD, ranges,
+                     branchPath, true, Depth.infinity, false, false, false);
+
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
+                              "branches/A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
+                              "branches/A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 6,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+        // now we reintegrate the branch with main
+        String branchUrl = thisTest.getUrl() + "/branches/A";
+        client.merge(branchUrl, Revision.HEAD, null,
+                     thisTest.getWCPath() + "/A", false,
+                     Depth.unknown, false, false, false, false);
+
+        // make the working copy up-to-date, so that mergeinfo can be committed
+        update(thisTest);
         // commit the changes so that we can verify merge
         addExpectedCommitItem(thisTest.getWCPath(),
                              thisTest.getUrl().toString(), "A", NodeKind.dir,
@@ -2602,7 +3410,7 @@ public class BasicTests extends SVNTests
         srcs.add(new CopySource(thisTest.getUrl() + "/A", Revision.HEAD,
                                 Revision.HEAD));
         client.copy(srcs, thisTest.getUrl() + "/branches/A",
-                    true, false, false, null,
+                    true, false, false, false, false, null, null,
                     new ConstMsg("create A branch"), null);
 
         // update the WC (to r3) so that it has the branches folder
@@ -2645,11 +3453,11 @@ public class BasicTests extends SVNTests
                              // Do nothing, right now.
                             return false;
                          }
-    	});
+        });
     }
 
     /**
-     * Test the {@link SVNClientInterface.diff()} APIs.
+     * Test the {@link ISVNClient.diff()} APIs.
      * @since 1.5
      */
     public void testDiff()
@@ -2706,7 +3514,7 @@ public class BasicTests extends SVNTests
                         thisTest.getUrl().toString(), diffOutput.getPath(),
                         Depth.infinity, null, true, true, false, false);
 
-            fail("This test should fail becaus the relativeToDir parameter " +
+            fail("This test should fail because the relativeToDir parameter " +
                  "does not work with URLs");
         }
         catch (Exception ignored)
@@ -2884,6 +3692,132 @@ public class BasicTests extends SVNTests
 
     }
 
+    /**
+     * Test the {@link ISVNClient.diff()} with {@link DiffOptions}.
+     * @since 1.8
+     */
+    public void testDiffOptions()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest(true);
+        File diffOutput = new File(super.localTmp, thisTest.testName);
+        final String NL = System.getProperty("line.separator");
+        final String sepLine =
+            "===================================================================" + NL;
+        final String underSepLine =
+            "___________________________________________________________________" + NL;
+        final String iotaPath = thisTest.getWCPath().replace('\\', '/') + "/iota";
+        final String wcPath = fileToSVNPath(new File(thisTest.getWCPath()),
+                false);
+        final String expectedDiffHeader =
+            "Index: iota" + NL + sepLine +
+            "--- iota\t(revision 1)" + NL +
+            "+++ iota\t(working copy)" + NL;
+
+        // make edits to iota
+        PrintWriter writer = new PrintWriter(new FileOutputStream(iotaPath));
+        writer.print("This is  the  file 'iota'.");
+        writer.flush();
+        writer.close();
+
+        try
+        {
+            final String expectedDiffOutput = expectedDiffHeader +
+                "@@ -1 +1 @@" + NL +
+                "-This is the file 'iota'." + NL +
+                "\\ No newline at end of file" + NL +
+                "+This is  the  file 'iota'." + NL +
+                "\\ No newline at end of file" + NL;
+
+            client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                        wcPath, new FileOutputStream(diffOutput.getPath()),
+                        Depth.infinity, null,
+                        false, false, false, false, false, false, null);
+            assertFileContentsEquals(
+                "Unexpected diff output with no options in file '" +
+                diffOutput.getPath() + '\'',
+                expectedDiffOutput, diffOutput);
+            diffOutput.delete();
+        }
+        catch (ClientException e)
+        {
+            fail(e.getMessage());
+        }
+
+        try
+        {
+            final String expectedDiffOutput = "";
+
+            client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                        wcPath, new FileOutputStream(diffOutput.getPath()),
+                        Depth.infinity, null,
+                        false, false, false, false, false, false,
+                        new DiffOptions(DiffOptions.Flag.IgnoreWhitespace));
+            assertFileContentsEquals(
+                "Unexpected diff output with Flag.IgnoreWhitespace in file '" +
+                diffOutput.getPath() + '\'',
+                expectedDiffOutput, diffOutput);
+            diffOutput.delete();
+        }
+        catch (ClientException e)
+        {
+            fail("Using Flag.IgnoreWhitespace: "
+                  + e.getMessage());
+        }
+
+        try
+        {
+            final String expectedDiffOutput = "";
+
+            client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                        wcPath, diffOutput.getPath(), Depth.infinity, null,
+                        false, false, false, false, false, false,
+                        new DiffOptions(DiffOptions.Flag.IgnoreSpaceChange));
+            assertFileContentsEquals(
+                "Unexpected diff output with Flag.IgnoreSpaceChange in file '" +
+                diffOutput.getPath() + '\'',
+                expectedDiffOutput, diffOutput);
+            diffOutput.delete();
+        }
+        catch (ClientException e)
+        {
+            fail("Using Flag.IgnoreSpaceChange: "
+                 + e.getMessage());
+        }
+
+        // make edits to iota
+        writer = new PrintWriter(new FileOutputStream(iotaPath));
+        writer.print("This is  the  file 'io ta'.");
+        writer.flush();
+        writer.close();
+
+        try
+        {
+            final String expectedDiffOutput = expectedDiffHeader +
+                "@@ -1 +1 @@" + NL +
+                "-This is the file 'iota'." + NL +
+                "\\ No newline at end of file" + NL +
+                "+This is  the  file 'io ta'." + NL +
+                "\\ No newline at end of file" + NL;
+
+            client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                        wcPath, diffOutput.getPath(), Depth.infinity, null,
+                        false, false, false, false, false, false,
+                        new DiffOptions(DiffOptions.Flag.IgnoreSpaceChange));
+            assertFileContentsEquals(
+                "Unexpected diff output with Flag.IgnoreSpaceChange in file '" +
+                diffOutput.getPath() + '\'',
+                expectedDiffOutput, diffOutput);
+            diffOutput.delete();
+        }
+        catch (ClientException e)
+        {
+            fail("Using Flag.IgnoreSpaceChange: "
+                 + e.getMessage());
+        }
+    }
+
+
     private void assertFileContentsEquals(String msg, String expected,
                                           File actual)
         throws IOException
@@ -2929,7 +3863,7 @@ public class BasicTests extends SVNTests
 
         // Rigorously inspect one of our DiffSummary notifications.
         final String BETA_PATH = "A/B/E/beta";
-        DiffSummary betaDiff = (DiffSummary) summaries.get(BETA_PATH);
+        DiffSummary betaDiff = summaries.get(BETA_PATH);
         assertNotNull("No diff summary for " + BETA_PATH, betaDiff);
         assertEquals("Incorrect path for " + BETA_PATH, BETA_PATH,
                      betaDiff.getPath());
@@ -2994,6 +3928,16 @@ public class BasicTests extends SVNTests
         }
     }
 
+    private static class CountingProgressListener implements ProgressCallback
+    {
+        public void onProgress(ProgressEvent event)
+        {
+            // TODO: Examine the byte counts from "event".
+            gotProgress = true;
+        }
+        public boolean gotProgress = false;
+    }
+
     public void testDataTransferProgressReport() throws Throwable
     {
         // ### FIXME: This isn't working over ra_local, because
@@ -3003,25 +3947,13 @@ public class BasicTests extends SVNTests
 
         // build the test setup
         OneTest thisTest = new OneTest();
-        ProgressCallback listener = new ProgressCallback()
-        {
-            public void onProgress(ProgressEvent event)
-            {
-                // TODO: Examine the byte counts from "event".
-                throw new RuntimeException("Progress reported as expected");
-            }
-        };
+        CountingProgressListener listener = new CountingProgressListener();
         client.setProgressCallback(listener);
 
         // Perform an update to exercise the progress notification.
-        try
-        {
-            update(thisTest);
+        update(thisTest);
+        if (!listener.gotProgress)
             fail("No progress reported");
-        }
-        catch (RuntimeException progressReported)
-        {
-        }
     }
 
     /**
@@ -3062,7 +3994,7 @@ public class BasicTests extends SVNTests
         }
         client.move(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    false, true, false, null, null, null);
+                    false, true, false, false, false, null, null, null);
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,
@@ -3103,6 +4035,7 @@ public class BasicTests extends SVNTests
         ConflictDescriptor conflict = conflicts.iterator().next();
 
         assertNotNull("Conflict should not be null", conflict);
+        assertNotNull("Repository UUID must be set", conflict.getSrcLeftVersion().getReposUUID());
 
         assertEquals(conflict.getSrcLeftVersion().getNodeKind(), NodeKind.file);
         assertEquals(conflict.getSrcLeftVersion().getReposURL() + "/" +
@@ -3111,6 +4044,8 @@ public class BasicTests extends SVNTests
 
         if (conflict.getSrcRightVersion() != null)
         {
+            assertEquals(conflict.getSrcLeftVersion().getReposUUID(),
+                         conflict.getSrcRightVersion().getReposUUID());
             assertEquals(conflict.getSrcRightVersion().getNodeKind(), NodeKind.none);
             assertEquals(conflict.getSrcRightVersion().getReposURL(), tcTest.getUrl().toString());
             assertEquals(conflict.getSrcRightVersion().getPegRevision(), 2L);
@@ -3164,19 +4099,19 @@ public class BasicTests extends SVNTests
 
     }
 
-    /**
+    /*
+      This is currently commented out, because we don't have an XFail method
+      for JavaHL.  The resolution is pending the result of issue #3680:
+      https://issues.apache.org/jira/browse/SVN-3680
+
+   / **
      * Test tolerance of unversioned obstructions when adding paths with
      * {@link org.apache.subversion.javahl.SVNClient#checkout()},
      * {@link org.apache.subversion.javahl.SVNClient#update()}, and
      * {@link org.apache.subversion.javahl.SVNClient#doSwitch()}
      * @throws IOException
      * @throws SubversionException
-     */
-    /*
-      This is currently commented out, because we don't have an XFail method
-      for JavaHL.  The resolution is pending the result of issue #3680:
-      http://subversion.tigris.org/issues/show_bug.cgi?id=3680
-
+     * /
     public void testObstructionTolerance()
             throws SubversionException, IOException
     {
@@ -3338,6 +4273,7 @@ public class BasicTests extends SVNTests
      * @throws Throwable
      * @since 1.5
      */
+    @SuppressWarnings("deprecation")
     public void testBasicBlame() throws Throwable
     {
         OneTest thisTest = new OneTest();
@@ -3357,11 +4293,90 @@ public class BasicTests extends SVNTests
                      false, false, callback);
         assertEquals(1, callback.numberOfLines());
         BlameCallbackImpl.BlameLine line = callback.getBlameLine(0);
-        if (line != null)
-        {
-            assertEquals(1, line.getRevision());
-            assertEquals("jrandom", line.getAuthor());
+        assertNotNull(line);
+        assertEquals(1, line.getRevision());
+        assertEquals("jrandom", line.getAuthor());
+        assertEquals("This is the file 'iota'.", line.getLine());
+    }
+
+    /**
+     * Test blame with diff options.
+     * @since 1.9
+     */
+    @SuppressWarnings("deprecation")
+    public void testBlameWithDiffOptions() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        // Modify the file iota, making only whitespace changes.
+        File iota = new File(thisTest.getWorkingCopy(), "iota");
+        FileOutputStream stream = new FileOutputStream(iota, false);
+        stream.write("This   is   the   file   'iota'.\t".getBytes());
+        stream.close();
+        Set<String> srcPaths = new HashSet<String>(1);
+        srcPaths.add(thisTest.getWCPath());
+        try {
+            client.username("rayjandom");
+            client.commit(srcPaths, Depth.infinity, false, false, null, null,
+                          new ConstMsg("Whitespace-only change in /iota"), null);
+        } finally {
+            client.username("jrandom");
         }
+
+        // Run blame on the result
+        BlameCallbackImpl callback = new BlameCallbackImpl();
+        client.blame(thisTest.getWCPath() + "/iota", Revision.HEAD,
+                     Revision.getInstance(1), Revision.HEAD,
+                     false, false, callback,
+                     new DiffOptions(DiffOptions.Flag.IgnoreWhitespace));
+        assertEquals(1, callback.numberOfLines());
+        BlameCallbackImpl.BlameLine line = callback.getBlameLine(0);
+        assertNotNull(line);
+        assertEquals(1, line.getRevision());
+        assertEquals("jrandom", line.getAuthor());
+        assertEquals("This   is   the   file   'iota'.\t", line.getLine());
+    }
+
+    /**
+     * Test the new 1.12 blame interface on a file with null bytes.
+     * @throws Throwable
+     * @since 1.12
+     */
+    public void testBinaryBlame() throws Throwable
+    {
+        final byte[] lineIn = {0x0, 0x0, 0x0, 0xa};
+        final byte[] lineOut = {0x0, 0x0, 0x0};
+
+        OneTest thisTest = new OneTest();
+        // Modify the file iota, adding null bytes.
+        File iota = new File(thisTest.getWorkingCopy(), "iota");
+        FileOutputStream stream = new FileOutputStream(iota, false);
+        stream.write(lineIn);
+        stream.close();
+        Set<String> srcPaths = new HashSet<String>(1);
+        srcPaths.add(thisTest.getWCPath());
+        try {
+            client.username("rayjandom");
+            client.commit(srcPaths, Depth.infinity, false, false, null, null,
+                          new ConstMsg("NUL bytes written to /iota"), null);
+        } finally {
+            client.username("jrandom");
+        }
+
+        // Test the current interface
+        BlameRangeCallbackImpl rangeCallback = new BlameRangeCallbackImpl();
+        BlameLineCallbackImpl lineCallback = new BlameLineCallbackImpl();
+        client.blame(thisTest.getWCPath() + "/iota", Revision.HEAD,
+                     Revision.getInstance(0), Revision.HEAD,
+                     false, false, null, rangeCallback, lineCallback);
+        assertEquals(0, rangeCallback.startRevnum);
+        assertEquals(2, rangeCallback.endRevnum);
+        assertEquals(1, lineCallback.numberOfLines());
+
+        BlameLineCallbackImpl.BlameLine line = lineCallback.getBlameLine(0);
+        assertNotNull(line);
+        assertEquals(2, line.getRevision());
+        assertEquals("rayjandom", line.getAuthor());
+        assertArrayEquals(lineOut, line.getLine());
     }
 
     /**
@@ -3403,10 +4418,11 @@ public class BasicTests extends SVNTests
         Set<String> revProps = new HashSet<String>(2);
         revProps.add("kfogel");
         revProps.add("cmpilato");
+        // Testing variant with allRevProps = false
         client.logMessages(thisTest.getWCPath(), Revision.getInstance(2),
                 toRevisionRange(Revision.getInstance(2),
                                 Revision.getInstance(2)),
-                false, false, false, revProps, 0,
+                false, false, false, revProps, false, 0,
                 new LogMessageCallback () {
                     public void singleMessage(Set<ChangePath> changedPaths,
                                               long revision,
@@ -3434,6 +4450,489 @@ public class BasicTests extends SVNTests
     {
       SVNClient cl = new SVNClient();
       cl.dispose();
+    }
+
+    /**
+     * Test RevisionRangeList.remove
+     */
+    public void testRevisionRangeListRemove() throws Throwable
+    {
+        RevisionRangeList ranges =
+            new RevisionRangeList(new ArrayList<RevisionRange>());
+        ranges.getRanges()
+            .add(new RevisionRange(Revision.getInstance(1),
+                                   Revision.getInstance(5),
+                                   true));
+        ranges.getRanges()
+            .add(new RevisionRange(Revision.getInstance(7),
+                                   Revision.getInstance(9),
+                                   false));
+        RevisionRangeList eraser =
+            new RevisionRangeList(new ArrayList<RevisionRange>());
+        eraser.getRanges()
+            .add(new RevisionRange(Revision.getInstance(7),
+                                   Revision.getInstance(9),
+                                   true));
+
+        List<RevisionRange> result = ranges.remove(eraser, true).getRanges();
+        assertEquals(2, ranges.getRanges().size());
+        assertEquals(1, eraser.getRanges().size());
+        assertEquals(2, result.size());
+
+        result = ranges.remove(eraser.getRanges(), false);
+        assertEquals(2, ranges.getRanges().size());
+        assertEquals(1, eraser.getRanges().size());
+        assertEquals(1, result.size());
+    }
+
+    private class Tunnel extends Thread
+        implements TunnelAgent, TunnelAgent.CloseTunnelCallback
+    {
+        public boolean checkTunnel(String name)
+        {
+            return name.equals("test");
+        }
+
+        public TunnelAgent.CloseTunnelCallback
+            openTunnel(ReadableByteChannel request,
+                       WritableByteChannel response,
+                       String name, String user,
+                       String hostname, int port)
+        {
+            this.request = request;
+            this.response = response;
+            start();
+            return this;
+        }
+
+        public void closeTunnel()
+        {
+            Throwable t = null;
+            try {
+                request.close();
+                join();
+                response.close();
+            } catch (Throwable ex) {
+                t = ex;
+            }
+            assertEquals("No exception thrown", null, t);
+        }
+
+        private ReadableByteChannel request;
+        private WritableByteChannel response;
+
+        public void run()
+        {
+
+            int index = 0;
+            byte[] raw_data = new byte[1024];
+            ByteBuffer data = ByteBuffer.wrap(raw_data);
+            while(index < commands.length && request.isOpen()) {
+                try {
+                    byte[] command = commands[index++];
+                    response.write(ByteBuffer.wrap(command));
+                } catch (IOException ex) {
+                    break;
+                }
+
+                try {
+                    data.clear();
+                    request.read(data);
+                } catch (Throwable ex) {}
+            }
+
+            try {
+                response.close();
+                request.close();
+            } catch (Throwable t) {}
+        }
+
+        private final byte[][] commands = new byte[][]{
+            // Initial capabilities negotiation
+            ("( success ( 2 2 ( ) " +
+             "( edit-pipeline svndiff1 absent-entries commit-revprops " +
+             "depth log-revprops atomic-revprops partial-replay " +
+             "inherited-props ephemeral-txnprops file-revs-reverse " +
+             ") ) ) ").getBytes(),
+
+            // Response for successful connection
+            ("( success ( ( ANONYMOUS EXTERNAL ) " +
+             "36:e3c8c113-03ba-4ec5-a8e6-8fc555e57b91 ) ) ").getBytes(),
+
+            // Response to authentication request
+            ("( success ( ) ) ( success ( " +
+             "36:e3c8c113-03ba-4ec5-a8e6-8fc555e57b91 " +
+             "24:svn+test://localhost/foo ( mergeinfo ) ) ) ").getBytes(),
+
+            // Response to revprop request
+            ("( success ( ( ) 0: ) ) ( success ( ( 4:fake ) ) ) ").getBytes()
+        };
+    }
+
+    /**
+     * Test tunnel handling.
+     */
+    public void testTunnelAgent() throws Throwable
+    {
+        byte[] revprop;
+        SVNClient cl = new SVNClient();
+        try {
+            cl.notification2(new MyNotifier());
+            if (DefaultAuthn.useDeprecated())
+                cl.setPrompt(DefaultAuthn.getDeprecated());
+            else
+                cl.setPrompt(DefaultAuthn.getDefault());
+            cl.username(USERNAME);
+            cl.setProgressCallback(new DefaultProgressListener());
+            cl.setConfigDirectory(conf.getAbsolutePath());
+
+            cl.setTunnelAgent(new Tunnel());
+            revprop = cl.revProperty("svn+test://localhost/foo", "svn:log",
+                                     Revision.getInstance(0L));
+        } finally {
+            cl.dispose();
+        }
+        assertEquals("fake", new String(revprop));
+    }
+
+    public static int FLAG_ECHO          = 0x00000001;
+    public static int FLAG_THROW_IN_OPEN = 0x00000002;
+
+    public enum Actions
+    {
+        READ_CLIENT,    // Read a request from SVN client
+        EMUL_SERVER,    // Emulate server response
+        WAIT_TUNNEL,    // Wait for tunnel to be closed
+    };
+
+    public static class ScriptItem
+    {
+        Actions action;
+        String value;
+
+        ScriptItem(Actions action, String value)
+        {
+            this.action = action;
+            this.value = value;
+        }
+    }
+
+    private static class TestTunnelAgent extends Thread
+        implements TunnelAgent
+    {
+        ScriptItem[] script;
+        int flags;
+        String error = null;
+        ReadableByteChannel request;
+        WritableByteChannel response;
+
+        final CloseTunnelCallback closeTunnelCallback = () ->
+        {
+            if ((flags & FLAG_ECHO) != 0)
+                System.out.println("TunnelAgent.CloseTunnelCallback");
+        };
+
+        TestTunnelAgent(int flags, ScriptItem[] script)
+        {
+            this.flags = flags;
+            this.script = script;
+        }
+
+        public void joinAndTest()
+        {
+            try
+            {
+                join();
+            }
+            catch (InterruptedException e)
+            {
+                fail("InterruptedException was caught");
+            }
+
+            if (error != null)
+                fail(error);
+        }
+
+        @Override
+        public boolean checkTunnel(String name)
+        {
+            return true;
+        }
+
+        private String readClient(ByteBuffer readBuffer)
+            throws IOException
+        {
+            readBuffer.reset();
+            request.read(readBuffer);
+
+            final int offset = readBuffer.arrayOffset();
+            return new String(readBuffer.array(),
+                offset,
+                readBuffer.position() - offset);
+        }
+
+        private void emulateServer(String serverMessage)
+            throws IOException
+        {
+            final byte[] responseBytes = serverMessage.getBytes();
+            response.write(ByteBuffer.wrap(responseBytes));
+        }
+
+        private void doScriptItem(ScriptItem scriptItem, ByteBuffer readBuffer)
+            throws Exception
+        {
+            switch (scriptItem.action)
+            {
+            case READ_CLIENT:
+                final String actualLine = readClient(readBuffer);
+
+                if ((flags & FLAG_ECHO) != 0)
+                {
+                    System.out.println("SERVER: " + scriptItem.value);
+                    System.out.flush();
+                }
+
+                if (!actualLine.contains(scriptItem.value))
+                {
+                    System.err.println("Expected: " + scriptItem.value);
+                    System.err.println("Actual:   " + actualLine);
+                    System.err.flush();
+
+                    // Unblock the SVN thread by emulating a server error
+                    final String serverError = "( success ( ( ) 0: ) ) ( failure ( ( 160000 39:Test script received unexpected request 0: 0 ) ) ) ";
+                    emulateServer(serverError);
+
+                    fail("Unexpected client request");
+                }
+                break;
+            case EMUL_SERVER:
+                if ((flags & FLAG_ECHO) != 0)
+                {
+                    System.out.println("CLIENT: " + scriptItem.value);
+                    System.out.flush();
+                }
+
+                emulateServer(scriptItem.value);
+                break;
+            case WAIT_TUNNEL:
+                // The loop will end with an exception when tunnel is closed
+                for (;;)
+                {
+                    readClient(readBuffer);
+                }
+            }
+        }
+
+        public void run()
+        {
+            final ByteBuffer readBuffer = ByteBuffer.allocate(1024 * 1024);
+            readBuffer.mark();
+
+            for (ScriptItem scriptItem : script)
+            {
+                try
+                {
+                    doScriptItem(scriptItem, readBuffer);
+                }
+                catch (ClosedChannelException ex)
+                {
+                    // Expected when closed properly
+                }
+                catch (IOException e)
+                {
+                    // IOException occurs when already-freed apr_file_t was lucky
+                    // to have reasonable fields to avoid the crash. It still
+                    // indicates a problem.
+                    error = "IOException was caught in run()";
+                    return;
+                }
+                catch (Throwable t)
+                {
+                    // No other exceptions are expected here.
+                    error = "Exception was caught in run()";
+                    t.printStackTrace();
+                    return;
+                }
+            }
+        }
+
+        @Override
+        public CloseTunnelCallback openTunnel(ReadableByteChannel request,
+                                              WritableByteChannel response,
+                                              String name,
+                                              String user,
+                                              String hostname,
+                                              int port)
+            throws Throwable
+        {
+            this.request = request;
+            this.response = response;
+
+            start();
+
+            if ((flags & FLAG_THROW_IN_OPEN) != 0)
+                throw ClientException.fromException(new RuntimeException("Test exception"));
+
+            return closeTunnelCallback;
+        }
+    };
+
+    /**
+     * Test scenario which previously caused a JVM crash.
+     * In this scenario, GC is invoked before closing tunnel.
+     */
+    public void testCrash_RemoteSession_nativeDispose()
+    {
+        final ScriptItem[] script = new ScriptItem[]
+        {
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( 2 2 ( ) ( edit-pipeline svndiff1 absent-entries commit-revprops depth log-revprops atomic-revprops partial-replay inherited-props ephemeral-txnprops file-revs-reverse ) ) ) "),
+            new ScriptItem(Actions.READ_CLIENT, "edit-pipeline"),
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ( ANONYMOUS ) 36:0113e071-0208-4a7b-9f20-3038f9caf0f0 ) ) "),
+            new ScriptItem(Actions.READ_CLIENT, "ANONYMOUS"),
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ) ) ( success ( 36:00000000-0000-0000-0000-000000000000 25:svn+test://localhost/test ( mergeinfo ) ) ) "),
+        };
+
+        final TestTunnelAgent tunnelAgent = new TestTunnelAgent(0, script);
+        final RemoteFactory remoteFactory = new RemoteFactory();
+        remoteFactory.setTunnelAgent(tunnelAgent);
+
+        ISVNRemote remote = null;
+        try
+        {
+            remote = remoteFactory.openRemoteSession("svn+test://localhost/test", 1);
+        }
+        catch (SubversionException e)
+        {
+            fail("SubversionException was caught");
+        }
+
+        // Previously, 'OperationContext::openTunnel()' didn't 'NewGlobalRef()'
+        // callback returned by 'TunnelAgent.openTunnel()'. This caused JVM to
+        // dispose it on next GC. JavaHL calls callback in 'remote.dispose()'.
+        // If the callback was disposed, this caused a JVM crash.
+        System.gc();
+        remote.dispose();
+
+        tunnelAgent.joinAndTest();
+    }
+
+    /**
+     * Test scenario which previously caused a JVM crash.
+     * In this scenario, tunnel was not properly closed after exception in
+     * 'TunnelAgent.openTunnel()'.
+     */
+    public void testCrash_RequestChannel_nativeRead_AfterException()
+    {
+        // Previously, exception caused TunnelChannel's native side to be
+        // destroyed with the following abbreviated stack:
+        //   TunnelChannel.nativeClose()
+        //   svn_pool_destroy(sesspool)
+        //   svn_ra_open5()
+        // TunnelAgent was unaware and called 'RequestChannel.nativeRead()'
+        // or 'ResponseChannel.nativeWrite()', causing either a crash or
+        // an attempt to use a random file.
+        final int flags = FLAG_THROW_IN_OPEN;
+
+        final ScriptItem[] script = new ScriptItem[]
+        {
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( 2 2 ( ) ( edit-pipeline svndiff1 absent-entries commit-revprops depth log-revprops atomic-revprops partial-replay inherited-props ephemeral-txnprops file-revs-reverse ) ) ) "),
+            new ScriptItem(Actions.WAIT_TUNNEL, ""),
+        };
+
+        final TestTunnelAgent tunnelAgent = new TestTunnelAgent(flags, script);
+        final SVNClient svnClient = new SVNClient();
+        svnClient.setTunnelAgent(tunnelAgent);
+
+        try
+        {
+            svnClient.openRemoteSession("svn+test://localhost/test");
+        }
+        catch (SubversionException e)
+        {
+            // RuntimeException("Test exception") is expected here
+        }
+
+        // In this test, there is a race condition that sometimes results in
+        // IOException when 'WAIT_TUNNEL' tries to read from a pipe that
+        // already has its read end closed. This is not an error, but
+        // it's hard to distinguish this case from other IOException which
+        // indicate a problem. To reproduce, simply wrap this test's body in
+        // a loop. The workaround is to ignore any detected IOException.
+        try
+        {
+            tunnelAgent.join();
+        }
+        catch (InterruptedException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Test scenario which previously caused a JVM crash.
+     * In this scenario, tunnel was not properly closed after an SVN error.
+     */
+    public void testCrash_RequestChannel_nativeRead_AfterSvnError()
+    {
+        final String wcRoot = new File("tempSvnRepo").getAbsolutePath();
+
+        final ScriptItem[] script = new ScriptItem[]
+        {
+            // openRemoteSession
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( 2 2 ( ) ( edit-pipeline svndiff1 absent-entries commit-revprops depth log-revprops atomic-revprops partial-replay inherited-props ephemeral-txnprops file-revs-reverse ) ) ) "),
+            new ScriptItem(Actions.READ_CLIENT, "edit-pipeline"),
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ( ANONYMOUS ) 36:0113e071-0208-4a7b-9f20-3038f9caf0f0 ) ) "),
+            new ScriptItem(Actions.READ_CLIENT, "ANONYMOUS"),
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ) ) ( success ( 36:00000000-0000-0000-0000-000000000000 25:svn+test://localhost/test ( mergeinfo ) ) ) "),
+            // checkout
+            new ScriptItem(Actions.READ_CLIENT, "( get-latest-rev ( ) ) "),
+            // Previously, error caused a SubversionException to be created,
+            // which then skipped closing the Tunnel properly due to
+            // 'ExceptionOccurred()' in 'OperationContext::closeTunnel()'.
+            // If TunnelAgent was unaware and called 'RequestChannel.nativeRead()',
+            // it either crashed or tried to use a random file.
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ( ) 0: ) ) ( failure ( ( 160006 20:This is a test error 0: 0 ) ) ) "),
+            // Pretend that TunnelAgent tries to read more
+            new ScriptItem(Actions.WAIT_TUNNEL, ""),
+        };
+
+        final TestTunnelAgent tunnelAgent = new TestTunnelAgent(0, script);
+        final SVNClient svnClient = new SVNClient();
+        svnClient.setTunnelAgent(tunnelAgent);
+
+        try
+        {
+            svnClient.checkout("svn+test://localhost/test",
+                               wcRoot,
+                               Revision.getInstance(1),
+                               null,
+                               Depth.infinity,
+                               true,
+                               false,
+                               null,
+                               Tristate.Unknown);
+
+            svnClient.dispose();
+        }
+        catch (ClientException ex)
+        {
+            final int SVN_ERR_FS_NO_SUCH_REVISION = 160006;
+            if (SVN_ERR_FS_NO_SUCH_REVISION != ex.getAllMessages().get(0).getCode())
+                ex.printStackTrace();
+        }
+
+        tunnelAgent.joinAndTest();
+    }
+
+    /**
+     * Test getMessage in NativeException.
+     * @throws Throwable
+     */
+    public void testGetMessage() throws Throwable
+    {
+	/* NativeException with a null message previously threw a NullPointerException */
+	assertEquals("", new NativeException(null, null, null, 0).getMessage());
+	assertEquals("messagesvn: source: (apr_err=0)", new NativeException("message", "source", null, 0).getMessage());
     }
 
     /**
@@ -3489,8 +4988,16 @@ public class BasicTests extends SVNTests
         extends HashMap<String, Collection<String>>
         implements ChangelistCallback
     {
+        private static final long serialVersionUID = 1L;
+
+        private HashSet<String> allChangelists = new HashSet<String>();
+
         public void doChangelist(String path, String changelist)
         {
+            if (changelist != null)
+                allChangelists.add(changelist);
+
+            path = fileToSVNPath(new File(path), true);
             if (super.containsKey(path))
             {
                 // Append the changelist to the existing list
@@ -3509,6 +5016,11 @@ public class BasicTests extends SVNTests
         public Collection<String> get(String path)
         {
             return super.get(path);
+        }
+
+        public Collection<String> getChangelists()
+        {
+            return allChangelists;
         }
     }
 
@@ -3611,11 +5123,13 @@ public class BasicTests extends SVNTests
                                          int direntFields, boolean fetchLocks)
         throws ClientException
     {
-        class MyListCallback implements ListCallback
+        class MyListItemCallback implements ListItemCallback
         {
             private List<DirEntry> dirents = new ArrayList<DirEntry>();
 
-            public void doEntry(DirEntry dirent, Lock lock)
+            public void doEntry(DirEntry dirent, Lock lock,
+                                String externalParentURL,
+                                String externalTarget)
             {
                 // All of this is meant to retain backward compatibility with
                 // the old svn_client_ls-style API.  For further information
@@ -3649,9 +5163,9 @@ public class BasicTests extends SVNTests
             }
         }
 
-        MyListCallback callback = new MyListCallback();
-        client.list(url, revision, pegRevision, depth, direntFields,
-                    fetchLocks, callback);
+        MyListItemCallback callback = new MyListItemCallback();
+        client.list(url, revision, pegRevision, null, depth, direntFields,
+                    fetchLocks, false, callback);
         return callback.getDirEntryArray();
     }
 
@@ -3662,8 +5176,9 @@ public class BasicTests extends SVNTests
     {
        final List<Info> infos = new ArrayList<Info>();
 
-        client.info2(pathOrUrl, revision, pegRevision, depth, changelists,
-                     new InfoCallback () {
+       client.info(pathOrUrl, revision, pegRevision, depth,
+                   true, true, false,
+                   changelists, new InfoCallback () {
             public void singleInfo(Info info)
             { infos.add(info); }
         });
@@ -3724,16 +5239,14 @@ public class BasicTests extends SVNTests
         }
 
         MyLogMessageCallback callback = new MyLogMessageCallback();
-        Set<String> revProps = new HashSet<String>();
-        revProps.add("svn:log");
-        revProps.add("svn:date");
-        revProps.add("svn:author");
+        // Testing variant with allRevProps = true
         client.logMessages(path, pegRevision, revisionRanges, stopOnCopy,
-                           discoverPath, includeMergedRevisions, revProps,
-                           limit, callback);
+                           discoverPath, includeMergedRevisions, null,
+                           true, limit, callback);
         return callback.getMessages();
     }
 
+    @SuppressWarnings("deprecation")
     private byte[] collectBlameLines(String path, Revision pegRevision,
                                      Revision revisionStart,
                                      Revision revisionEnd,
@@ -3821,6 +5334,7 @@ public class BasicTests extends SVNTests
     }
 
     /* A blame callback implementation. */
+    @SuppressWarnings("deprecation")
     protected class BlameCallbackImpl implements BlameCallback
     {
 
@@ -4030,6 +5544,158 @@ public class BasicTests extends SVNTests
                 }
 
                 sb.append(val);
+            }
+        }
+    }
+
+    /* A blame range callback implementation. */
+    protected class BlameRangeCallbackImpl implements BlameRangeCallback
+    {
+        public long startRevnum = -1;
+        public long endRevnum = -1;
+        public void setRange(long start, long end)
+        {
+            startRevnum = start;
+            endRevnum = end;
+        }
+    }
+
+    /* A blame line callback implementation. */
+    protected class BlameLineCallbackImpl implements BlameLineCallback
+    {
+
+        /** list of blame records (lines) */
+        private List<BlameLine> lines = new ArrayList<BlameLine>();
+
+        public void singleLine(long lineNum, long rev,
+                               Map<String, byte[]> revProps,
+                               long mergedRevision,
+                               Map<String, byte[]> mergedRevProps,
+                               String mergedPath, boolean localChange,
+                               byte[] line)
+            throws ClientException
+        {
+            DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+
+            try {
+                insertLine(
+                    df.parse(new String(revProps.get("svn:date"))),
+                    rev,
+                    new String(revProps.get("svn:author")),
+                    mergedRevProps == null ? null
+                        : df.parse(new String(mergedRevProps.get("svn:date"))),
+                    mergedRevision,
+                    mergedRevProps == null ? null
+                        : new String(mergedRevProps.get("svn:author")),
+                    mergedPath, line);
+            } catch (ParseException e) {
+                throw ClientException.fromException(e);
+            }
+        }
+
+        private Date getDate(Date date, Date merged_date) {
+            return (merged_date == null ? date : merged_date);
+        }
+
+        private String getAuthor(String author, String merged_author) {
+            return (merged_author == null ? author : merged_author);
+        }
+
+        private long getRevision(long revision, long merged_revision) {
+            return (merged_revision == -1 ? revision : merged_revision);
+        }
+
+        private void insertLine(Date date, long revision, String author,
+                                Date merged_date, long merged_revision,
+                                String merged_author, String merged_path,
+                                byte[] line)
+        {
+            this.lines.add(new BlameLine(getRevision(revision, merged_revision),
+                                         getAuthor(author, merged_author),
+                                         getDate(date, merged_date),
+                                         line));
+        }
+
+        /**
+         * Retrieve the number of line of blame information
+         * @return number of lines of blame information
+         */
+        public int numberOfLines()
+        {
+            return this.lines.size();
+        }
+
+        /**
+         * Retrieve blame information for specified line number
+         * @param i the line number to retrieve blame information about
+         * @return  Returns object with blame information for line
+         */
+        public BlameLine getBlameLine(int i)
+        {
+            if (i >= this.lines.size())
+            {
+                return null;
+            }
+            return this.lines.get(i);
+        }
+
+        /**
+         * Class represeting one line of the lines, i.e. a blame record
+         */
+        public final class BlameLine
+        {
+            private long revision;
+            private String author;
+            private Date changed;
+            private byte[] line;
+
+            /**
+             * Constructor
+             *
+             * @param revision
+             * @param author
+             * @param changed
+             * @param line
+             */
+            public BlameLine(long revision, String author,
+                             Date changed, byte[] line)
+            {
+                this.revision = revision;
+                this.author = author;
+                this.changed = changed;
+                this.line = line;
+            }
+
+            /**
+             * @return Returns the author.
+             */
+            public String getAuthor()
+            {
+                return author;
+            }
+
+            /**
+             * @return Returns the date changed.
+             */
+            public Date getChanged()
+            {
+                return changed;
+            }
+
+            /**
+             * @return Returns the source line content.
+             */
+            public byte[] getLine()
+            {
+                return line;
+            }
+
+            /**
+             * @return Returns the revision.
+             */
+            public long getRevision()
+            {
+                return revision;
             }
         }
     }

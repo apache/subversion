@@ -22,7 +22,6 @@
 DROP VIEW IF EXISTS nodeview;
 DROP TABLE IF EXISTS noderev;
 DROP TABLE IF EXISTS string;
-DROP TABLE IF EXISTS branch;
 DROP TABLE IF EXISTS txn;
 
 
@@ -61,36 +60,10 @@ CREATE TABLE txn (
 
 CREATE INDEX txn_revision_idx ON txn(revision);
 
-
--- Branches -- unique forks in the nodes' history
-CREATE TABLE branch (
-  -- branch identifier
-  id        integer NOT NULL PRIMARY KEY,
-
-  -- the transaction in which the branch was created
-  treeid    integer NOT NULL REFERENCES txn(id),
-
-  -- the node to which this branch belongs; refers to the initial
-  -- branch of the node
-  nodeid    integer NULL REFERENCES branch(id),
-
-  -- the source branch from which this branch was forked
-  origin    integer NULL REFERENCES branch(id),
-
-  -- mark branches in uncommitted transactions so that they can be
-  -- ignored by branch traversals
-  -- T = transient (uncommitted), P = permanent (committed)
-  state     character(1) NOT NULL DEFAULT 'T',
-
-  -- sanity check: enumerated value validation
-  CONSTRAINT enumeration_validation CHECK (state IN ('T', 'P')),
-
-  -- sanity check: ye can't be yer own daddy
-  CONSTRAINT genetic_diversity CHECK (id <> origin)
-);
-
-CREATE INDEX branch_txn_idx ON branch(treeid);
-CREATE INDEX branch_node_idx ON branch(nodeid);
+CREATE TRIGGER txn_ensure_treeid AFTER INSERT ON txn
+BEGIN
+  UPDATE txn SET treeid = NEW.id WHERE treeid IS NULL AND id = NEW.id;
+END;
 
 
 -- File names -- lookup table of strings
@@ -108,18 +81,19 @@ CREATE TABLE noderev (
   -- the transaction in which the node was changed
   treeid    integer NOT NULL REFERENCES txn(id),
 
-  -- the node identifier; a new node will get the ID of its initial
-  -- branch
-  nodeid    integer NOT NULL REFERENCES branch(id),
+  -- the node identifier
+  -- a new node will get the ID of its initial noderev.id
+  nodeid    integer NULL REFERENCES noderev(id),
 
   -- this node revision's immediate predecessor
   origin    integer NULL REFERENCES noderev(id),
 
   -- the parent (directory) of this node revision -- tree graph
-  parent    integer NULL REFERENCES branch(id),
+  parent    integer NULL REFERENCES noderev(id),
 
   -- the branch that this node revision belongs to -- history graph
-  branch    integer NOT NULL REFERENCES branch(id),
+  -- a new branch will get the ID of its initial noderev.id
+  branch    integer NULL REFERENCES noderev(id),
 
   -- the indexable, NFC-normalized name of this noderev within its parent
   nameid    integer NOT NULL REFERENCES string(id),
@@ -171,7 +145,14 @@ CREATE TABLE noderev (
 CREATE UNIQUE INDEX noderev_tree_idx ON noderev(parent,nameid,treeid,opcode);
 CREATE INDEX noderev_txn_idx ON noderev(treeid);
 CREATE INDEX nodefev_node_idx ON noderev(nodeid);
+CREATE INDEX noderev_branch_idx ON noderev(branch);
 CREATE INDEX noderev_successor_idx ON noderev(origin);
+
+CREATE TRIGGER noderev_ensure_node_and_branch AFTER INSERT ON noderev
+BEGIN
+    UPDATE noderev SET nodeid = NEW.id WHERE nodeid IS NULL AND id = NEW.id;
+    UPDATE noderev SET branch = NEW.id WHERE branch IS NULL AND id = NEW.id;
+END;
 
 
 CREATE VIEW nodeview AS
@@ -188,7 +169,6 @@ CREATE VIEW nodeview AS
 
 INSERT INTO txn (id, treeid, revision, created, state)
   VALUES (0, 0, 0, 'EPOCH', 'P');
-INSERT INTO branch (id, treeid, nodeid, state) VALUES (0, 0, 0, 'P');
 INSERT INTO string (id, val) VALUES (0, '');
 INSERT INTO noderev (id, treeid, nodeid, branch,
                      nameid, denameid, kind, opcode, state)
@@ -198,9 +178,6 @@ INSERT INTO noderev (id, treeid, nodeid, branch,
 ---STATEMENT TXN_INSERT
 INSERT INTO txn (treeid, revision, created, author)
   VALUES (:treeid, :revision, :created, :author);
-
----STATEMENT TXN_UPDATE_INITIAL_TREEID
-UPDATE txn SET treeid = :id WHERE id = :id;
 
 ---STATEMENT TXN_GET
 SELECT * FROM txn WHERE id = :id;
@@ -230,28 +207,6 @@ UPDATE txn SET state = 'D' WHERE id = :id;
 ---STATEMENT TXN_CLEANUP
 DELETE FROM txn WHERE id = :id;
 
----STATEMENT BRANCH_INSERT
-INSERT INTO branch (nodeid, treeid, origin)
-  VALUES (:nodeid, :treeid, :origin);
-
----STATEMENT BRANCH_UPDATE_INITIAL_NODEID
-UPDATE branch SET nodeid = :id WHERE id = :id;
-
----STATEMENT BRANCH_UPDATE_TREEID
-UPDATE branch SET treeid = :new_treeid WHERE treeid = :old_treeid;
-
----STATEMENT BRANCH_GET
-SELECT * FROM branch WHERE id = :id;
-
----STATEMENT BRANCH_HISTORY
-SELECT * from branch WHERE nodeid = :nodeid ORDER BY id ASC;
-
----STATEMENT BRANCH_COMMIT
-UPDATE branch SET state = 'P' WHERE treeid = :treeid;
-
----STATEMENT BRANCH_CLEANUP
-DELETE FROM branch WHERE treeid = :treeid;
-
 ---STATEMENT STRING_INSERT
 INSERT INTO string (val) VALUES (:val);
 
@@ -272,9 +227,6 @@ UPDATE noderev SET opcode = :opcode WHERE id = :id;
 
 ---STATEMENT NODEVIEW_GET
 SELECT * FROM nodeview WHERE id = :id;
-
----STATEMENT NODEREV_COUNT_SUCCESSORS
-SELECT COUNT(id) FROM noderev WHERE origin = :origin;
 
 ---STATEMENT NODEREV_COMMIT
 UPDATE noderev SET state = 'P' WHERE treeid = :treeid;
@@ -309,7 +261,8 @@ ORDER BY treeid DESC LIMIT 1;
 ---STATEMENT NODEVIEW_LIST_DIRECTORY
 SELECT * FROM nodeview
   JOIN (SELECT nameid, MAX(treeid) AS treeid FROM noderev
-        WHERE treeid <= :treeid AND state = 'P') AS filter
+        WHERE treeid <= :treeid AND state = 'P'
+        GROUP BY nameid) AS filter
     ON nodeview.nameid = filter.nameid AND nodeview.treeid = filter.treeid
 WHERE parent = :parent AND opcode <> 'D'
 ORDER BY nodeview.name ASC;
@@ -317,7 +270,8 @@ ORDER BY nodeview.name ASC;
 ---STATEMENT NODEVIEW_LIST_TRANSIENT_DIRECTORY
 SELECT * FROM nodeview
   JOIN (SELECT nameid, MAX(treeid) AS treeid FROM noderev
-        WHERE treeid < :treeid AND state = 'P' OR treeid = :treeid) AS filter
+        WHERE treeid < :treeid AND state = 'P' OR treeid = :treeid
+        GROUP BY nameid) AS filter
     ON nodeview.nameid = filter.name AND nodeview.treeid = filter.treeid
 WHERE parent = :parent AND opcode <> 'D'
 ORDER BY nodeview.name ASC;

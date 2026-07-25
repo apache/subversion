@@ -42,10 +42,19 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/**
+ * To indicate charset names of the current locale
+ */
 #define SVN_APR_LOCALE_CHARSET APR_LOCALE_CHARSET
-#define SVN_APR_DEFAULT_CHARSET APR_DEFAULT_CHARSET
 
 /**
+ * Indicates the charset of the sourcecode at compile time names.  This is
+ * useful if there are literal strings in the source code which must
+ * be translated according to the charset of the source code.
+ */
+#define SVN_APR_DEFAULT_CHARSET APR_DEFAULT_CHARSET
+
+  /**
  * Initialize the UTF-8 encoding/decoding routines.
  * Allocate cached translation handles in a subpool of @a pool.
  *
@@ -63,15 +72,16 @@ extern "C" {
  * @since New in 1.8.
  */
 void
-svn_utf_initialize2(apr_pool_t *pool,
-                    svn_boolean_t assume_native_utf8);
+svn_utf_initialize2(svn_boolean_t assume_native_utf8,
+                    apr_pool_t *pool);
 
 /**
- * Like svn_utf_initialize but without the ability to force the
+ * Like svn_utf_initialize2() but without the ability to force the
  * native encoding to UTF-8.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 void
 svn_utf_initialize(apr_pool_t *pool);
 
@@ -211,7 +221,7 @@ svn_utf_cstring_from_utf8_ex(const char **dest,
  * so when we can detect that at configure time, things will change.
  * Also, this should (?) be moved to apr/apu eventually.
  *
- * See http://subversion.tigris.org/issues/show_bug.cgi?id=807 for
+ * See https://issues.apache.org/jira/browse/SVN-807 for
  * details.
  */
 const char *
@@ -238,7 +248,9 @@ svn_utf_cstring_from_utf8_string(const char **dest,
 
 /** Return the display width of UTF-8-encoded C string @a cstr.
  * If the string is not printable or invalid UTF-8, return -1.
- * @since New in 1.8. */
+ *
+ * @since New in 1.8.
+ */
 int
 svn_utf_cstring_utf8_width(const char *cstr);
 

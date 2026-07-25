@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,11 +17,11 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl.types;
 
+import java.lang.annotation.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -32,13 +31,10 @@ import java.util.Locale;
  */
 public class Revision implements java.io.Serializable
 {
-    // Update the serialVersionUID when there is a incompatible change
-    // made to this class.  See any of the following, depending upon
-    // the Java release.
-    // http://java.sun.com/j2se/1.3/docs/guide/serialization/spec/version.doc7.html
-    // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
-    // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
-    // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
+    // Update the serialVersionUID when there is an incompatible change made to
+    // this class.  See the Java documentation (following link or its counter-
+    // part in your specific Java release) for when a change is incompatible.
+    // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
     private static final long serialVersionUID = 1L;
 
     /**
@@ -81,6 +77,7 @@ public class Revision implements java.io.Serializable
             case head : return "HEAD";
             case previous : return "PREV";
             case working : return "WORKING";
+            case unspecified: return "UNSPECIFIED";
         }
         return super.toString();
     }
@@ -135,7 +132,7 @@ public class Revision implements java.io.Serializable
     }
 
     /**
-     * Creates a Revision.DateSpec objet
+     * Creates a Revision.DateSpec object
      * @param revisionDate  the date of the new object
      * @return  the new object
      */
@@ -153,6 +150,11 @@ public class Revision implements java.io.Serializable
      * first existing revision
      */
     public static final Revision START = new Revision(Kind.unspecified);
+
+    /**
+     * unspecified revision
+     */
+    public static final Revision UNSPECIFIED = START;
 
     /**
      * last committed revision, needs working copy
@@ -177,6 +179,7 @@ public class Revision implements java.io.Serializable
     /**
      * Marker revision number for no real revision
      */
+    @Native
     public static final int SVN_INVALID_REVNUM = -1;
 
     /**
@@ -271,6 +274,16 @@ public class Revision implements java.io.Serializable
                 throw new IllegalArgumentException("a date must be specified");
             revDate = date;
         }
+
+        /**
+         * Create a revision from a timestamp in milliseconds.
+         * Used by the native implementation.
+         */
+        private DateSpec(long milliseconds)
+        {
+            this(new Date(milliseconds));
+        }
+
         /**
          * Returns the date of the revision
          * @return the date
@@ -310,7 +323,6 @@ public class Revision implements java.io.Serializable
         {
             return revDate.hashCode();
         }
-
     }
 
     /**

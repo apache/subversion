@@ -32,14 +32,23 @@
  * the PRESENCE column in these tables has one of the following values
  * (see also the C type #svn_wc__db_status_t):
  *   "normal"
- *   "absent" -- server has declared it "absent" (ie. authz failure)
+ *   "server-excluded" -- server has declared it excluded (ie. authz failure)
  *   "excluded" -- administratively excluded (ie. sparse WC)
  *   "not-present" -- node not present at this REV
  *   "incomplete" -- state hasn't been filled in
  *   "base-deleted" -- node represents a delete of a BASE node
  */
 
-/* One big list of statements to create our (current) schema.  */
+/* One big list of statements to create our initial schema.
+
+   STMT_CREATE_SCHEMA creates the schema for the minimum WC format
+   supported by the client (SVN_WC__SUPPORTED_VERSION).
+
+   When we're creating a new working copy, we first execute
+   STMT_CREATE_SCHEMA, and then use the normal WC upgrade code (using
+   STMT_UPGRADE_TO_xx) to bring the schema up to any higher requested
+   format.
+ */
 -- STMT_CREATE_SCHEMA
 
 /* ------------------------------------------------------------------------- */
@@ -108,7 +117,7 @@ CREATE TABLE PRISTINE (
   );
 
 CREATE INDEX I_PRISTINE_MD5 ON PRISTINE (md5_checksum);
-  
+
 /* ------------------------------------------------------------------------- */
 
 /* The ACTUAL_NODE table describes text changes and property changes
@@ -150,7 +159,7 @@ CREATE TABLE ACTUAL_NODE (
 
   /* if not NULL, this node is part of a changelist. */
   changelist  TEXT,
-  
+
   /* ### need to determine values. "unknown" (no info), "admin" (they
      ### used something like 'svn edit'), "noticed" (saw a mod while
      ### scanning the filesystem). */
@@ -170,7 +179,7 @@ CREATE TABLE ACTUAL_NODE (
   /* stsp: This is meant for text conflicts, right? What about property
            conflicts? Why do we need these in a column to refer to the
            pristine store? Can't we just parse the checksums from
-           conflict_data as well? 
+           conflict_data as well?
      rhuijben: Because that won't allow triggers to handle refcounts.
                We would have to scan all conflict skels before cleaning up the
                a single file from the pristine stor */
@@ -181,8 +190,8 @@ CREATE TABLE ACTUAL_NODE (
   PRIMARY KEY (wc_id, local_relpath)
   );
 
-CREATE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath);
-CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
+CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath,
+                                                    local_relpath);
 
 
 /* ------------------------------------------------------------------------- */
@@ -200,7 +209,7 @@ CREATE TABLE LOCK (
   lock_owner  TEXT,
   lock_comment  TEXT,
   lock_date  INTEGER,   /* an APR date/time (usec since 1970) */
-  
+
   PRIMARY KEY (repos_id, repos_relpath)
   );
 
@@ -228,12 +237,6 @@ CREATE TABLE WC_LOCK (
   PRIMARY KEY (wc_id, local_dir_relpath)
  );
 
-
-PRAGMA user_version =
--- define: SVN_WC__VERSION
-;
-
-
 /* ------------------------------------------------------------------------- */
 
 /* The NODES table describes the way WORKING nodes are layered on top of
@@ -253,18 +256,9 @@ PRAGMA user_version =
    op_depth values are not normally visible to the user but may become
    visible after reverting local changes.
 
-   ### The following text needs revision
-
-   Each row in BASE_NODE has an associated row NODE_DATA. Additionally, each
-   row in WORKING_NODE has one or more associated rows in NODE_DATA.
-
    This table contains full node descriptions for nodes in either the BASE
    or WORKING trees as described in notes/wc-ng/design. Fields relate
    both to BASE and WORKING trees, unless documented otherwise.
-
-   ### This table is to be integrated into the SCHEMA statement as soon
-       the experimental status of NODES is lifted.
-   ### This table superseeds NODE_DATA
 
    For illustration, with a scenario like this:
 
@@ -275,12 +269,11 @@ PRAGMA user_version =
      touch foo/bar
      svn add foo/bar    # (2)
 
-   , these are the NODES for the path foo/bar (before single-db, the
-   numbering of op_depth is still a bit different):
+   , these are the NODES table rows for the path foo/bar:
 
-   (0)  BASE_NODE ----->  NODES (op_depth == 0)
-   (1)                    NODES (op_depth == 1) ( <----_ )
-   (2)                    NODES (op_depth == 2)   <----- WORKING_NODE
+   (0)  "BASE" --->  NODES (op_depth == 0)
+   (1)               NODES (op_depth == 1)
+   (2)               NODES (op_depth == 2)
 
    0 is the original data for foo/bar before 'svn rm foo' (if it existed).
    1 is the data for foo/bar copied in from ^/moo/bar.
@@ -289,7 +282,6 @@ PRAGMA user_version =
    An 'svn revert foo/bar' would remove the NODES of (2).
 
  */
--- STMT_CREATE_NODES
 CREATE TABLE NODES (
   /* Working copy location related fields */
 
@@ -367,7 +359,7 @@ CREATE TABLE NODES (
        current 'op_depth'.  This state is badly named, it should be
        something like 'deleted'.
 
-     absent: in the 'BASE' tree this is a node that is excluded by
+     server-excluded: in the 'BASE' tree this is a node that is excluded by
        authz.  The name of the node is known from the parent, but no
        other information is available.  Not valid in the 'WORKING'
        tree as there is no way to commit such a node.
@@ -408,8 +400,11 @@ CREATE TABLE NODES (
   /* the kind of the new node. may be "unknown" if the node is not present. */
   kind  TEXT NOT NULL,
 
-  /* serialized skel of this node's properties. NULL if we
-     have no information about the properties (a non-present node). */
+  /* serialized skel of this node's properties (when presence is 'normal' or
+     'incomplete'); an empty skel or NULL indicates no properties.  NULL if
+     we have no information about the properties (any other presence).
+     TODO: Choose & require a single representation for 'no properties'.
+  */
   properties  BLOB,
 
   /* NULL depth means "default" (typically svn_depth_infinity) */
@@ -475,11 +470,16 @@ CREATE TABLE NODES (
      ### anyway. */
   file_external  INTEGER,
 
+  /* serialized skel of this node's inherited properties. NULL if this
+     is not the BASE of a WC root node. */
+  inherited_props  BLOB,
+
   PRIMARY KEY (wc_id, local_relpath, op_depth)
 
   );
 
-CREATE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath, op_depth);
+CREATE UNIQUE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath,
+                                             local_relpath, op_depth);
 /* I_NODES_MOVED is introduced in format 30 */
 CREATE UNIQUE INDEX I_NODES_MOVED ON NODES (wc_id, moved_to, op_depth);
 
@@ -505,8 +505,6 @@ CREATE VIEW NODES_BASE AS
   SELECT * FROM nodes
   WHERE op_depth = 0;
 
--- STMT_CREATE_NODES_TRIGGERS
-
 CREATE TRIGGER nodes_insert_trigger
 AFTER INSERT ON nodes
 WHEN NEW.checksum IS NOT NULL
@@ -533,8 +531,6 @@ BEGIN
   UPDATE pristine SET refcount = refcount - 1
   WHERE checksum = OLD.checksum;
 END;
-
--- STMT_CREATE_EXTERNALS
 
 CREATE TABLE EXTERNALS (
   /* Working copy location related fields (like NODES)*/
@@ -549,13 +545,13 @@ CREATE TABLE EXTERNALS (
   /* Repository location fields */
   repos_id  INTEGER NOT NULL REFERENCES REPOSITORY (id),
 
-  /* Either 'normal' or 'excluded' */
+  /* Either MAP_NORMAL or MAP_EXCLUDED */
   presence  TEXT NOT NULL,
 
   /* the kind of the external. */
   kind  TEXT NOT NULL,
 
-  /* The local relpath of the directory NODE defining this external 
+  /* The local relpath of the directory NODE defining this external
      (Defaults to the parent directory of the file external after upgrade) */
   def_local_relpath         TEXT NOT NULL,
 
@@ -570,222 +566,90 @@ CREATE TABLE EXTERNALS (
   PRIMARY KEY (wc_id, local_relpath)
 );
 
-CREATE INDEX I_EXTERNALS_PARENT ON EXTERNALS (wc_id, parent_relpath);
 CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
                                                       def_local_relpath,
                                                       local_relpath);
 
-/* Format 20 introduces NODES and removes BASE_NODE and WORKING_NODE */
 
--- STMT_UPGRADE_TO_20
-
-UPDATE BASE_NODE SET checksum=(SELECT checksum FROM pristine
-                           WHERE md5_checksum=BASE_NODE.checksum)
-WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=BASE_NODE.checksum);
-
-UPDATE WORKING_NODE SET checksum=(SELECT checksum FROM pristine
-                           WHERE md5_checksum=WORKING_NODE.checksum)
-WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=WORKING_NODE.checksum);
-
-INSERT INTO NODES (
-       wc_id, local_relpath, op_depth, parent_relpath,
-       repos_id, repos_path, revision,
-       presence, depth, moved_here, moved_to, kind,
-       changed_revision, changed_date, changed_author,
-       checksum, properties, translated_size, last_mod_time,
-       dav_cache, symlink_target, file_external )
-SELECT wc_id, local_relpath, 0 /*op_depth*/, parent_relpath,
-       repos_id, repos_relpath, revnum,
-       presence, depth, NULL /*moved_here*/, NULL /*moved_to*/, kind,
-       changed_rev, changed_date, changed_author,
-       checksum, properties, translated_size, last_mod_time,
-       dav_cache, symlink_target, file_external
-FROM BASE_NODE;
-INSERT INTO NODES (
-       wc_id, local_relpath, op_depth, parent_relpath,
-       repos_id, repos_path, revision,
-       presence, depth, moved_here, moved_to, kind,
-       changed_revision, changed_date, changed_author,
-       checksum, properties, translated_size, last_mod_time,
-       dav_cache, symlink_target, file_external )
-SELECT wc_id, local_relpath, 2 /*op_depth*/, parent_relpath,
-       copyfrom_repos_id, copyfrom_repos_path, copyfrom_revnum,
-       presence, depth, NULL /*moved_here*/, NULL /*moved_to*/, kind,
-       changed_rev, changed_date, changed_author,
-       checksum, properties, translated_size, last_mod_time,
-       NULL /*dav_cache*/, symlink_target, NULL /*file_external*/
-FROM WORKING_NODE;
-
-DROP TABLE BASE_NODE;
-DROP TABLE WORKING_NODE;
-
-PRAGMA user_version = 20;
+/* Identify the WC format corresponding to the schema we have created. */
+PRAGMA user_version =
+-- define: SVN_WC__SUPPORTED_VERSION
+;
 
 
 /* ------------------------------------------------------------------------- */
+/* This statement provides SQLite with the necessary information about our
+   indexes to make better decisions in the query planner.
 
-/* Format 21 involves no schema changes, it moves the tree conflict victim
-   information to victime nodes, rather than parents. */
+   For every interesting index this contains a number of rows where the
+   statistics are calculated for and then for every column in the index the
+   average number of rows with the same value in all columns left of this
+   column including the column itself.
 
--- STMT_UPGRADE_TO_21
-PRAGMA user_version = 21;
+   See http://www.sqlite.org/fileformat2.html#stat1tab for more details.
 
-/* For format 21 bump code */
--- STMT_UPGRADE_21_SELECT_OLD_TREE_CONFLICT
-SELECT wc_id, local_relpath, tree_conflict_data
-FROM actual_node
-WHERE tree_conflict_data IS NOT NULL
+   The important thing here is that this tells Sqlite that the wc_id column
+   of the NODES and ACTUAL_NODE table is usually a single value, so queries
+   should use more than one column for index usage.
 
-/* For format 21 bump code */
--- STMT_UPGRADE_21_ERASE_OLD_CONFLICTS
-UPDATE actual_node SET tree_conflict_data = NULL
+   The current hints describe NODES+ACTUAL_NODE as a working copy with
+   8000 nodes in 1 a single working copy(=wc_id), 10 nodes per directory
+   and an average of 2 op-depth layers per node.
 
+   The number of integers must be number of index columns + 1, which is
+   verified via the test_schema_statistics() test.
+ */
+-- STMT_INSTALL_SCHEMA_STATISTICS
+ANALYZE sqlite_master; /* Creates empty sqlite_stat1 if necessary */
+
+DELETE FROM sqlite_stat1
+WHERE tbl in ('NODES', 'ACTUAL_NODE', 'LOCK', 'WC_LOCK', 'EXTERNALS');
+
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('NODES', 'sqlite_autoindex_NODES_1',               '8000 8000 2 1');
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('NODES', 'I_NODES_PARENT',                         '8000 8000 10 2 1');
+/* Tell a lie: We ignore that 99.9% of all moved_to values are NULL */
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('NODES', 'I_NODES_MOVED',                          '8000 8000 1 1');
+
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('ACTUAL_NODE', 'sqlite_autoindex_ACTUAL_NODE_1',   '8000 8000 1');
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('ACTUAL_NODE', 'I_ACTUAL_PARENT',                  '8000 8000 10 1');
+
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('LOCK', 'sqlite_autoindex_LOCK_1',                 '100 100 1');
+
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('WC_LOCK', 'sqlite_autoindex_WC_LOCK_1',           '100 100 1');
+
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('EXTERNALS','sqlite_autoindex_EXTERNALS_1',        '100 100 1');
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('EXTERNALS','I_EXTERNALS_DEFINED',                 '100 100 3 1');
+
+/* sqlite_autoindex_WORK_QUEUE_1 doesn't exist because WORK_QUEUE is
+   a INTEGER PRIMARY KEY AUTOINCREMENT table */
+
+ANALYZE sqlite_master; /* Loads sqlite_stat1 data for query optimizer */
 /* ------------------------------------------------------------------------- */
 
-/* Format 22 simply moves the tree conflict information from the conflict_data
-   column to the tree_conflict_data column. */
-
--- STMT_UPGRADE_TO_22
-UPDATE actual_node SET tree_conflict_data = conflict_data;
-UPDATE actual_node SET conflict_data = NULL;
-
-PRAGMA user_version = 22;
-
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 23 involves no schema changes, it introduces multi-layer
-   op-depth processing for NODES. */
-
--- STMT_UPGRADE_TO_23
-PRAGMA user_version = 23;
-
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 24 involves no schema changes; it starts using the pristine
-   table's refcount column correctly. */
-
--- STMT_UPGRADE_TO_24
-UPDATE pristine SET refcount =
-  (SELECT COUNT(*) FROM nodes
-   WHERE checksum = pristine.checksum /*OR checksum = pristine.md5_checksum*/);
-
-PRAGMA user_version = 24;
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 25 introduces the NODES_CURRENT view. */
-
--- STMT_UPGRADE_TO_25
-DROP VIEW IF EXISTS NODES_CURRENT;
-CREATE VIEW NODES_CURRENT AS
-  SELECT * FROM nodes
-    JOIN (SELECT wc_id, local_relpath, MAX(op_depth) AS op_depth FROM nodes
-          GROUP BY wc_id, local_relpath) AS filter
-    ON nodes.wc_id = filter.wc_id
-      AND nodes.local_relpath = filter.local_relpath
-      AND nodes.op_depth = filter.op_depth;
-
-PRAGMA user_version = 25;
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 26 introduces the NODES_BASE view. */
-
--- STMT_UPGRADE_TO_26
-DROP VIEW IF EXISTS NODES_BASE;
-CREATE VIEW NODES_BASE AS
-  SELECT * FROM nodes
-  WHERE op_depth = 0;
-
-PRAGMA user_version = 26;
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 27 involves no schema changes, it introduces stores
-   conflict files as relpaths rather than names in ACTUAL_NODE. */
-
--- STMT_UPGRADE_TO_27
-PRAGMA user_version = 27;
-
-/* For format 27 bump code */
--- STMT_UPGRADE_27_HAS_ACTUAL_NODES_CONFLICTS
-SELECT 1 FROM actual_node
-WHERE NOT ((prop_reject IS NULL) AND (conflict_old IS NULL)
-           AND (conflict_new IS NULL) AND (conflict_working IS NULL)
-           AND (tree_conflict_data IS NULL))
-LIMIT 1
-
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 28 involves no schema changes, it only converts MD5 pristine 
-   references to SHA1. */
-
--- STMT_UPGRADE_TO_28
-
-UPDATE NODES SET checksum=(SELECT checksum FROM pristine
-                           WHERE md5_checksum=nodes.checksum)
-WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=nodes.checksum);
-
-PRAGMA user_version = 28;
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 29 introduces the EXTERNALS table (See STMT_CREATE_TRIGGERS) and
-   optimizes a few trigger definitions. ... */
-
--- STMT_UPGRADE_TO_29
-
-DROP TRIGGER IF EXISTS nodes_update_checksum_trigger;
-DROP TRIGGER IF EXISTS nodes_insert_trigger;
-DROP TRIGGER IF EXISTS nodes_delete_trigger;
-
-CREATE TRIGGER nodes_update_checksum_trigger
-AFTER UPDATE OF checksum ON nodes
-WHEN NEW.checksum IS NOT OLD.checksum
-  /* AND (NEW.checksum IS NOT NULL OR OLD.checksum IS NOT NULL) */
-BEGIN
-  UPDATE pristine SET refcount = refcount + 1
-  WHERE checksum = NEW.checksum;
-  UPDATE pristine SET refcount = refcount - 1
-  WHERE checksum = OLD.checksum;
-END;
-
-CREATE TRIGGER nodes_insert_trigger
-AFTER INSERT ON nodes
-WHEN NEW.checksum IS NOT NULL
-BEGIN
-  UPDATE pristine SET refcount = refcount + 1
-  WHERE checksum = NEW.checksum;
-END;
-
-CREATE TRIGGER nodes_delete_trigger
-AFTER DELETE ON nodes
-WHEN OLD.checksum IS NOT NULL
-BEGIN
-  UPDATE pristine SET refcount = refcount - 1
-  WHERE checksum = OLD.checksum;
-END;
-
-PRAGMA user_version = 29;
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 30 currently just contains some nice to haves that should be included
-   with the next format bump  */
+/* Format 30 creates a new NODES index for move information, and a new
+   PRISTINE index for the md5_checksum column. It also activates use of
+   skel-based conflict storage -- see notes/wc-ng/conflict-storage-2.0.
+   It also renames the "absent" presence to "server-excluded". */
 -- STMT_UPGRADE_TO_30
 CREATE UNIQUE INDEX IF NOT EXISTS I_NODES_MOVED
 ON NODES (wc_id, moved_to, op_depth);
 
 CREATE INDEX IF NOT EXISTS I_PRISTINE_MD5 ON PRISTINE (md5_checksum);
 
+UPDATE nodes SET presence = 'server-excluded' WHERE presence = 'absent';
+
 /* Just to be sure clear out file external skels from pre 1.7.0 development
    working copies that were never updated by 1.7.0+ style clients */
 UPDATE nodes SET file_external=1 WHERE file_external IS NOT NULL;
-
-PRAGMA user_version = 30;
 
 -- STMT_UPGRADE_30_SELECT_CONFLICT_SEPARATE
 SELECT wc_id, local_relpath,
@@ -806,8 +670,142 @@ WHERE wc_id = ?1 and local_relpath = ?2
 
 /* ------------------------------------------------------------------------- */
 
-/* Format YYY introduces new handling for conflict information.  */
--- format: YYY
+/* Format 31 adds the inherited_props column to the NODES table. C code then
+   initializes the update/switch roots to make sure future updates fetch the
+   inherited properties */
+-- STMT_UPGRADE_TO_31
+ALTER TABLE NODES ADD COLUMN inherited_props BLOB;
+
+DROP INDEX IF EXISTS I_ACTUAL_CHANGELIST;
+DROP INDEX IF EXISTS I_EXTERNALS_PARENT;
+
+DROP INDEX I_NODES_PARENT;
+CREATE UNIQUE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath,
+                                             local_relpath, op_depth);
+
+DROP INDEX I_ACTUAL_PARENT;
+CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath,
+                                                    local_relpath);
+
+PRAGMA user_version = 31;
+
+-- STMT_UPGRADE_31_SELECT_WCROOT_NODES
+/* Select all base nodes which are the root of a WC, including
+   switched subtrees, but excluding those which map to the root
+   of the repos.
+
+   ### IPROPS: Is this query horribly inefficient?  Quite likely,
+   ### but it only runs during an upgrade, so do we care? */
+SELECT l.wc_id, l.local_relpath FROM nodes as l
+LEFT OUTER JOIN nodes as r
+ON l.wc_id = r.wc_id
+   AND r.local_relpath = l.parent_relpath
+   AND r.op_depth = 0
+WHERE l.op_depth = 0
+  AND l.repos_path != ''
+  AND ((l.repos_id IS NOT r.repos_id)
+       OR (l.repos_path IS NOT RELPATH_SKIP_JOIN(r.local_relpath, r.repos_path, l.local_relpath)))
+
+
+/* ------------------------------------------------------------------------- */
+/* Format 32 adds support for optional pristine contents with the
+   following schema changes:
+   - Add the 'hydrated' column to the PRISTINE table.
+   - Add the I_PRISTINE_UNREFERENCED index.
+   - Add the TEXTBASE_REFS table.
+   - Add the SETTINGS table. */
+-- STMT_UPGRADE_TO_32
+/* True iff the pristine contents are currently available on disk. */
+ALTER TABLE PRISTINE ADD COLUMN hydrated INTEGER NOT NULL DEFAULT 1;
+
+CREATE INDEX I_PRISTINE_UNREFERENCED ON PRISTINE (refcount, refcount=0);
+
+/* This table contains references to the on disk text-base contents.
+   Every row corresponds to a row in NODES table with the same key.
+   While a row is present is this table, the contents identified by the
+   corresponding NODES.checksum cannot be dehydrated from the pristine store.
+ */
+CREATE TABLE TEXTBASE_REFS (
+  /* Same key columns as in the NODES table */
+  wc_id  INTEGER NOT NULL,
+  local_relpath  TEXT NOT NULL,
+  op_depth  INTEGER NOT NULL,
+
+  PRIMARY KEY (wc_id, local_relpath, op_depth)
+  );
+
+DROP TRIGGER nodes_delete_trigger;
+
+CREATE TRIGGER nodes_delete_trigger
+AFTER DELETE ON nodes
+WHEN OLD.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+  DELETE FROM textbase_refs
+  WHERE wc_id = OLD.wc_id
+    AND local_relpath = OLD.local_relpath
+    AND op_depth = OLD.op_depth;
+END;
+
+DROP TRIGGER nodes_update_checksum_trigger;
+
+CREATE TRIGGER nodes_update_checksum_trigger
+AFTER UPDATE OF checksum ON nodes
+WHEN NEW.checksum IS NOT OLD.checksum
+  /* AND (NEW.checksum IS NOT NULL OR OLD.checksum IS NOT NULL) */
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+  DELETE FROM textbase_refs
+  WHERE wc_id = OLD.wc_id
+    AND local_relpath = OLD.local_relpath
+    AND op_depth = OLD.op_depth;
+END;
+
+/* This table contains settings of a working copy, identified by WC_ID. */
+CREATE TABLE SETTINGS (
+  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id) PRIMARY KEY,
+  store_pristine  INTEGER
+);
+
+/* Migrate existing working copy settings. */
+INSERT OR IGNORE INTO SETTINGS SELECT id, 1 FROM WCROOT;
+
+PRAGMA user_version = 32;
+
+/* ------------------------------------------------------------------------- */
+/* Format 33 ....  */
+
+/* Note: we use checksums to detect if the file contents have been modified
+   in textbase.c and in the svn_wc__internal_file_modified_p() function.
+
+   The new working copy format SHOULD incorporate a switch to a different
+   checksum type without known collisions.
+
+   For the updated pristine table schema, we MAY want to add a new column
+   containing a checksum of the first 8KB of the file to allow saying that
+   the file is modified without reading all its content.  That could speed
+   up the check for large modified files whose size did not change, for
+   example if they are allocated in certain extents. */
+
+/* -- STMT_UPGRADE_TO_33
+PRAGMA user_version = 33; */
+
+/* ------------------------------------------------------------------------- */
+/* When bumping the format, also update:
+ *
+ *   * subversion/tests/libsvn_wc/wc-queries-test.c
+ *     (schema_statements, create_memory_db)
+ *   * The implementation of svn_client_latest_wc_version()
+ *   * The implementation of svn_wc__format_from_version()
+ *   * The implementation of svn_client_get_wc_formats_supported()
+ *   * subversion/tests/cmdline/svntest/main.py:wc_format()
+ *   * The comment above the comment above SVN_WC__VERSION
+ *   * The value of SVN_WC__VERSION, if needed
+ */
 
 
 /* ------------------------------------------------------------------------- */
@@ -818,9 +816,6 @@ WHERE wc_id = ?1 and local_relpath = ?2
    number will be, however, so we're just marking it as 99 for now.  */
 -- format: 99
 
-/* TODO: Rename the "absent" presence value to "server-excluded". wc_db.c
-   and this file have references to "absent" which still need to be changed
-   to "server-excluded". */
 /* TODO: Un-confuse *_revision column names in the EXTERNALS table to
    "-r<operative> foo@<peg>", as suggested by the patch attached to
    http://svn.haxx.se/dev/archive-2011-09/0478.shtml */
@@ -864,8 +859,8 @@ CREATE TABLE ACTUAL_NODE (
   PRIMARY KEY (wc_id, local_relpath)
   );
 
-CREATE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath);
-CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
+CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath,
+                                                    local_relpath);
 
 INSERT INTO ACTUAL_NODE SELECT
   wc_id, local_relpath, parent_relpath, properties, conflict_old,

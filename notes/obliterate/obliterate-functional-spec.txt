@@ -1021,7 +1021,7 @@ VII. Appendix
 
     1. Link to external documentation
 
-    [1] Issue 516: http://subversion.tigris.org/issues/show_bug.cgi?id=516
+    [1] Issue 516: https://issues.apache.org/jira/browse/SVN-516
     [2] Karl Fogel's proposal to use the replay API and filters:
         http://svn.haxx.se/dev/archive-2008-04/0687.shtml
     [3] Bob Jenkins's thread about "Auditability": keep log of what has been

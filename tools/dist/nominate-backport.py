@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+"""\
+Nominate revision(s) for backport.
+
+This script should be run interactively, to nominate code for backport.
+
+It will output a properly formatted nomination that can be copied into
+STATUS."""
+
+import sys
+assert sys.version_info[0] == 3, "This script targets Python 3"
+
+import os
+import subprocess
+import hashlib
+import string
+import re
+import textwrap
+
+import backport.merger
+import backport.status
+import backport.wc
+
+def get_availid():
+  """Try to get the AVAILID of the current user"""
+
+  SVN_A_O_REALM = '<https://svn.apache.org:443> ASF Committers'
+
+  try:
+    # First try to get the ID from an environment variable
+    return os.environ["AVAILID"]
+
+  except KeyError:
+    pass
+
+  except:
+    raise
+
+  try:
+    # Failing, try executing svn auth
+    (exitcode, auth, stderr) = backport.merger.run_svn(['auth', 
+                                                        'svn.apache.org:443'],
+                                                       "E200009")
+    if exitcode == 0:
+      correct_realm = False
+      for line in auth.split('\n'):
+        line = line.strip()
+        if line.startswith('Authentication realm:'):
+          correct_realm = True if line.find(SVN_A_O_REALM) > 0 else False
+        elif correct_realm and line.startswith('Username:'):
+          return line[10:]
+
+  except OSError:
+    pass
+
+  except:
+    raise
+
+  try:
+    # Last resort, read from ~/.subversion/auth/svn.simple
+    dir = os.environ["HOME"] + "/.subversion/auth/svn.simple/"
+    filename = hashlib.md5(SVN_A_O_REALM.encode('utf-8')).hexdigest()
+    with open(dir+filename, 'r') as file:
+      lines = file.readlines()
+      for i in range(0, len(lines), 4):
+        if lines[i].strip() == "K 8" and lines[i+1].strip() == 'username':
+          return lines[i+3]
+
+  except FileNotFoundError:
+    pass
+
+  except:
+    raise
+
+def usage():
+  print(f"""nominate-backport.py: a tool for adding entries to STATUS.
+
+Usage: ./tools/dist/nominate-backport.py "r42, r43, r45" "$Some_justification"
+
+Will output:
+ * r42, r43, r45
+   (log message of r42)
+   Justification:
+     $Some_justification
+   Votes:
+     +1: {AVAILID}
+
+Backport branches are detected automatically and is added accordingly.
+
+The revisions argument may contain arbitrary text (besides the revision
+numbers); it will be ignored.  For example,
+    ./tools/dist/nominate-backport.py "Committed revision 42." \\
+    "$Some_justification"
+will nominate r42.
+
+Revision numbers within the last thousand revisions may be specified using
+the last three digits only.
+
+The justification can be an arbitrarily-long string; if it is wider than the
+available width, this script will wrap it for you.
+""")
+
+def main():
+  # Pre-requisite
+  if AVAILID is None:
+    print("Nominating failed: Unable to determine your username via $AVAILID or svn auth or ~/.subversion/auth/.\n", file=sys.stderr)
+    print("Unable to proceed.\n", file=sys.stderr)
+    sys.exit(1)
+
+  # Argument parsing.
+  if len(sys.argv) < 3:
+    usage()
+    return
+  revisions = [int(''.join(filter(str.isdigit, revision))) for revision in sys.argv[1].split()]
+  justification = sys.argv[2]
+
+  # Get some WC info
+  wcinfo = backport.wc.get_wc_info()
+
+  # To save typing, require just the last three digits if they're unambiguous.
+  if wcinfo["BASE_revision"] != "":
+    BASE_revision = int(wcinfo["BASE_revision"])
+    if BASE_revision > 1000:
+      residue = BASE_revision % 1000
+      thousands = BASE_revision - residue
+      revisions = [r+thousands if r<1000 else r for r in revisions]
+
+  # Deduplicate and sort
+  revisions = list(set(revisions))
+  revisions.sort()
+
+  # Determine whether a backport branch exists
+  (exit_code, branch, stderr) = backport.merger.run_svn(['info', '--show-item', 'url', '--',
+                              wcinfo["URL"] + '-r'+str(revisions[0])], 'W170000')
+  branch.replace('\n', '')
+  if branch == "":
+    branch = None
+
+  # Get log message from first revision
+  (exit_code, logmsg, stderr) = backport.merger.run_svn(['propget', '--revprop', '-r',
+                              str(revisions[0]), '--strict', 'svn:log', '^/'])
+  if (logmsg == ""):
+    print("Can't fetch log message of r" + revisions[0])
+    sys.exit(1)
+
+  # Delete all leading empty lines
+  split_logmsg = logmsg.split("\n")
+  for line in split_logmsg:
+    if line == "":
+      del split_logmsg[0]
+    else:
+      break
+
+  # If the first line is a file, ie: "* file"
+  # Then we expect the next line to be "  (symbol): Log message."
+  # Remove "* file" and "  (symbol):" so we can use this log message.
+  if split_logmsg[0].startswith("* "):
+    del split_logmsg[0]
+    split_logmsg[0] = re.sub(r".*\): ", "", split_logmsg[0])
+
+  # Get the log message summary, up to the first empty line or the
+  # next file nomination.
+  logmsg = ""
+  for i in range(len(split_logmsg)):
+    if split_logmsg[i].strip() == "" \
+       or split_logmsg[i].strip().startswith("* "):
+      break
+    logmsg += split_logmsg[i].strip() + " "
+
+  # Create new status entry and print
+  e = backport.status.StatusEntry(None)
+  e.revisions = revisions
+  e.logsummary = textwrap.wrap(logmsg)
+  e.justification_str = "\n" + textwrap.fill(justification, initial_indent='  ', subsequent_indent='  ') + "\n"
+  e.votes_str = f"  +1: {AVAILID}\n"
+  e.branch = branch
+  print(e)
+
+  sys.exit(0)
+
+AVAILID = get_availid()
+
+if __name__ == "__main__":
+  try:
+    main()
+  except KeyboardInterrupt:
+    print("\n")
+    sys.exit(1)

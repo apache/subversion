@@ -13,15 +13,32 @@ SVN::Wc - Subversion working copy functions
 
 Incomplete
 
-=head1 OBJECTS
-
 =cut
 
 swig_init_asp_dot_net_hack($SVN::Core::gpool);
 
+=head1 FUNCTIONS
+
+=over 4
+
+=item SVN::Wc::parse_externals_description3($parent_directory, $desc, $canonicalize_url, $pool);
+
+Parse the string $desc as an C<svn:externals> value and return a reference 
+to an array of L<_p_svn_wc_external_item2_t|svn_wc_external_item2_t> objects. 
+If $canonicalize_url is true, canonicalize the C<url> member of those objects.  
+$parent_directory is only used in constructing error strings.
+
+=back
+
+=cut
+
+=head1 OBJECTS
+
+=cut
+
 package _p_svn_wc_t;
 
-=head2 svn_wc_status_t
+=head2 svn_wc_status2_t
 
 =over 4
 
@@ -67,7 +84,52 @@ be one of the $SVN::Wc::Status::* constants.
 An integer representing the status of the item's properties in the repository.
 Can be one of the $SVN::Wc::Status::* constants.
 
+=item $wcstat-E<gt>repos_lock()
+
+A svn_lock_t object representing the entry's lock in the repository, if any.
+
+=item $wcstat-E<gt>url()
+
+The url (actual or expected) of the item.
+
+=item $wcstat-E<gt>ood_last_cmt_rev()
+
+An integer representing the youngest committed revision or $SVN::Core::INVALID_REVNUM is not out of date.
+
+=item $wcstat-E<gt>ood_last_cmt_date()
+
+The date of the most recent commit as microseconds since 00:00:00 January 1, 1970 UTC or 0 if not out of date.
+
+=item $wcstat-E<gt>ood_kind()
+
+An integer representing the kind of the youngest commit.  Can be any of the $SVN::Node::* constants.  Will be $SVN::Node::none if not out of date.
+
+=item $wcstat-E<gt>tree_conflict()
+
+A svn_wc_conflict_description_t object if the entry is the victim of a tree conflict or undef.
+
+=item $wcstat-E<gt>file_external()
+
+A boolean telling if the item is a file that was added to the working copy as an svn:externals.  If file_external is TRUE, then switched is always FALSE.
+
+=item $wcstat-E<gt>pristine_text_status()
+
+An integer representing the status of the item's text as compared to the pristine base of the file.  Can be one of the $SVN::Wc::Status::* constants.
+
+=item $wcstat-E<gt>pristine_prop_status()
+
+An integer representing the status of the item's properties as compared to the pristine base of the node.  Can be one of the $SVN::Wc::Status::* constants.
+
 =back
+
+=cut
+
+package _p_svn_wc_status2_t;
+use SVN::Base qw(Wc svn_wc_status2_t_);
+
+=head2 svn_wc_status_t
+
+Same as svn_wc_status2_t, but without the repos_lock, url, ood_last_cmt_rev, ood_last_cmt_date, ood_kind, ood_last_cmt_author, tree_conflict, file_external, pristine_text_status, pristine_prop_status fields.
 
 =cut
 
@@ -182,6 +244,42 @@ package _p_svn_wc_entry_t;
 # still need to check if the function prototype allows it to be called
 # as method.
 use SVN::Base qw(Wc svn_wc_entry_t_);
+
+=head2 svn_wc_external_item2_t
+
+=over 4
+
+=item $ext-E<gt>target_dir()
+
+The name of the subdirectory into which this external should be
+checked out.  This is relative to the parent directory that
+holds this external item.  
+
+=item $ext-E<gt>url()
+
+Where to check out from. This is possibly a relative external URL, as
+allowed in externals definitions, but without the peg revision.
+
+=item $ext-E<gt>revision()
+
+What revision to check out,
+a L<svn_opt_revision_t|SVN::Core/svn_opt_revision_t> object.
+The only valid kind()s for this are $SVN::Core::opt_revision_number,
+$SVN::Core::opt_revision_date, and $SVN::Core::opt_revision_head.
+
+=item $ext-E<gt>peg_revision()
+
+The peg revision to use when checking out, 
+a L<svn_opt_revision_t|SVN::Core/svn_opt_revision_t> object.
+The only valid kind()s for this are $SVN::Core::opt_revision_number,
+$SVN::Core::opt_revision_date, and $SVN::Core::opt_revision_head.
+
+=back
+
+=cut
+
+package _p_svn_wc_external_item2_t;
+use SVN::Base qw(Wc svn_wc_external_item2_t_);
 
 =head1 CONSTANTS
 
@@ -430,6 +528,11 @@ A directory doesn't contain a complete entries list.
 
 =back
 
+=cut
+
+package SVN::Wc::Status;
+use SVN::Base qw(Wc svn_wc_status_);
+
 =head1 COPYRIGHT
 
     Licensed to the Apache Software Foundation (ASF) under one
@@ -450,8 +553,5 @@ A directory doesn't contain a complete entries list.
     under the License.
 
 =cut
-
-package SVN::Wc::Status;
-use SVN::Base qw(Wc svn_wc_status_);
 
 1;

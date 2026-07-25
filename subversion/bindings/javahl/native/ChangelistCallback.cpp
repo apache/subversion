@@ -53,7 +53,8 @@ ChangelistCallback::callback(void *baton,
                              apr_pool_t *pool)
 {
   if (baton)
-    ((ChangelistCallback *)baton)->doChangelist(path, changelist, pool);
+    static_cast<ChangelistCallback *>(baton)->doChangelist(path, changelist,
+            pool);
 
   return SVN_NO_ERROR;
 }
@@ -77,7 +78,7 @@ ChangelistCallback::doChangelist(const char *path, const char *changelist,
   // it can be cached.
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ChangelistCallback");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/ChangelistCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NOTHING();
 

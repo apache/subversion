@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file RevisionRanges.cpp
+ * @file RevisionRange.cpp
  * @brief Implementation of the class RevisionRange.
  */
 
@@ -44,59 +44,117 @@ RevisionRange::~RevisionRange()
     // explicitly destroyed.
 }
 
-const svn_opt_revision_range_t *RevisionRange::toRange(SVN::Pool &pool) const
+namespace {
+void get_range_info(jobject jrange,
+                    svn_opt_revision_t* range_start,
+                    svn_opt_revision_t* range_end,
+                    svn_boolean_t* range_inheritable)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/RevisionRange");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/RevisionRange"));
   if (JNIUtil::isExceptionThrown())
-    return NULL;
+    return;
 
-  static jmethodID fmid = 0;
-  if (fmid == 0)
+  if (range_start)
     {
-      fmid = env->GetMethodID(clazz, "getFromRevision",
-                              "()L"JAVA_PACKAGE"/types/Revision;");
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+
+      static jmethodID fmid = 0;
+      if (fmid == 0)
+        {
+          fmid = env->GetMethodID(clazz, "getFromRevision",
+                                  "()" JAVAHL_ARG("/types/Revision;"));
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+        }
+
+      jobject jstartRevision = env->CallObjectMethod(jrange, fmid);
+      if (JNIUtil::isExceptionThrown())
+        return;
+
+      Revision startRevision(jstartRevision);
+      if (JNIUtil::isExceptionThrown())
+        return;
+
+      *range_start = *startRevision.revision();
+      if (JNIUtil::isExceptionThrown())
+        return;
     }
 
-  static jmethodID tmid = 0;
-  if (tmid == 0)
+  if (range_end)
     {
-      tmid = env->GetMethodID(clazz, "getToRevision",
-                              "()L"JAVA_PACKAGE"/types/Revision;");
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+      static jmethodID tmid = 0;
+      if (tmid == 0)
+        {
+          tmid = env->GetMethodID(clazz, "getToRevision",
+                                  "()" JAVAHL_ARG("/types/Revision;"));
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+        }
+
+      jobject jendRevision = env->CallObjectMethod(jrange, tmid);
+      if (JNIUtil::isExceptionThrown())
+        return;
+
+      Revision endRevision(jendRevision);
+      if (JNIUtil::isExceptionThrown())
+        return;
+
+      *range_end = *endRevision.revision();
+      if (JNIUtil::isExceptionThrown())
+        return;
     }
 
-  jobject jstartRevision = env->CallObjectMethod(m_range, fmid);
+  if (range_inheritable)
+    {
+      static jmethodID imid = 0;
+      if (imid == 0 && range_inheritable)
+        {
+          imid = env->GetMethodID(clazz, "isInheritable", "()Z");
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+        }
+
+      jboolean inheritable = env->CallBooleanMethod(jrange, imid);
+      if (JNIUtil::isExceptionThrown())
+        return;
+      *range_inheritable = inheritable;
+    }
+}
+} // anonymous namespace
+
+svn_merge_range_t* RevisionRange::toMergeRange(SVN::Pool &pool) const
+{
+  svn_opt_revision_t range_start, range_end;
+  svn_boolean_t range_inheritable;
+  get_range_info(m_range, &range_start, &range_end, &range_inheritable);
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
-  Revision startRevision(jstartRevision);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
+  if (range_start.kind != svn_opt_revision_number
+      || range_end.kind != svn_opt_revision_number)
+    JNIUtil::raiseThrowable("java.lang.InvalidStateException",
+                            "Revsision ranges must contain revision numbers");
 
-  jobject jendRevision = env->CallObjectMethod(m_range, tmid);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
+  svn_merge_range_t* range =
+    static_cast<svn_merge_range_t*>
+      (apr_palloc(pool.getPool(), sizeof(*range)));
 
-  Revision endRevision(jendRevision);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
+  range->start = range_start.value.number;
+  range->end = range_end.value.number;
+  range->inheritable = range_inheritable;
+  return range;
+}
 
+svn_opt_revision_range_t *RevisionRange::toRange(SVN::Pool &pool) const
+{
   svn_opt_revision_range_t *range =
-    (svn_opt_revision_range_t *) apr_palloc(pool.getPool(), sizeof(*range));
+    static_cast<svn_opt_revision_range_t *>
+      (apr_palloc(pool.getPool(), sizeof(*range)));
 
-  range->start = *startRevision.revision();
+  get_range_info(m_range, &range->start, &range->end, NULL);
   if (JNIUtil::isExceptionThrown())
-    return NULL;
-
-  range->end = *endRevision.revision();
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-
+    range = NULL;
   return range;
 }
 
@@ -105,19 +163,20 @@ RevisionRange::makeJRevisionRange(svn_merge_range_t *range)
 {
     JNIEnv *env = JNIUtil::getEnv();
 
-    jclass rangeClazz = env->FindClass(JAVA_PACKAGE "/types/RevisionRange");
+    jclass rangeClazz = env->FindClass(JAVAHL_CLASS("/types/RevisionRange"));
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
     static jmethodID rangeCtor = 0;
     if (rangeCtor == 0)
     {
-        rangeCtor = env->GetMethodID(rangeClazz, "<init>", "(JJ)V");
+        rangeCtor = env->GetMethodID(rangeClazz, "<init>", "(JJZ)V");
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
     }
     jobject jrange = env->NewObject(rangeClazz, rangeCtor,
-                                    (jlong) range->start,
-                                    (jlong) range->end);
+                                    jlong(range->start),
+                                    jlong(range->end),
+                                    jboolean(range->inheritable));
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 

@@ -38,8 +38,12 @@ StringArray::~StringArray()
 
 const apr_array_header_t *StringArray::array(const SVN::Pool &pool)
 {
+  if (isNull())
+    return NULL;
+
   apr_array_header_t *strings
-    = apr_array_make(pool.getPool(), m_strings.size(), sizeof(char *));
+    = apr_array_make(pool.getPool(), static_cast<int>(m_strings.size()),
+                     sizeof(char *));
 
   std::vector<std::string>::const_iterator it;
   for (it = m_strings.begin(); it < m_strings.end(); ++it)
@@ -69,18 +73,20 @@ StringArray::init(void)
       if (JNIUtil::isExceptionThrown())
         return;
 
-      m_strings.push_back(std::string((const char *)str));
+      m_strings.push_back(std::string(static_cast<const char *>(str)));
     }
 }
 
 StringArray::StringArray(jobjectArray jstrings)
     : Array(jstrings), m_strings()
 {
-  init();
+  if (!isNull())
+    init();
 }
 
 StringArray::StringArray(jobject jstringCollection)
     : Array(jstringCollection), m_strings()
 {
-  init();
+  if (!isNull())
+    init();
 }

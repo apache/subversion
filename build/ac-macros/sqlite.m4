@@ -78,6 +78,10 @@ AC_DEFUN(SVN_LIB_SQLITE,
     SVN_SQLITE_FILE_CONFIG($abs_srcdir/sqlite-amalgamation/sqlite3.c)
 
     if test -z "$svn_lib_sqlite"; then
+      SVN_SQLITE_FILE_CONFIG($abs_builddir/sqlite-amalgamation/sqlite3.c)
+    fi
+
+    if test -z "$svn_lib_sqlite"; then
       dnl check the "standard" location of /usr
       SVN_SQLITE_DIR_CONFIG()
     fi
@@ -92,6 +96,7 @@ AC_DEFUN(SVN_LIB_SQLITE,
     fi
   ])
 
+  SVN_DOT_CLANGD([$SVN_SQLITE_INCLUDES])
   AC_SUBST(SVN_SQLITE_INCLUDES)
   AC_SUBST(SVN_SQLITE_LIBS)
 ])
@@ -189,10 +194,15 @@ AC_DEFUN(SVN_SQLITE_FILE_CONFIG,
 SQLITE_VERSION_OKAY
 #endif],
                  [AC_MSG_RESULT([amalgamation found and is okay])
+                  _SVN_SQLITE_DSO_LIBS
                   AC_DEFINE(SVN_SQLITE_INLINE, 1,
                   [Defined if svn should use the amalgamated version of sqlite])
                   SVN_SQLITE_INCLUDES="-I`dirname $sqlite_amalg`"
-                  SVN_SQLITE_LIBS="-ldl -lpthread"
+                  if test -n "$svn_sqlite_dso_ldflags"; then
+                    SVN_SQLITE_LIBS="$svn_sqlite_dso_ldflags -lpthread"
+                  else
+                    SVN_SQLITE_LIBS="-lpthread"
+                  fi
                   svn_lib_sqlite="yes"],
                  [AC_MSG_RESULT([unsupported amalgamation SQLite version])])
   fi
@@ -238,9 +248,60 @@ AC_DEFUN(SVN_DOWNLOAD_SQLITE,
   echo ""
   echo "get the sqlite ${SQLITE_RECOMMENDED_VER} amalgamation from:"
   echo "    ${SQLITE_URL}"
-  echo "unpack the archive using tar/gunzip and copy sqlite3.c from the"
-  echo "resulting directory to:"
-  echo "$abs_srcdir/sqlite-amalgamation/sqlite3.c"
+  echo "unpack the archive using unzip and rename the resulting"
+  echo "directory to:"
+  echo "$abs_srcdir/sqlite-amalgamation"
+  if test x"$abs_srcdir" != x"$abs_builddir"; then
+    echo "or to:"
+    echo "$abs_builddir/sqlite-amalgamation"
+  fi
   echo ""
   AC_MSG_ERROR([Subversion requires SQLite])
+])
+
+dnl _SVN_SQLITE_DSO_LIBS() dnl Find additional libraries that the
+dnl sqlite amalgamation code should link in order to load
+dnl shared libraries.  Copied from build/libtool.m4
+AC_DEFUN(_SVN_SQLITE_DSO_LIBS,
+[
+  case $host_os in
+  beos* | mingw* | pw32* | cegcc* | cygwin*)
+    svn_sqlite_dso_ldflags=
+    ;;
+
+  darwin*)
+  # if libdl is installed we need to link against it
+    AC_CHECK_LIB([dl], [dlopen],
+                [lt_cv_dlopen="dlopen" svn_sqlite_dso_ldflags="-ldl"],[
+    svn_sqlite_dso_ldflags=
+    ])
+    ;;
+
+  *)
+    AC_CHECK_FUNC([shl_load],
+          [svn_sqlite_dso_ldflags=],
+      [AC_CHECK_LIB([dld], [shl_load],
+            [svn_sqlite_dso_ldflags="-ldld"],
+        [AC_CHECK_FUNC([dlopen],
+              [svn_sqlite_dso_ldflags=],
+          [AC_CHECK_LIB([dl], [dlopen],
+                [svn_sqlite_dso_ldflags="-ldl"],
+            [AC_CHECK_LIB([svld], [dlopen],
+                  [svn_sqlite_dso_ldflags="-lsvld"],
+              [AC_CHECK_LIB([dld], [dld_link],
+                    [svn_sqlite_dso_ldflags="-ldld"])
+              ])
+            ])
+          ])
+        ])
+      ])
+    ;;
+  esac
+
+  AC_MSG_CHECKING([additional libraries for sqlite])
+  if test -n "$svn_sqlite_dso_ldflags"; then
+    AC_MSG_RESULT(${svn_sqlite_dso_ldflags})
+  else
+    AC_MSG_RESULT(none)
+  fi
 ])

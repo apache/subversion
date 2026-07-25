@@ -8,3 +8,4 @@ SVNLOOK = 'svnlook'
 
 # Verbosity: True for verbose, or False for quiet
 VERBOSE = True
+

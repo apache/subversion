@@ -1,0 +1,39 @@
+#!/bin/sh
+#
+# PROVIDE: svnwcsub
+# REQUIRE: DAEMON
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="svnwcsub"
+rcvar=`set_rcvar`
+
+load_rc_config $name
+
+#
+# DO NOT CHANGE THESE DEFAULT VALUES HERE
+# SET THEM IN THE /etc/rc.conf FILE
+#
+svnwcsub_enable=${svnwcsub_enable-"NO"}
+svnwcsub_user=${svnwcsub_user-"svnwc"}
+svnwcsub_group=${svnwcsub_group-"svnwc"}
+svnwcsub_pidfile=${svnwcsub_pidfile-"/var/run/svnwcsub/svnwcsub.pub"}
+svnwcsub_env="PYTHON_EGG_CACHE"
+svnwcsub_cmd_int=${svnwcsub_cmd_int-"python"}
+svnwcsub_config=${svnwcsub_config-"/etc/svnwcsub.conf"}
+svnwcsub_logfile=${svnwcsub_logfile-"/var/log/svnwcsub/svnwcsub.log"}
+pidfile="${svnwcsub_pidfile}"
+
+export PYTHON_EGG_CACHE="/var/run/svnwcsub"
+
+command="/usr/local/svnpubsub/svnwcsub.py"
+command_interpreter="/usr/local/bin/${svnwcsub_cmd_int}"
+command_args="--daemon \
+              --logfile=${svnwcsub_logfile} \
+              --pidfile=${pidfile} \
+              --uid=${svnwcsub_user} --gid=${svnwcsub_group} \
+              --umask=002 \
+	      ${svnwcsub_config}"
+
+run_rc_command "$1"

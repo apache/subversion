@@ -506,7 +506,7 @@ get_path_ancestor_length(const char *path1,
   else
     if (last_dirsep == 0 && path1[0] == '/' && path2[0] == '/')
       return 1;
-    return last_dirsep;
+  return last_dirsep;
 }
 
 
@@ -590,7 +590,7 @@ svn_path_is_ancestor(const char *path1, const char *path2)
 {
   apr_size_t path1_len = strlen(path1);
 
-  /* If path1 is empty and path2 is not absoulte, then path1 is an ancestor. */
+  /* If path1 is empty and path2 is not absolute, then path1 is an ancestor. */
   if (SVN_PATH_IS_EMPTY(path1))
     return *path2 != '/';
 
@@ -910,9 +910,24 @@ uri_escape(const char *path, const char table[], apr_pool_t *pool)
   svn_stringbuf_t *retstr;
   apr_size_t i, copied = 0;
   int c;
+  apr_size_t len;
+  const char *p;
 
-  retstr = svn_stringbuf_create_ensure(strlen(path), pool);
-  for (i = 0; path[i]; i++)
+  /* To terminate our scanning loop, table[NUL] must report "invalid". */
+  assert(table[0] == 0);
+
+  /* Quick check: Does any character need escaping? */
+  for (p = path; table[(unsigned char)*p]; ++p)
+    {}
+
+  /* No char to escape before EOS? */
+  if (*p == '\0')
+    return path;
+
+  /* We need to escape at least one character. */
+  len = strlen(p) + (p - path);
+  retstr = svn_stringbuf_create_ensure(len, pool);
+  for (i = p - path; i < len; i++)
     {
       c = (unsigned char)path[i];
       if (table[c])
@@ -941,10 +956,6 @@ uri_escape(const char *path, const char table[], apr_pool_t *pool)
       copied = i + 1;
     }
 
-  /* If we didn't encode anything, we don't need to duplicate the string. */
-  if (retstr->len == 0)
-    return path;
-
   /* Anything left to copy? */
   if (i - copied)
     svn_stringbuf_appendbytes(retstr, path + copied, i - copied);
@@ -971,7 +982,7 @@ svn_path_uri_encode(const char *path, apr_pool_t *pool)
 }
 
 static const char iri_escape_chars[256] = {
-  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  0, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
@@ -998,7 +1009,7 @@ svn_path_uri_from_iri(const char *iri, apr_pool_t *pool)
 }
 
 static const char uri_autoescape_chars[256] = {
-  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  0, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   0, 1, 0, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 0, 1, 0, 1,
@@ -1082,7 +1093,7 @@ svn_path_url_add_component2(const char *url,
   /* = svn_path_uri_encode() but without always copying */
   component = uri_escape(component, svn_uri__char_validity, pool);
 
-  return svn_path_join(url, component, pool);
+  return svn_path_join_internal(url, component, pool);
 }
 
 svn_error_t *
@@ -1100,7 +1111,7 @@ svn_path_get_absolute(const char **pabsolute,
 }
 
 
-
+#if !defined(WIN32) && !defined(DARWIN)
 /** Get APR's internal path encoding. */
 static svn_error_t *
 get_path_encoding(svn_boolean_t *path_is_utf8, apr_pool_t *pool)
@@ -1119,6 +1130,7 @@ get_path_encoding(svn_boolean_t *path_is_utf8, apr_pool_t *pool)
   *path_is_utf8 = (encoding_style == APR_FILEPATH_ENCODING_UTF8);
   return SVN_NO_ERROR;
 }
+#endif
 
 
 svn_error_t *
@@ -1163,11 +1175,8 @@ svn_path_cstring_to_utf8(const char **path_utf8,
 }
 
 
-/* Return a copy of PATH, allocated from POOL, for which control
-   characters have been escaped using the form \NNN (where NNN is the
-   octal representation of the byte's ordinal value).  */
-static const char *
-illegal_path_escape(const char *path, apr_pool_t *pool)
+const char *
+svn_path_illegal_path_escape(const char *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
   apr_size_t i, copied = 0;
@@ -1193,7 +1202,7 @@ illegal_path_escape(const char *path, apr_pool_t *pool)
                                   i - copied);
 
       /* Make sure buffer is big enough for '\' 'N' 'N' 'N' (and NUL) */
-      svn_stringbuf_ensure(retstr, retstr->len + 4);
+      svn_stringbuf_ensure(retstr, retstr->len + 5);
       /*### The backslash separator doesn't work too great with Windows,
          but it's what we'll use for consistency with invalid utf8
          formatting (until someone has a better idea) */
@@ -1227,11 +1236,11 @@ svn_path_check_valid(const char *path, apr_pool_t *pool)
     {
       if (svn_ctype_iscntrl(*c))
         {
-          return svn_error_createf
-            (SVN_ERR_FS_PATH_SYNTAX, NULL,
+          return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
              _("Invalid control character '0x%02x' in path '%s'"),
              (unsigned char)*c,
-             illegal_path_escape(svn_dirent_local_style(path, pool), pool));
+             svn_path_illegal_path_escape(svn_dirent_local_style(path, pool),
+                                          pool));
         }
     }
 
@@ -1254,7 +1263,7 @@ svn_path_splitext(const char **path_root,
      anything after it?  We look for the "rightmost" period in the
      string. */
   last_dot = strrchr(path, '.');
-  if (last_dot && (last_dot + 1 != '\0'))
+  if (last_dot && (*(last_dot + 1) != '\0'))
     {
       /* If we have a period, we need to make sure it occurs in the
          final path component -- that there's no path separator
@@ -1280,3 +1289,34 @@ svn_path_splitext(const char **path_root,
   if (path_ext)
     *path_ext = "";
 }
+
+
+/* Repository relative URLs (^/). */
+
+svn_boolean_t
+svn_path_is_repos_relative_url(const char *path)
+{
+  return (0 == strncmp("^/", path, 2));
+}
+
+svn_error_t *
+svn_path_resolve_repos_relative_url(const char **absolute_url,
+                                    const char *relative_url,
+                                    const char *repos_root_url,
+                                    apr_pool_t *pool)
+{
+  if (! svn_path_is_repos_relative_url(relative_url))
+    return svn_error_createf(SVN_ERR_BAD_URL, NULL,
+                             _("Improper relative URL '%s'"),
+                             relative_url);
+
+  /* No assumptions are made about the canonicalization of the input
+   * arguments, it is presumed that the output will be canonicalized after
+   * this function, which will remove any duplicate path separator.
+   */
+  *absolute_url = apr_pstrcat(pool, repos_root_url, relative_url + 1,
+                              SVN_VA_NULL);
+
+  return SVN_NO_ERROR;
+}
+

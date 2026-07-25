@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 package org.tigris.subversion.javahl;
 
@@ -26,6 +24,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.FileStore;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.DosFileAttributeView;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -158,7 +160,7 @@ class SVNTests extends TestCase
 
     private void init()
     {
-        // if not already set, get a usefull value for rootDir
+        // if not already set, get a useful value for rootDir
         if (rootDirectoryName == null)
             rootDirectoryName = System.getProperty("test.rootdir");
         if (rootDirectoryName == null)
@@ -183,7 +185,7 @@ class SVNTests extends TestCase
                 rootUrl = rootUrl.replaceFirst("file:/", "file:///");
 
             // According to
-            // http://java.sun.com/j2se/1.5.0/docs/api/java/io/File.html#toURL()
+            // https://docs.oracle.com/javase/1.5.0/docs/api/java/io/File.html#toURL()
             // the URL from rootDir.toURI() may end with a trailing /
             // if rootDir exists and is a directory, so depending if
             // the test suite has been previously run and rootDir
@@ -232,8 +234,9 @@ class SVNTests extends TestCase
         greekDump = new File(localTmp, "greek_dump");
         admin.create(greekRepos.getAbsolutePath(), true,false, null,
                      this.fsType);
-        addExpectedCommitItem(greekFiles.getAbsolutePath(), null, null,
-                              NodeKind.none, CommitItemStateFlags.Add);
+        addExpectedCommitItem(greekFiles.getAbsolutePath(),
+                              makeReposUrl(greekRepos).toString(), null,
+                              NodeKind.dir, CommitItemStateFlags.Add);
         client.doImport(greekFiles.getAbsolutePath(), makeReposUrl(greekRepos),
                         null, true );
         admin.dump(greekRepos.getAbsolutePath(), new FileOutputer(greekDump),
@@ -244,7 +247,7 @@ class SVNTests extends TestCase
      * Create a directory for the sample (Greek) repository, config
      * files, repositories and working copies.
      */
-    private void createDirectories()
+    private void createDirectories() throws IOException
     {
         this.rootDir.mkdirs();
 
@@ -309,12 +312,12 @@ class SVNTests extends TestCase
 
         public boolean prompt(String realm, String username)
         {
-            return false;
+            return true;
         }
 
         public boolean prompt(String realm, String username, boolean maySave)
         {
-            return false;
+            return true;
         }
 
         public String askQuestion(String realm, String question,
@@ -380,7 +383,7 @@ class SVNTests extends TestCase
      *
      * @param path The file or directory to be removed.
      */
-    static final void removeDirOrFile(File path)
+    static final void removeDirOrFile(File path) throws IOException
     {
         if (!path.exists())
         {
@@ -394,6 +397,18 @@ class SVNTests extends TestCase
             for (int i = 0; i < dirContents.length; i++)
             {
                 removeDirOrFile(dirContents[i]);
+            }
+        }
+
+        // Unset readonly flag of the file because deleting a file with
+        // readonly flag on Windows fails since Java 25.
+        Path nioPath = path.toPath();
+        FileStore store = Files.getFileStore(nioPath);
+        if (store.supportsFileAttributeView(DosFileAttributeView.class)) {
+            DosFileAttributeView view = Files.getFileAttributeView(
+                    nioPath, DosFileAttributeView.class);
+            if (view != null) {
+                view.setReadOnly(false);
             }
         }
 
@@ -438,6 +453,7 @@ class SVNTests extends TestCase
      * @param stateFlags        expected commit state flags
      *                          (see CommitItemStateFlags)
      */
+    @SuppressWarnings("unchecked")
     protected void addExpectedCommitItem(String workingCopyPath,
                                          String baseUrl,
                                          String itemPath,

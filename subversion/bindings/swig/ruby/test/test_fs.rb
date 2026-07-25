@@ -20,7 +20,7 @@
 require "my-assertions"
 require "util"
 require "time"
-require "md5"
+require "digest/md5"
 
 require "svn/core"
 require "svn/fs"
@@ -49,14 +49,15 @@ class SvnFsTest < Test::Unit::TestCase
 
     assert(!File.exist?(path))
     fs = nil
-    callback = Proc.new do |fs|
+    callback = Proc.new do |t_fs|
       assert(File.exist?(path))
       assert_equal(fs_type, Svn::Fs.type(path))
-      fs.set_warning_func do |err|
+      t_fs.set_warning_func do |err|
         p err
         abort
       end
-      assert_equal(path, fs.path)
+      assert_equal(path, t_fs.path)
+      fs = t_fs
     end
     yield(:create, [path, config], callback)
 
@@ -109,7 +110,8 @@ class SvnFsTest < Test::Unit::TestCase
     FileUtils.mkdir_p(fs_path)
 
     make_context(log) do |ctx|
-      assert_raises(Svn::Error::RaLocalReposOpenFailed) do
+      # ### Verify Svn::Error::RaLocalReposOpenFailed in chain
+      assert_raises(Svn::Error::RaCannotCreateSession) do
         ctx.log_message(path, rev)
       end
 
@@ -162,7 +164,7 @@ class SvnFsTest < Test::Unit::TestCase
 
       assert_equal(src, @fs.root.file_contents(path_in_repos){|f| f.read})
       assert_equal(src.length, @fs.root.file_length(path_in_repos))
-      assert_equal(MD5.new(src).hexdigest,
+      assert_equal(Digest::MD5.hexdigest(src),
                    @fs.root.file_md5_checksum(path_in_repos))
 
       assert_equal([path_in_repos], @fs.root.paths_changed.keys)
@@ -208,23 +210,23 @@ class SvnFsTest < Test::Unit::TestCase
       ctx.commit(@wc_path)
     end
 
-    assert_raises(Svn::Error::FsNoSuchTransaction) do
+    assert_raises(Svn::Error::FsMalformedTxnId) do
       @fs.open_txn("NOT-EXIST")
     end
 
+    assert_raises(Svn::Error::FsNoSuchTransaction) do
+      @fs.open_txn("9-9")
+    end
+
     start_time = Time.now
+    sleep 0.032r if Svn::Util::windows?
     txn1 = @fs.transaction
     assert_equal([Svn::Core::PROP_REVISION_DATE], txn1.proplist.keys)
     assert_instance_of(Time, txn1.proplist[Svn::Core::PROP_REVISION_DATE])
     date = txn1.prop(Svn::Core::PROP_REVISION_DATE)
 
-    # Subversion's clock is more precise than Ruby's on
-    # Windows.  So this test can fail intermittently because
-    # the begin and end of the range are the same (to 3
-    # decimal places), but the time from Subversion has 6
-    # decimal places so it looks like it's not in the range.
-    # So we just add a smidgen to the end of the Range.
-    assert_operator(start_time..(Time.now + 0.001), :include?, date)
+    sleep 0.032r if Svn::Util::windows?
+    assert_operator(start_time..Time.now, :include?, date)
     txn1.set_prop(Svn::Core::PROP_REVISION_DATE, nil)
     assert_equal([], txn1.proplist.keys)
     assert_equal(youngest_rev, txn1.base_revision)
@@ -364,7 +366,7 @@ class SvnFsTest < Test::Unit::TestCase
 
       File.open(path, "w") {|f| f.print(modified)}
       @fs.transaction do |txn|
-        checksum = MD5.new(normalize_line_break(result)).hexdigest
+        checksum = Digest::MD5.hexdigest(normalize_line_break(result))
         stream = txn.root.apply_text(path_in_repos, checksum)
         stream.write(normalize_line_break(result))
         stream.close
@@ -383,7 +385,7 @@ class SvnFsTest < Test::Unit::TestCase
                                                   path_in_repos)
       end
 
-      data = ''
+      data = String.new
       stream.each{|w| data << w.new_data}
       assert_equal(normalize_line_break(expected), data)
 
@@ -392,8 +394,8 @@ class SvnFsTest < Test::Unit::TestCase
 
       File.open(path, "w") {|f| f.print(modified)}
       @fs.transaction do |txn|
-        base_checksum = MD5.new(normalize_line_break(src)).hexdigest
-        checksum = MD5.new(normalize_line_break(result)).hexdigest
+        base_checksum = Digest::MD5.hexdigest(normalize_line_break(src))
+        checksum = Digest::MD5.hexdigest(normalize_line_break(result))
         handler = txn.root.apply_textdelta(path_in_repos,
                                            base_checksum, checksum)
         assert_raises(Svn::Error::ChecksumMismatch) do
@@ -414,10 +416,12 @@ class SvnFsTest < Test::Unit::TestCase
       ctx.mkdir(["#{@wc_path}/new_dir"])
 
       start_time = Time.now
+      sleep 0.032r if Svn::Util::windows?
       info = ctx.commit([@wc_path])
 
       assert_equal(@author, info.author)
       assert_equal(@fs.youngest_rev, info.revision)
+      sleep 0.032r if Svn::Util::windows?
       assert_operator(start_time..(Time.now), :include?, info.date)
 
       assert_equal(@author, @fs.prop(Svn::Core::PROP_REVISION_AUTHOR))

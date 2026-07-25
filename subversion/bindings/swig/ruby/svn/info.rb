@@ -229,7 +229,9 @@ module Svn
 
     def parse_diff_unified(entry)
       in_content = false
-      entry.body.each do |line|
+      # ruby 1.8 and ruby 1.9 compat
+      each_meth = entry.body.respond_to?(:each_line) ? :each_line : :each
+      entry.body.send(each_meth) do |line|
         case line
         when /^@@/
           in_content = true
@@ -325,7 +327,7 @@ module Svn
         @type = type
         @added_line = 0
         @deleted_line = 0
-        @body = ""
+        @body = String.new
       end
 
       def count_up_added_line!

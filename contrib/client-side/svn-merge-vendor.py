@@ -72,7 +72,7 @@ def del_temp_tree(tmpdir):
     try:
         shutil.rmtree(tmpdir)
     except OSError:
-        print logger.warn("Couldn't delete tmpdir %s. Don't forget to remove it manually." % (tmpdir))
+        print(logger.warn("Couldn't delete tmpdir %s. Don't forget to remove it manually." % (tmpdir)))
 
 
 def checkout(url, revision=None):
@@ -148,7 +148,7 @@ def copy(wc_dir_orig, wc_dir, file):
     global logger
     logger.info("A+ %s" % (file))
 
-    # Retreiving the original URL
+    # Retrieving the original URL
     os.chdir(wc_dir_orig)
     info_tree = call_cmd_xml_tree_out(["svn", "info", "--xml", os.path.join(wc_dir_orig, file)])
     url = get_xml_text_content(info_tree, "/info/entry/url")
@@ -173,7 +173,7 @@ def copy(wc_dir_orig, wc_dir, file):
         os.chdir(wc_dir_orig)
         orig_svn_root_subroot = get_xml_text_content(info_tree, "/info/entry/repository/root") + orig_svn_subroot
         real_from = str(int(r_from)+1)
-        logger.info("Retreiving log of the original trunk %s between revisions %s and %s ..." % (orig_svn_root_subroot, real_from, r_to))
+        logger.info("Retrieving log of the original trunk %s between revisions %s and %s ..." % (orig_svn_root_subroot, real_from, r_to))
         log_tree = call_cmd_xml_tree_out(["svn", "log", "--xml", "-v", "-r", "%s:%s" % (real_from, r_to), orig_svn_root_subroot])
 
     # Detecting the path of the original moved or copied file
@@ -282,7 +282,7 @@ def fine_tune(wc_dir):
 def alert(messages):
     """Wait the user to <ENTER> or abort the program"""
     for message in messages:
-        print >> sys.stderr, message
+        sys.stderr.write(message + "\n")
     try:
         return sys.stdin.readline()
     except KeyboardInterrupt:
@@ -336,7 +336,7 @@ def get_xml_text_content(xml_doc, xpath):
 
 def usage(error = None):
     """Print usage message and exit"""
-    print >>sys.stderr, """%s: Merges the difference between two revisions of the original repository of the vendor, to the vendor branch
+    sys.stderr.write("""%s: Merges the difference between two revisions of the original repository of the vendor, to the vendor branch
 usage: %s [options] REPO_URL CURRENT_PATH ORIGINAL_REPO_URL -r N:M
 
   - REPO_URL : repository URL for the vendor branch (i.e: http://svn.example.com/repos/vendor/libcomplex)
@@ -369,10 +369,10 @@ Valid options:
   -v [--verbose]           : verbose mode
   -c [--merged-vendor] arg : working copy path of the original already merged vendor trunk (skips the steps 1. and 2.)
   -w [--current-wc] arg    : working copy path of the current checked out trunk of the vendor branch (skips the step 3.)
-    """ % ((prog_name,) * 2)
+    """ % ((prog_name,) * 2))
 
     if error:
-        print >>sys.stder, "", "Current error : "+error
+        sys.stder.write("\nCurrent error : " + error + "\n")
 
     sys.exit(1)
 

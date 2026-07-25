@@ -28,7 +28,7 @@ Usage: remove-zombie-locks.py REPOS-PATH <REVISION|all>
   locks on files that don't exist in the HEAD revision, removing any found.
 
   This script is a workaround for Subversion issue #2507
-  http://subversion.tigris.org/issues/show_bug.cgi?id=2507
+  https://issues.apache.org/jira/browse/SVN-2507
 
 Examples:
 
@@ -59,7 +59,7 @@ For additional information read the commented notes in this script.
 #
 #  There is a theoretical and very small chance that before this
 #  script runs another commit adds a file with the same path as one
-#  just deleted in this revision, and then a lock is aquired for it,
+#  just deleted in this revision, and then a lock is acquired for it,
 #  resulting in this script unlocking the "wrong" file. In practice it
 #  seems highly improbable and would require very strange performance
 #  characteristics on your svn server.  However, to minimize the
@@ -84,11 +84,11 @@ assert (svn.core.SVN_VER_MAJOR, svn.core.SVN_VER_MINOR) >= (1, 2), \
        + str(svn.core.SVN_VER_MAJOR) + "." + str(svn.core.SVN_VER_MINOR)
 
 def usage_and_exit():
-  print >> sys.stderr, __doc__
+  sys.stderr.write(__doc__ + "\n")
   sys.exit(1)
 
 class RepositoryZombieLockRemover:
-  """Remove all locks on non-existant files in repository@HEAD"""
+  """Remove all locks on non-existent files in repository@HEAD"""
   def __init__(self, repos_path, repos_subpath=""):
     self.repos_path = repos_path  # path to repository on disk
     self.repos_subpath = repos_subpath  # if only cleaning part of the repo
@@ -108,20 +108,20 @@ class RepositoryZombieLockRemover:
     svn.core.svn_pool_destroy(self.pool)
     svn.core.apr_terminate()
 
-  def unlock_nonexistant_files(self, lock, callback_pool):
+  def unlock_nonexistent_files(self, lock, callback_pool):
     """check if the file still exists in HEAD, removing the lock if not"""
     if svn.fs.svn_fs_check_path(self.rev_root, lock.path, callback_pool) \
            == svn.core.svn_node_none:
-      print lock.path
+      print(lock.path)
       svn.repos.svn_repos_fs_unlock(self.repos_ptr, lock.path, lock.token,
                                     True, callback_pool)
 
   def run(self):
     """iterate over every locked file in repo_path/repo_subpath,
-       calling unlock_nonexistant_files for each"""
+       calling unlock_nonexistent_files for each"""
 
-    print "Removing all zombie locks from repository at %s\n" \
-          "This may take several minutes..." % self.repos_path
+    print("Removing all zombie locks from repository at %s\n" \
+          "This may take several minutes..." % self.repos_path)
 
     # Try to use svn_fs_get_locks2() if it's present, as it's believed
     # to be problem-free.
@@ -135,7 +135,7 @@ class RepositoryZombieLockRemover:
     if hasattr(svn.fs, 'svn_fs_get_locks2'):
       svn.fs.svn_fs_get_locks2(self.fs_ptr, self.repos_subpath,
                                svn.core.svn_depth_infinity,
-                               self.unlock_nonexistant_files, self.pool)
+                               self.unlock_nonexistent_files, self.pool)
     else:
       if self.fs_type == svn.fs.SVN_FS_TYPE_BDB:
         self.locks = []
@@ -146,12 +146,12 @@ class RepositoryZombieLockRemover:
         subpool = svn.core.svn_pool_create(self.pool)
         for lock in self.locks:
           svn.core.svn_pool_clear(subpool)
-          self.unlock_nonexistant_files(lock, subpool)
+          self.unlock_nonexistent_files(lock, subpool)
         svn.core.svn_pool_destroy(subpool)
       else:
         svn.fs.svn_fs_get_locks(self.fs_ptr, self.repos_subpath,
-                                self.unlock_nonexistant_files, self.pool)
-    print "Done."
+                                self.unlock_nonexistent_files, self.pool)
+    print("Done.")
 
 
 class RevisionZombieLockRemover:

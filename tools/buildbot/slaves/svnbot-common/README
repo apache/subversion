@@ -1,0 +1,7 @@
+Common tool used by (some) buildslaves
+---------------------------------------
+
+Currently used by the following script sets:
+
+  * svn-x64-macosx
+  * svn-arm64-gentoo (under construction -- literally :)

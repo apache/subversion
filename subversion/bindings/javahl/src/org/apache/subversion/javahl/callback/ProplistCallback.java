@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl.callback;
@@ -33,7 +31,7 @@ import org.apache.subversion.javahl.ISVNClient;
 public interface ProplistCallback
 {
     /**
-     * the method will be called for every line in a file.
+     * the method will be called once for every file.
      * @param path        the path.
      * @param properties  the properties on the path.
      */
