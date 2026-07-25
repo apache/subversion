@@ -38,26 +38,18 @@ import logging
 import hashlib
 import zipfile
 import codecs
+import queue
 
-try:
-  # Python >=3.0
-  import queue
-  from urllib.parse import quote as urllib_parse_quote
-  from urllib.parse import unquote as urllib_parse_unquote
-  from urllib.parse import urlparse
-except ImportError:
-  # Python <3.0
-  import Queue as queue
-  from urllib import quote as urllib_parse_quote
-  from urllib import unquote as urllib_parse_unquote
-  from urlparse import urlparse
+from urllib.parse import quote as urllib_parse_quote
+from urllib.parse import unquote as urllib_parse_unquote
+from urllib.parse import urlparse
 
 import svntest
 from svntest import Failure
 from svntest import Skip
 from svntest.wc import StateItem as Item
 
-SVN_VER_MINOR = 15
+SVN_VER_MINOR = 16
 DEFAULT_COMPATIBLE_VERSION = "1.8"
 
 def svn_wc__min_supported_format_version():
@@ -178,7 +170,7 @@ S_ALL_RWX = S_ALL_READ | S_ALL_WRITE | S_ALL_EXEC
 def P(relpath,
       head=os.path.dirname(os.path.dirname(os.path.abspath('.')))
       ):
-  if sys.platform=='win32':
+  if windows:
     return os.path.join(head, relpath + '.exe')
   else:
     return os.path.join(head, relpath)
@@ -462,9 +454,8 @@ def run_command(command, error_expected, binary_mode=False, *varargs):
 # then we can assume that the on-disk repository path was leaked to the
 # client.  Having these here as constants means we don't need to construct
 # them over and over again.
-_repos_diskpath1 = os.path.join('cmdline', 'svn-test-work', 'repositories')
-_repos_diskpath2 = os.path.join('cmdline', 'svn-test-work', 'local_tmp',
-                                'repos')
+_repos_diskpath1 = os.path.join('cmdline', general_repo_dir)
+_repos_diskpath2 = os.path.join('cmdline', pristine_greek_repos_dir)
 _repos_diskpath1_bytes = _repos_diskpath1.encode()
 _repos_diskpath2_bytes = _repos_diskpath2.encode()
 
@@ -779,7 +770,7 @@ def trust_ssl_cert(cfgdir, ssl_cert, ssl_url):
   ssl_dir = os.path.join(cfgdir, 'auth', 'svn.ssl.server')
   if not os.path.isdir(ssl_dir):
     os.makedirs(ssl_dir)
-  md5_name = hashlib.md5(netloc_url).hexdigest()
+  md5_name = hashlib.md5(netloc_url.encode()).hexdigest()
   md5_file = os.path.join(ssl_dir, md5_name)
   md5_file_contents = """K 10
 ascii_cert
@@ -868,7 +859,7 @@ def run_svnadmin(*varargs):
   exit_code, stdout_lines, stderr_lines = \
                        run_command(svnadmin_binary, 1, use_binary, *varargs)
 
-  if use_binary and sys.platform == 'win32':
+  if use_binary and windows:
     # Callers don't expect binary output on stderr
     stderr_lines = [x.replace('\r', '') for x in stderr_lines]
 
@@ -1751,6 +1742,10 @@ def is_httpd_authz_provider_enabled():
 def is_remote_http_connection_allowed():
   return options.allow_remote_http_connection
 
+def is_xml_schema_validation_enabled():
+  return options.check_xml_schema
+
+
 def wc_format(ver=None):
   """Return the WC format number used by Subversion version VER.
 
@@ -1860,6 +1855,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--valgrind=' + options.valgrind)
     if options.valgrind_opts:
       args.append('--valgrind-opts=' + options.valgrind_opts)
+    if options.check_xml_schema:
+      args.append('--check-xml-schema')
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -2304,6 +2301,8 @@ def _create_parser(usage=None):
                     help='programs to run under valgrind')
   parser.add_option('--valgrind-opts', action='store',
                     help='options to pass to valgrind')
+  parser.add_option('--check-xml-schema', action='store_true',
+                    help='Enable extended XML schema validation')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -2382,8 +2381,6 @@ def parse_options(arglist=sys.argv[1:], usage=None):
                  % (svn_wc__min_supported_format_version(),
                     svn_wc__max_supported_format_version(),
                     options.wc_format_version))
-
-  pass
 
   return (parser, args)
 

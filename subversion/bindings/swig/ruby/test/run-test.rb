@@ -30,14 +30,18 @@ top_dir = File.expand_path(File.join(base_dir, "..", "..", "..", ".."))
 ext_dir = File.join(base_dir, ".ext")
 ext_svn_dir = File.join(ext_dir, "svn")
 ext_svn_ext_dir = File.join(ext_svn_dir, "ext")
-FileUtils.mkdir_p(ext_svn_dir)
-at_exit {FileUtils.rm_rf(ext_dir)}
+if ENV['SVN_TEST_SWIG_RUBY'] != 'ctest'
+  FileUtils.mkdir_p(ext_svn_dir)
+  at_exit {FileUtils.rm_rf(ext_dir)}
+end
 
 $LOAD_PATH.unshift(test_dir)
 require 'util'
 require 'test-unit-ext'
 
-SvnTestUtil.setup_test_environment(top_dir, base_dir, ext_svn_ext_dir)
+if ENV['SVN_TEST_SWIG_RUBY'] != 'ctest'
+  SvnTestUtil.setup_test_environment(top_dir, base_dir, ext_svn_ext_dir)
+end
 
 $LOAD_PATH.unshift(ext_dir)
 $LOAD_PATH.unshift(base_src_dir)

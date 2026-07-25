@@ -95,3 +95,13 @@ def codecs_eq(a, b):
 
 def is_defaultencoding_utf8():
   return codecs_eq(sys.getdefaultencoding(), 'utf-8')
+
+def get_holded_refcount_by_getrefcount():
+  "get refcount holded by sys.getrefcount() if its arg is a local variable"
+  a = []
+  rv = sys.getrefcount(a) - 1
+  return rv
+
+HAS_DEFERRED_REFCOUNT = not get_holded_refcount_by_getrefcount()
+
+del get_holded_refcount_by_getrefcount

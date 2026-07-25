@@ -125,7 +125,7 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
   svn_error_t *err;
   svn_wc_context_t *wc_ctx = NULL;
   const char *dir_abspath;
-  apr_pool_t *iterpool = svn_pool_create(pool); 
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   SVN_ERR(svn_dirent_get_absolute(&dir_abspath, dir_path, pool));
 
@@ -178,7 +178,7 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
       const char *key = apr_hash_this_key(hi);
       const svn_wc_entry_t *entry = apr_hash_this_val(hi);
 
-      svn_pool_clear(iterpool); 
+      svn_pool_clear(iterpool);
       SVN_ERR_ASSERT(strcmp(key, entry->name) == 0);
       printf("e = Entry()\n");
       str_value("name", entry->name, iterpool);

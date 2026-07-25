@@ -24,6 +24,7 @@
  * @brief Implementation of the class CreateJ.
  */
 
+#include "svn_client.h"
 #include "svn_error.h"
 
 #include "JNIUtil.h"
@@ -32,6 +33,7 @@
 #include "RevisionRange.h"
 #include "RevisionRangeList.h"
 #include "CreateJ.h"
+#include "Version.hpp"
 #include "../include/org_apache_subversion_javahl_types_Revision.h"
 #include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
 
@@ -318,7 +320,7 @@ CreateJ::DirEntry(const char *path, const char *absPath,
 }
 
 jobject
-CreateJ::Info(const char *path, const svn_client_info2_t *info)
+CreateJ::Info(const char *path, const svn_client_info2_t *info, apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -346,6 +348,7 @@ CreateJ::Info(const char *path, const svn_client_info2_t *info)
                              JAVAHL_ARG("/types/Checksum;")
                              "Ljava/lang/String;JJ"
                              JAVAHL_ARG("/types/Depth;Ljava/util/Set;")
+                             JAVAHL_ARG("/types/Version;Z")
                              ")V");
       if (mid == 0 || JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
@@ -365,6 +368,8 @@ CreateJ::Info(const char *path, const svn_client_info2_t *info)
   jlong jworkingSize = -1;
   jlong jcopyfrom_rev = -1;
   jlong jtext_time = -1;
+  jobject jwc_version = NULL;
+  jboolean jstore_pristine = JNI_TRUE;
   if (info->wc_info)
     {
       jwcroot = JNIUtil::makeJString(info->wc_info->wcroot_abspath);
@@ -418,6 +423,16 @@ CreateJ::Info(const char *path, const svn_client_info2_t *info)
           if (JNIUtil::isJavaExceptionThrown())
             POP_AND_RETURN_NULL;
         }
+
+      if (info->wc_info->wc_format > 0)
+        {
+          const svn_version_t *wc_ver
+            = svn_client_wc_version_from_format(info->wc_info->wc_format, pool);
+          if (wc_ver != NULL)
+            jwc_version = ::JavaHL::Version::getInstance(::Java::Env(env), *wc_ver);
+        }
+
+      jstore_pristine = info->wc_info->store_pristine ? JNI_TRUE : JNI_FALSE;
     }
 
   jstring jurl = JNIUtil::makeJString(info->URL);
@@ -455,7 +470,8 @@ CreateJ::Info(const char *path, const svn_client_info2_t *info)
                                   jscheduleKind, jcopyFromUrl,
                                   jcopyfrom_rev, jtext_time, jchecksum,
                                   jchangelist, jworkingSize,
-                                  (jlong) info->size, jdepth, jconflicts);
+                                  (jlong) info->size, jdepth, jconflicts,
+                                  jwc_version, jstore_pristine);
 
   return env->PopLocalFrame(jinfo2);
 }

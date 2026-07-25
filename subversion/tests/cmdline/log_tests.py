@@ -1008,7 +1008,7 @@ def log_xml_empty_date(sbox):
   date_re = re.compile('<date')
 
   # Ensure that we get a date before we delete the property.
-  exit_code, output, errput = svntest.actions.run_and_verify_svn(
+  exit_code, output, errput = svntest.actions.run_and_verify_svn_xml(
     None, [], 'log', '--xml', '-r1', sbox.wc_dir)
 
   matched = 0
@@ -1023,7 +1023,7 @@ def log_xml_empty_date(sbox):
                                      'pdel', '--revprop', '-r1', 'svn:date',
                                      sbox.wc_dir)
 
-  exit_code, output, errput = svntest.actions.run_and_verify_svn(
+  exit_code, output, errput = svntest.actions.run_and_verify_svn_xml(
     None, [], 'log', '--xml', '-r1', sbox.wc_dir)
 
   for line in output:
@@ -2782,7 +2782,7 @@ def log_on_deleted_deep(sbox):
 @Issue(4711)
 def log_with_merge_history_and_search(sbox):
   "log --use-merge-history --search"
-  
+
   sbox.build()
 
   # r2: create branch
@@ -2798,28 +2798,18 @@ def log_with_merge_history_and_search(sbox):
   sbox.simple_commit(message='r4: merge')
   sbox.simple_update()
 
-  # Helper function
-  def count(haystack, needle):
-    """Return the number of times the string NEEDLE occurs in the string
-    HAYSTACK."""
-    return len(haystack.split(needle)) - 1
-
   # Check the output is valid
-  # ### Since the test is currently XFail, we only smoke test the output.
-  # ### When fixing this test to PASS, extend this validation.
   _, output, _ = svntest.main.run_svn(None, 'log', '--xml', '-g',
                                       '--search', "this will have no matches",
                                       sbox.ospath('A2'))
+  svntest.verify.validate_xml_schema('log', output)
 
-  output = '\n'.join(output)
-  if count(output, "<logentry") != count(output, "</logentry"):
-    raise svntest.Failure("Apparently invalid XML in " + repr(output))
 
-@XFail(svntest.main.is_ra_type_file)
+@XFail(lambda: (svntest.main.is_ra_type_file()))
 @Issue(4856)
 def log_xml_with_merge_history(sbox):
   "log --use-merge-history --xml"
-  
+
   sbox.build()
 
   # r2-r4: create branches
@@ -2852,21 +2842,10 @@ def log_xml_with_merge_history(sbox):
   sbox.simple_commit(message='r9: merge A3=>A4')
   sbox.simple_update()
 
-  # Helper function
-  def count(haystack, needle):
-    """Return the number of times the string NEEDLE occurs in the string
-    HAYSTACK."""
-    return len(haystack.split(needle)) - 1
-
   # Check the output is valid
-  # ### Since the test is currently XFail, we only smoke test the output.
-  # ### When fixing this test to PASS, extend this validation.
   _, output, _ = svntest.main.run_svn(None, 'log', '--xml', '-g', '-r', '8:9',
                                       sbox.ospath('A4'))
-
-  output = '\n'.join(output)
-  if count(output, "<logentry") != count(output, "</logentry"):
-    raise svntest.Failure("Apparently invalid XML in " + repr(output))
+  svntest.verify.validate_xml_schema('log', output)
 
 ########################################################################
 # Run the tests

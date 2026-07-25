@@ -93,6 +93,10 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
                                                const char *,
                                                apr_pool_t *));
 
+/* Get the actual name of the character that will be used when
+ * SVN_APR_LOCALE_CHARSET is provided.
+ * Allocate result in POOL. */
+const char *svn_utf__locale_encoding(apr_pool_t *pool);
 
 #if defined(WIN32)
 /* On Windows: Convert the UTF-8 string SRC to UTF-16.
@@ -287,6 +291,74 @@ svn_utf__utf32_to_utf8(const svn_string_t **result,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
+/* Return the display width of the UTF-8 string CSTR, or -1 if the string is
+ * not valid. If LENGTH is not NULL, set *LENGTH to the byte-wise length
+ * of CSTR; this the same as the value returned by strlen(CSTR).
+ */
+apr_ssize_t
+svn_utf__cstring_width(apr_size_t *length, const char *cstr);
+
+/* Trims the UTF-8 string CSTR to at most MAX_WIDTH visible Unicode glyphs,
+ * removing excess graphemes from the trailing (right) end of the string.
+ * Returns the display width of the trimmed substring, which can be less than
+ * MAX_WIDTH, and sets *STARTP and *ENDP to the start and one-past-the-end
+ * of the trimmed substring of CSTR.
+ *
+ * If CSTR is not a valid UTF-8 string, the returned value will be -1.
+ */
+apr_ssize_t
+svn_utf__cstring_trim_right(const char **startp,
+                            const char **endp,
+                            const char *cstr,
+                            apr_size_t max_width);
+
+/* Trims the UTF-8 string CSTR to at most MAX_WIDTH visible Unicode glyphs,
+ * removing excess graphemes from the leading (left) end of the string.
+ * Returns the display width of the trimmed substring, which can be less than
+ * MAX_WIDTH, and sets *STARTP and *ENDP to the start and one-past-the-end
+ * of the trimmed substring of CSTR.
+ *
+ * If CSTR is not a valid UTF-8 string, the returned value will be -1.
+ */
+apr_ssize_t
+svn_utf__cstring_trim_left(const char **startp,
+                           const char **endp,
+                           const char *cstr,
+                           apr_size_t max_width);
+
+/* Return a new string with a copy of CSTR allocated in POOL aligned to
+ * the right side with spaces. This function takes UTF-8 multibyte encoding
+ * and wcwidth into account. The new string will have exactly as many
+ * printable characters as fit into MAX_WIDTH. Glyphs from CSTR will be
+ * trimmed from the LEFT.
+ *
+ * If MAX_WIDTH is too narrow for even a single glyph, only spaces will be
+ * returned (for example, a two-column emoji doesn't fit into one column).
+ *
+ * If CSTR is not valid UTF-8, return up to four replacement characters
+ * (U+FFFD) aligned to the right
+ */
+char *
+svn_utf__cstring_align_right_trim_left(const char *cstr,
+                                       apr_size_t max_width,
+                                       apr_pool_t *pool);
+
+/* Return a new string with a copy of CSTR allocated in POOL aligned to
+ * the left side with spaces. This function takes UTF-8 multibyte encoding and
+ * wcwidth into an account. The new string will have exactly as many
+ * printable characters as fit into MAX_WIDTH. Glyphs from CSTR will be
+ * trimmed from the RIGHT.
+x *
+ * If MAX_WIDTH is too narrow for even a single glyph, only spaces will be
+ * returned (for example, a two-column emoji doesn't fit into one column).
+ *
+ * If CSTR is not valid UTF-8, return up to four replacement characters
+ * (U+FFFD) aligned to the left
+ */
+char *
+svn_utf__cstring_align_left(const char *cstr,
+                            apr_size_t max_width,
+                            apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

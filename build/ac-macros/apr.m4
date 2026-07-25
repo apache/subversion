@@ -72,10 +72,23 @@ AC_DEFUN(SVN_LIB_APR,
     AC_MSG_ERROR([apr-config --cppflags failed])
   fi
 
-  CFLAGS="$CFLAGS `$apr_config --cflags`"
+  dnl Remove debugging, optimization and warning flags from the result of
+  dnl 'apr-config --cflags'. They're usually not present, but Homebrew on
+  dnl macOS adds '-g -O2 -Wall', for example. we don't want that to
+  dnl interact with our default flags.
+  apr_cflags="`$apr_config --cflags`"
   if test $? -ne 0; then
     AC_MSG_ERROR([apr-config --cflags failed])
   fi
+  if test "$GCC" = "yes"; then
+    saved="$apr_cflags"
+    apr_cflags=["`echo $apr_cflags' ' | $SED -e 's/-[gOW][^ ]* //g'`"]
+    apr_cflags=["`echo $apr_cflags' ' | $SED -e 's/-w //g'`"]
+    if test "$saved" != "$apr_cflags"; then
+      AC_MSG_WARN(['apr_config --cflags': [[$saved]] -> [[$apr_cflags]]])
+    fi
+  fi
+  CFLAGS="$CFLAGS $apr_cflags"
 
   apr_ldflags="`$apr_config --ldflags`"
   if test $? -ne 0; then

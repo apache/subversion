@@ -26,11 +26,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <limits.h>
 
 #include <apr_strings.h>
 #include <apr_lib.h>
 #include <apr_xlate.h>
 #include <apr_atomic.h>
+#include <apr_portable.h>       /* for apr_os_locale_encoding() */
 
 #include "svn_hash.h"
 #include "svn_string.h"
@@ -199,6 +201,17 @@ atomic_swap(void * volatile * mem, void *new_value)
 #endif
 }
 
+static const char *
+get_apr_xlate_charset(const char *charset)
+{
+  if (charset == SVN_APR_DEFAULT_CHARSET)
+    return APR_DEFAULT_CHARSET;
+  else if (charset == SVN_APR_LOCALE_CHARSET)
+    return APR_LOCALE_CHARSET;
+  else
+    return charset;
+}
+
 /* Set *RET to a newly created handle node for converting from FROMPAGE
    to TOPAGE, If apr_xlate_open() returns APR_EINVAL or APR_ENOTIMPL, set
    (*RET)->handle to NULL.  If fail for any other reason, return the error.
@@ -225,7 +238,10 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
                                        frompage, pool);
   name = "win32-xlate: ";
 #else
-  apr_err = apr_xlate_open(&handle, topage, frompage, pool);
+  apr_err = apr_xlate_open(&handle,
+                           get_apr_xlate_charset(topage),
+                           get_apr_xlate_charset(frompage),
+                           pool);
   name = "APR: ";
 #endif
 
@@ -1025,6 +1041,18 @@ svn_utf_cstring_from_utf8_string(const char **dest,
   return err;
 }
 
+int
+svn_utf_cstring_utf8_width(const char *cstr)
+{
+  const apr_ssize_t width = svn_utf__cstring_width(NULL, cstr);
+
+  /* Check for return value overflow. It's unfortunate that we chose
+     to use 'int' for what is essentially a string length value. */
+  if (width > INT_MAX)
+    return -1;
+
+  return (int)width;
+}
 
 /* Insert the given UCS-4 VALUE into BUF at the given OFFSET. */
 static void
@@ -1034,7 +1062,8 @@ membuf_insert_ucs4(svn_membuf_t *buf, apr_size_t offset, apr_int32_t value)
   ((apr_int32_t*)buf->data)[offset] = value;
 }
 
-/* TODO: Use compiler intrinsics for byte swaps. */
+/* Modern compilers with -O2 optimise it out and replace these with special
+ * instructions (bswap or rev). */
 #define SWAP_SHORT(x)  ((((x) & 0xff) << 8) | (((x) >> 8) & 0xff))
 #define SWAP_LONG(x)   ((((x) & 0xff) << 24) | (((x) & 0xff00) << 8)    \
                         | (((x) >> 8) & 0xff00) | (((x) >> 24) & 0xff))
@@ -1180,9 +1209,108 @@ svn_utf__utf32_to_utf8(const svn_string_t **result,
   return SVN_NO_ERROR;
 }
 
+const char *
+svn_utf__locale_encoding(apr_pool_t *pool)
+{
+#if defined(WIN32)
+  /* We have special code for xlate on Windows. */
+  return svn_subr__win32_xlate_locale_encoding(pool);
+#else
+  return apr_os_locale_encoding(pool);
+#endif
+}
+
+/* Return a UTF-8 string allocated in POOL of exactly MAX_WIDTH printable
+ * characters, containing up to four U+FFFD replacement characters aligned
+ * left or right according to ALIGN_LEFT. The rest of the string is padded
+ * with spaces.
+ */
+static char *
+replacement_chars(apr_size_t max_width,
+                  svn_boolean_t align_left,
+                  apr_pool_t *pool)
+{
+  /* String of four Unicode replacement characters, U+FFFD. */
+  static const char fffds[13] =
+    "\xef\xbf\xbd" "\xef\xbf\xbd" "\xef\xbf\xbd" "\xef\xbf\xbd";
+
+  const apr_ssize_t length = max_width >= 4 ? 12 : 3 * max_width;
+  const apr_ssize_t spaces = max_width <= 4 ? 0 : max_width - 4;
+  char *const result = apr_palloc(pool, length + spaces + 1);
+
+  if (align_left)
+    {
+      memcpy(result, fffds, length);
+      memset(result + length, ' ', spaces);
+    }
+  else
+    {
+      memset(result, ' ', spaces);
+      memcpy(result + spaces, fffds, length);
+    }
+  result[length + spaces] = '\0';
+  return result;
+}
+
+/* Return a UTF-8 string allocated in POOL of exactly MAX_WIDTH printable
+ * characters, containing the substring from START to END with display width
+ * WIDTH aligned left or right according to ALIGN_LEFT. The rest of the
+ * string is padded with spaces.
+ */
+static char *
+align_substring(const char *start, const char *end,
+                apr_ssize_t width, apr_ssize_t max_width,
+                svn_boolean_t align_left, apr_pool_t *pool)
+{
+  const apr_ssize_t length = end - start;
+  const apr_ssize_t spaces = max_width - width;
+  char *const result = apr_palloc(pool, length + spaces + 1);
+
+  if (align_left)
+    {
+      memcpy(result, start, length);
+      memset(result + length, ' ', spaces);
+    }
+  else
+    {
+      memset(result, ' ', spaces);
+      memcpy(result + spaces, start, length);
+    }
+  result[length + spaces] = '\0';
+  return result;
+}
+
+char *
+svn_utf__cstring_align_right_trim_left(const char *cstr,
+                                       apr_size_t max_width,
+                                       apr_pool_t *pool)
+{
+  const char *start, *end;
+  const apr_ssize_t width =
+    svn_utf__cstring_trim_left(&start, &end, cstr, max_width);
+
+  if (width < 0)
+    return replacement_chars(max_width, FALSE, pool);
+
+  return align_substring(start, end, width, max_width, FALSE, pool);
+}
+
+char *
+svn_utf__cstring_align_left(const char *cstr,
+                            apr_size_t max_width,
+                            apr_pool_t *pool)
+{
+  const char *start, *end;
+  const apr_ssize_t width =
+    svn_utf__cstring_trim_right(&start, &end, cstr, max_width);
+
+  if (width < 0)
+    return replacement_chars(max_width, TRUE, pool);
+
+  return align_substring(start, end, width, max_width, TRUE, pool);
+}
 
 #ifdef WIN32
-
 
 svn_error_t *
 svn_utf__win32_utf8_to_utf16(const WCHAR **result,

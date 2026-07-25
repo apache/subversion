@@ -1280,6 +1280,18 @@ svn_client__textbase_sync(svn_ra_session_t **ra_session_p,
 const svn_version_t *
 svn_client__compatible_wc_version_optional_pristine(apr_pool_t *result_pool);
 
+/* Helper for svn_client_args_to_target_array2 and
+ * svn_client_args_to_target_array3.
+ */
+svn_error_t *
+svn_client__process_target_array(apr_array_header_t **targets_p,
+                                 apr_array_header_t *utf8_targets,
+                                 const apr_array_header_t *known_targets,
+                                 svn_client_ctx_t *ctx,
+                                 svn_boolean_t keep_last_origpath_on_truepath_collision,
+                                 apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

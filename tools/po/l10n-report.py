@@ -77,11 +77,11 @@ class l10nReport:
         [stdout, stderr] = subprocess.Popen(cmd_and_args, \
                            stdin=subprocess.PIPE, \
                            stdout=subprocess.PIPE, \
-                           stderr=subprocess.PIPE).communicate(input=cmd_in)
-        return stdout, stderr
+                           stderr=subprocess.PIPE).communicate(input=cmd_in.encode('UTF-8'))
+        return stdout.decode('UTF-8'), stderr.decode('UTF-8')
 
     def match(self, pattern, string):
-        if isinstance(pattern, basestring):
+        if isinstance(pattern, str):
             pattern = re.compile(pattern)
         match = re.compile(pattern).search(string)
         if match and match.groups():
@@ -146,7 +146,7 @@ def bar_graph(nominal_length, trans, untrans, fuzzy, obsolete):
     for count, letter in [(trans, '+'), (untrans, 'U'), (fuzzy, '~'),
                           (obsolete, 'o')]:
         accum_count += count
-        new_bar_end = nominal_length * accum_count / total_count
+        new_bar_end = int(nominal_length * accum_count / total_count)
         s += letter * (new_bar_end - accum_bar)
         accum_bar = new_bar_end
     return s
@@ -179,7 +179,7 @@ def main():
         sys.exit(0)
 
     po_dir = 'subversion/po'
-    branch_name = l10n.match('URL:.*/asf/subversion/(\S+)', info_out)
+    branch_name = l10n.match('URL:.*/asf/subversion/(\\S+)', info_out)
     [info_out, info_err] = l10n.safe_command(['svnversion', po_dir])
     if info_err:
         sys.stderr.write("\nError: %s\n" % info_err)

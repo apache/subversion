@@ -24,11 +24,15 @@
 #    under the License.
 ######################################################################
 
-import re, sys
+import os, re
 from difflib import unified_diff, ndiff
 import pprint
 import logging
 import itertools
+from io import BytesIO
+from typing import Iterable
+
+import xml.etree.ElementTree
 
 import svntest
 
@@ -77,6 +81,9 @@ class SVNDumpParseError(svntest.Failure):
   """Exception raised if parsing a dump file fails"""
   pass
 
+class SVNXMLSchemaValidationError(SVNUnexpectedOutput):
+  """Exception raised if XML output failed validation against its schema"""
+  pass
 
 ######################################################################
 # Comparison of expected vs. actual output
@@ -852,7 +859,7 @@ def compare_dump_files(label_expected, label_actual,
     print('DIFF of raw dumpfiles (including expected differences)')
     print('--- ' + (label_expected or 'expected'))
     print('+++ ' + (label_actual or 'actual'))
-    print(''.join(ndiff([repr(line) for line in expected], 
+    print(''.join(ndiff([repr(line) for line in expected],
                         [repr(line) for line in actual])))
     raise svntest.Failure('DIFF of parsed dumpfiles (ignoring expected differences)\n'
                           + '\n'.join(ndiff(
@@ -1039,3 +1046,39 @@ def make_diff_prop_modified(pname, pval1, pval2):
     "## -1 +1 ##\n",
   ] + make_diff_prop_val("-", pval1) + make_diff_prop_val("+", pval2)
 
+
+__schema_dir = os.path.join(
+  os.path.dirname(
+    os.path.dirname(
+      os.path.dirname(
+        os.path.dirname(
+          os.path.abspath(__file__))))),
+  "svn", "schema")
+def validate_xml_schema(name: str, lines: Iterable[str]) -> None:
+  source = ''.join(lines)
+
+  if svntest.main.is_xml_schema_validation_enabled():
+    # Use full XML schema validation (requires lxml and rnc2rng packages)
+    schema_name = name + ".rnc"
+    try:
+      from lxml import etree #type:ignore
+      schema_file = os.path.join(__schema_dir, schema_name)
+      schema = etree.RelaxNG(file=schema_file)
+      document = etree.parse(BytesIO(source.encode("utf-8")))
+      if not schema.validate(document):
+        raise SVNXMLSchemaValidationError(schema.error_log)
+    except ImportError:
+      logger.error("XML: Module lxml.etree not found")
+      raise svntest.Failure
+    except Exception as ex:
+      logger.error("XML: " + str(ex))
+      logger.warning("XML:\n" + "\n".join(repr(line) for line in lines))
+      raise
+
+  # Always parse XML using built in XML parser to check structural validity.
+  try:
+    xml.etree.ElementTree.fromstring(source)
+  except Exception as ex:
+    logger.error("XML: " + str(ex))
+    logger.warning("XML:\n" + "\n".join(repr(line) for line in lines))
+    raise

@@ -21,6 +21,7 @@ Contents:
        D. Installing from a Zip or Installer File under Windows
        E. Building the Latest Source under Windows
        F. Building using CMake
+       G. Running the test suite
 
    III. BUILDING A SUBVERSION SERVER
        A. Setting Up Apache Httpd
@@ -481,7 +482,6 @@ I.    INTRODUCTION
       In more detail, Python is required to do any of the following:
 
       * Use the SWIG Python bindings.
-      * Use the ctypes Python bindings.
       * Use hook scripts coded in Python.
       * Build Subversion from a tarball on Unix-like systems and run
         Subversion's test suite as described in section II.B.
@@ -490,7 +490,6 @@ I.    INTRODUCTION
         Subversion's own repository (whether or not running the test
         suite).
       * Build the SWIG Python bindings.
-      * Build the ctypes Python bindings.
       * Testing as described in section III.D.
 
       The Python bindings are used by:
@@ -578,19 +577,7 @@ I.    INTRODUCTION
       then pass the '--with-gnome-keyring' option to `configure`.
 
 
-      20. Ctypesgen  (OPTIONAL)
-
-      Ctypesgen is Python wrapper generator for ctypes. It is used to generate
-      a part of Subversion Ctypes Python bindings (CSVN). If you want to build
-      CSVN, then pass the '--with-ctypesgen' option to `configure`. If ctypesgen.py
-      is installed in a non-standard place, then use:
-
-          --with-ctypesgen=/path/to/ctypesgen.py
-
-      For more information on CSVN, see subversion/bindings/ctypes-python/README.
-
-
-      21. libmagic (OPTIONAL)
+      20. libmagic (OPTIONAL)
 
       Subversion's configure script attempts to find libmagic automatically.
       If it is installed in a non-standard location, then use:
@@ -612,7 +599,7 @@ I.    INTRODUCTION
         --with-libmagic
 
 
-      22. LZ4 (OPTIONAL)
+      21. LZ4 (OPTIONAL)
 
       Subversion uses LZ4 compression library version r129 or above. Configure
       will attempt to locate the system library by default using pkg-config
@@ -626,7 +613,7 @@ I.    INTRODUCTION
         --with-lz4=internal
 
 
-      23. py3c (OPTIONAL)
+      22. py3c (OPTIONAL)
 
       Subversion uses the Python 3 Compatibility Layer for C
       Extensions (py3c) library when building the Python language
@@ -693,10 +680,8 @@ II.   INSTALLATION
           $ make
           # make install
 
-      You can also run the full test suite by running 'make check'.  Even
-      in successful runs, some tests will report XFAIL; that is normal.
-      Failed runs are indicated by FAIL or XPASS results, or a non-zero exit
-      code from "make check".
+      You can also run the full test suite by running 'make check'.  See the
+      section G for more information.
 
 
   B.  Building the Latest Source under Unix
@@ -847,6 +832,11 @@ II.   INSTALLATION
 
   E.  Building the Latest Source under Windows
       ----------------------------------------
+
+      Windows users may find it easier to build Subversion using CMake and
+      vcpkg (see section F below).
+
+      The following procedure does not use CMake or vcpkg.
 
   E.1 Prerequisites
 
@@ -1194,9 +1184,8 @@ II.   INSTALLATION
   F.  Building using CMake
       --------------------
 
-      Get the sources, either a release tarball or by checking out the
-      official repository. The CMake build system currently only exists in
-      /trunk and it will be included in the 1.15 release.
+      Get the sources, either from a release tarball or by checking out the
+      official repository.
 
       The process for building on Unix and Windows is the same.
 
@@ -1204,11 +1193,14 @@ II.   INSTALLATION
           $ cmake -B out [build options]
           $ cmake --build out
 
+      Note: If you're using the tarball distribution, the first gen-make step
+      can be skipped.
+
       "out" in the commands above is the build directory used by CMake.
 
       Build options can be added, for example:
 
-          $ cmake -B out -DCMAKE_INSTALL_PREFIX=/usr/local/subversion -DSVN_ENABLE_RA_SERF=ON
+          $ cmake -B out -DCMAKE_INSTALL_PREFIX=/usr/local/subversion -DSVN_ENABLE_TESTS=ON
 
       Build options can be listed using:
 
@@ -1239,7 +1231,7 @@ II.   INSTALLATION
 
             $ git clone https://github.com/microsoft/vcpkg
             $ cd vcpkg && .\bootstrap-vcpkg.bat -disableMetrics
-            $ .\vcpkg install apr apr-util expat zlib sqlite3 [any other dependency]
+            $ .\vcpkg install apr apr-util expat zlib sqlite3 serf [any other dependency]
 
         After this is done, vcpkg can be integrated into CMake by passing
         the vcpkg toolchain to CMAKE_TOOLCHAIN_FILE option. In order to do
@@ -1248,6 +1240,64 @@ II.   INSTALLATION
         file` field, where VCPKG_ROOT is the path to vcpkg registry:
 
             <VCPKG_ROOT>/scripts/buildsystems/vcpkg.cmake
+
+
+  G.  Running the test suite
+      ----------------------
+
+      The test suite can be run using any of the build systems above.
+
+      Each test may report PASS, XFAIL, FAIL or XPASS.
+
+      The first two statuses are expected and "normal":
+      - PASS means a test completed with successful result.
+      - XFAIL means a test failed, but this is a known issue.
+
+      The last two statuses are unexpected and indicate a failure:
+      - FAIL means a test returned an unexpected result.
+      - XPASS means a test which was expected to fail completed successfully.
+
+
+  G.1 Validating XML output
+
+      Some Subversion commands can format their output as XML.  The test suite
+      will always verify that the output is valid XML, however it is also
+      possible to check the output against the expected XML schema. To do
+      this, install the lxml and rnc2rng Python modules and start the tests
+      using the --check-xml-schema argument.
+
+
+  G.2 Running the test suite under the autoconf/make build system
+
+      Tests can be started with either of the following commands
+      - make check [options]
+        Run the test suite using a local repository ("file://...")
+      - make davautocheck [options]
+        Run the test suite using a http:// repository on the local machine
+      - make svnserveautocheck [options]
+        Run the test suite using a svnserve:// repository on the local machine
+      - make check-javahl [options]
+        Test the javahl bindings
+
+      For either command, the usual -j argument can be used to have make run
+      several tests concurrently.
+
+      The following list are options commonly used:
+      - PARALLEL=n
+        Run n python based command line tests concurrently
+      - TESTS=[path to python based test in subversion/tests/cmdline/]
+        Run a specific Python based test
+      - APACHE_MPM=mpm type
+        Used for davautocheck, run the test using the specified Apache httpd
+        MPM engine
+      - CHECK_XML_SCHEMA
+        If this option is defined, full XML schema validation will be
+        performed, see the --check-xml-schema option above.
+
+
+  G.3 Running the test suite under the CMake build system
+
+      Run the ctests command from the build directory.
 
 
 III.  BUILDING A SUBVERSION SERVER

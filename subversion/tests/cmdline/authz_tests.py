@@ -1755,7 +1755,7 @@ def delete_file_with_starstar_rules(sbox):
 
   # mod_dav_svn unnecessarily requires svn_authz_recursive access on DELETE of
   # a file.  See:
-  # 
+  #
   #     https://mail-archives.apache.org/mod_mbox/subversion-users/202107.mbox/%3C20210731004148.GA26581%40tarpaulin.shahaf.local2%3E
   #     https://mail-archives.apache.org/mod_mbox/subversion-dev/202107.mbox/%3C20210731004148.GA26581%40tarpaulin.shahaf.local2%3E
   #     (Both links go to the same message.)

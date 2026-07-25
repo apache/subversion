@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl.types;
@@ -157,6 +155,19 @@ public class Info implements java.io.Serializable
     private Set<ConflictDescriptor> conflict;
 
     /**
+     * The working copy compatibility version.
+     * May be <code>null</code>.
+     * @since 1.15
+     */
+    private Version wcVersion;
+
+    /**
+     * True if the working copy stores pristine files.
+     * @since 1.15
+     */
+    private boolean storePristine = true;
+
+    /**
      * constructor to build the object by native code. See fields for
      * parameters
      * @param path
@@ -177,8 +188,10 @@ public class Info implements java.io.Serializable
      * @param textTime
      * @param checksum
      * @param depth
-     * @param treeConflict
+     * @param conflict
+     * @deprecated
      */
+    @Deprecated
     public Info(String path, String wcroot, String url, long rev, NodeKind kind,
           String reposRootUrl, String reposUUID, long lastChangedRev,
           long lastChangedDate, String lastChangedAuthor, Lock lock,
@@ -209,6 +222,32 @@ public class Info implements java.io.Serializable
         this.reposSize = reposSize;
         this.depth = depth;
         this.conflict = conflict;
+    }
+
+    /**
+     * Constructor to build the object by native code.
+     * <p>
+     * Behaves like the deprecated version with additional arguments:
+     * @param wcVersion
+     * @param storePristine
+     * @since 1.15
+     */
+    @SuppressWarnings("deprecation")  // because we call the deprecated ctor
+    private Info(String path, String wcroot, String url, long rev, NodeKind kind,
+          String reposRootUrl, String reposUUID, long lastChangedRev,
+          long lastChangedDate, String lastChangedAuthor, Lock lock,
+          boolean hasWcInfo, ScheduleKind schedule, String copyFromUrl,
+          long copyFromRev, long textTime, Checksum checksum,
+          String changelistName, long workingSize, long reposSize, Depth depth,
+          Set<ConflictDescriptor> conflict, Version wcVersion, boolean storePristine)
+    {
+        this(path, wcroot, url, rev, kind, reposRootUrl, reposUUID,
+             lastChangedRev, lastChangedDate, lastChangedAuthor,
+             lock, hasWcInfo, schedule, copyFromUrl, copyFromRev,
+             textTime, checksum, changelistName, workingSize,
+             reposSize, depth, conflict);
+        this.wcVersion = wcVersion;
+        this.storePristine = storePristine;
     }
 
     /**
@@ -402,11 +441,29 @@ public class Info implements java.io.Serializable
     }
 
     /**
-     * @return the tree conflict of which this node is a victim, or null if none
+     * @return The tree conflict of which this node is a victim, or null if none
      */
     public Set<ConflictDescriptor> getConflicts()
     {
         return conflict;
+    }
+
+    /**
+     * @return The working copy compatibility version.
+     * @since 1.15
+     */
+    public Version getWorkingCopyVersion()
+    {
+        return wcVersion;
+    }
+
+    /**
+     * @return True if the working copy stores pristine content.
+     * @since 1.15
+     */
+    public boolean getStorePristine()
+    {
+        return storePristine;
     }
 
     /**

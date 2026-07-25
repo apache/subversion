@@ -57,12 +57,10 @@ svn_cl__propset(apr_getopt_t *os,
   apr_array_header_t *args, *targets;
 
   /* PNAME and PROPVAL expected as first 2 arguments if filedata was
-     NULL, else PNAME alone will precede the targets.  Get a UTF-8
-     version of the name, too. */
+     NULL, else PNAME alone will precede the targets. */
   SVN_ERR(svn_opt_parse_num_args(&args, os,
                                  opt_state->filedata ? 1 : 2, scratch_pool));
   pname = APR_ARRAY_IDX(args, 0, const char *);
-  SVN_ERR(svn_utf_cstring_to_utf8(&pname, pname, scratch_pool));
   if (! svn_prop_name_is_valid(pname))
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                              _("'%s' is not a valid Subversion property name"),

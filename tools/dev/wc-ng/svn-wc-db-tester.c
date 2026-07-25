@@ -26,7 +26,6 @@
 #include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
-#include "svn_utf.h"
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_version.h"
@@ -217,13 +216,11 @@ sub_main(int *exit_code,
         }
     }
 
-  /* Convert the remaining arguments to UTF-8. */
+  /* Pull the remaining arguments from argv. */
   remaining_argv = apr_array_make(pool, 0, sizeof(const char *));
   while (os->ind < argc)
     {
-      const char *s;
-
-      SVN_ERR(svn_utf_cstring_to_utf8(&s, os->argv[os->ind++], pool));
+      const char *s = apr_pstrdup(pool, os->argv[os->ind++]);
       APR_ARRAY_PUSH(remaining_argv, const char *) = s;
     }
 

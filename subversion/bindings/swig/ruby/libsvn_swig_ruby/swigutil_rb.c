@@ -813,7 +813,8 @@ svn_swig_rb_set_pool_for_no_swig_type(VALUE target, VALUE pool)
     target = rb_ary_new3(1, target);
   }
 
-  rb_iterate(rb_each, target, rb_set_pool_callback, pool);
+  rb_block_call(target, rb_intern("each"), 0, NULL, rb_set_pool_callback,
+                pool);
 }
 
 void
@@ -1748,7 +1749,8 @@ svn_swig_rb_set_baton(VALUE target, VALUE baton)
     target = rb_ary_new3(1, target);
   }
 
-  rb_iterate(rb_each, target, add_baton_if_delta_editor, baton);
+  rb_block_call(target, rb_intern("each"), 0, NULL, add_baton_if_delta_editor,
+                baton);
 }
 
 

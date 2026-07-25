@@ -326,7 +326,7 @@ find_running_gpg_agent(int *new_sd, apr_pool_t *pool)
   char *buffer;
   const char *socket_name = find_gpg_agent_socket(pool, pool);
   const char *request = NULL;
-  const char *p = NULL;
+  char *p = NULL;
   char *ep = NULL;
   int sd;
 

@@ -19,16 +19,17 @@
 # FindSerf.cmake -- CMake module for Serf library
 #
 
+include(GNUInstallDirs)
+
 find_path(Serf_INCLUDE_DIR
   NAMES serf.h
   PATH_SUFFIXES
     include
+    "${CMAKE_INSTALL_INCLUDEDIR}"
+    include/serf-2
+    "${CMAKE_INSTALL_INCLUDEDIR}/serf-2"
     include/serf-1
-)
-
-find_library(Serf_LIBRARY
-  NAMES serf-1
-  PATH_SUFFIXES lib
+    "${CMAKE_INSTALL_INCLUDEDIR}/serf-1"
 )
 
 mark_as_advanced(
@@ -47,9 +48,19 @@ if (Serf_INCLUDE_DIR AND EXISTS ${Serf_INCLUDE_DIR}/serf.h)
   string(REGEX REPLACE ".*SERF_MAJOR_VERSION +([0-9]+).*" "\\1" SERF_MAJOR_VERSION ${VERSION_STRINGS})
   string(REGEX REPLACE ".*SERF_MINOR_VERSION +([0-9]+).*" "\\1" SERF_MINOR_VERSION ${VERSION_STRINGS})
   string(REGEX REPLACE ".*SERF_PATCH_VERSION +([0-9]+).*" "\\1" SERF_PATCH_VERSION ${VERSION_STRINGS})
-
-  set(Serf_VERSION "${SERF_MAJOR_VERSION}.${SERF_MINOR_VERSION}.${SERF_PATCH_VERSION}")
+else()
+  # Default version to 1.0.0 if not found.
+  set(SERF_MAJOR_VERSION 1)
+  set(SERF_MINOR_VERSION 0)
+  set(SERF_PATCH_VERSION 0)
 endif()
+
+set(Serf_VERSION "${SERF_MAJOR_VERSION}.${SERF_MINOR_VERSION}.${SERF_PATCH_VERSION}")
+
+find_library(Serf_LIBRARY
+  NAMES "serf-${SERF_MAJOR_VERSION}"
+  PATH_SUFFIXES lib "${CMAKE_INSTALL_LIBDIR}"
+)
 
 include(FindPackageHandleStandardArgs)
 
@@ -71,15 +82,18 @@ set_target_properties(Serf::Serf PROPERTIES
 
 find_package(OpenSSL REQUIRED)
 find_package(APR REQUIRED)
-find_package(APRUtil REQUIRED)
 find_package(ZLIB REQUIRED)
 
 target_link_libraries(Serf::Serf INTERFACE
   apr::apr
-  apr::aprutil
   OpenSSL::SSL
   ZLIB::ZLIB
 )
+
+if(APR_VERSION VERSION_LESS 2.0.0)
+  find_package(APRUtil REQUIRED)
+  target_link_libraries(Serf::Serf INTERFACE apr::aprutil)
+endif()
 
 if (WIN32)
   target_link_libraries(Serf::Serf INTERFACE

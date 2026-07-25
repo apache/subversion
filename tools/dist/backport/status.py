@@ -143,7 +143,7 @@ class Paragraph:
   def unparse(self, stream):
     "Write this paragraph to STREAM, an open file-like object."
     stream.write(self.__str__())
-    
+
   def __str__(self):
     s = ""
     if self.kind in (Kind.preamble, Kind.section_header, Kind.unknown):
@@ -236,7 +236,12 @@ class StatusFile:
         for para in entry_paras:
           para.kind = Kind.unknown
 
-  def insert(self, entry, containing_section):
+  def insert(self, entry, containing_section, add_missing_section = True):
+    """Insert a new entry under the containing_section header.
+    If add_missing_section is True, a new header will be added last if 
+    no existing header is found.
+    If add_missing_section is False and no headline containing_section is
+    found, entry will not be added and insert till return False."""
     p = Paragraph(Kind.nomination,
                   "",
                   entry,
@@ -251,10 +256,13 @@ class StatusFile:
           correct_header = True
         elif correct_header:
           self.paragraphs.insert(i, p)
-          return
+          return True
       i += 1
 
     if not correct_header:
+      if not add_missing_section:
+        return False
+      
       # None found so we need to append a new header followed by the new entry
       self.paragraphs.append(Paragraph(Kind.section_header,
                                        containing_section + ":\n" \
@@ -263,6 +271,7 @@ class StatusFile:
                                        containing_section)
                              )
     self.paragraphs.append(p)
+    return True
 
   def remove(self, entry):
     "Remove ENTRY from SELF."
@@ -281,6 +290,8 @@ class StatusFile:
     s = ""
     for para in self.paragraphs:
       s += para.__str__()
+    if s[-1] == "\n":
+      s = s[:-1]
     return s
 
 class Test_StatusFile(unittest.TestCase):
@@ -309,7 +320,6 @@ class Test_StatusFile(unittest.TestCase):
         "   Bump version number to 1.0.\n"
         "   Votes:\n"
         "     +1: jrandom\n"
-        "\n"
     )
     test_file = io.StringIO(s)
     with test_file:

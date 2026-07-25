@@ -54,7 +54,7 @@ class CreateJ
            const svn_dirent_t *dirent);
 
   static jobject
-  Info(const char *path, const svn_client_info2_t *info);
+  Info(const char *path, const svn_client_info2_t *info, apr_pool_t *pool);
 
   static jobject
   Lock(const svn_lock_t *lock);

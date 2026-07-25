@@ -38,6 +38,7 @@
 #include "jni_string_map.hpp"
 
 #include "../SubversionException.hpp"
+#include "../Version.hpp"
 #include "../AuthnCallback.hpp"
 #include "../Credential.hpp"
 #include "../ExternalItem.hpp"
@@ -188,6 +189,9 @@ class ClassCacheImpl
   JNIWRAPPER_DEFINE_CACHED_CLASS(subversion_exception,
                                  ::JavaHL::SubversionException);
 
+  JNIWRAPPER_DEFINE_CACHED_CLASS(version,
+                                 ::JavaHL::Version);
+
   JNIWRAPPER_DEFINE_CACHED_CLASS(authn_cb,
                                  ::JavaHL::AuthnCallback);
   JNIWRAPPER_DEFINE_CACHED_CLASS(authn_result,
@@ -304,6 +308,8 @@ JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(output_stream);
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(byte_buffer);
 
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(subversion_exception);
+
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(version);
 
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(authn_cb);
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(authn_result);

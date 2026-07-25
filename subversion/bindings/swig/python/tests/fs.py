@@ -308,7 +308,7 @@ class SubversionFSTestCase(unittest.TestCase):
     try:
       diffout, differr = Popen(["diff"], stdin=PIPE, stderr=PIPE).communicate()
 
-    # When removing Python 2 support: Change to FileNotFoundError and 
+    # When removing Python 2 support: Change to FileNotFoundError and
     # remove check for ENOENT (FileNotFoundError "Corresponds to errno
     # ENOENT" according to documentation)
     except OSError as err:

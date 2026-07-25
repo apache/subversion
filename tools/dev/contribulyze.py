@@ -517,15 +517,15 @@ class LogMessage(object):
 
 log_separator = '-' * 72 + '\n'
 log_header_re = re.compile\
-                ('^(r[0-9]+) \| ([^|]+) \| ([^|]+) \| ([0-9]+)[^0-9]')
+                (r'^(r[0-9]+) \| ([^|]+) \| ([^|]+) \| ([0-9]+)[^0-9]')
 field_re = re.compile(
-           '^(Patch|Review(ed)?|Suggested|Found|Inspired|Tested|Reported) by:'
-           '\s*\S.*$')
+           r'^(Patch|Review(ed)?|Suggested|Found|Inspired|Tested|Reported) by:'
+           r'\s*\S.*$')
 field_aliases = {
   'Reviewed' : 'Review',
   'Reported' : 'Found',
 }
-parenthetical_aside_re = re.compile('^\s*\(.*\)\s*$')
+parenthetical_aside_re = re.compile(r'^\s*\(.*\)\s*$')
 
 def graze(input):
   just_saw_separator = False
@@ -576,7 +576,7 @@ def graze(input):
                 # Each line begins either with "WORD by:", or with whitespace.
                 in_field_re = re.compile('^('
                                          + (field.alias or field.name)
-                                         + ' by:\s+|\s+)([^\s(].*)')
+                                         + r' by:\s+|\s+)([^\s(].*)')
                 m = in_field_re.match(line)
                 if m is None:
                   sys.stderr.write("Error matching: %s\n" % (line))
@@ -703,7 +703,7 @@ def process_committers(committers):
   while line != 'Blanket commit access:\n':
     line = committers.readline()
   in_full_committers = True
-  matcher = re.compile('(\S+)\s+([^\(\)]+)\s+(\([^()]+\)){0,1}')
+  matcher = re.compile(r'(\S+)\s+([^\(\)]+)\s+(\([^()]+\)){0,1}')
   line = committers.readline()
   while line:
     # Every @-sign we see after this point indicates a committer line...
@@ -723,7 +723,7 @@ def process_committers(committers):
       c.is_full_committer = in_full_committers
     line = committers.readline()
   svn_role = Contributor.parse('svn-role <svnsvn{_AT_}svn-qavm.apache.org>')
-  Contributor.get(*svn_role).is_committer = True 
+  Contributor.get(*svn_role).is_committer = True
   Contributor.get(*svn_role).is_full_committer = True # elide it from the listing
 
 

@@ -216,7 +216,7 @@ def blame_in_xml(sbox):
                                         None)
 
   # Retrieve last changed date from svn info
-  exit_code, output, error = svntest.actions.run_and_verify_svn(
+  exit_code, output, error = svntest.actions.run_and_verify_svn_xml(
     None, [],
     'log', file_path, '--xml', '-r1:2')
 
@@ -256,7 +256,7 @@ def blame_in_xml(sbox):
               '</target>\n',
               '</blame>\n']
 
-  exit_code, output, error = svntest.actions.run_and_verify_svn(
+  exit_code, output, error = svntest.actions.run_and_verify_svn_xml(
     None, [],
     'blame', file_path, '--xml')
 

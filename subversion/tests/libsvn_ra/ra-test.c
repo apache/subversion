@@ -261,10 +261,10 @@ open_tunnel(svn_stream_t **request, svn_stream_t **response,
             svn_cancel_func_t cancel_func, void *cancel_baton,
             apr_pool_t *pool)
 {
-  apr_proc_t *proc;
+  const char *args[] = { "svnserve", "-t", "-r", ".", NULL };
+  apr_proc_t *proc = apr_pcalloc(pool, sizeof(*proc));
   apr_procattr_t *attr;
   apr_status_t status;
-  const char *args[] = { "svnserve", "-t", "-r", ".", NULL };
   const char *svnserve;
   tunnel_baton_t *b = tunnel_baton;
   close_baton_t *cb;
@@ -275,10 +275,12 @@ open_tunnel(svn_stream_t **request, svn_stream_t **response,
 
   status = apr_procattr_create(&attr, pool);
   if (status == APR_SUCCESS)
-    status = apr_procattr_io_set(attr, 1, 1, 0);
+    status = apr_procattr_io_set(attr,
+                                 APR_FULL_BLOCK, /* input */
+                                 APR_FULL_BLOCK, /* output */
+                                 APR_NO_PIPE);   /* error */
   if (status == APR_SUCCESS)
     status = apr_procattr_cmdtype_set(attr, APR_PROGRAM_ENV);
-  proc = apr_palloc(pool, sizeof(*proc));
   if (status == APR_SUCCESS)
     status = apr_proc_create(proc,
                              svn_dirent_local_style(svnserve, pool),

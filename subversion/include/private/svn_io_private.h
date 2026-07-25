@@ -200,7 +200,7 @@ svn_io__win_rename_open_file(apr_file_t *file,
    Corresponds to the predefined value of "0" in:
    https://docs.microsoft.com/windows-hardware/drivers/ddi/wdm/ns-wdm-_file_basic_information#remarks
  */
-#define SVN_IO__WIN_TIME_UNCHANGED APR_INT64_MIN + 0
+#define SVN_IO__WIN_TIME_UNCHANGED (APR_INT64_MIN + 0)
 
 /* Special value that indicates that the file system should suspend updates
    for timestamp values such as LastAccessTime, LastWriteTime, and ChangeTime
@@ -208,7 +208,7 @@ svn_io__win_rename_open_file(apr_file_t *file,
    Corresponds to the predefined value of "-1" in:
    https://docs.microsoft.com/windows-hardware/drivers/ddi/wdm/ns-wdm-_file_basic_information#remarks
  */
-#define SVN_IO__WIN_TIME_SUSPEND_UPDATE APR_INT64_MIN + 1
+#define SVN_IO__WIN_TIME_SUSPEND_UPDATE (APR_INT64_MIN + 1)
 
 /* This Windows-specific function sets the basic file information using an
    existing file handle. The SET_MTIME will be set as the new LastWriteTime

@@ -130,24 +130,37 @@ datasource_to_index(svn_diff_datasource_e datasource)
 #define CHUNK_SHIFT 17
 #define CHUNK_SIZE (1 << CHUNK_SHIFT)
 
-#define chunk_to_offset(chunk) ((chunk) << CHUNK_SHIFT)
-#define offset_to_chunk(offset) ((offset) >> CHUNK_SHIFT)
-#define offset_in_chunk(offset) ((offset) & (CHUNK_SIZE - 1))
+static APR_INLINE apr_off_t
+chunk_to_offset(apr_off_t chunk)
+{
+  return chunk << CHUNK_SHIFT;
+}
 
+static APR_INLINE apr_off_t
+offset_to_chunk(apr_off_t offset)
+{
+  return offset >> CHUNK_SHIFT;
+}
+
+static APR_INLINE apr_size_t
+offset_in_chunk(apr_off_t offset)
+{
+  return offset & (CHUNK_SIZE - 1);
+}
 
 /* Read a chunk from a FILE into BUFFER, starting from OFFSET, going for
  * *LENGTH.  The actual bytes read are stored in *LENGTH on return.
  */
 static APR_INLINE svn_error_t *
 read_chunk(apr_file_t *file,
-           char *buffer, apr_off_t length,
+           char *buffer, apr_size_t length,
            apr_off_t offset, apr_pool_t *scratch_pool)
 {
   /* XXX: The final offset may not be the one we asked for.
    * XXX: Check.
    */
   SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, scratch_pool));
-  return svn_io_file_read_full2(file, buffer, (apr_size_t) length,
+  return svn_io_file_read_full2(file, buffer, length,
                                 NULL, NULL, scratch_pool);
 }
 
@@ -268,7 +281,7 @@ map_or_read_file(apr_file_t **file,
 static svn_error_t *
 increment_chunk(struct file_info *file, apr_pool_t *pool)
 {
-  apr_off_t length;
+  apr_size_t length;
   apr_off_t last_chunk = offset_to_chunk(file->size);
 
   if (file->chunk == -1)
@@ -469,7 +482,7 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
                       apr_size_t file_len, apr_pool_t *pool)
 {
   struct file_info file_for_suffix[4] = { { 0 }  };
-  apr_off_t length[4];
+  apr_size_t length[4];
   apr_off_t suffix_min_chunk0;
   apr_off_t suffix_min_offset0;
   apr_off_t min_file_size;
@@ -650,7 +663,7 @@ datasources_open(void *baton,
 {
   svn_diff__file_baton_t *file_baton = baton;
   struct file_info files[4];
-  apr_off_t length[4];
+  apr_size_t length[4];
 #ifndef SVN_DISABLE_PREFIX_SUFFIX_SCANNING
   svn_boolean_t reached_one_eof;
 #endif
@@ -672,7 +685,7 @@ datasources_open(void *baton,
       SVN_ERR(svn_io_file_size_get(&filesize, file->file, file_baton->pool));
       file->size = filesize;
       length[i] = filesize > CHUNK_SIZE ? CHUNK_SIZE : filesize;
-      file->buffer = apr_palloc(file_baton->pool, (apr_size_t) length[i]);
+      file->buffer = apr_palloc(file_baton->pool, length[i]);
       SVN_ERR(read_chunk(file->file, file->buffer,
                          length[i], 0, file_baton->pool));
       file->endp = file->buffer + length[i];

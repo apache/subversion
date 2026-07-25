@@ -70,12 +70,12 @@ def externals_test_setup(sbox):
     Properties on 'A/B':
       svn:externals
         ^/A/D/gamma gamma
-    
+
     Properties on 'A/C':
       svn:externals
         exdir_G       <scheme>://<...>/<other_repos_basename>/A/D/G
         ../../../<other_repos_basename>/A/D/H@1 exdir_H
-    
+
     Properties on 'A/D':
       svn:externals
         ^/../<other_repos_basename>/A exdir_A

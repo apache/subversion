@@ -129,7 +129,7 @@ debug_dir_opened(void **new_dir_baton,
                                        copyfrom_source, scratch_pool));
   SVN_ERR(write_action_property_source(b, "left_source",
                                        left_source, scratch_pool));
-  SVN_ERR(write_action_property_source(b, "right_source", 
+  SVN_ERR(write_action_property_source(b, "right_source",
                                        right_source, scratch_pool));
 
   b->indent_level++;
@@ -171,7 +171,7 @@ debug_dir_deleted(const char *relpath,
   SVN_ERR(write_action(b, "dir_deleted", relpath, scratch_pool));
   SVN_ERR(write_action_property_source(b, "left_source",
                                        left_source, scratch_pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -260,7 +260,7 @@ debug_file_added(const char *relpath,
   SVN_ERR(write_action(b, "file_added", relpath, scratch_pool));
   SVN_ERR(write_action_property_source(b, "copyfrom_source",
                                        copyfrom_source, scratch_pool));
-  SVN_ERR(write_action_property_source(b, "right_source", 
+  SVN_ERR(write_action_property_source(b, "right_source",
 right_source, scratch_pool));
 
   return SVN_NO_ERROR;

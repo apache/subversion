@@ -278,8 +278,10 @@ static const char *unidiff_with_mergeinfo =
   "Modified: svn:mergeinfo"                                             NL
   "## -0,1 +0,3 ##"                                                     NL
   "   Reverse-merged /subversion/branches/1.6.x-r935631:r952683-955333" NL
-  "   /subversion/branches/nfc-nfd-aware-client:r870276,870376 をマージしました"NL
-  "   Fusionné /subversion/branches/1.7.x-r1507044:r1507300-1511568"    NL
+  "   /subversion/branches/nfc-nfd-aware-client:r870276,870376 "
+  "\xe3\x82\x92\xe3\x83\x9e\xe3\x83\xbc\xe3\x82\xb8\xe3\x81\x97"
+  "\xe3\x81\xbe\xe3\x81\x97\xe3\x81\x9f"                                NL
+  "   Fusionn\xc3\xa9 /subversion/branches/1.7.x-r1507044:r1507300-1511568" NL
   "   Merged /subversion/branches/1.8.x-openssl-dirs:r1535139"          NL;
 /* The above diff intentionally contains i18n versions of some lines. */
 

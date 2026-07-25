@@ -31,6 +31,7 @@
 #include <apr_strings.h>
 
 #include "cl.h"
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
@@ -97,13 +98,24 @@ format_size(double human_readable_size,
        the absolute size is actually a single-digit number, because
        files can't have fractional byte sizes. */
     if (absolute_human_readable_size >= 10)
-      sprintf(buffer, "%.0f", human_readable_size);
+      {
+#if HAVE_SNPRINTF
+        snprintf(buffer, sizeof(buffer), "%.0f", human_readable_size);
+#else
+        sprintf(buffer, "%.0f", human_readable_size);
+#endif
+      }
     else
       {
         double integral;
         const double frac = modf(absolute_human_readable_size, &integral);
         const int decimals = (index > 0 && (integral < 9 || frac <= .949999999));
+#if HAVE_SNPRINTF
+        snprintf(buffer, sizeof(buffer), "%.*f", decimals,
+                 human_readable_size);
+#else
         sprintf(buffer, "%.*f", decimals, human_readable_size);
+#endif
       }
 
     return apr_pstrcat(result_pool, buffer, suffix, SVN_VA_NULL);

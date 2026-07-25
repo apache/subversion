@@ -81,6 +81,10 @@
 #include <mach-o/loader.h>
 #endif
 
+#ifdef SVN_HAVE_LIBMAGIC
+#include <magic.h>
+#endif
+
 #if HAVE_UNAME
 static const char *canonical_host_from_uname(apr_pool_t *pool);
 # ifndef SVN_HAVE_MACOS_PLIST
@@ -137,59 +141,93 @@ svn_sysinfo__release_name(apr_pool_t *pool)
 #endif
 }
 
+const char *
+svn_sysinfo__character_encoding(apr_pool_t *pool)
+{
+  return svn_utf__locale_encoding(pool);
+}
+
 const apr_array_header_t *
 svn_sysinfo__linked_libs(apr_pool_t *pool)
 {
-  svn_version_ext_linked_lib_t *lib;
-  apr_array_header_t *array = apr_array_make(pool, 7, sizeof(*lib));
-  int lz4_version = svn_lz4__runtime_version();
+  apr_array_header_t *array =
+      apr_array_make(pool, 7, sizeof(svn_version_ext_linked_lib_t));
 
-  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
-  lib->name = "APR";
-  lib->compiled_version = APR_VERSION_STRING;
-  lib->runtime_version = apr_pstrdup(pool, apr_version_string());
+  {
+    svn_version_ext_linked_lib_t *lib = apr_array_push(array);
+    lib->name = "APR";
+    lib->compiled_version = APR_VERSION_STRING;
+    lib->runtime_version = apr_pstrdup(pool, apr_version_string());
+  }
 
 /* Don't list APR-Util if it isn't linked in, which it may not be if
  * we're using APR 2.x+ which combined APR-Util into APR. */
 #ifdef APU_VERSION_STRING
-  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
-  lib->name = "APR-Util";
-  lib->compiled_version = APU_VERSION_STRING;
-  lib->runtime_version = apr_pstrdup(pool, apu_version_string());
+  {
+    svn_version_ext_linked_lib_t *lib = apr_array_push(array);
+    lib->name = "APR-Util";
+    lib->compiled_version = APU_VERSION_STRING;
+    lib->runtime_version = apr_pstrdup(pool, apu_version_string());
+  }
 #endif
 
-  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
-  lib->name = "Expat";
-  lib->compiled_version = apr_pstrdup(pool, svn_xml__compiled_version());
-  lib->runtime_version = apr_pstrdup(pool, svn_xml__runtime_version());
+  {
+    svn_version_ext_linked_lib_t *lib = apr_array_push(array);
+    lib->name = "Expat";
+    lib->compiled_version = apr_pstrdup(pool, svn_xml__compiled_version());
+    lib->runtime_version = apr_pstrdup(pool, svn_xml__runtime_version());
+  }
 
-  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
-  lib->name = "SQLite";
-  lib->compiled_version = apr_pstrdup(pool, svn_sqlite__compiled_version());
+#ifdef SVN_HAVE_LIBMAGIC
+  {
+    int libmagic_version = magic_version();
+    svn_version_ext_linked_lib_t *lib = apr_array_push(array);
+    lib->name = "Libmagic";
+    lib->compiled_version =
+        apr_psprintf(pool, "%d.%d", MAGIC_VERSION / 100, MAGIC_VERSION % 100);
+    lib->runtime_version = apr_psprintf(pool, "%d.%d", libmagic_version / 100,
+                                        libmagic_version % 100);
+  }
+#endif
+
+  {
+    svn_version_ext_linked_lib_t *lib = apr_array_push(array);
+    lib->name = "SQLite";
+    lib->compiled_version = apr_pstrdup(pool, svn_sqlite__compiled_version());
 #ifdef SVN_SQLITE_INLINE
-  lib->runtime_version = NULL;
+    lib->runtime_version = NULL;
 #else
-  lib->runtime_version = apr_pstrdup(pool, svn_sqlite__runtime_version());
+    lib->runtime_version = apr_pstrdup(pool, svn_sqlite__runtime_version());
 #endif
+  }
 
-  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
-  lib->name = "Utf8proc";
-  lib->compiled_version = apr_pstrdup(pool, svn_utf__utf8proc_compiled_version());
-  lib->runtime_version = apr_pstrdup(pool, svn_utf__utf8proc_runtime_version());
+  {
+    svn_version_ext_linked_lib_t *lib = apr_array_push(array);
+    lib->name = "Utf8proc";
+    lib->compiled_version =
+        apr_pstrdup(pool, svn_utf__utf8proc_compiled_version());
+    lib->runtime_version =
+        apr_pstrdup(pool, svn_utf__utf8proc_runtime_version());
+  }
 
-  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
-  lib->name = "ZLib";
-  lib->compiled_version = apr_pstrdup(pool, svn_zlib__compiled_version());
-  lib->runtime_version = apr_pstrdup(pool, svn_zlib__runtime_version());
+  {
+    svn_version_ext_linked_lib_t *lib = apr_array_push(array);
+    lib->name = "ZLib";
+    lib->compiled_version = apr_pstrdup(pool, svn_zlib__compiled_version());
+    lib->runtime_version = apr_pstrdup(pool, svn_zlib__runtime_version());
+  }
 
-  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
-  lib->name = "LZ4";
-  lib->compiled_version = apr_pstrdup(pool, svn_lz4__compiled_version());
+  {
+    svn_version_ext_linked_lib_t *lib = apr_array_push(array);
+    int lz4_version = svn_lz4__runtime_version();
+    lib->name = "LZ4";
+    lib->compiled_version = apr_pstrdup(pool, svn_lz4__compiled_version());
 
-  lib->runtime_version = apr_psprintf(pool, "%d.%d.%d",
-                                      lz4_version / 100 / 100,
-                                      (lz4_version / 100) % 100,
-                                      lz4_version % 100);
+    lib->runtime_version = apr_psprintf(pool, "%d.%d.%d",
+                                        lz4_version / 100 / 100,
+                                        (lz4_version / 100) % 100,
+                                        lz4_version % 100);
+  }
 
   return array;
 }
@@ -955,22 +993,24 @@ win32_canonical_host(apr_pool_t *pool)
 }
 
 /* Convert a Unicode string to UTF-8. */
-static char *
+static const char *
 wcs_to_utf8(const wchar_t *wcs, apr_pool_t *pool)
 {
-  const int bufsize = WideCharToMultiByte(CP_UTF8, 0, wcs, -1,
-                                          NULL, 0, NULL, NULL);
-  if (bufsize > 0)
+  svn_error_t *err;
+  const char *utf8;
+
+  err = svn_utf__win32_utf16_to_utf8(&utf8, wcs, NULL, pool);
+  if (err)
     {
-      char *const utf8 = apr_palloc(pool, bufsize + 1);
-      WideCharToMultiByte(CP_UTF8, 0, wcs, -1, utf8, bufsize, NULL, NULL);
-      return utf8;
+      svn_error_clear(err);
+      return NULL;
     }
-  return NULL;
+
+  return utf8;
 }
 
 /* Query the value called NAME of the registry key HKEY. */
-static char *
+static const char *
 registry_value(HKEY hkey, wchar_t *name, apr_pool_t *pool)
 {
   DWORD size;

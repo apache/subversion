@@ -118,6 +118,9 @@ struct init_baton_t
   svn_atomic__str_init_func_t str_init_func;
   const char *errstr;
 
+  /* Used only by svn_atomic__init_once_void() */
+  svn_atomic__void_init_func_t void_init_func;
+
   /* Used by both pairs of functions */
   void *baton;
 };
@@ -176,6 +179,29 @@ svn_atomic__init_once_no_error(volatile svn_atomic_t *global_status,
     return "Couldn't perform atomic initialization";
   else
     return init_baton.errstr;
+}
+
+/* Wrapper for the svn_atomic__init_once_void() init function. */
+static svn_boolean_t void_init_func_wrapper(init_baton_t *init_baton)
+{
+  init_baton->void_init_func(init_baton->baton);
+  return TRUE;
+}
+
+void
+svn_atomic__init_once_void(volatile svn_atomic_t *global_status,
+                           svn_atomic__void_init_func_t init_func,
+                           void *baton)
+{
+  svn_boolean_t result;
+  init_baton_t init_baton = { 0 };
+  init_baton.void_init_func = init_func;
+  init_baton.baton = baton;
+
+  result = init_once(global_status, void_init_func_wrapper, &init_baton);
+
+  /* void_init_func_wrapper() always returns success */
+  SVN_ERR_ASSERT_NO_RETURN(result);
 }
 
 /* The process-global counter that we use to produce process-wide unique

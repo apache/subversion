@@ -45,6 +45,12 @@ const char *svn_sysinfo__canonical_host(apr_pool_t *pool);
  */
 const char *svn_sysinfo__release_name(apr_pool_t *pool);
 
+/* Return the name of the current locale character set.
+ *
+ * All allocations are done in POOL.
+ */
+const char *svn_sysinfo__character_encoding(apr_pool_t *pool);
+
 /* Return an array of svn_version_linked_lib_t of descriptions of the
  * link-time and run-time versions of dependent libraries, or NULL of
  * the info is not available.

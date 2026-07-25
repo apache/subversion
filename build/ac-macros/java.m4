@@ -162,16 +162,47 @@ AC_DEFUN(SVN_FIND_JDK,
       fi
     ])
 
+    dnl Get the Java release version
+    java_version=[`"$JDK/bin/java" -version 2>&1 | $HEAD -1 | $SED -e 's/^[^0-9]*//' -e 's/\.[^.]*$//'`]
+    java_major=[`echo $java_version | $SED -e 's/\.[^.]*$//'`]
+    java_minor=[`echo $java_version | $SED -e 's/^[^.]*\.//'`]
+    dnl versions older than 11 report '1.V.x' instead of 'V.x.y'
+    if test "$java_major" -eq 1; then
+      java_release="$java_minor"
+    else
+      java_release="$java_major"
+      java_version="$java_release"
+    fi
+    AC_MSG_NOTICE([Compiling with Java $java_version for target Java $JAVA_OLDEST_WORKING_VER])
+
+    dnl Java 24 and above restrict native access.
+    dnl See: https://inside.java/2024/12/09/quality-heads-up/
+    if test "$java_release" -ge 24; then
+      JAVAHL_CHECK_FLAGS='--module-path "$(abs_builddir)/$(JAVAHL_JAR)"'
+      JAVAHL_CHECK_FLAGS="$JAVAHL_CHECK_FLAGS --add-modules org.apache.subversion.javahl"
+      JAVAHL_CHECK_FLAGS="$JAVAHL_CHECK_FLAGS --enable-native-access=org.apache.subversion.javahl"
+      JAVAHL_CHECK_FLAGS="$JAVAHL_CHECK_FLAGS --illegal-native-access=deny"
+    fi
+
     dnl Add javac flags.
-    # The release for "-source" could actually be greater than that
-    # of "-target", if we want to cross-compile for lesser JVMs.
     if test -z "$JAVAC_FLAGS"; then
-      JAVAC_FLAGS="-target $JAVA_OLDEST_WORKING_VER -source 1.8"
+      dnl The release for "-source" could actually be greater than that
+      dnl of "-target", if we want to cross-compile for lesser JVMs.
+      if test "$java_release" -lt 9; then
+        JAVAC_FLAGS="-target $JAVA_OLDEST_WORKING_VER -source 1.8"
+      else
+        java_oldest_release=[`echo $JAVA_OLDEST_WORKING_VER | $SED -e 's/^1\.//'`]
+        JAVAC_FLAGS="--release $java_oldest_release"
+      fi
+
       if test "$enable_debugging" = "yes"; then
         JAVAC_FLAGS="-g -Xlint -Xlint:unchecked -Xlint:serial -Xlint:path $JAVAC_FLAGS"
-        if test -z "$JAVAC_COMPAT_FLAGS"; then
-          JAVAC_COMPAT_FLAGS="$JAVAC_FLAGS -Xlint:-unchecked -Xlint:-deprecation -Xlint:-dep-ann -Xlint:-rawtypes"
-        fi
+      else
+        dnl Ignore warnings about deprecated version 8 (from --release 8)
+        JAVAC_FLAGS="-Xlint:-options $JAVAC_FLAGS"
+      fi
+      if test -z "$JAVAC_COMPAT_FLAGS"; then
+        JAVAC_COMPAT_FLAGS="$JAVAC_FLAGS -Xlint:-unchecked -Xlint:-deprecation -Xlint:-dep-ann -Xlint:-rawtypes"
       fi
     fi
 
@@ -193,4 +224,5 @@ AC_DEFUN(SVN_FIND_JDK,
   AC_SUBST(JAVAH)
   AC_SUBST(JAR)
   AC_SUBST(JNI_INCLUDES)
+  AC_SUBST(JAVAHL_CHECK_FLAGS)
 ])

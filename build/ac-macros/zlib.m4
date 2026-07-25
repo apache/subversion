@@ -73,10 +73,19 @@ AC_DEFUN(SVN_LIB_Z,
       ])
     fi
   fi
- 
+
   if test "$zlib_found" = "no"; then
     AC_MSG_ERROR([subversion requires zlib])
   fi
+
+  dnl Check if this zlib provides adler32_z().
+  save_ldflags="$LDFLAGS"
+  LDFLAGS="$SVN_ZLIB_LIBS"
+  AC_CHECK_FUNC([adler32_z],[
+    AC_DEFINE([SVN_ZLIB_HAS_ADLER32_Z],[1],
+              [Define if the function adler32_z() is available])
+  ],[])
+  LDFLAGS="$save_ldflags"
 
   SVN_DOT_CLANGD([$SVN_ZLIB_INCLUDES])
   AC_SUBST(SVN_ZLIB_INCLUDES)
