@@ -891,7 +891,7 @@ function(swig_target_external_runtime target lang)
 endfunction()
 
 function(test_prepend_builddir_to_path name)
-  file(TO_NATIVE_PATH "${CMAKE_CURRENT_BINARY_DIR}" dir)
+  set(dir "$<SHELL_PATH:$<TARGET_FILE_DIR:svn>>")
   if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.22")
     set_property(TEST ${name} APPEND PROPERTY ENVIRONMENT_MODIFICATION
       "PATH=path_list_prepend:${dir}"
