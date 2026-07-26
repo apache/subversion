@@ -62,6 +62,9 @@ if ([targets.enable_condition])[is targets.type "swig"][is targets.swig_lang "pe
     "${SVN_SWIG_PYTHON_SITEARCH}/libsvn"[end][is targets.swig_lang "perl"]
     "${SVN_SWIG_PERL_SITEARCH}/auto/SVN/[targets.output_name]"[end][is targets.swig_lang "ruby"]
     "${SVN_SWIG_RUBY_SITEARCH}/svn/ext"[end]
+  )[else][is targets.type "java"]
+  list(APPEND [if-any targets.is_java_test]SVN_JAVAHL_TESTS_SOURCES[else]SVN_JAVAHL_SOURCES[end][for targets.sources]
+    [targets.sources][end]
   )[else][is targets.type "lib"]
   add_library([targets.name][if-any targets.build_type] [targets.build_type][end][for targets.sources]
     [targets.sources][end]
@@ -117,6 +120,6 @@ if ([targets.enable_condition])[is targets.type "swig"][is targets.swig_lang "pe
   endif()[if-any targets.install_target]
   install(TARGETS [targets.name][if-any targets.is_apache_mod]
     LIBRARY DESTINATION "${HTTPD_MODULES_DIR}"
-  [end])[end][end]
+  [end])[end][end][end]
 endif()
 [end]

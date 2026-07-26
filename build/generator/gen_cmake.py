@@ -39,6 +39,8 @@ def get_target_type(target):
     return "swig"
   if isinstance(target, gen_base.TargetSWIGProject):
     return "swig-project"
+  if isinstance(target, gen_base.TargetJava):
+    return "java"
   if isinstance(target, gen_base.TargetLib):
     return "lib"
   else:
@@ -81,6 +83,8 @@ def get_target_conditions(target):
       enable_condition.append("SVN_ENABLE_AUTH_KWALLET")
     elif target.name == "libsvn_auth_gnome_keyring":
       enable_condition.append("SVN_ENABLE_AUTH_GNOME_KEYRING")
+    elif target.name == "libsvnjavahl":
+      enable_condition.append("SVN_ENABLE_JAVAHL")
 
   if isinstance(target, gen_base.TargetExe):
     if target.install == "test" or target.install == "sub-test":
@@ -96,6 +100,11 @@ def get_target_conditions(target):
   if isinstance(target, gen_base.TargetSWIG) or \
      isinstance(target, gen_base.TargetSWIGLib):
     enable_condition.append("SVN_ENABLE_SWIG_" + target.lang.upper())
+
+  if isinstance(target, gen_base.TargetJava):
+    enable_condition.append("SVN_ENABLE_JAVAHL_TESTS"
+                            if target.name.endswith("-tests") else
+                            "SVN_ENABLE_JAVAHL")
 
   if isinstance(target, gen_base.TargetApacheMod):
     enable_condition.append("SVN_ENABLE_APACHE_MODULES")
@@ -127,6 +136,7 @@ class Generator(gen_base.GeneratorBase):
       build_type = None
       swig_lang = None
       is_apache_mod = None
+      is_java_test = None
 
       if isinstance(target, gen_base.TargetScript):
         # there is nothing to build
@@ -141,6 +151,9 @@ class Generator(gen_base.GeneratorBase):
         is_apache_mod = True
       elif isinstance(target, gen_base.TargetSWIG):
         swig_lang = target.lang
+      elif isinstance(target, gen_base.TargetJava):
+        if target.name.endswith("-tests"):
+          is_java_test = True
       elif isinstance(target, gen_base.TargetLib):
         if target.msvc_static:
           build_type = "STATIC"
@@ -198,7 +211,7 @@ class Generator(gen_base.GeneratorBase):
 
       target_type = get_target_type(target)
 
-      if target_type in ["exe", "lib", "test", "swig"]:
+      if target_type in ["exe", "lib", "test", "swig", "java"]:
         msvc_libs = []
         msvc_objects = []
 
@@ -239,6 +252,7 @@ class Generator(gen_base.GeneratorBase):
           srcdir = target.path,
           install_target = ezt.boolean(install_target),
           swig_lang = swig_lang,
+          is_java_test = is_java_test,
           is_apache_mod = is_apache_mod,
           namespace = os.path.basename(target.path),
         )
@@ -281,10 +295,6 @@ class Generator(gen_base.GeneratorBase):
   def check_ignore_target(self, target):
     ignore_names = [
       "svnxx-tests",
-
-      "libsvnjavahl",
-      "__JAVAHL__",
-      "__JAVAHL_TESTS__",
     ]
 
     for name in ignore_names:

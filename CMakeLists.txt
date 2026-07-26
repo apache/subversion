@@ -101,6 +101,8 @@ option(SVN_ENABLE_SWIG_PERL "Enable Subversion Perl bindings Perl" OFF)
 option(SVN_ENABLE_SWIG_PERL_MAN_PAGES "Enable man pages for Subversion Perl bindings" OFF)
 option(SVN_ENABLE_SWIG_PYTHON "Enable Subversion Python bindings" OFF)
 option(SVN_ENABLE_SWIG_RUBY "Enable Subversion Ruby bindings" OFF)
+option(SVN_ENABLE_JAVAHL "Enable Subversion JavaHL bindings" OFF)
+option(SVN_ENABLE_JAVAHL_TESTS "Enable tests for Subversion JavaHL bindings" OFF)
 set(SVN_SWIG_PERL_SITEARCH "${CMAKE_INSTALL_LIBDIR}/svn-perl"
   CACHE PATH "Path to install Subversion Perl bindings for sitearch")
 set(SVN_SWIG_PERL_MAN3DIR "${CMAKE_INSTALL_MANDIR}/man3"
@@ -113,6 +115,8 @@ set(SVN_SWIG_RUBY_SITELIB "${CMAKE_INSTALL_LIBDIR}/svn-ruby"
   CACHE PATH "Path to install Subversion Ruby bindings for sitelib")
 set(SVN_SWIG_RUBY_SITEARCH "${CMAKE_INSTALL_LIBDIR}/svn-ruby"
   CACHE PATH "Path to install Subversion Ruby bindings for sitearch")
+set(SVN_JAVAHL_DIR "${CMAKE_INSTALL_DATAROOTDIR}/java"
+  CACHE PATH "Path to install Subversion JavaHL bindings")
 
 # Enable modules and features
 option(SVN_ENABLE_RA_LOCAL "Enable Subversion Local Repository Access Library" ON)
@@ -154,9 +158,7 @@ option(SVN_SQLITE_USE_AMALGAMATION "Use sqlite amalgamation" OFF)
 set(SQLiteAmalgamation_ROOT "${CMAKE_SOURCE_DIR}/sqlite-amalgamation" CACHE STRING "Directory with sqlite amalgamation")
 
 # Require C++ compiler
-if (SVN_ENABLE_SVNXX OR SVN_ENABLE_AUTH_KWALLET)
-  # TODO: Also add SVN_ENABLE_JAVAHL to the conditions when they done.
-
+if (SVN_ENABLE_SVNXX OR SVN_ENABLE_AUTH_KWALLET OR SVN_ENABLE_JAVAHL)
   enable_language(CXX)
 endif()
 
@@ -242,7 +244,7 @@ add_private_config_definition(
 )
 
 if (SVN_ENABLE_TESTS OR SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR
-    SVN_ENABLE_SWIG_RUBY)
+    SVN_ENABLE_SWIG_RUBY OR SVN_ENABLE_JAVAHL_TESTS)
   enable_testing()
 endif()
 
@@ -307,6 +309,40 @@ if (SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
         "subversion.apache.org/docs/release-notes/1.11#ruby-swig-issue-602")
     endif()
     set(SVN_SWIG_RB_OPTS)
+  endif()
+endif()
+
+if(SVN_ENABLE_JAVAHL)
+  find_package(Java REQUIRED)
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
+    find_package(JNI REQUIRED COMPONENTS JVM)
+  else()
+    find_package(JNI REQUIRED)
+  endif()
+  include(UseJava)
+
+  if(NOT TARGET JNI::JNI)
+    add_library(JNI::JNI IMPORTED INTERFACE)
+  endif()
+  set_property(TARGET JNI::JNI PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+    ${JAVA_INCLUDE_PATH})
+
+  set(CMAKE_JAVA_COMPILE_FLAGS)
+  if(Java_VERSION VERSION_LESS "9")
+    list(APPEND CMAKE_JAVA_COMPILE_FLAGS
+      -target 1.8
+      -source 1.8
+    )
+  else()
+    list(APPEND CMAKE_JAVA_COMPILE_FLAGS
+      --release 8
+    )
+  endif()
+
+  set(SVN_JAVAHL_SOURCES)
+  if(SVN_ENABLE_JAVAHL_TESTS)
+    set(SVN_JAVAHL_TESTS_SOURCES)
+    find_jar(JUNIT_JAR NAMES junit.jar)
   endif()
 endif()
 
@@ -1088,6 +1124,90 @@ if(SVN_ENABLE_SWIG_RUBY)
   test_prepend_builddir_to_path(swig-ruby)
 endif()
 
+if(SVN_ENABLE_JAVAHL)
+  add_jar(svn-javahl SOURCES ${SVN_JAVAHL_SOURCES}
+    GENERATE_NATIVE_HEADERS svn-javahl.headers
+      DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/javahl/include"
+    OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/javahl/lib"
+  )
+  add_custom_command(TARGET libsvnjavahl PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+      "${CMAKE_CURRENT_BINARY_DIR}/javahl/native"
+  )
+  target_link_libraries(libsvnjavahl PRIVATE svn-javahl.headers)
+  add_library(external-java-sdk INTERFACE)
+  target_link_libraries(external-java-sdk INTERFACE
+    JNI::JNI
+  )
+  target_include_directories(external-java-sdk INTERFACE
+    ${JNI_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/javahl/native
+    ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/javahl/native/jniwrapper
+    ${CMAKE_CURRENT_BINARY_DIR}/javahl/native
+  )
+  target_link_libraries(external-java-sdk INTERFACE
+    ${JNI_LIBRARIES}
+  )
+
+  if(SVN_ENABLE_JAVAHL_TESTS)
+    add_jar(svn-javahl-tests
+      SOURCES ${SVN_JAVAHL_TESTS_SOURCES}
+      INCLUDE_JARS
+        "${CMAKE_CURRENT_BINARY_DIR}/javahl/lib/svn-javahl.jar"
+        "${JUNIT_JAR}"
+      OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/javahl/lib"
+    )
+    add_dependencies(svn-javahl-tests svn-javahl)
+
+    function(add_javahl_tests target)
+      if(WIN32)
+        set(sep "\\;")
+      else()
+        set(sep ":")
+      endif()
+      string(JOIN ${sep} classpath
+        "${CMAKE_CURRENT_BINARY_DIR}/javahl/lib/svn-javahl-tests.jar"
+        "${CMAKE_CURRENT_BINARY_DIR}/javahl/lib/svn-javahl.jar"
+        "${JUNIT_JAR}"
+      )
+      set(rootdir "${CMAKE_CURRENT_BINARY_DIR}/Testing/${target}")
+      file(MAKE_DIRECTORY "${rootdir}")
+
+      set(test_args)
+      if(Java_VERSION VERSION_GREATER_EQUAL "24")
+        list(APPEND test_args
+          --enable-native-access=ALL-UNNAMED
+        )
+      endif()
+      add_test(NAME ${target}
+        COMMAND
+          ${Java_JAVA_EXECUTABLE}
+          -Xcheck:jni
+          -Djava.library.path=$<TARGET_FILE_DIR:libsvnjavahl>
+          -Dtest.rootdir=${rootdir}
+          -Dtest.srcdir=${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/javahl
+          -classpath
+          "${classpath}"
+          ${test_args}
+          ${ARGN}
+        WORKING_DIRECTORY
+          "${rootdir}"
+      )
+      if(WIN32 OR CYGWIN)
+        test_prepend_builddir_to_path(${target})
+      endif()
+    endfunction()
+
+    add_javahl_tests(javahl-tests-apache org.apache.subversion.javahl.RunTests)
+    add_javahl_tests(javahl-tests-tigris org.tigris.subversion.javahl.RunTests)
+    add_javahl_tests(javahl-tests-deprecated-authn
+      "-Dtest.authn.deprecated=true" org.apache.subversion.javahl.RunTests
+    )
+  endif()
+
+  install_jar(svn-javahl DESTINATION "${SVN_JAVAHL_DIR}")
+endif()
+
 ### Checks
 
 include(CheckIncludeFiles)
@@ -1370,3 +1490,4 @@ message(STATUS "    Build SVNXX ................... : ${SVN_ENABLE_SVNXX}")
 message(STATUS "    Build SWIG_PERL ............... : ${SVN_ENABLE_SWIG_PERL}")
 message(STATUS "    Build SWIG_PYTHON ............. : ${SVN_ENABLE_SWIG_PYTHON}")
 message(STATUS "    Build SWIG_RUBY ............... : ${SVN_ENABLE_SWIG_RUBY}")
+message(STATUS "    Build JavaHL .................. : ${SVN_ENABLE_JAVAHL}")
