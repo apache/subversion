@@ -43,16 +43,6 @@ if(POLICY CMP0092)
   cmake_policy(SET CMP0092 NEW)
 endif()
 
-# CMP0078: UseSWIG generates standard target names.
-if(POLICY CMP0078)
-  cmake_policy(SET CMP0078 NEW)
-endif()
-
-# CMP0086: UseSWIG honors SWIG_MODULE_NAME via -module flag.
-if(POLICY CMP0086)
-  cmake_policy(SET CMP0086 NEW)
-endif()
-
 # Enable support for MSVC runtime library selection by abstraction
 # if supported by CMake.
 if(POLICY CMP0091)
