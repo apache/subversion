@@ -100,6 +100,47 @@ deserialize_revnum(void **out,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_cache__partial_setter_func_t */
+static svn_error_t *
+add_revnum_inplace_partial_setter_func(void **data,
+                                       apr_size_t *data_len,
+                                       void *baton,
+                                       apr_pool_t *result_pool)
+{
+  svn_revnum_t *in_rev = (svn_revnum_t *) (*data);
+  const svn_revnum_t *addend = (const svn_revnum_t *) baton;
+
+  if (*data_len != sizeof(*in_rev))
+    return svn_error_create(SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
+                            _("Bad size for revision number in cache"));
+
+  *in_rev += *addend;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_cache__partial_setter_func_t */
+static svn_error_t *
+add_revnum_dup_partial_setter_func(void **data,
+                                   apr_size_t *data_len,
+                                   void *baton,
+                                   apr_pool_t *result_pool)
+{
+  svn_revnum_t *in_rev = (svn_revnum_t *) (*data);
+  const svn_revnum_t *addend = (const svn_revnum_t *) baton;
+
+  if (*data_len != sizeof(*in_rev))
+    return svn_error_create(SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
+                            _("Bad size for revision number in cache"));
+
+  *in_rev += *addend;
+
+  *data = apr_pmemdup(result_pool, in_rev, sizeof(*in_rev));
+  *data_len = sizeof(*in_rev);
+
+  return SVN_NO_ERROR;
+}
+
 /* Reset cache stats. */
 static svn_error_t *
 reset_cache_stats(svn_cache__t *cache, apr_pool_t *pool)
@@ -231,6 +272,65 @@ basic_cache_test(svn_cache__t *cache,
 }
 
 static svn_error_t *
+partial_cache_test(svn_cache__t *cache,
+                   apr_pool_t *pool)
+{
+  svn_boolean_t found;
+  svn_revnum_t twenty = 20, thirty = 30, *answer;
+  apr_pool_t *subpool;
+
+  /* We use a subpool for all calls in this test and aggressively
+   * clear it, to try to find any bugs where the cached values aren't
+   * actually saved away in the cache's pools. */
+  subpool = svn_pool_create(pool);
+
+  SVN_ERR(reset_cache_stats(cache, subpool));
+  SVN_ERR(svn_cache__set(cache, "partial", &thirty, subpool));
+  ASSERT_CACHE_STATS(cache, 0, 0, 1, subpool);
+  svn_pool_clear(subpool);
+
+  SVN_ERR(reset_cache_stats(cache, subpool));
+  SVN_ERR(svn_cache__set_partial(cache, "partial",
+                                 add_revnum_inplace_partial_setter_func,
+                                 &twenty, subpool));
+  ASSERT_CACHE_STATS(cache, 0, 0, 1, subpool);
+  svn_pool_clear(subpool);
+
+  SVN_ERR(reset_cache_stats(cache, subpool));
+  SVN_ERR(svn_cache__get((void **)&answer, &found, cache, "partial", subpool));
+  if (!found)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "cache failed to find entry for 'partial'");
+  if (*answer != 50)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "expected 50 but found '%ld'", *answer);
+  ASSERT_CACHE_STATS(cache, 1, 1, 0, subpool);
+  svn_pool_clear(subpool);
+
+  SVN_ERR(reset_cache_stats(cache, subpool));
+  SVN_ERR(svn_cache__set_partial(cache, "partial",
+                                 add_revnum_dup_partial_setter_func,
+                                 &twenty, subpool));
+  ASSERT_CACHE_STATS(cache, 0, 0, 1, subpool);
+  svn_pool_clear(subpool);
+
+  SVN_ERR(reset_cache_stats(cache, subpool));
+  SVN_ERR(svn_cache__get((void **)&answer, &found, cache, "partial", subpool));
+  if (!found)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "cache failed to find entry for 'partial'");
+  if (*answer != 70)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "expected 70 but found '%ld'", *answer);
+  ASSERT_CACHE_STATS(cache, 1, 1, 0, subpool);
+  svn_pool_clear(subpool);
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 test_inprocess_cache_basic(apr_pool_t *pool)
 {
   svn_cache__t *cache;
@@ -247,6 +347,25 @@ test_inprocess_cache_basic(apr_pool_t *pool)
                                       pool));
 
   return basic_cache_test(cache, TRUE, pool);
+}
+
+static svn_error_t *
+test_inprocess_cache_partial(apr_pool_t *pool)
+{
+  svn_cache__t *cache;
+
+  /* Create a cache with just one entry. */
+  SVN_ERR(svn_cache__create_inprocess(&cache,
+                                      serialize_revnum,
+                                      deserialize_revnum,
+                                      APR_HASH_KEY_STRING,
+                                      1,
+                                      1,
+                                      TRUE,
+                                      "",
+                                      pool));
+
+  return partial_cache_test(cache, pool);
 }
 
 static svn_error_t *
@@ -299,6 +418,30 @@ test_membuffer_cache_basic(apr_pool_t *pool)
                                             pool, pool));
 
   return basic_cache_test(cache, FALSE, pool);
+}
+
+static svn_error_t *
+test_membuffer_cache_partial(apr_pool_t *pool)
+{
+  svn_cache__t *cache;
+  svn_membuffer_t *membuffer;
+
+  SVN_ERR(svn_cache__membuffer_cache_create(&membuffer, 10 * 1024, 1, 0, TRUE,
+                                            TRUE, pool));
+
+  /* Create a cache with just one entry. */
+  SVN_ERR(svn_cache__create_membuffer_cache(&cache, membuffer,
+                                            serialize_revnum,
+                                            deserialize_revnum,
+                                            APR_HASH_KEY_STRING,
+                                            "cache:",
+                                            SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                                            FALSE,
+                                            FALSE,
+                                            pool,
+                                            pool));
+
+  return partial_cache_test(cache, pool);
 }
 
 /* Implements svn_cache__deserialize_func_t */
@@ -673,13 +816,17 @@ static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_inprocess_cache_basic,
-                   "basic inprocess svn_cache test"),
+                   "inprocess svn_cache basic test"),
+    SVN_TEST_PASS2(test_inprocess_cache_partial,
+                   "inprocess svn_cache partial set test"),
     SVN_TEST_OPTS_PASS(test_memcache_basic,
                        "basic memcache svn_cache test"),
     SVN_TEST_OPTS_PASS(test_memcache_long_key,
                        "memcache svn_cache with very long keys"),
     SVN_TEST_PASS2(test_membuffer_cache_basic,
-                   "basic membuffer svn_cache test"),
+                   "membuffer svn_cache basic test"),
+    SVN_TEST_PASS2(test_inprocess_cache_partial,
+                   "membuffer svn_cache partial set test"),
     SVN_TEST_PASS2(test_membuffer_serializer_error_handling,
                    "test for error handling in membuffer svn_cache"),
     SVN_TEST_PASS2(test_membuffer_cache_clearing,
