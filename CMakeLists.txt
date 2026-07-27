@@ -37,18 +37,7 @@
 # - RHEL 8                 (supported until May 2029): CMake 3.26
 # - RHEL 9                 (supported until May 2032): CMake 3.31
 # - RHEL 10                (supported until May 2035): CMake 3.31
-cmake_minimum_required(VERSION 3.14)
-
-# CMP0092: MSVC warning flags are not in CMAKE_<LANG>_FLAGS by default.
-if(POLICY CMP0092)
-  cmake_policy(SET CMP0092 NEW)
-endif()
-
-# Enable support for MSVC runtime library selection by abstraction
-# if supported by CMake.
-if(POLICY CMP0091)
-  cmake_policy(SET CMP0091 NEW)
-endif()
+cmake_minimum_required(VERSION 3.20)
 
 function(read_version path var major minor patch)
   get_filename_component(path ${path} ABSOLUTE)
@@ -504,16 +493,6 @@ if(SVN_ENABLE_NLS)
   find_package(Gettext REQUIRED)
   find_package(Intl REQUIRED)
 
-  # If using CMake of version < 3.20, FindIntl would not define IMPORTED target.
-  # https://cmake.org/cmake/help/latest/module/FindIntl.html
-  if(NOT TARGET Intl::Intl)
-    add_library(Intl::Intl INTERFACE IMPORTED)
-    include_directories("${Intl_INCLUDE_DIRS}")
-    set_target_properties(Intl::Intl PROPERTIES
-      INTERFACE_LINK_LIBRARIES "${Intl_LIBRARIES}"
-    )
-  endif()
-
   svn_create_alias_target(external-intl Intl::Intl)
 
   add_private_config_definition(
@@ -771,11 +750,7 @@ endif()
 ### Python
 
 if(SVN_ENABLE_SWIG_PYTHON)
-  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
-    find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
-  else()
-    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-  endif()
+  find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
 elseif(SVN_ENABLE_TESTS)
   find_package(Python3 REQUIRED COMPONENTS
       Interpreter
@@ -1081,9 +1056,6 @@ if(SVN_ENABLE_SWIG_RUBY)
   find_package(Ruby REQUIRED)
 
   add_library(external-ruby IMPORTED INTERFACE)
-  if(NOT DEFINED Ruby_INCLUDE_DIRS)  # < 3.18
-    set(Ruby_INCLUDE_DIRS ${RUBY_INCLUDE_DIRS})
-  endif()
   target_include_directories(external-ruby INTERFACE
     ${Ruby_INCLUDE_DIRS}
     ${SWIG_INCLUDE_DIRECTORIES}
