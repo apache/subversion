@@ -92,3 +92,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+* r1936610
+  Update and verify Simplified Chinese translation
+  Justification:
+    Simplified Chinese translation for 1.15
+  Votes:
+    +1: dongsheng
