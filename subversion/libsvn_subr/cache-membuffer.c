@@ -1314,7 +1314,6 @@ insert_entry(svn_membuffer_t *cache, entry_t *entry)
    */
   cache->used_entries++;
   cache->data_used += entry->size;
-  entry->hit_count = 0;
   group->header.used++;
 
   /* update entry chain
@@ -2268,6 +2267,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
       entry->size = size;
       entry->offset = level->current_data;
       entry->priority = priority;
+      entry->hit_count = 0;
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
@@ -2698,6 +2698,7 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
                   entry = find_entry(cache, group_index, to_find, TRUE);
                   entry->size = item_size + key_len;
                   entry->offset = cache->l1.current_data;
+                  entry->hit_count = 0;
 
                   if (key_len)
                     memcpy(cache->data + entry->offset,
