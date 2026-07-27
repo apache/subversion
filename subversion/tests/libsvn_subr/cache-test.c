@@ -100,6 +100,68 @@ deserialize_revnum(void **out,
   return SVN_NO_ERROR;
 }
 
+/* Reset cache stats. */
+static svn_error_t *
+reset_cache_stats(svn_cache__t *cache, apr_pool_t *pool)
+{
+  svn_cache__info_t info;
+
+  SVN_ERR(svn_cache__get_info(cache, &info, TRUE, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Helper for ASSERT_CACHE_STATS. */
+static svn_error_t *
+check_cache_stats(svn_cache__t *cache,
+                  apr_uint64_t expected_gets,
+                  apr_uint64_t expected_hits,
+                  apr_uint64_t expected_sets,
+                  const char *file,
+                  int line,
+                  apr_pool_t *pool)
+{
+  svn_cache__info_t info;
+  const char *actual;
+  const char *expected;
+
+  SVN_ERR(svn_cache__get_info(cache, &info, FALSE, pool));
+
+  actual =
+    apr_psprintf(pool,
+                 "gets: %" APR_UINT64_T_FMT ", "
+                 "hits: %" APR_UINT64_T_FMT ", "
+                 "sets: %" APR_UINT64_T_FMT,
+                 info.gets,
+                 info.hits,
+                 info.sets),
+  expected =
+    apr_psprintf(pool,
+                 "gets: %" APR_UINT64_T_FMT ", "
+                 "hits: %" APR_UINT64_T_FMT ", "
+                 "sets: %" APR_UINT64_T_FMT,
+                 expected_gets,
+                 expected_hits,
+                 expected_sets);
+
+  if (strcmp(actual, expected) != 0)
+    return svn_error_createf(
+        SVN_ERR_TEST_FAILED, NULL,
+        "Strings not equal\n  Expected: '%s'\n  Found:    '%s'"
+        "\n  at %s:%d",
+        expected, actual, file, line);
+
+  return SVN_NO_ERROR;
+}
+
+/* Asserts expected cache stats. */
+#define ASSERT_CACHE_STATS(cache, expected_gets, expected_hits,          \
+                           expected_sets, pool)                          \
+  do {                                                                   \
+    SVN_ERR(check_cache_stats(cache, expected_gets, expected_hits,       \
+                              expected_sets, __FILE__, __LINE__, pool)); \
+  } while (0)
+
 static svn_error_t *
 basic_cache_test(svn_cache__t *cache,
                  svn_boolean_t size_is_one,
@@ -114,42 +176,54 @@ basic_cache_test(svn_cache__t *cache,
    * actually saved away in the cache's pools. */
   subpool = svn_pool_create(pool);
 
+  SVN_ERR(reset_cache_stats(cache, subpool));
   SVN_ERR(svn_cache__get((void **) &answer, &found, cache, "twenty", subpool));
   if (found)
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "cache found an entry that wasn't there");
+  ASSERT_CACHE_STATS(cache, 1, 0, 0, subpool);
   svn_pool_clear(subpool);
 
+  SVN_ERR(reset_cache_stats(cache, subpool));
   SVN_ERR(svn_cache__set(cache, "twenty", &twenty, subpool));
+  ASSERT_CACHE_STATS(cache, 0, 0, 1, subpool);
   svn_pool_clear(subpool);
 
-  SVN_ERR(svn_cache__get((void **) &answer, &found, cache, "twenty", subpool));
+  SVN_ERR(reset_cache_stats(cache, subpool));
+  SVN_ERR(svn_cache__get((void **)&answer, &found, cache, "twenty", subpool));
   if (! found)
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "cache failed to find entry for 'twenty'");
   if (*answer != 20)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "expected 20 but found '%ld'", *answer);
+  ASSERT_CACHE_STATS(cache, 1, 1, 0, subpool);
   svn_pool_clear(subpool);
 
+  SVN_ERR(reset_cache_stats(cache, subpool));
   SVN_ERR(svn_cache__set(cache, "thirty", &thirty, subpool));
+  ASSERT_CACHE_STATS(cache, 0, 0, 1, subpool);
   svn_pool_clear(subpool);
 
-  SVN_ERR(svn_cache__get((void **) &answer, &found, cache, "thirty", subpool));
+  SVN_ERR(reset_cache_stats(cache, subpool));
+  SVN_ERR(svn_cache__get((void **)&answer, &found, cache, "thirty", subpool));
   if (! found)
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "cache failed to find entry for 'thirty'");
   if (*answer != 30)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "expected 30 but found '%ld'", *answer);
+  ASSERT_CACHE_STATS(cache, 1, 1, 0, subpool);
 
   if (size_is_one)
     {
-      SVN_ERR(svn_cache__get((void **) &answer, &found, cache, "twenty", subpool));
+      SVN_ERR(reset_cache_stats(cache, subpool));
+      SVN_ERR(svn_cache__get((void **)&answer, &found, cache, "twenty", subpool));
       if (found)
         return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                                 "cache found entry for 'twenty' that should have "
                                 "expired");
+      ASSERT_CACHE_STATS(cache, 1, 0, 0, subpool);
     }
   svn_pool_destroy(subpool);
 
