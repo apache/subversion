@@ -36,7 +36,7 @@ function(read_version path var major minor patch)
   endif()
 endfunction()
 
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.14)
 
 # CMP0092: MSVC warning flags are not in CMAKE_<LANG>_FLAGS by default.
 if(POLICY CMP0092)
@@ -46,9 +46,6 @@ endif()
 # CMP0078: UseSWIG generates standard target names.
 if(POLICY CMP0078)
   cmake_policy(SET CMP0078 NEW)
-else()
-  # Otherwise, setup this behavior manually.
-  set(UseSWIG_TARGET_NAME_PREFERENCE STANDARD)
 endif()
 
 # CMP0086: UseSWIG honors SWIG_MODULE_NAME via -module flag.
