@@ -307,7 +307,7 @@ revprop_refresh(const svn_test_opts_t *opts,
 
       SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, iterpool));
       SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
-      SVN_ERR(svn_fs_make_dir(txn_root, apr_itoa(pool, i), iterpool));
+      SVN_ERR(svn_fs_make_dir(txn_root, apr_itoa(iterpool, i), iterpool));
       SVN_ERR(test_commit_txn(&new_rev, txn, NULL, iterpool));
     }
 
