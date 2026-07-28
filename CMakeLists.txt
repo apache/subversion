@@ -87,9 +87,12 @@ option(SVN_ENABLE_APACHE_MODULES "Build modules for Apache HTTPD" OFF)
 
 include(GNUInstallDirs)
 option(SVN_ENABLE_SWIG_PERL "Enable Subversion Perl bindings Perl" OFF)
+option(SVN_ENABLE_SWIG_PERL_TESTS "Enable tests for Subversion Perl bindings" OFF)
 option(SVN_ENABLE_SWIG_PERL_MAN_PAGES "Enable man pages for Subversion Perl bindings" OFF)
 option(SVN_ENABLE_SWIG_PYTHON "Enable Subversion Python bindings" OFF)
+option(SVN_ENABLE_SWIG_PYTHON_TESTS "Enable tests for Subversion Python bindings" OFF)
 option(SVN_ENABLE_SWIG_RUBY "Enable Subversion Ruby bindings" OFF)
+option(SVN_ENABLE_SWIG_RUBY_TESTS "Enable tests for Subversion Ruby bindings" OFF)
 option(SVN_ENABLE_JAVAHL "Enable Subversion JavaHL bindings" OFF)
 option(SVN_ENABLE_JAVAHL_TESTS "Enable tests for Subversion JavaHL bindings" OFF)
 set(SVN_SWIG_PERL_SITEARCH "${CMAKE_INSTALL_LIBDIR}/svn-perl"
@@ -232,8 +235,11 @@ add_private_config_definition(
   "SVN_SOVERSION" "${SVN_SOVERSION}"
 )
 
-if (SVN_ENABLE_TESTS OR SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR
-    SVN_ENABLE_SWIG_RUBY OR SVN_ENABLE_JAVAHL_TESTS)
+if (SVN_ENABLE_TESTS OR 
+    SVN_ENABLE_SWIG_PERL_TESTS OR 
+    SVN_ENABLE_SWIG_PYTHON_TESTS OR
+    SVN_ENABLE_SWIG_RUBY_TESTS OR
+    SVN_ENABLE_JAVAHL_TESTS)
   enable_testing()
 endif()
 
@@ -996,17 +1002,19 @@ if(SVN_ENABLE_SWIG_PYTHON)
     )
   ]==])
 
-  add_test(
-    NAME swig-python
-    COMMAND
-      "${Python3_EXECUTABLE}"
-      ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/tests/run_all.py
-      --verbose
-    WORKING_DIRECTORY
-      "${CMAKE_CURRENT_BINARY_DIR}/swig-python"
-  )
-  if(WIN32 OR CYGWIN)
-    test_prepend_builddir_to_path(swig-python)
+  if (SVN_ENABLE_SWIG_PYTHON_TESTS)
+    add_test(
+      NAME swig-python
+      COMMAND
+        "${Python3_EXECUTABLE}"
+        ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/tests/run_all.py
+        --verbose
+      WORKING_DIRECTORY
+        "${CMAKE_CURRENT_BINARY_DIR}/swig-python"
+    )
+    if(WIN32 OR CYGWIN)
+      test_prepend_builddir_to_path(swig-python)
+    endif()
   endif()
 endif()
 
@@ -1067,19 +1075,21 @@ if(SVN_ENABLE_SWIG_PERL)
     )
   endif()
 
-  add_test(
-    NAME swig-perl
-    COMMAND
-      ${PERL_EXECUTABLE}
-      "-I${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib"
-      -MTest::Harness
-      -e
-      "$Test::Harness::verbose = 1; runtests(glob('t/*.t'))"
-    WORKING_DIRECTORY
-      ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/perl/native
-  )
-  if(WIN32 OR CYGWIN)
-    test_prepend_builddir_to_path(swig-perl)
+  if (SVN_ENABLE_SWIG_PERL_TESTS)
+    add_test(
+      NAME swig-perl
+      COMMAND
+        ${PERL_EXECUTABLE}
+        "-I${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib"
+        -MTest::Harness
+        -e
+        "$Test::Harness::verbose = 1; runtests(glob('t/*.t'))"
+      WORKING_DIRECTORY
+        ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/perl/native
+    )
+    if(WIN32 OR CYGWIN)
+      test_prepend_builddir_to_path(swig-perl)
+    endif()
   endif()
 endif()
 
@@ -1108,23 +1118,25 @@ if(SVN_ENABLE_SWIG_RUBY)
     FILES_MATCHING PATTERN "*.rb"
   )
 
-  add_test(
-    NAME swig-ruby
-    COMMAND
-      "${Ruby_EXECUTABLE}"
-      "-I${CMAKE_CURRENT_BINARY_DIR}/swig-ruby"
-      "-I${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/ruby"
-      test/run-test.rb
-      --collector=dir
-      --verbose=v
-    WORKING_DIRECTORY
-      ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/ruby
-  )
-  set_property(TEST swig-ruby APPEND PROPERTY ENVIRONMENT
-    "SVN_TEST_SWIG_RUBY=ctest"
-  )
-  # svnserve in the build directory is launched by the tests
-  test_prepend_builddir_to_path(swig-ruby)
+  if (SVN_ENABLE_SWIG_RUBY_TESTS)
+    add_test(
+      NAME swig-ruby
+      COMMAND
+        "${Ruby_EXECUTABLE}"
+        "-I${CMAKE_CURRENT_BINARY_DIR}/swig-ruby"
+        "-I${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/ruby"
+        test/run-test.rb
+        --collector=dir
+        --verbose=v
+      WORKING_DIRECTORY
+        ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/ruby
+    )
+    set_property(TEST swig-ruby APPEND PROPERTY ENVIRONMENT
+      "SVN_TEST_SWIG_RUBY=ctest"
+    )
+    # svnserve in the build directory is launched by the tests
+    test_prepend_builddir_to_path(swig-ruby)
+  endif()
 endif()
 
 if(SVN_ENABLE_JAVAHL)

@@ -105,9 +105,12 @@ jobs:
               -DSVN_ENABLE_LIBMAGIC=ON
               -DSVN_ENABLE_APACHE_MODULES=ON
               -DSVN_ENABLE_SWIG_PERL=ON
+              -DSVN_ENABLE_SWIG_PERL_TESTS=ON
               -DSVN_ENABLE_SWIG_PERL_MAN_PAGES=ON
               -DSVN_ENABLE_SWIG_PYTHON=ON
+              -DSVN_ENABLE_SWIG_PYTHON_TESTS=ON
               -DSVN_ENABLE_SWIG_RUBY=ON
+              -DSVN_ENABLE_SWIG_RUBY_TESTS=ON
               -DSVN_ENABLE_JAVAHL=ON
               -DSVN_ENABLE_JAVAHL_TESTS=ON
             extra_packages: >
@@ -129,9 +132,12 @@ jobs:
             extra_config_opts: >
               -DSVN_ENABLE_APACHE_MODULES=ON
               -DSVN_ENABLE_SWIG_PERL=ON
+              -DSVN_ENABLE_SWIG_PERL_TESTS=ON
               -DSVN_ENABLE_SWIG_PERL_MAN_PAGES=ON
               -DSVN_ENABLE_SWIG_PYTHON=ON
+              -DSVN_ENABLE_SWIG_PYTHON_TESTS=ON
               -DSVN_ENABLE_SWIG_RUBY=ON
+              -DSVN_ENABLE_SWIG_RUBY_TESTS=ON
               -DSVN_ENABLE_JAVAHL=ON
               -DSVN_ENABLE_JAVAHL_TESTS=ON
 
