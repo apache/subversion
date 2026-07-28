@@ -64,6 +64,9 @@ jobs:
             vcpkg_triplet: x64-windows
             arch: x64
             run_tests: true
+            extra_config_opts: >
+              -DSVN_ENABLE_JAVAHL=ON
+              -DSVN_ENABLE_JAVAHL_TESTS=ON
           - name: Windows, shared, x64, vs2022, with tests
             os: windows-2022
             build_shared: ON
@@ -71,12 +74,18 @@ jobs:
             vcpkg_triplet: x64-windows
             arch: x64
             run_tests: true
+            extra_config_opts: >
+              -DSVN_ENABLE_JAVAHL=ON
+              -DSVN_ENABLE_JAVAHL_TESTS=ON
           - name: Windows, shared, x86
             os: windows-2022
             build_shared: ON
             cmake_generator: Ninja
             vcpkg_triplet: x86-windows
             arch: x86
+            extra_config_opts: >
+              -DSVN_ENABLE_JAVAHL=ON
+              -DSVN_ENABLE_JAVAHL_TESTS=ON
           - name: Windows, static, x64, with tests
             os: windows-2022
             build_shared: OFF
@@ -94,6 +103,13 @@ jobs:
               -DSVN_ENABLE_AUTH_GNOME_KEYRING=ON
               -DSVN_ENABLE_SASL=ON
               -DSVN_ENABLE_LIBMAGIC=ON
+              -DSVN_ENABLE_APACHE_MODULES=ON
+              -DSVN_ENABLE_SWIG_PERL=ON
+              -DSVN_ENABLE_SWIG_PERL_MAN_PAGES=ON
+              -DSVN_ENABLE_SWIG_PYTHON=ON
+              -DSVN_ENABLE_SWIG_RUBY=ON
+              -DSVN_ENABLE_JAVAHL=ON
+              -DSVN_ENABLE_JAVAHL_TESTS=ON
             extra_packages: >
               libkf5wallet-dev
               libkf5coreaddons-dev
@@ -110,6 +126,14 @@ jobs:
             build_shared: ON
             cmake_generator: Ninja
             run_tests: true
+            extra_config_opts: >
+              -DSVN_ENABLE_APACHE_MODULES=ON
+              -DSVN_ENABLE_SWIG_PERL=ON
+              -DSVN_ENABLE_SWIG_PERL_MAN_PAGES=ON
+              -DSVN_ENABLE_SWIG_PYTHON=ON
+              -DSVN_ENABLE_SWIG_RUBY=ON
+              -DSVN_ENABLE_JAVAHL=ON
+              -DSVN_ENABLE_JAVAHL_TESTS=ON
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.name }}
@@ -260,14 +284,7 @@ jobs:
           -DSVN_ENABLE_TESTS=ON
           -DSVN_ENABLE_RA_SERF=ON
           -DSVN_ENABLE_NLS=ON
-          -DSVN_ENABLE_APACHE_MODULES=${{ runner.os != 'Windows' && 'ON' || 'OFF' }}
           -DSVN_ENABLE_TUI=ON
-          -DSVN_ENABLE_SWIG_PERL=${{ runner.os != 'Windows' && 'ON' || 'OFF' }}
-          -DSVN_ENABLE_SWIG_PERL_MAN_PAGES=${{ runner.os != 'Windows' && 'ON' || 'OFF' }}
-          -DSVN_ENABLE_SWIG_PYTHON=${{ runner.os != 'Windows' && 'ON' || 'OFF' }}
-          -DSVN_ENABLE_SWIG_RUBY=${{ runner.os != 'Windows' && 'ON' || 'OFF' }}
-          -DSVN_ENABLE_JAVAHL=${{ matrix.build_shared }}
-          -DSVN_ENABLE_JAVAHL_TESTS=${{ matrix.build_shared }}
           -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/installdir
           -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
           -DSVN_TEST_CONFIGURE_FOR_PARALLEL=ON
