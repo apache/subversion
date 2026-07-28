@@ -61,7 +61,7 @@ revprop_cache_pollution(const svn_test_opts_t *opts, apr_pool_t *pool)
 
         SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, iterpool));
         SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
-        SVN_ERR(svn_fs_make_dir(txn_root, apr_itoa(pool, i), iterpool));
+        SVN_ERR(svn_fs_make_dir(txn_root, apr_itoa(iterpool, i), iterpool));
         SVN_ERR(svn_fs_commit_txn(NULL, &new_rev, txn, iterpool));
         SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(new_rev));
       }
