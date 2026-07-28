@@ -34,6 +34,8 @@ Candidate changes that cannot go into a later 1.15.x:
     https://lists.apache.org/thread/2j9p8o97knd9loxoj1xgz58y6dq8dok4
   Branch:
     1.15.x-r1936635
+  Votes:
+    +1: ivan
 
 Other candidate changes:
 ========================
