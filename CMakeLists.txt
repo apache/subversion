@@ -379,13 +379,28 @@ else()
   # the -W syntax
 
   include(CheckCompilerFlag)
-  # Adds flags if one is supported by the compiler
-  function(SVN_CFLAGS_ADD_IFELSE flag)
-    set(variable "HAVE_FLAG_${flag}")
-    check_compiler_flag(C ${flag} ${variable})
-    if (${${variable}})
-      add_compile_options("${flag}")
+
+  # Adds flags if each one is supported by the compiler for the lang
+  function(svn_add_compiler_options_ifelse lang)
+    if(CMAKE_${lang}_COMPILER)
+      foreach(flag ${ARGN})
+        if(flag)
+          set(variable "HAVE_FLAG_${lang}_${flag}")
+          check_compiler_flag(${lang} ${flag} ${variable})
+          if(${${variable}})
+            add_compile_options($<$<COMPILE_LANGUAGE:${lang}>:${flag}>)
+          endif()
+        endif()
+      endforeach()
     endif()
+  endfunction()
+
+  function(SVN_CFLAGS_ADD_IFELSE)
+    svn_add_compiler_options_ifelse(C ${ARGN})
+  endfunction()
+
+  function(SVN_CXXFLAGS_ADD_IFELSE)
+    svn_add_compiler_options_ifelse(CXX ${ARGN})
   endfunction()
 
   # Add flags that all versions of GCC/G++ (should) support
@@ -412,17 +427,25 @@ else()
     $<$<COMPILE_LANGUAGE:CXX>:-Wunreachable-code>
   )
 
-  # Add each of the following flags only if the C compiler accepts it.
-  SVN_CFLAGS_ADD_IFELSE(-Werror=implicit-function-declaration)
-  SVN_CFLAGS_ADD_IFELSE(-Werror=declaration-after-statement)
-  SVN_CFLAGS_ADD_IFELSE(-Wextra-tokens)
-  SVN_CFLAGS_ADD_IFELSE(-Wnewline-eof)
-  SVN_CFLAGS_ADD_IFELSE(-Wshorten-64-to-32)
-  SVN_CFLAGS_ADD_IFELSE(-Wold-style-definition)
-  SVN_CFLAGS_ADD_IFELSE(-Wno-system-headers)
-  SVN_CFLAGS_ADD_IFELSE(-Wno-format-nonliteral)
-  SVN_CFLAGS_ADD_IFELSE(-Wmissing-variable-declarations)
-  SVN_CFLAGS_ADD_IFELSE(-Wno-unused-const-variable)
+  # Add each of the following flags only if the C/C++ compiler accepts it.
+  SVN_CFLAGS_ADD_IFELSE(
+    -Wextra-tokens
+    -Wnewline-eof
+    -Wshorten-64-to-32
+    -Wno-system-headers
+    -Wno-format-nonliteral
+    -Wmissing-variable-declarations
+    -Wno-unused-const-variable
+    -Werror=implicit-function-declaration
+    -Werror=declaration-after-statement
+    -Wold-style-definition
+  )
+  SVN_CXXFLAGS_ADD_IFELSE(
+    -Wextra-tokens
+    -Wnewline-eof
+    -Wshorten-64-to-32
+    -Wno-system-headers
+  )
 endif()
 
 # Setup modules path
