@@ -26,6 +26,15 @@ Candidate changes that cannot go into a later 1.15.x:
   Votes:
     +1: dsahlberg, ivan
 
+* r1932396, r1932397, r1936635
+  Bump minimum CMake required version to 3.20.
+  Justification:
+    Do not support legacy CMake versions.
+  Notes:
+    https://lists.apache.org/thread/2j9p8o97knd9loxoj1xgz58y6dq8dok4
+  Branch:
+    1.15.x-r1936635
+
 Other candidate changes:
 ========================
 
