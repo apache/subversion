@@ -36,18 +36,7 @@ function(read_version path var major minor patch)
   endif()
 endfunction()
 
-cmake_minimum_required(VERSION 3.14)
-
-# CMP0092: MSVC warning flags are not in CMAKE_<LANG>_FLAGS by default.
-if(POLICY CMP0092)
-  cmake_policy(SET CMP0092 NEW)
-endif()
-
-# Enable support for MSVC runtime library selection by abstraction
-# if supported by CMake.
-if(POLICY CMP0091)
-  cmake_policy(SET CMP0091 NEW)
-endif()
+cmake_minimum_required(VERSION 3.20)
 
 read_version(
   "subversion/include/svn_version.h" SVN_VERSION
