@@ -18,14 +18,6 @@ Release blockers for 1.15.0:
 Candidate changes that cannot go into a later 1.15.x:
 =====================================================
 
-* r1936306, r1936315
-  Remove the ctypes bindings code.
-  Justification:
-    Ctypes bindings don't work with Python 3 (and has not worked for at
-    least 6 years).
-  Votes:
-    +1: dsahlberg, ivan
-
 Other candidate changes:
 ========================
 
@@ -103,3 +95,11 @@ Approved changes:
     1.15.x-r1936635
   Votes:
     +1: ivan, dsahlberg, kotkov
+
+* r1936306, r1936315
+  Remove the ctypes bindings code.
+  Justification:
+    Ctypes bindings don't work with Python 3 (and has not worked for at
+    least 6 years).
+  Votes:
+    +1: dsahlberg, ivan, kotkov
