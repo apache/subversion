@@ -69,16 +69,6 @@ Other candidate changes:
   Votes:
     +1: dsahlberg, ivan
 
-* r1936304
-  cmake: Follow-up to r1935776, fix all tests via run_tests.py failing
-  with SVN_TEST_CHECK_XML_SCHEMA=OFF.
-  Justification:
-    Ensure ctest work
-  Branch:
-    1.15.x-r1936304
-  Votes:
-    +1: ivan, dsahlberg
-
 Veto-blocked changes:
 =====================
 
@@ -103,3 +93,13 @@ Approved changes:
     least 6 years).
   Votes:
     +1: dsahlberg, ivan, kotkov
+
+* r1936304
+  cmake: Follow-up to r1935776, fix all tests via run_tests.py failing
+  with SVN_TEST_CHECK_XML_SCHEMA=OFF.
+  Justification:
+    Ensure ctest work
+  Branch:
+    1.15.x-r1936304
+  Votes:
+    +1: ivan, dsahlberg, kotkov
