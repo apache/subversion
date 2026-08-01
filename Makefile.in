@@ -165,9 +165,6 @@ SWIG_RB_TEST_VERBOSE = @SWIG_RB_TEST_VERBOSE@
 SWIG_RB_RI_DATADIR = $(DESTDIR)$(datadir)/ri/$(RUBY_MAJOR).$(RUBY_MINOR)/site
 SWIG_RB_ERRMSG = @SWIG_RB_ERRMSG@
 
-CTYPESGEN = @CTYPESGEN@
-CTYPES_PYTHON_SRC_DIR = $(abs_srcdir)/subversion/bindings/ctypes-python
-
 JAVAHL_JAR=subversion/bindings/javahl/svn-javahl.jar
 JAVAHL_INCLUDES= @JNI_INCLUDES@ -I$(abs_builddir)/subversion/bindings/javahl/include
 
@@ -455,7 +452,7 @@ fast-clean: doc-clean
           fi                                                         \
         done
 	echo $(CLEAN_FILES) | xargs rm -f --
-	for d in $(CTYPES_PYTHON_SRC_DIR) $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) \
+	for d in $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) \
 		$(abs_srcdir)/build $(top_srcdir)/subversion/tests/cmdline; \
 	do \
 	  test -e $$d || continue; \
@@ -883,12 +880,12 @@ install-man:
 install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
-clean-bindings: clean-swig clean-ctypes-python clean-javahl
+clean-bindings: clean-swig clean-javahl
 
 extraclean-bindings: clean-swig extraclean-swig-headers \
 			extraclean-swig-py extraclean-swig-rb \
 			extraclean-swig-pl \
-			clean-ctypes-python clean-javahl \
+			clean-javahl \
 
 clean-swig: clean-swig-headers clean-swig-py clean-swig-rb clean-swig-pl
 	@rm -f .swig_checked
@@ -1029,29 +1026,6 @@ extraclean-swig-rb: clean-swig-rb
 
 install-swig-rb-doc:
 	$(RDOC) --all --ri --op "$(SWIG_RB_RI_DATADIR)" "$(SWIG_RB_SRC_DIR)/svn"
-
-# ctypes-python make targets
-ctypes-python: local-all
-	$(SHELL) $(abs_srcdir)/build/run_ctypesgen.sh "$(LT_EXECUTE)" "$(CPPFLAGS)" "$(EXTRA_CTYPES_LDFLAGS)" "$(PYTHON)" "$(CTYPESGEN)" "$(abs_srcdir)" "$(abs_builddir)" "$(libdir)" "$(SVN_APR_CONFIG)" "$(SVN_APRUTIL_CONFIG)" "$(CPP)"
-
-install-ctypes-python: ctypes-python
-	cd $(CTYPES_PYTHON_SRC_DIR); \
-	  $(PYTHON) setup.py install --prefix="$(DESTDIR)$(prefix)"
-
-check-ctypes-python: ctypes-python
-	cd $(CTYPES_PYTHON_SRC_DIR); \
-	  $(LT_EXECUTE) $(PYTHON) test/run_all.py
-
-# If any of those files exists, run ctypes' 'setup.py clean'.  We don't run
-# it otherwise because it spams stdout+stderr; see r1479326.
-clean-ctypes-python:
-	cd $(CTYPES_PYTHON_SRC_DIR);            \
-	  for b in build csvn/core/functions.py svn_all.py svn_all2.py ; do \
-	    if [ -e "$$b" ] ; then              \
-	      $(PYTHON) setup.py clean --all;   \
-	      break;                            \
-	    fi;                                 \
-	  done
 
 # manually describe a dependency, which we won't otherwise detect
 subversion/libsvn_wc/wc-queries.h: $(abs_srcdir)/subversion/libsvn_wc/wc-metadata.sql

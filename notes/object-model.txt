@@ -38,8 +38,8 @@ bindings languages, and allows for a single, language-agnostic set of
 documentation.  Several other projects have successfully implemented such
 a model, inclding wxWidgets[6] and MapServer[7].  There have even been
 past proposals within Subversion[8], but no real progress has been made.
-(The exception is the python c-types bindings[9], which have yet to be merged
-to trunk.)
+(The exception was the python c-types bindings[9], which existed between
+1.6 and 1.14, removed in 1.15)
 
 
 Requirements
@@ -167,4 +167,5 @@ Notes
 [6] http://www.wxwidgets.org/
 [7] http://mapserver.gis.umn.edu/
 [8] http://svn.haxx.se/dev/archive-2003-10/0215.shtml
-[9] http://svn.apache.org/repos/asf/subversion/branches/ctypes-python-bindings/
+[9] http://svn.apache.org/repos/asf/subversion/trunk/subversion/bindings/ctypes-python,
+before r1936298

@@ -1564,8 +1564,6 @@ AC_ARG_VAR(SWIG_RB_FEATURES, [SWIG feature flags specific to Ruby bindings])
 AC_ARG_VAR(SWIG_PL_FEATURES, [SWIG feature flags specific to Perl bindings])
 AC_ARG_VAR(SWIG_PY_FEATURES, [SWIG feature flags specific to Python bindings])
 
-SVN_CHECK_CTYPESGEN
-
 dnl decide whether we want to link against the RA/FS libraries
 AC_ARG_ENABLE(runtime-module-search,
 AS_HELP_STRING([--enable-runtime-module-search],
