@@ -67,16 +67,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
-* r1936304
-  cmake: Follow-up to r1935776, fix all tests via run_tests.py failing
-  with SVN_TEST_CHECK_XML_SCHEMA=OFF.
-  Justification:
-    Ensure ctest work
-  Branch:
-    1.15.x-r1936304
-  Votes:
-    +1: ivan, dsahlberg, kotkov
-
 * r1936337
   Parse dumpfile property length as unsigned integers. This rejects
   negative lengths such as "V -1" before they are cast to apr_size_t.

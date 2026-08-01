@@ -805,21 +805,28 @@ if(SVN_ENABLE_TESTS)
 
     file(MAKE_DIRECTORY "${test_root}/subversion/tests/cmdline")
 
+    set(test_args
+      --bin ${binary_dir}
+      --tools-bin ${binary_dir}
+      --verbose
+      --log-to-stdout
+      --set-log-level=WARNING
+    )
+    if(SVN_TEST_CHECK_XML_SCHEMA)
+      list(APPEND test_args --check-xml-schema)
+    endif()
+    list(APPEND test_args
+      ${SVN_TEST_COMMAND_ARGUMENTS}
+      ${CMAKE_CURRENT_SOURCE_DIR}
+      ${test_root}
+      "${prog}"
+    )
+
     add_test(
       NAME
         "${name}"
       COMMAND
-        "${Python3_EXECUTABLE}" "${run_tests_script}"
-        --bin ${binary_dir}
-        --tools-bin ${binary_dir}
-        --verbose
-        --log-to-stdout
-        --set-log-level=WARNING
-        $<$<BOOL:${SVN_TEST_CHECK_XML_SCHEMA}>:--check-xml-schema>
-        ${SVN_TEST_COMMAND_ARGUMENTS}
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${test_root}
-        "${prog}"
+        "${Python3_EXECUTABLE}" "${run_tests_script}" ${test_args}
       WORKING_DIRECTORY
         ${test_root}
     )
