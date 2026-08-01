@@ -66,11 +66,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
-* r1936337
-  Parse dumpfile property length as unsigned integers. This rejects
-  negative lengths such as "V -1" before they are cast to apr_size_t.
-  Justification:
-    Subversion shouldn't crash even if the dump file is corrupt
-  Votes:
-    +1: dsahlberg, ivan, kotkov
