@@ -653,6 +653,9 @@ def update_backport_bot(args):
   to the backport merge bot.  See
   https://subversion.apache.org/docs/community-guide/releasing.html#backport-merge-bot
 
+  Also remember to edit .github/workflows/detect-backport-conflicts.yml
+  to support the new release line.
+
 ***
 
 """ % (ver.branch,))
