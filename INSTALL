@@ -961,7 +961,7 @@ II.   INSTALLATION
       * Download the SQLite amalgamation from
         https://www.sqlite.org/download.html
         and extract it into SVN\sqlite-amalgamation.
-        See I.C.12 for alternatives to using the amalgamation package.
+        See I.C.2 for alternatives to using the amalgamation package.
 
   E.4 Building the Binaries
 
