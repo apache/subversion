@@ -66,10 +66,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
-* r1936876, r1936877
-  Update and correct INSTALL regarding libserf, pkg-config, libtool
-  Justification:
-    Improve documentation
-  Votes:
-    +1: hartmannathan, dsahlberg

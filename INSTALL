@@ -65,7 +65,7 @@ I.    INTRODUCTION
       You'll need the following build tools to compile Subversion:
 
       * autoconf 2.59 or later (Unix only)
-      * libtool 1.4 or later (Unix only)
+      * libtool 2.0 or later (Unix only)
       * a reasonable C compiler (gcc, Visual Studio, etc.)
 
 
@@ -326,13 +326,10 @@ I.    INTRODUCTION
       (see section II.B). Generally only developers would be doing this.
 
 
-      6.  libtool 1.4 or newer (Unix only)
+      6.  libtool 2.0 or newer (Unix only)
 
       This is required only if you plan to build from the latest source
       (see section II.B).
-
-      Note: Some systems (Solaris, for example) require libtool 1.4.3 or
-      newer. The autogen.sh script knows about that.
 
 
       7.  Apache Serf library 1.3.4 or newer (OPTIONAL)
@@ -341,13 +338,13 @@ I.    INTRODUCTION
       server (via a http:// or https:// URL), you must link against
       Apache Serf.  Though optional, we strongly recommend this.
 
-      In order to use ra_serf, you must install serf, and run Subversion's
-      ./configure with the argument --with-serf.  If serf is installed in a
-      non-standard place, you should use
+      In order to use ra_serf, you must install serf.  Configure will
+      attempt to locate libserf by default using pkg-config.
+
+      If you don't use pkg-config and serf is installed in a non-standard
+      location, then use:
 
                --with-serf=/path/to/serf/install
-
-      instead.
 
       Apache Serf can be obtained via your system's package distribution
       system or directly from https://serf.apache.org/.
