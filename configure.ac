@@ -1755,6 +1755,22 @@ AC_ARG_ENABLE(javahl,
         do_javahl_build="yes"
     fi
   ])
+AC_ARG_WITH(junit,
+AS_HELP_STRING([--with-junit=PATH],
+               [Specify a path to the junit JAR file.]),
+[
+    if test "$withval" != "no"; then
+      AC_CHECK_FILE("$withval",, AC_MSG_ERROR([--with-junit='$withval' is not a file]))
+      if test -n "$JAVA_CLASSPATH"; then
+        JAVA_CLASSPATH="$withval:$JAVA_CLASSPATH"
+      else
+        JAVA_CLASSPATH="$withval"
+      fi
+      JAVAHL_TESTS_TARGET="javahl-tests"
+      JAVAHL_COMPAT_TESTS_TARGET="javahl-compat-tests"
+      have_junit="yes"
+    fi
+])
 
 JAVAHL_OBJDIR=""
 INSTALL_EXTRA_JAVAHL_LIB=""
@@ -1763,6 +1779,12 @@ JAVAHL_TESTS_TARGET=""
 JAVAHL_COMPAT_TESTS_TARGET=""
 LT_CXX_LIBADD=""
 if test "$do_javahl_build" = "yes"; then
+  dnl Since r1933892 junit is required to build the JavaHL bindings
+  if test "$have_junit" != "yes"; then
+    AC_MSG_ERROR([--with-junit must be specified if building the Java high-level
+                  bindings.])
+  fi
+  
   dnl Check for suitable JDK
   if test "$JDK_SUITABLE" = "no"; then
     AC_MSG_ERROR([Cannot compile JavaHL without a suitable JDK. 
@@ -1802,21 +1824,6 @@ AC_SUBST(INSTALL_EXTRA_JAVAHL_LIB)
 AC_SUBST(JAVAHL_OBJDIR)
 AC_SUBST(FIX_JAVAHL_LIB)
 AC_SUBST(LT_CXX_LIBADD)
-
-AC_ARG_WITH(junit,
-AS_HELP_STRING([--with-junit=PATH],
-               [Specify a path to the junit JAR file.]),
-[
-    if test "$withval" != "no"; then
-      if test -n "$JAVA_CLASSPATH"; then
-        JAVA_CLASSPATH="$withval:$JAVA_CLASSPATH"
-      else
-        JAVA_CLASSPATH="$withval"
-      fi
-      JAVAHL_TESTS_TARGET="javahl-tests"
-      JAVAHL_COMPAT_TESTS_TARGET="javahl-compat-tests"
-    fi
-])
 AC_SUBST(JAVA_CLASSPATH)
 AC_SUBST(JAVAHL_TESTS_TARGET)
 AC_SUBST(JAVAHL_COMPAT_TESTS_TARGET)
