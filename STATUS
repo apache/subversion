@@ -61,6 +61,21 @@ Other candidate changes:
   Votes:
     +1: dsahlberg
 
+* r1936936
+  Fix the check for libtool to actually prevent using libtool 1.
+  Justification:
+    Make sure we actually fail if libtool < 2
+  Votes:
+    +1: dsahlberg
+
+* r1936939
+  Make sure --with-junit is set when --enable-javahl since the install-
+  javahl target will fail otherwise since r1933892.
+  Justification:
+    We shouldn't fail installing
+  Votes:
+    +1: dsahlberg
+
 Veto-blocked changes:
 =====================
 
