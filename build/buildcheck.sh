@@ -80,7 +80,7 @@ echo "buildcheck: autoheader version $ah_version (ok)"
 #
 LIBTOOL_WANTED_MAJOR=2
 LIBTOOL_WANTED_MINOR=0
-LIBTOOL_WANTED_PATCH=
+LIBTOOL_WANTED_PATCH=0
 LIBTOOL_WANTED_VERSION=2.0
 
 # Much like APR except we do not prefer libtool 1 over libtool 2.
@@ -97,19 +97,7 @@ if test -z "$lt_pversion"; then
 fi
 lt_version=`echo $lt_pversion|sed -e 's/\([a-z]*\)$/.\1/'`
 IFS=.; set $lt_version; IFS=' '
-lt_status="good"
-if test "$1" = "$LIBTOOL_WANTED_MAJOR"; then
-   if test "$2" -gt "$LIBTOOL_WANTED_MINOR"; then
-      lt_status="good"
-   elif test "$2" -lt "$LIBTOOL_WANTED_MINOR"; then
-      lt_status="bad"
-   elif test ! -z "$LIBTOOL_WANTED_PATCH"; then
-       if test "$3" -lt "$LIBTOOL_WANTED_PATCH"; then
-           lt_status="bad"
-       fi
-   fi
-fi
-if test $lt_status != "good"; then
+if test "$1" = "$LIBTOOL_WANTED_MAJOR" -a "$2" = "$LIBTOOL_WANTED_MINOR" -a "$3" -lt "$LIBTOOL_WANTED_PATCH" || test "$1" = "$LIBTOOL_WANTED_MAJOR" -a "$2" -lt "$LIBTOOL_WANTED_MINOR" || test "$1" -lt "$LIBTOOL_WANTED_MAJOR"; then
   echo "buildcheck: libtool version $lt_pversion found."
   echo "            You need libtool version $LIBTOOL_WANTED_VERSION or newer installed"
   exit 1
