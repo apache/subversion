@@ -96,9 +96,9 @@ I.    INTRODUCTION
 
       * LZ4  (REQUIRED for client and server)
 
-        Subversion uses the LZ4 library for compression.  If it is not detected
-        at compile time, a copy bundled with the Subversion sources can be
-        used.
+         Subversion uses the LZ4 library for compression.  If it is not
+         detected at compile time, a copy bundled with the Subversion sources
+         can be used.
 
       * utf8proc  (REQUIRED for client and server)
       
