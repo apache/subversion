@@ -15,6 +15,14 @@ Status of 1.15.0:
 Release blockers for 1.15.0:
 ============================
 
+* r1936939
+  Make sure --with-junit is set when --enable-javahl since the install-
+  javahl target will fail otherwise since r1933892.
+  Justification:
+    We shouldn't fail installing
+  Votes:
+    +1: dsahlberg, brane
+
 Candidate changes that cannot go into a later 1.15.x:
 =====================================================
 
@@ -65,14 +73,6 @@ Other candidate changes:
   Fix the check for libtool to actually prevent using libtool 1.
   Justification:
     Make sure we actually fail if libtool < 2
-  Votes:
-    +1: dsahlberg
-
-* r1936939
-  Make sure --with-junit is set when --enable-javahl since the install-
-  javahl target will fail otherwise since r1933892.
-  Justification:
-    We shouldn't fail installing
   Votes:
     +1: dsahlberg
 
