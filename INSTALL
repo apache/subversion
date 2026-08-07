@@ -84,6 +84,10 @@ I.    INTRODUCTION
          that allows Subversion clients and servers to run on
          different operating systems.
 
+      * Expat  (REQUIRED for client and server)
+
+         Subversion uses the Expat library for XML parsing.
+
       * SQLite  (REQUIRED for client and server)
 
          Subversion uses SQLite to manage some internal databases.
