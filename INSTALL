@@ -94,6 +94,12 @@ I.    INTRODUCTION
          These diff streams are used everywhere -- over the network,
          in the repository, and in the client's working copy.
 
+      * LZ4  (REQUIRED for client and server)
+
+        Subversion uses the LZ4 library for compression.  If it is not detected
+        at compile time, a copy bundled with the Subversion sources can be
+        used.
+
       * utf8proc  (REQUIRED for client and server)
       
          Subversion uses utf8proc for UTF-8 support, including Unicode
@@ -532,7 +538,7 @@ I.    INTRODUCTION
         --with-libmagic
 
 
-      20. LZ4 (OPTIONAL)
+      20. LZ4 (REQUIRED)
 
       Subversion uses LZ4 compression library version r129 or above. Configure
       will attempt to locate the system library by default using pkg-config
