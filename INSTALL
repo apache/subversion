@@ -755,7 +755,6 @@ II.   INSTALLATION
         are available from
         http://www.oracle.com/technetwork/database/database-technologies/berkeleydb/downloads/index-082944.html
         (Version 4.4.20 or in specific cases some higher version recommended)
-        For more information see Section I.C.8.
       * [Optional] Openssl can be obtained from https://www.openssl.org/source/
       * [Optional] NASM can be obtained from http://www.nasm.us/
       * [Optional] A modified version of GNU libintl, called
@@ -1235,8 +1234,7 @@ III.  BUILDING A SUBVERSION SERVER
       --with-berkeley-db=/usr/local/BerkeleyDB.4.2 to the configure
       line.  Make sure this is the same db as the one Subversion uses.
       This note assumes you have installed Berkeley DB 4.2.52
-      at its default locations.  For more info about the db requirement,
-      see section I.C.8.
+      at its default locations.
 
       You may also want to include other modules in your build. Add
       --enable-ssl to turn on SSL support, and --enable-deflate to turn on
