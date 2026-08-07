@@ -341,8 +341,6 @@ I.    INTRODUCTION
       Apache Serf can be obtained via your system's package distribution
       system or directly from https://serf.apache.org/.
 
-      For more information on Apache Serf and Subversion's ra_serf, see the
-      file subversion/libsvn_ra_serf/README.
 
 
       8.  Berkeley DB 4.X  (DEPRECATED and OPTIONAL)
