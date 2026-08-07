@@ -413,33 +413,26 @@ I.    INTRODUCTION
       section II.B for more about autogen.sh.
 
 
-      11. Perl 5.8 or newer (Windows only)  (OPTIONAL)
-
-      To build Subversion under any of the MS Windows platforms, you
-      will also need Perl 5.8 or newer to run apr-util's w32locatedb.pl
-      script.
-
-
-      12. pkg-config  (Unix only, OPTIONAL)
+      11. pkg-config  (Unix only, OPTIONAL)
 
       Subversion uses pkg-config to find appropriate options used
       at build time.
 
 
-      13. D-Bus  (Unix only, OPTIONAL)
+      12. D-Bus  (Unix only, OPTIONAL)
 
       D-Bus is a message bus system. D-Bus is required for support for KWallet
       and GNOME Keyring. pkg-config is needed to find D-Bus headers and library.
 
 
-      14. Qt 5 or Qt 4  (Unix only, OPTIONAL)
+      13. Qt 5 or Qt 4  (Unix only, OPTIONAL)
 
       Qt is a cross-platform application framework. QtCore, QtDBus and QtGui
       modules are required for support for KWallet. pkg-config is needed
       to find Qt headers and libraries.
 
 
-      15. KDE 5 Framework libraries or KDELibs 4  (Unix only, OPTIONAL)
+      14. KDE 5 Framework libraries or KDELibs 4  (Unix only, OPTIONAL)
 
       Subversion contains optional support for storing passwords in KWallet.
       Subversion will look for KF5Wallet, KF5CoreAddons, KF5I18n APIs by default,
@@ -455,13 +448,13 @@ I.    INTRODUCTION
           --with-kwallet=/path/to/KDE/prefix
 
 
-      16. GLib 2  (Unix only, OPTIONAL)
+      15. GLib 2  (Unix only, OPTIONAL)
 
       GLib is a general-purpose utility library. GLib is required for support
       for GNOME Keyring. pkg-config is needed to find GLib headers and library.
 
 
-      17. GNOME Keyring  (Unix only, OPTIONAL)
+      16. GNOME Keyring  (Unix only, OPTIONAL)
 
       Subversion contains optional support for storing passwords in GNOME Keyring.
       pkg-config is needed to find GNOME Keyring headers and library. D-Bus and
@@ -469,7 +462,7 @@ I.    INTRODUCTION
       then pass the '--with-gnome-keyring' option to `configure`.
 
 
-      18. libmagic (OPTIONAL)
+      17. libmagic (OPTIONAL)
 
       Subversion's configure script attempts to find libmagic automatically.
       If it is installed in a non-standard location, then use:
@@ -491,7 +484,7 @@ I.    INTRODUCTION
         --with-libmagic
 
 
-      19. LZ4 (REQUIRED)
+      18. LZ4 (REQUIRED)
 
       Subversion uses LZ4 compression library version r129 or above. Configure
       will attempt to locate the system library by default using pkg-config
@@ -505,7 +498,7 @@ I.    INTRODUCTION
         --with-lz4=internal
 
 
-      20. py3c (OPTIONAL)
+      19. py3c (OPTIONAL)
 
       Subversion uses the Python 3 Compatibility Layer for C
       Extensions (py3c) library when building the Python language
