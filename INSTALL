@@ -101,27 +101,9 @@ I.    INTRODUCTION
 
       * Apache Serf  (OPTIONAL for client)
 
-         The Apache Serf library allows the Subversion client to send HTTP
-         requests.  This is necessary if you want your client to access
-         a repository served by the Apache HTTP server.  There is an
-         alternate 'svnserve' server as well, though, and clients
-         automatically know how to speak the svnserve protocol.
-         Thus it's not strictly necessary for your client to be able
-         to speak HTTP... though we still recommend that your client
-         be built to speak both HTTP and svnserve protocols.
-
-      * OpenSSL (OPTIONAL for client and server)
-
-         OpenSSL enables your client to access SSL-encrypted https://
-         URLs (using Apache Serf) in addition to unencrypted http:// URLs.
-         To use SSL with Subversion's WebDAV server, Apache needs to be
-         compiled with OpenSSL as well.
-
-      * Netwide Assembler (OPTIONAL for client and server)
-
-        The Netwide Assembler (NASM) is used to build the (optional)
-        assembler modules of OpenSSL.  As of OpenSSL 1.1.0 NASM is the
-        only supported assembler.
+         The Apache Serf library enables the Subversion client to access
+         repositories over http:// and https:// URLs.  Apache Serf uses OpenSSL
+         for the encrypted https:// communication.
 
       * Berkeley DB (DEPRECATED and OPTIONAL for client and server)
 
@@ -196,7 +178,7 @@ I.    INTRODUCTION
       Subversion's own configure script may need to be told where to find
       them, if they were not installed in standard system locations.
 
-      Note: there are optional dependencies (such as OpenSSL, swig, and httpd)
+      Note: there are optional dependencies (such as swig and httpd)
       which get-deps.sh does not download.
 
       Note: Because previous builds of Subversion may have installed older
@@ -353,53 +335,7 @@ I.    INTRODUCTION
       file subversion/libsvn_ra_serf/README.
 
 
-      8.  OpenSSL  (OPTIONAL)
-
-      ### needs some updates. I think Apache Serf automagically handles
-      ### finding OpenSSL, but we may need more docco here. and w.r.t
-      ### zlib.
-
-      The Apache Serf library has support for SSL encryption by relying on the
-      OpenSSL library.
-
-        a. Using OpenSSL on the client through Apache Serf
-
-          On Unix systems, to build Apache Serf with OpenSSL, you need OpenSSL
-          installed on your system, and you must add "--with-ssl" as a
-          "./configure" parameter.  If your OpenSSL installation is hard
-          for Apache Serf to find, you may need to use
-          "--with-libs=/path/to/lib" in addition.  In particular, on Red Hat
-          (but not Fedora Core) it is necessary to specify
-          "--with-libs=/usr/kerberos" for OpenSSL to be found.  You can also
-          specify a path to the zlib library using "--with-libs".
-
-          Under Windows, you can specify the paths to these libraries by
-          passing the options --with-zlib and --with-openssl to gen-make.py.
-
-        b. Using OpenSSL on the Apache server
-
-          You can also add support for these features to an Apache httpd
-          server to be used for Subversion using the same support libraries.
-          The Subversion build system will not provide them, however.  You
-          add them by specifying parameters to the "./configure" script of
-          the Apache Server instead.
-
-          For getting SSL on your server, you would add the "--enable-ssl"
-          or "--with-ssl=/path/to/lib" option to Apache's "./configure"
-          script.  Apache enables zlib support by default, but you can
-          specify a nonstandard location for the library with the
-          "--with-z=/path/to/dir" option.  Consult the Apache documentation
-          for more details, and for other modules you may wish to install
-          to enhance your Subversion server.
-
-      If you don't already have it, you can get a copy of OpenSSL,
-      including instructions for building and packaging on both Unix
-      systems and Windows, at:
-
-          https://www.openssl.org/
-
-
-      9.  Berkeley DB 4.X  (DEPRECATED and OPTIONAL)
+      8.  Berkeley DB 4.X  (DEPRECATED and OPTIONAL)
 
       You need the Berkeley DB libraries only if you are building a
       Subversion server that supports the older BDB repository storage
@@ -442,7 +378,7 @@ I.    INTRODUCTION
       the libraries at configure time.
 
 
-      10. Cyrus SASL library (OPTIONAL)
+      9.  Cyrus SASL library (OPTIONAL)
 
       If the Simple Authentication and Security Layer (SASL) library
       is detected on your system, then the Subversion client and
@@ -453,7 +389,7 @@ I.    INTRODUCTION
          http://freshmeat.net/projects/cyrussasl/
 
 
-      11. Apache Web Server 2.2.X or newer  (OPTIONAL)
+      10. Apache Web Server 2.2.X or newer  (OPTIONAL)
 
           (https://httpd.apache.org/download.cgi)
 
@@ -466,7 +402,7 @@ I.    INTRODUCTION
       is done: See section III for details.
 
 
-      12. Python 3.x or newer (https://www.python.org/)  (OPTIONAL)
+      11. Python 3.x or newer (https://www.python.org/)  (OPTIONAL)
 
       Subversion does not require Python for its basic operation.
       However, Python is required for building and testing Subversion
@@ -518,33 +454,33 @@ I.    INTRODUCTION
       section II.B for more about autogen.sh.
 
 
-      13. Perl 5.8 or newer (Windows only)  (OPTIONAL)
+      12. Perl 5.8 or newer (Windows only)  (OPTIONAL)
 
       To build Subversion under any of the MS Windows platforms, you
       will also need Perl 5.8 or newer to run apr-util's w32locatedb.pl
       script.
 
 
-      14. pkg-config  (Unix only, OPTIONAL)
+      13. pkg-config  (Unix only, OPTIONAL)
 
       Subversion uses pkg-config to find appropriate options used
       at build time.
 
 
-      15. D-Bus  (Unix only, OPTIONAL)
+      14. D-Bus  (Unix only, OPTIONAL)
 
       D-Bus is a message bus system. D-Bus is required for support for KWallet
       and GNOME Keyring. pkg-config is needed to find D-Bus headers and library.
 
 
-      16. Qt 5 or Qt 4  (Unix only, OPTIONAL)
+      15. Qt 5 or Qt 4  (Unix only, OPTIONAL)
 
       Qt is a cross-platform application framework. QtCore, QtDBus and QtGui
       modules are required for support for KWallet. pkg-config is needed
       to find Qt headers and libraries.
 
 
-      17. KDE 5 Framework libraries or KDELibs 4  (Unix only, OPTIONAL)
+      16. KDE 5 Framework libraries or KDELibs 4  (Unix only, OPTIONAL)
 
       Subversion contains optional support for storing passwords in KWallet.
       Subversion will look for KF5Wallet, KF5CoreAddons, KF5I18n APIs by default,
@@ -560,13 +496,13 @@ I.    INTRODUCTION
           --with-kwallet=/path/to/KDE/prefix
 
 
-      18. GLib 2  (Unix only, OPTIONAL)
+      17. GLib 2  (Unix only, OPTIONAL)
 
       GLib is a general-purpose utility library. GLib is required for support
       for GNOME Keyring. pkg-config is needed to find GLib headers and library.
 
 
-      19. GNOME Keyring  (Unix only, OPTIONAL)
+      18. GNOME Keyring  (Unix only, OPTIONAL)
 
       Subversion contains optional support for storing passwords in GNOME Keyring.
       pkg-config is needed to find GNOME Keyring headers and library. D-Bus and
@@ -574,7 +510,7 @@ I.    INTRODUCTION
       then pass the '--with-gnome-keyring' option to `configure`.
 
 
-      20. libmagic (OPTIONAL)
+      19. libmagic (OPTIONAL)
 
       Subversion's configure script attempts to find libmagic automatically.
       If it is installed in a non-standard location, then use:
@@ -596,7 +532,7 @@ I.    INTRODUCTION
         --with-libmagic
 
 
-      21. LZ4 (OPTIONAL)
+      20. LZ4 (OPTIONAL)
 
       Subversion uses LZ4 compression library version r129 or above. Configure
       will attempt to locate the system library by default using pkg-config
@@ -610,7 +546,7 @@ I.    INTRODUCTION
         --with-lz4=internal
 
 
-      22. py3c (OPTIONAL)
+      21. py3c (OPTIONAL)
 
       Subversion uses the Python 3 Compatibility Layer for C
       Extensions (py3c) library when building the Python language
@@ -867,7 +803,7 @@ II.   INSTALLATION
         are available from
         http://www.oracle.com/technetwork/database/database-technologies/berkeleydb/downloads/index-082944.html
         (Version 4.4.20 or in specific cases some higher version recommended)
-        For more information see Section I.C.9.
+        For more information see Section I.C.8.
       * [Optional] Openssl can be obtained from https://www.openssl.org/source/
       * [Optional] NASM can be obtained from http://www.nasm.us/
       * [Optional] A modified version of GNU libintl, called
@@ -1348,7 +1284,7 @@ III.  BUILDING A SUBVERSION SERVER
       line.  Make sure this is the same db as the one Subversion uses.
       This note assumes you have installed Berkeley DB 4.2.52
       at its default locations.  For more info about the db requirement,
-      see section I.C.9.
+      see section I.C.8.
 
       You may also want to include other modules in your build. Add
       --enable-ssl to turn on SSL support, and --enable-deflate to turn on
