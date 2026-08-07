@@ -345,7 +345,7 @@ I.    INTRODUCTION
       authentication.  To learn more about SASL or to get the source
       code, visit:
 
-         http://freshmeat.net/projects/cyrussasl/
+         https://www.cyrusimap.org/sasl/
 
 
       9. Apache Web Server 2.2.X or newer  (OPTIONAL)
