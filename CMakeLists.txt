@@ -335,9 +335,10 @@ if(SVN_ENABLE_JAVAHL)
   endif()
 
   set(SVN_JAVAHL_SOURCES)
-  if(SVN_ENABLE_JAVAHL_TESTS)
-    set(SVN_JAVAHL_TESTS_SOURCES)
-    find_jar(JUNIT_JAR NAMES junit4 junit)
+  set(SVN_JAVAHL_TESTS_SOURCES)
+  find_jar(JUNIT_JAR NAMES junit4 junit)
+  if(NOT JUNIT_JAR OR NOT EXISTS "${JUNIT_JAR}")
+    message(SEND_ERROR "The junit jar file does not exist; JUNIT_JAR=${JUNIT_JAR}")
   endif()
 endif()
 
@@ -1138,7 +1139,9 @@ if(SVN_ENABLE_JAVAHL)
   file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/javahl/Manifest"
     "${SVN_JAVAHL_MANIFEST}"
   )
-  add_jar(svn-javahl SOURCES ${SVN_JAVAHL_SOURCES}
+  add_jar(svn-javahl
+    SOURCES ${SVN_JAVAHL_SOURCES} ${SVN_JAVAHL_TESTS_SOURCES}
+    INCLUDE_JARS "${JUNIT_JAR}"
     MANIFEST "${CMAKE_CURRENT_BINARY_DIR}/javahl/Manifest"
     GENERATE_NATIVE_HEADERS svn-javahl.headers
       DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/javahl/include"
@@ -1164,15 +1167,6 @@ if(SVN_ENABLE_JAVAHL)
   )
 
   if(SVN_ENABLE_JAVAHL_TESTS)
-    add_jar(svn-javahl-tests
-      SOURCES ${SVN_JAVAHL_TESTS_SOURCES}
-      INCLUDE_JARS
-        "${CMAKE_CURRENT_BINARY_DIR}/javahl/lib/svn-javahl.jar"
-        "${JUNIT_JAR}"
-      OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/javahl/lib"
-    )
-    add_dependencies(svn-javahl-tests svn-javahl)
-
     function(add_javahl_tests target)
       if(WIN32)
         set(sep "\\;")
@@ -1180,7 +1174,6 @@ if(SVN_ENABLE_JAVAHL)
         set(sep ":")
       endif()
       string(JOIN ${sep} classpath
-        "${CMAKE_CURRENT_BINARY_DIR}/javahl/lib/svn-javahl-tests.jar"
         "${CMAKE_CURRENT_BINARY_DIR}/javahl/lib/svn-javahl.jar"
         "${JUNIT_JAR}"
       )
