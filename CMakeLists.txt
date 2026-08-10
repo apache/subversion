@@ -337,7 +337,7 @@ if(SVN_ENABLE_JAVAHL)
   set(SVN_JAVAHL_SOURCES)
   if(SVN_ENABLE_JAVAHL_TESTS)
     set(SVN_JAVAHL_TESTS_SOURCES)
-    find_jar(JUNIT_JAR NAMES junit.jar)
+    find_jar(JUNIT_JAR NAMES junit4 junit)
   endif()
 endif()
 
