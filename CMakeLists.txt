@@ -1128,7 +1128,18 @@ if(SVN_ENABLE_SWIG_RUBY)
 endif()
 
 if(SVN_ENABLE_JAVAHL)
+  file(READ
+    "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/javahl/Manifest.in"
+    SVN_JAVAHL_MANIFEST
+  )
+  string(REPLACE "%bundleVersion" "${SVN_VERSION}"
+    SVN_JAVAHL_MANIFEST "${SVN_JAVAHL_MANIFEST}"
+  )
+  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/javahl/Manifest"
+    "${SVN_JAVAHL_MANIFEST}"
+  )
   add_jar(svn-javahl SOURCES ${SVN_JAVAHL_SOURCES}
+    MANIFEST "${CMAKE_CURRENT_BINARY_DIR}/javahl/Manifest"
     GENERATE_NATIVE_HEADERS svn-javahl.headers
       DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/javahl/include"
     OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/javahl/lib"
