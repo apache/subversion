@@ -374,6 +374,7 @@ if (MSVC)
     /we4700
     /we4715
     /we4789
+    /source-charset:utf-8
   )
 
   add_compile_definitions(
