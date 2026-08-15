@@ -31,10 +31,13 @@
 #
 # The changes sent through the system started as the reproduction
 # recipe for issue 2939 (https://issues.apache.org/jira/browse/SVN-2939,
-# using svnmucc) and have grown to cover URI-encoded locations, the
-# SVN-3445 payload-corruption regressions, proxied reads of transaction
-# resources, and locks.  Any svn traffic liable to break over
-# mirroring remains a good addition.
+# using svnmucc) and have grown to cover URI-encoded locations,
+# COPY/MOVE Destination rewriting, the SVN-3445 payload-corruption
+# regressions, proxied reads of transaction resources (including
+# dead-property values and location-name collisions in rewritten
+# hrefs), HTTPv1 MKACTIVITY/CHECKOUT, revision-property changes
+# through the proxy, and locks.  Any svn traffic liable to break
+# over mirroring remains a good addition.
 #
 # Most of the httpd setup was lifted from davautocheck.sh.
 # The common boilerplate snippets to setup/start/stop httpd
@@ -62,6 +65,45 @@ function say() {
 function fail() {
   say "FAIL: " $*
   stop_httpd_and_die
+}
+
+# Authenticated curl against the test repositories.  CURL is resolved
+# later; the functions below expand it at call time.
+function curl_auth() {
+  $CURL --silent --show-error --user jrandom:rayjandom "$@"
+}
+
+# Open a transaction on the master (raw HTTPv2 create-txn POST) and print
+# its SVN-Txn-Name.  Used by probes that must read in-txn data through the
+# slave; committed reads are served locally and never hit the rewrite.
+function create_master_txn() {
+  curl_auth \
+    --request POST \
+    --header "Content-Type: application/vnd.svn-skel" --data "( create-txn )" \
+    --dump-header - --output /dev/null "$MASTER_URL/!svn/me" \
+    | sed -ne 's/^SVN-Txn-Name: *//p' | tr -d '\r'
+}
+
+function delete_master_txn() {
+  curl_auth --request DELETE --output /dev/null \
+    "$MASTER_URL/!svn/txn/$1" \
+    || say "WARNING: could not delete test txn $1 (continuing)" >&2
+}
+
+# PROPFIND PATH in a fresh master txn through the slave.  Stores the
+# multistatus in DEST (a variable name) and leaves TXN_NAME set so
+# callers can assert on the txn id in hrefs.  WHAT is a short label
+# for the fail message.  Assigns in this shell so TXN_NAME survives
+# (command substitution would lose it).
+function propfind_slave_txr() {
+  local dest="$1"
+  local path="$2"
+  local what="$3"
+  TXN_NAME=$(create_master_txn)
+  [ -n "$TXN_NAME" ] || fail "could not create a txn on the master${what:+ ($what)}"
+  printf -v "$dest" '%s' "$(curl_auth --request PROPFIND --header "Depth: 0" \
+    "$SLAVE_URL/!svn/txr/$TXN_NAME/$path")"
+  delete_master_txn "$TXN_NAME"
 }
 
 function get_loadmodule_config() {
@@ -388,6 +430,12 @@ MASTER_URL="http://${MASTER_HOST}:${TEST_PORT}/${MASTER_LOCATION_URI}"
 SLAVE_URL="http://${SLAVE_HOST}:${TEST_PORT}/${SLAVE_LOCATION_URI}"
 SYNC_URL="http://${SLAVE_HOST}:${TEST_PORT}/${SYNC_LOCATION}"
 
+# User-data payloads that include the rewrite-anchor tag plus a location
+# root -- the byte sequence the body filter matches.  Protocol XML
+# escapes this; file content and skels carry it raw.
+HREF_IN_MASTER="<D:href>/${MASTER_LOCATION_URI}"
+HREF_IN_SLAVE="<D:href>/${SLAVE_LOCATION_URI}"
+
 BASE_URL="$SLAVE_URL"
 
 # setup server and repositories
@@ -412,9 +460,11 @@ read SLAVE_UUID < "$SLAVE_REPOS/db/uuid"
 [ "$SLAVE_UUID" = "$MASTER_UUID" ] \
   || fail "master/slave uuid mismatch"
 # setup hooks:
-#  slave allows revprop changes
+#  slave and master allow revprop changes (the latter so a proxied
+#  svn propset --revprop can succeed)
 #  master syncs changes to slave
 echo "#!/bin/sh" > "$SLAVE_REPOS/hooks/pre-revprop-change"
+echo "#!/bin/sh" > "$MASTER_REPOS/hooks/pre-revprop-change"
 echo "#!/bin/sh" > "$MASTER_REPOS/hooks/post-revprop-change"
 echo "#!/bin/sh" > "$MASTER_REPOS/hooks/post-commit"
 echo "$SVNSYNC --non-interactive sync '$SYNC_URL' --username=svnsync --password=svnsync" \
@@ -423,6 +473,7 @@ echo "$SVNSYNC --non-interactive sync '$SYNC_URL' --username=svnsync --password=
     >> "$MASTER_REPOS/hooks/post-commit"
 
 chmod 0755 "$SLAVE_REPOS/hooks/pre-revprop-change"
+chmod 0755 "$MASTER_REPOS/hooks/pre-revprop-change"
 chmod 0755 "$MASTER_REPOS/hooks/post-revprop-change"
 chmod 0755 "$MASTER_REPOS/hooks/post-commit"
 
@@ -506,6 +557,21 @@ $SVNLOOK tree --full-paths "$MASTER_REPOS" | grep -Fq "branch new/" \
 
 say "PASS: committing a path which has a space in it passes"
 
+# An explicit move is a COPY plus a DELETE of the source within one txn.
+# The Destination rewrite is the same path as the space-in-name COPY
+# above; this checks the pair lands as a move on the master.
+say "Test case for move (COPY + DELETE) through the proxy"
+
+$svnmucc mkdir "$BASE_URL/move-src" \
+  || fail "creating move source failed"
+$svnmucc mv "$BASE_URL/move-src" "$BASE_URL/move-src-moved" \
+  || fail "move through the proxy failed"
+$SVNLOOK tree --full-paths "$MASTER_REPOS" | grep -Fq "move-src-moved/" \
+  || fail "moved directory missing on the master"
+$SVNLOOK tree --full-paths "$MASTER_REPOS" | grep -Fq "move-src/" \
+  && fail "move source still present on the master"
+say "PASS: move (copy + delete) works through the proxy"
+
 # Regression coverage for SVN-3445.  When the master and slave locations
 # differ, the proxy must translate the location prefix in *protocol* URLs
 # (hrefs in MERGE/CHECKOUT bodies) but must NOT touch *user payload*:
@@ -513,30 +579,30 @@ say "PASS: committing a path which has a space in it passes"
 # PROPPATCH bodies, and log-message/revprop skels in POST bodies.
 say "Test case for versioned content munging (SVN-3445)"
 
-# File content must round-trip verbatim whether it embeds the master URL
-# or the slave URL (used to be mangled/rejected).
-echo "$MASTER_URL" > "$HTTPD_ROOT/master-url.txt"
-echo "$SLAVE_URL"  > "$HTTPD_ROOT/slave-url.txt"
+# File content must round-trip verbatim whether it embeds the master or
+# slave rewrite-anchor sequence (used to be mangled/rejected).
+echo "$HREF_IN_MASTER" > "$HTTPD_ROOT/master-url.txt"
+echo "$HREF_IN_SLAVE"  > "$HTTPD_ROOT/slave-url.txt"
 $svnmucc put "$HTTPD_ROOT/master-url.txt" "$BASE_URL/master-url.txt" \
          put "$HTTPD_ROOT/slave-url.txt"  "$BASE_URL/slave-url.txt" \
-  || fail "committing URL-bearing files failed (SVN-3445: PUT body rewritten?)"
+  || fail "committing href-bearing files failed (SVN-3445: PUT body rewritten?)"
 
 master_file_content=$($SVNLOOK cat "$SLAVE_REPOS" master-url.txt)
-[ "$master_file_content" = "$MASTER_URL" ] \
-  || fail "file content embedding the master URL was munged: committed '$MASTER_URL', slave stores '$master_file_content'"
+[ "$master_file_content" = "$HREF_IN_MASTER" ] \
+  || fail "file content embedding the master href tag was munged: committed '$HREF_IN_MASTER', slave stores '$master_file_content'"
 slave_file_content=$($SVNLOOK cat "$SLAVE_REPOS" slave-url.txt)
-[ "$slave_file_content" = "$SLAVE_URL" ] \
-  || fail "file content embedding the slave URL was munged: committed '$SLAVE_URL', slave stores '$slave_file_content'"
-say "PASS: file content is preserved verbatim regardless of embedded URL"
+[ "$slave_file_content" = "$HREF_IN_SLAVE" ] \
+  || fail "file content embedding the slave href tag was munged: committed '$HREF_IN_SLAVE', slave stores '$slave_file_content'"
+say "PASS: file content is preserved verbatim regardless of embedded href tag"
 
 # Property values must likewise round-trip verbatim: a PROPPATCH value that
-# contains the slave URL used to be silently rewritten.
-$svnmucc propset svn-3445-prop "$SLAVE_URL" "$BASE_URL/slave-url.txt" \
-  || fail "propset of a value containing the slave URL failed"
+# contains the rewrite-anchor sequence used to be silently rewritten.
+$svnmucc propset svn-3445-prop "$HREF_IN_SLAVE" "$BASE_URL/slave-url.txt" \
+  || fail "propset of a value containing the slave href tag failed"
 prop_value=$($SVNLOOK propget "$SLAVE_REPOS" svn-3445-prop slave-url.txt)
-[ "$prop_value" = "$SLAVE_URL" ] \
-  || fail "property value embedding the slave URL was munged: set '$SLAVE_URL', slave stores '$prop_value'"
-say "PASS: property value is preserved verbatim regardless of embedded URL"
+[ "$prop_value" = "$HREF_IN_SLAVE" ] \
+  || fail "property value embedding the slave href tag was munged: set '$HREF_IN_SLAVE', slave stores '$prop_value'"
+say "PASS: property value is preserved verbatim regardless of embedded href tag"
 
 # Commit log messages and revision properties travel inside the
 # create-txn-with-props POST body (HTTPv2), a length-prefixed skel
@@ -544,24 +610,35 @@ say "PASS: property value is preserved verbatim regardless of embedded URL"
 # corrupts the values, and when the location paths differ in length it
 # breaks the skel framing outright.  Both must round-trip verbatim.
 # (The $svnmucc wrapper bakes in -mm, so invoke $SVNMUCC directly.)
-log_msg="log mentioning the slave URL: $SLAVE_URL"
+log_msg="log mentioning the slave href tag: $HREF_IN_SLAVE"
 $SVNMUCC --non-interactive --username jrandom --password rayjandom \
-         -m "$log_msg" --with-revprop "svn-3445-revprop=$SLAVE_URL" \
+         -m "$log_msg" --with-revprop "svn-3445-revprop=$HREF_IN_SLAVE" \
          mkdir "$BASE_URL/log-url-dir" \
-  || fail "commit with a log message containing the slave URL failed (POST body rewritten?)"
+  || fail "commit with a log message containing the slave href tag failed (POST body rewritten?)"
 rev=$($SVNLOOK youngest "$SLAVE_REPOS")
 stored_log=$($SVNLOOK propget --revprop -r "$rev" "$SLAVE_REPOS" svn:log)
 [ "$stored_log" = "$log_msg" ] \
   || fail "log message was munged: committed '$log_msg', slave stores '$stored_log'"
 stored_revprop=$($SVNLOOK propget --revprop -r "$rev" "$SLAVE_REPOS" svn-3445-revprop)
-[ "$stored_revprop" = "$SLAVE_URL" ] \
-  || fail "revprop value was munged: set '$SLAVE_URL', slave stores '$stored_revprop'"
+[ "$stored_revprop" = "$HREF_IN_SLAVE" ] \
+  || fail "revprop value was munged: set '$HREF_IN_SLAVE', slave stores '$stored_revprop'"
 say "PASS: log message and revprop values are preserved verbatim"
 
-# The response side (mirror.c attaches the body-rewrite filter only for
-# MERGE and PROPFIND, with the response_is_xml() gate as a backstop) is
-# covered by the proxied-txn-reads test below.  The residual block further
-# down exercises the one remaining SVN-3445 residual.
+# PROPPATCH on !svn/rev is a different path from the create-txn-with-props
+# POST above: the body is an opaque property value and must stay out of
+# the rewrite.  The master's pre-revprop-change hook is enabled above
+# so this can succeed.
+say "Test case for revision-property change through the proxy"
+
+rev=$($SVNLOOK youngest "$MASTER_REPOS")
+$SVN propset --revprop -r "$rev" --non-interactive \
+     --username jrandom --password rayjandom \
+     test:revprop "url is $HREF_IN_SLAVE" "$SLAVE_URL" \
+  || fail "revprop change through the proxy failed"
+stored_rp=$($SVNLOOK propget --revprop -r "$rev" "$MASTER_REPOS" test:revprop)
+[ "$stored_rp" = "url is $HREF_IN_SLAVE" ] \
+  || fail "revprop value was munged through the proxy: stored '$stored_rp'"
+say "PASS: revision property change through the proxy is stored verbatim"
 
 # Response-side SVN-3445 coverage: reads of transaction resources are
 # proxied to the master; the proxy must rewrite hrefs in protocol XML
@@ -575,101 +652,116 @@ say "PASS: log message and revprop values are preserved verbatim"
 # without ever traversing the proxy or the response filter under test.
 say "Test case for proxied reads of txn resources (SVN-3445 response side)"
 
-curl_auth="$CURL --silent --show-error --user jrandom:rayjandom"
-
-# Commit an XML-mime-typed file for probe 3 below (before the txn is
+# Commit an XML-mime-typed file for the GET probe below (before the txn is
 # opened, so the txn tree contains it).
-printf '<?xml version="1.0"?>\n<note><!-- %s --></note>\n' "$MASTER_URL" \
+printf '<?xml version="1.0"?>\n<note><!-- %s --></note>\n' "$HREF_IN_MASTER" \
   > "$HTTPD_ROOT/xml-payload.xml"
 $svnmucc put "$HTTPD_ROOT/xml-payload.xml" "$BASE_URL/xml-payload.xml" \
          propset svn:mime-type text/xml "$BASE_URL/xml-payload.xml" \
   || fail "committing the XML-typed payload file failed"
 
-# Open a transaction directly on the master (raw HTTPv2 create-txn POST)
-# and harvest its name from the SVN-Txn-Name response header.
-txn_name=$($curl_auth --request POST \
-  --header "Content-Type: application/vnd.svn-skel" --data "( create-txn )" \
-  --dump-header - --output /dev/null "$MASTER_URL/!svn/me" \
-  | sed -ne 's/^SVN-Txn-Name: *//p' | tr -d '\r')
+txn_name=$(create_master_txn)
 [ -n "$txn_name" ] || fail "could not create a txn on the master"
 
-# 1. Non-XML payload: GET the file through the SLAVE. The response is
-#    proxied from the master and must arrive verbatim, the slave URL
-#    embedded in the content must NOT have been rewritten.
-proxied_get=$($curl_auth "$SLAVE_URL/!svn/txr/$txn_name/slave-url.txt")
-[ "$proxied_get" = "$SLAVE_URL" ] \
-  || fail "proxied GET of txn file content was munged: expected '$SLAVE_URL', got '$proxied_get'"
+# Non-XML payload: GET the file through the SLAVE. The response is
+# proxied from the master and must arrive verbatim, the slave href
+# tag embedded in the content must NOT have been rewritten.
+proxied_get=$(curl_auth "$SLAVE_URL/!svn/txr/$txn_name/slave-url.txt")
+[ "$proxied_get" = "$HREF_IN_SLAVE" ] \
+  || fail "proxied GET of txn file content was munged: expected '$HREF_IN_SLAVE', got '$proxied_get'"
 
-# 2. Protocol XML: PROPFIND on the txn file through the SLAVE. The
-#    multistatus hrefs come from the master and MUST be rewritten to the
-#    slave location.
-proxied_propfind=$($curl_auth --request PROPFIND --header "Depth: 0" \
-  "$SLAVE_URL/!svn/txr/$txn_name/slave-url.txt")
+# Regression guard: a versioned file whose svn:mime-type is XML must
+# never have its content rewritten on a proxied read.  Doubly protected:
+# GET responses do not receive the ReposRewrite body filter at all
+# (proxy_request_fixup() attaches it only for MERGE and PROPFIND), and
+# mod_dav_svn happens to emit no Content-Type for !svn/txr file GETs.
+proxied_xml_get=$(curl_auth "$SLAVE_URL/!svn/txr/$txn_name/xml-payload.xml")
+echo "$proxied_xml_get" | grep -qF "$HREF_IN_MASTER" \
+  || fail "XML-typed txn file content did not round-trip a proxied read verbatim: got '$proxied_xml_get'"
+delete_master_txn "$txn_name"
+say "PASS: XML-typed txn file content survives a proxied read verbatim"
+
+# Protocol XML: PROPFIND on the txn file through the SLAVE. The
+# multistatus hrefs come from the master and MUST be rewritten to the
+# slave location.
+propfind_slave_txr proxied_propfind "slave-url.txt" "proxied reads"
 echo "$proxied_propfind" | grep -qF "/${SLAVE_LOCATION_URI}/" \
   || fail "proxied PROPFIND multistatus hrefs were not rewritten to the slave location: $proxied_propfind"
 echo "$proxied_propfind" | grep -qF "/${MASTER_LOCATION_URI}/" \
   && fail "proxied PROPFIND multistatus still contains master-location hrefs: $proxied_propfind"
 
-# 3. Regression guard: a versioned file whose svn:mime-type is XML must
-#    never have its content rewritten on a proxied read.  Doubly protected:
-#    GET responses do not receive the ReposRewrite body filter at all
-#    (proxy_request_fixup() attaches it only for MERGE and PROPFIND), and
-#    mod_dav_svn happens to emit no Content-Type for !svn/txr file GETs.
-proxied_xml_get=$($curl_auth "$SLAVE_URL/!svn/txr/$txn_name/xml-payload.xml")
-echo "$proxied_xml_get" | grep -qF "$MASTER_URL" \
-  || fail "XML-typed txn file content did not round-trip a proxied read verbatim: got '$proxied_xml_get'"
-say "PASS: XML-typed txn file content survives a proxied read verbatim"
-
-# Clean up the open txn so later consistency checks aren't confused.
-$curl_auth --request DELETE --output /dev/null \
-  "$MASTER_URL/!svn/txn/$txn_name" \
-  || say "WARNING: could not delete test txn $txn_name (continuing)"
-
 say "PASS: proxied txn reads: content verbatim, protocol hrefs rewritten"
 
-# The one remaining SVN-3445 residual: a dead-property value rewritten in
-# a proxied PROPFIND multistatus.  Needs a proxied read of in-transaction
-# data (reads of committed data are served locally by the slave and never
-# traverse the response filter), so it reuses the curl txn-probe technique
-# from the test above.
-say "Test case for the SVN-3445 response-side residual (XFAIL expected)"
+# Dead-property values in a proxied PROPFIND must survive verbatim while
+# the surrounding hrefs are translated.  Needs a proxied read of in-txn
+# data (committed reads are served locally and never hit the filter).
+say "Test case for dead-property values in a proxied multistatus"
 
-# The munged fingerprint: a master-URL value rewritten by the response
-# filter keeps the master host but gains the slave location path.
-master_url_munged="http://${MASTER_HOST}:${TEST_PORT}/${SLAVE_LOCATION_URI}"
+$svnmucc propset url-bearing-prop "$HREF_IN_MASTER" "$BASE_URL/master-url.txt" \
+  || fail "propset of a master href-tag value failed"
 
-# The residual: a dead-property VALUE containing the master URL, returned
-# inside a proxied PROPFIND multistatus, is blindly rewritten along with
-# the genuine hrefs (see the "FIXME (SVN-3445, residual)" comment in
-# mirror.c's dav_svn__location_body_filter).
-$svnmucc propset svn-3445-residual-prop "$MASTER_URL" "$BASE_URL/master-url.txt" \
-  || fail "propset of a master-URL value failed"
+propfind_slave_txr deadprop_propfind "master-url.txt" "dead-property test"
+# The value is XML-escaped in the multistatus; the raw tag must not appear
+# as a rewritten protocol href.
+echo "$deadprop_propfind" | grep -qF "&lt;D:href&gt;/${MASTER_LOCATION_URI}" \
+  || fail "dead-property value did not survive the proxied PROPFIND verbatim: $deadprop_propfind"
+echo "$deadprop_propfind" | grep -qF "<D:href>/${SLAVE_LOCATION_URI}/" \
+  || fail "multistatus href was not translated to the slave location: $deadprop_propfind"
+say "PASS: dead-property values survive proxied multistatus href translation"
 
-# Open a fresh txn on the master (after the propset above, so its tree
-# contains the property).
-txn_name=$($curl_auth --request POST \
-  --header "Content-Type: application/vnd.svn-skel" --data "( create-txn )" \
-  --dump-header - --output /dev/null "$MASTER_URL/!svn/me" \
-  | sed -ne 's/^SVN-Txn-Name: *//p' | tr -d '\r')
-[ -n "$txn_name" ] || fail "could not create a txn on the master (residual tests)"
+# A repos path component named like the master location must survive
+# root translation in proxied multistatus hrefs.
+say "Test case for location-name collision in proxied hrefs"
 
-# Residual probe: PROPFIND (allprop) on the file through the SLAVE.
-residual_propfind=$($curl_auth --request PROPFIND --header "Depth: 0" \
-  "$SLAVE_URL/!svn/txr/$txn_name/master-url.txt")
-if echo "$residual_propfind" | grep -qF "$MASTER_URL"; then
-  say "XPASS: SVN-3445 residual appears fixed: dead-property value survived a"
-  say "       proxied PROPFIND verbatim."
-elif echo "$residual_propfind" | grep -qF "$master_url_munged"; then
-  say "XFAIL (SVN-3445 residual): dead-property value was rewritten in the"
-  say "       proxied multistatus: '$MASTER_URL' -> '$master_url_munged'."
-else
-  fail "residual PROPFIND contained neither the original nor the munged value: $residual_propfind"
-fi
+$svnmucc mkdir "$BASE_URL/${MASTER_LOCATION_URI}" \
+  || fail "committing a directory named after the master location failed"
+$SVNLOOK tree --full-paths "$MASTER_REPOS" | grep -Fq "${MASTER_LOCATION}/" \
+  || fail "directory named after the master location missing on the master"
 
-# Clean up the open txn.
-$curl_auth --request DELETE --output /dev/null \
-  "$MASTER_URL/!svn/txn/$txn_name" \
-  || say "WARNING: could not delete residual-test txn $txn_name (continuing)"
+propfind_slave_txr collision_propfind "${MASTER_LOCATION_URI}" "collision test"
+echo "$collision_propfind" | grep -qF "/$TXN_NAME/${MASTER_LOCATION_URI}" \
+  || fail "href component named after the master location did not survive the proxied PROPFIND: $collision_propfind"
+echo "$collision_propfind" | grep -qF "<D:href>/${SLAVE_LOCATION_URI}/" \
+  || fail "collision multistatus href root was not translated to the slave location: $collision_propfind"
+say "PASS: href components named after a location survive the anchored rewrite"
+
+# The HTTPv1 commit opening, emulated with curl (no modern client speaks
+# it, but mod_dav_svn still serves it): MKACTIVITY names an activity, and
+# CHECKOUT of a version resource carries that activity's href -- as
+# <D:href> in the request body -- which the request-side filter must
+# translate for the master to resolve it.  The 201 itself proves the body
+# translation (an untranslated activity href cannot resolve on the
+# master); the Location header must come back rewritten to the slave
+# root with no doubled slash; and a PROPFIND of the resulting working
+# resource covers the !svn/wrk/ routing branch.
+say "Test case for v1 commit opening (MKACTIVITY/CHECKOUT) through the proxy"
+
+v1_activity="dav-mirror-v1-activity-$$"
+mka_status=$(curl_auth --request MKACTIVITY -o /dev/null -w "%{http_code}" \
+  "$SLAVE_URL/!svn/act/$v1_activity")
+[ "$mka_status" = "201" ] \
+  || fail "MKACTIVITY through the proxy failed (HTTP $mka_status)"
+
+rev=$($SVNLOOK youngest "$SLAVE_REPOS")
+printf '<?xml version="1.0" encoding="utf-8"?><D:checkout xmlns:D="DAV:"><D:activity-set><D:href>/%s/!svn/act/%s</D:href></D:activity-set></D:checkout>' \
+  "$SLAVE_LOCATION_URI" "$v1_activity" > "$HTTPD_ROOT/checkout-body.xml"
+v1_location=$(curl_auth --request CHECKOUT --header "Content-Type: text/xml" \
+  --data @"$HTTPD_ROOT/checkout-body.xml" --dump-header - --output /dev/null \
+  "$SLAVE_URL/!svn/ver/$rev/master-url.txt" \
+  | sed -ne 's/^Location: *//p' | tr -d '\r')
+[ -n "$v1_location" ] \
+  || fail "v1 CHECKOUT through the proxy returned no Location header (body href untranslated?)"
+echo "$v1_location" | grep -qF "$SLAVE_URL/!svn/wrk/$v1_activity/master-url.txt" \
+  || fail "CHECKOUT Location was not rewritten cleanly to the slave root: '$v1_location'"
+
+wrk_propfind=$(curl_auth --request PROPFIND --header "Depth: 0" \
+  "$SLAVE_URL/!svn/wrk/$v1_activity/master-url.txt")
+echo "$wrk_propfind" | grep -qF "<D:href>/${SLAVE_LOCATION_URI}/!svn/wrk/" \
+  || fail "working-resource PROPFIND href was not translated to the slave location: $wrk_propfind"
+
+curl_auth --request DELETE --output /dev/null "$SLAVE_URL/!svn/act/$v1_activity" \
+  || say "WARNING: could not delete v1 test activity (continuing)" >&2
+say "PASS: v1 activity checkout, Location rewrite, and wrk reads work through the proxy"
 
 # LOCK/UNLOCK are proxied methods, and locked-file commits push lock tokens
 # through the proxy.  The lock comment travels as the DAV owner element in
@@ -679,7 +771,7 @@ say "Test case for locks through the write-through proxy"
 svncmd="$SVN --non-interactive --username=jrandom --password=rayjandom"
 $svncmd checkout -q "$BASE_URL" "$HTTPD_ROOT/wc-lock" \
   || fail "checkout for lock test failed"
-$svncmd lock -m "locked via slave: $SLAVE_URL" "$HTTPD_ROOT/wc-lock/slave-url.txt" \
+$svncmd lock -m "locked via slave: $HREF_IN_SLAVE" "$HTTPD_ROOT/wc-lock/slave-url.txt" \
   || fail "svn lock through the proxy failed"
 
 # The lock must exist on the MASTER (locks are not versioned; svnsync does
@@ -690,8 +782,8 @@ $SVNLOOK lock "$MASTER_REPOS" slave-url.txt | grep -q "Owner: jrandom" \
 # The client's own view of the comment is just the cached copy in its
 # working-copy lock table, so inspect what the master actually stored.
 lock_comment=$($SVNLOOK lock "$MASTER_REPOS" slave-url.txt)
-echo "$lock_comment" | grep -qF "$SLAVE_URL" \
-  || fail "stored lock comment was munged by the proxy: expected it to contain '$SLAVE_URL', master stores: $lock_comment"
+echo "$lock_comment" | grep -qF "$HREF_IN_SLAVE" \
+  || fail "stored lock comment was munged by the proxy: expected it to contain '$HREF_IN_SLAVE', master stores: $lock_comment"
 say "PASS: lock comment survives the proxy verbatim"
 
 # Committing a change to the locked file sends the lock token with the

@@ -32,6 +32,18 @@
 
 #include "dav_svn.h"
 
+/* The rewrite anchor: hrefs in the protocol bodies we filter always
+   appear as <D:href>/path -- serf and mod_dav(_svn) both hard-code the
+   "D:" prefix and emit the value immediately after the tag.  Anchoring
+   the match here means only href-initial location roots are translated;
+   mid-path components and property values pass through.
+
+   A raw "<D:href>" inside a property value would still be rewritten.
+   That cannot currently happen because the emitters escape or
+   base64-encode values (deadprops.c). Although this is not a structural
+   guarantee. */
+#define PROXY_HREF_ANCHOR "<D:href>"
+
 
 /* If the request carries a Destination header (as COPY and MOVE do), rewrite
    it to target the master server instead of this slave. MASTER_URI is the
@@ -207,11 +219,28 @@ typedef struct locate_ctx_t
 {
     const apr_strmatch_pattern *pattern;
     apr_size_t pattern_len;
-    const char *localpath;
-    apr_size_t  localpath_len;
-    const char *remotepath;
-    apr_size_t  remotepath_len;
+    const char *replacement;
+    apr_size_t replacement_len;
 } locate_ctx_t;
+
+/* Initialize CTX to rewrite href-initial FROM_ROOT into TO_ROOT.
+   Both roots are already canonical and URI-encoded, the same domain
+   the protocol bodies use on the wire. */
+static void
+locate_ctx_init(locate_ctx_t *ctx,
+                apr_pool_t *pool,
+                const char *from_root,
+                const char *to_root)
+{
+    const char *from;
+
+    from = apr_pstrcat(pool, PROXY_HREF_ANCHOR, from_root, SVN_VA_NULL);
+    ctx->replacement = apr_pstrcat(pool, PROXY_HREF_ANCHOR, to_root,
+                                   SVN_VA_NULL);
+    ctx->replacement_len = strlen(ctx->replacement);
+    ctx->pattern = apr_strmatch_precompile(pool, from, 1);
+    ctx->pattern_len = strlen(from);
+}
 
 apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
                                          apr_bucket_brigade *bb,
@@ -244,18 +273,9 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
         return ap_get_brigade(f->next, bb, mode, block, readbytes);
     }
 
-    /* Both CANONICALIZED_URI and ROOT_DIR are already canonical and
-       URI-encoded (svn_urlpath__canonicalize() output and the stored
-       <Location> path, respectively), which is the same domain the
-       protocol bodies use on the wire. */
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
-        ctx->remotepath = canonicalized_uri;
-        ctx->remotepath_len = strlen(ctx->remotepath);
-        ctx->localpath = root_dir;
-        ctx->localpath_len = strlen(ctx->localpath);
-        ctx->pattern = apr_strmatch_precompile(r->pool, ctx->localpath, 1);
-        ctx->pattern_len = ctx->localpath_len;
+        locate_ctx_init(ctx, r->pool, root_dir, canonicalized_uri);
     }
 
     rv = ap_get_brigade(f->next, bb, mode, block, readbytes);
@@ -284,8 +304,8 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
             apr_bucket_split(next_bucket, ctx->pattern_len);
             bkt = APR_BUCKET_NEXT(next_bucket);
             apr_bucket_delete(next_bucket);
-            next_bucket = apr_bucket_pool_create(ctx->remotepath,
-                                                 ctx->remotepath_len,
+            next_bucket = apr_bucket_pool_create(ctx->replacement,
+                                                 ctx->replacement_len,
                                                  r->pool, bb->bucket_alloc);
             APR_BUCKET_INSERT_BEFORE(bkt, next_bucket);
         }
@@ -301,7 +321,7 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
 {
     request_rec *r = f->r;
     const char *master_uri;
-    const char *location, *start_foo = NULL;
+    const char *location, *remainder = NULL;
 
     /* Don't filter if we're in a subrequest or we aren't setup to
        proxy anything. */
@@ -313,15 +333,18 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
 
     location = apr_table_get(r->headers_out, "Location");
     if (location) {
-        start_foo = ap_strstr_c(location, master_uri);
+        remainder = ap_strstr_c(location, master_uri);
     }
-    if (start_foo) {
+    if (remainder) {
         const char *new_uri;
-        start_foo += strlen(master_uri);
+        remainder += strlen(master_uri);
+        /* REMAINDER is empty or begins with '/' (the stored master URI
+           is canonical, with no trailing slash), so concatenate
+           without a separator. */
         new_uri = ap_construct_url(r->pool,
                                    apr_pstrcat(r->pool,
-                                               dav_svn__get_root_dir(r), "/",
-                                               start_foo, SVN_VA_NULL),
+                                               dav_svn__get_root_dir(r),
+                                               remainder, SVN_VA_NULL),
                                    r);
         apr_table_set(r->headers_out, "Location", new_uri);
     }
@@ -379,25 +402,9 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
         return ap_pass_brigade(f->next, bb);
     }
 
-    /* ### FIXME (SVN-3445, residual): a PROPFIND multistatus is still rewritten
-       ### wholesale below, so a dead-property *value* that happens to contain
-       ### the master location gets silently rewritten along with the genuine
-       ### <D:href>s.  Fixing that safely requires an XML-structure-aware
-       ### rewrite (translate hrefs only, leave property values alone) rather
-       ### than the blind byte substitution used here. */
-
-    /* Both CANONICALIZED_URI and ROOT_DIR are already canonical and
-       URI-encoded (svn_urlpath__canonicalize() output and the stored
-       <Location> path, respectively), which is the same domain the
-       protocol bodies use on the wire. */
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
-        ctx->remotepath = canonicalized_uri;
-        ctx->remotepath_len = strlen(ctx->remotepath);
-        ctx->localpath = root_dir;
-        ctx->localpath_len = strlen(ctx->localpath);
-        ctx->pattern = apr_strmatch_precompile(r->pool, ctx->remotepath, 1);
-        ctx->pattern_len = ctx->remotepath_len;
+        locate_ctx_init(ctx, r->pool, canonicalized_uri, root_dir);
     }
 
     bkt = APR_BRIGADE_FIRST(bb);
@@ -416,8 +423,8 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
             apr_bucket_split(next_bucket, ctx->pattern_len);
             bkt = APR_BUCKET_NEXT(next_bucket);
             apr_bucket_delete(next_bucket);
-            next_bucket = apr_bucket_pool_create(ctx->localpath,
-                                                 ctx->localpath_len,
+            next_bucket = apr_bucket_pool_create(ctx->replacement,
+                                                 ctx->replacement_len,
                                                  r->pool, bb->bucket_alloc);
             APR_BUCKET_INSERT_BEFORE(bkt, next_bucket);
         }
