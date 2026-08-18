@@ -41,7 +41,7 @@ Other candidate changes:
      -0: ivan (not sure if we should backport, as it's not a regression)
 
  * r1933386, r1933394, r1933404
-   Corectness fixes in svn_subr__win32_xlate_to_stringbuf().
+   Correctness fixes in svn_subr__win32_xlate_to_stringbuf().
    Justification:
      Fix potential integer overflow.
    Votes:
