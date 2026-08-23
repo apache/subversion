@@ -76,6 +76,13 @@ Other candidate changes:
   Votes:
     +1: dsahlberg
 
+* r1936884, r1936949, r1936953, r1936955, r1936956, r1936958, r1936959, r1936961, r1936962, r1936963, r1936965
+  INSTALL: Corrections and cleanups
+  Justification:
+    Documentation correctness
+  Votes:
+    +1: hartmannathan
+
 Veto-blocked changes:
 =====================
 
