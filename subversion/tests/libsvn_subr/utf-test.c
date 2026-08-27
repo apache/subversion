@@ -256,6 +256,27 @@ test_utf_cstring_to_utf8_ex2(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_utf_cstring_to_utf8_ex2_CVE(apr_pool_t *pool)
+{
+  apr_size_t i;
+  svn_stringbuf_t *src = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *expected = svn_stringbuf_create_empty(pool);
+  const char *dest;
+
+  for (i = 0; i < 10000; i++)
+    {
+      svn_stringbuf_appendcstr(src, "\xfb");
+      svn_stringbuf_appendcstr(expected, "\xe2\x88\x9a");
+    }
+
+  SVN_ERR(svn_utf_cstring_to_utf8_ex2(&dest, src->data, "cp866", pool));
+
+  SVN_TEST_ASSERT(strcmp(dest, expected->data) == 0);
+
+  return SVN_NO_ERROR;
+}
+
 /* Test conversion to different codepages from utf8. */
 static svn_error_t *
 test_utf_cstring_from_utf8_ex2(apr_pool_t *pool)
@@ -1318,6 +1339,8 @@ test_utf8_align(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+
+
 
 /* The test table.  */
 
@@ -1332,6 +1355,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test last_valid/last_valid2"),
     SVN_TEST_PASS2(test_utf_cstring_to_utf8_ex2,
                    "test svn_utf_cstring_to_utf8_ex2"),
+    SVN_TEST_PASS2(test_utf_cstring_to_utf8_ex2_CVE,
+                   "test svn_utf_cstring_to_utf8_ex2 CVE"),
     SVN_TEST_PASS2(test_utf_cstring_from_utf8_ex2,
                    "test svn_utf_cstring_from_utf8_ex2"),
     SVN_TEST_PASS2(test_utf_collated_compare,

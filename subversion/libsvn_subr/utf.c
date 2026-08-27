@@ -545,6 +545,7 @@ convert_to_stringbuf(xlate_handle_node_t *node,
                                for all characters in the buffer, 4 is
                                maximum character size (currently) */
 
+      svn_stringbuf_ensure(*dest, buflen);
 
     } while (apr_err == APR_SUCCESS && srclen != 0);
 #endif
