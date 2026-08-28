@@ -92,7 +92,7 @@ I.    INTRODUCTION
 
          Subversion uses SQLite to manage some internal databases.
 
-      * libz  (REQUIRED for client and server)
+      * Zlib  (REQUIRED for client and server)
 
          Subversion uses zlib for compressing binary differences.
          These diff streams are used everywhere -- over the network,
@@ -273,7 +273,7 @@ I.    INTRODUCTION
       3.  Zlib  (REQUIRED)
 
       Subversion's binary-differencing engine depends on zlib for
-      compression.  Most Unix systems have libz pre-installed, but if
+      compression.  Most Unix systems have zlib pre-installed, but if
       you need it, you can get it from
 
           http://www.zlib.net/
