@@ -825,7 +825,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "memcache svn_cache with very long keys"),
     SVN_TEST_PASS2(test_membuffer_cache_basic,
                    "membuffer svn_cache basic test"),
-    SVN_TEST_PASS2(test_inprocess_cache_partial,
+    SVN_TEST_PASS2(test_membuffer_cache_partial,
                    "membuffer svn_cache partial set test"),
     SVN_TEST_PASS2(test_membuffer_serializer_error_handling,
                    "test for error handling in membuffer svn_cache"),
