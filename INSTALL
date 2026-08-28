@@ -166,25 +166,14 @@ I.    INTRODUCTION
       what other tools and libraries will be required so that Subversion
       can be built with the set of features you want.
 
+      The easiest way to install dependencies is via your operating system's
+      package management system.
+
       On Unix systems, the './configure' script will tell you if you are
       missing the correct version of any of the required libraries or
       tools, so if you are in a real hurry to get building, you can skip
       straight to section II.  If you want to gather the pieces you will
       need before starting out, however, you should read the following.
-
-      If you're just installing a Subversion client, the Subversion
-      team has created a script that downloads the minimal prerequisite
-      libraries (Apache Portable Runtime, Sqlite, and Zlib).  The script,
-      'get-deps.sh', is available in the same directory as this file.
-      When run, it will place 'apr', 'apr-util', 'serf', 'zlib', and
-      'sqlite-amalgamation' directories directly into your unpacked Subversion
-      distribution.  With the exception of sqlite-amalgamation, they will
-      still need to be configured, built and installed explicitly, and
-      Subversion's own configure script may need to be told where to find
-      them, if they were not installed in standard system locations.
-
-      Note: there are optional dependencies (such as swig and httpd)
-      which get-deps.sh does not download.
 
       Note: Because previous builds of Subversion may have installed older
       versions of these libraries, you may want to run some of the cleanup
@@ -519,8 +508,23 @@ I.    INTRODUCTION
           https://github.com/encukou/py3c
       
       On Unix systems, you can also use the provided get-deps.sh
-      script to download py3c and several other dependencies; see the
-      top of section I.C for more about get-deps.sh.
+      script to download py3c and several other dependencies.
+
+
+      Note on get-deps.sh
+
+      The Subversion team has created a script that downloads the minimal
+      prerequisite libraries (Apache Portable Runtime, Sqlite, and Zlib).  The
+      script, 'get-deps.sh', is available in the same directory as this file.
+      When run, it will place 'apr', 'apr-util', 'serf', 'zlib', and
+      'sqlite-amalgamation' directories directly into your unpacked Subversion
+      distribution.  With the exception of sqlite-amalgamation, they will
+      still need to be configured, built and installed explicitly, and
+      Subversion's own configure script may need to be told where to find
+      them, if they were not installed in standard system locations.
+
+      There are optional dependencies (such as swig and httpd) which
+      get-deps.sh does not download.
 
 
   D. Documentation
