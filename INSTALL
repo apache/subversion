@@ -513,15 +513,23 @@ I.    INTRODUCTION
 
       Note on get-deps.sh
 
-      The Subversion team has created a script that downloads the minimal
-      prerequisite libraries (Apache Portable Runtime, Sqlite, and Zlib).  The
-      script, 'get-deps.sh', is available in the same directory as this file.
-      When run, it will place 'apr', 'apr-util', 'serf', 'zlib', and
+      The optional 'get-deps.sh' script, available in the same directory as
+      this INSTALL document you are reading, downloads the source code of
+      several dependencies.
+
+      Note: The script downloads fixed versions of the dependencies that are
+      defined at the top of the script's code.  These versions are not
+      necessarily the latest releases.
+
+      The dependencies obtained this way still need to be
+      configured, built and installed explicitly (with the exception of
+      'sqlite-amalgamation') and the Subversion's own configure script may need
+      to be told where to find them, if they were not installed in the standard
+      system locations.
+
+      When run, the script will place 'apr', 'apr-util', 'serf', 'zlib', and
       'sqlite-amalgamation' directories directly into your unpacked Subversion
-      distribution.  With the exception of sqlite-amalgamation, they will
-      still need to be configured, built and installed explicitly, and
-      Subversion's own configure script may need to be told where to find
-      them, if they were not installed in standard system locations.
+      distribution.
 
       There are optional dependencies (such as swig and httpd) which
       get-deps.sh does not download.
