@@ -76,12 +76,13 @@ Other candidate changes:
   Votes:
     +1: dsahlberg
 
-* r1936884, r1936949, r1936953, r1936955, r1936956, r1936958, r1936959, r1936961, r1936962, r1936963, r1936965
+* r1936884, r1936949, r1936953, r1936955, r1936956, r1936958, r1936959, r1936961, r1936962, r1936963, r1936965, r1937573, r1937576, r1937577
   INSTALL: Corrections and cleanups
   Justification:
     Documentation correctness
   Votes:
-    +1: hartmannathan
+    +1: hartmannathan (without 1937573-1937577)
+    +1: dsahlberg
 
 Veto-blocked changes:
 =====================
