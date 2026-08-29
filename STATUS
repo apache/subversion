@@ -84,6 +84,13 @@ Other candidate changes:
     +1: hartmannathan (without 1937573-1937577)
     +1: dsahlberg
 
+* 1937538
+   Fix a memory corruption in utf.c:convert_to_stringbuf().
+  Justification:
+    Don't crash...
+  Votes:
+    +1: rinrab
+
 Veto-blocked changes:
 =====================
 
