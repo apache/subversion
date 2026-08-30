@@ -98,6 +98,13 @@ Other candidate changes:
   Votes:
     +1 (non-binding): lyalyakin
 
+* r1937643
+   Remove all (old and outdated) Buildbot scripts
+  Justification:
+    Remove all Buildbot scripts as discussed on dev@
+  Votes:
+    +1 (non-binding): lyalyakin
+
 Veto-blocked changes:
 =====================
 
