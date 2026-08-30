@@ -97,6 +97,7 @@ Other candidate changes:
     Remove get-geps.sh as discussed on dev@
   Votes:
     +1 (non-binding): lyalyakin
+    +1: dsahlberg
 
 * r1937643
    Remove all (old and outdated) Buildbot scripts
@@ -104,6 +105,7 @@ Other candidate changes:
     Remove all Buildbot scripts as discussed on dev@
   Votes:
     +1 (non-binding): lyalyakin
+    +1: dsahlberg
 
 Veto-blocked changes:
 =====================
