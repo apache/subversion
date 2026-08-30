@@ -1,0 +1,5 @@
+This directory used to contain scripts for Buildbot, a CI platform used by
+Subversion from before 2010 until 2025. We started migrating to GitHub Actions
+in r1920766 and removed the last jobs from the ASF Infra repository in 
+https://svn.apache.org/repos/infra/infrastructure/buildbot2/@1089557
+
