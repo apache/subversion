@@ -91,6 +91,13 @@ Other candidate changes:
   Votes:
     +1: rinrab
 
+* r1937667
+   Remove get-deps.sh
+  Justification:
+    Remove get-geps.sh as discussed on dev@
+  Votes:
+    +1 (non-binding): lyalyakin
+
 Veto-blocked changes:
 =====================
 
