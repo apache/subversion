@@ -64,8 +64,14 @@ I.    INTRODUCTION
 
       You'll need the following build tools to compile Subversion:
 
-      * autoconf 2.59 or later (Unix only)
-      * libtool 2.0 or later (Unix only)
+      * autoconf 2.59 or later and libtool 2.0 or later
+        (Unix only, for the autoconf-based build system)
+
+          or
+
+      * CMake 3.20 or later (Windows and Unix, for the
+        CMake-based build system)
+
       * a reasonable C compiler (gcc, Visual Studio, etc.)
 
 
