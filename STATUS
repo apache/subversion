@@ -82,7 +82,7 @@ Other candidate changes:
     Documentation correctness
   Votes:
     +1: hartmannathan (without 1937573-1937577 and 1937693)
-    +1: dsahlberg (without 1937693)
+    +1: dsahlberg
 
 * r1937538
    Fix a memory corruption in utf.c:convert_to_stringbuf().
