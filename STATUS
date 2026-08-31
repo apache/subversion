@@ -91,14 +91,6 @@ Other candidate changes:
   Votes:
     +1: rinrab
 
-* r1937667
-   Remove get-deps.sh
-  Justification:
-    Remove get-geps.sh as discussed on dev@
-  Votes:
-    +1 (non-binding): lyalyakin
-    +1: dsahlberg
-
 * r1937643
    Remove all (old and outdated) Buildbot scripts
   Justification:
@@ -112,3 +104,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+* r1937667
+   Remove get-deps.sh
+  Justification:
+    Remove get-geps.sh as discussed on dev@
+  Votes:
+    +1 (non-binding): lyalyakin
+    +1: dsahlberg, ivan
