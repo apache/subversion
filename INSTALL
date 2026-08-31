@@ -230,29 +230,6 @@ I.    INTRODUCTION
         the ends of their lines. Otherwise Visual Studio will complain that
         it doesn't recognize the .dsp files.
 
-      Notes on Unix platforms:
-
-      * If you check out APR and APR-util sources from their Subversion
-        repository, you need to run the 'buildconf' script in each library's
-        directory to regenerate the configure scripts and other files
-        required for compiling the libraries. Afterwards, configure, build,
-        and install both libraries before running Subversion's configure
-        script. For example:
-
-          $ cd apr
-          $ ./buildconf
-          $ ./configure <options...>
-          $ make
-          $ make install
-          $ cd ..
-
-          $ cd apr-util
-          $ ./buildconf
-          $ ./configure <options...>
-          $ make
-          $ make install
-          $ cd ..
-
 
       2.  SQLite  (REQUIRED)
 
