@@ -15,14 +15,6 @@ Status of 1.15.0:
 Release blockers for 1.15.0:
 ============================
 
-* r1936939
-  Make sure --with-junit is set when --enable-javahl since the install-
-  javahl target will fail otherwise since r1933892.
-  Justification:
-    We shouldn't fail installing
-  Votes:
-    +1: dsahlberg, brane
-
 Candidate changes that cannot go into a later 1.15.x:
 =====================================================
 
@@ -96,3 +88,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+* r1936939
+  Make sure --with-junit is set when --enable-javahl since the install-
+  javahl target will fail otherwise since r1933892.
+  Justification:
+    We shouldn't fail installing
+  Votes:
+    +1: dsahlberg, brane, stsp
