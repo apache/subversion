@@ -149,6 +149,8 @@ debug_dir_added(const char *relpath,
 {
   debug_diff_tree_baton_t *b = processor->baton;
 
+  b->indent_level--;
+
   SVN_ERR(write_action(b, "dir_added", relpath, scratch_pool));
   SVN_ERR(write_action_property_source(b, "copyfrom_source",
                                        copyfrom_source, scratch_pool));
@@ -167,6 +169,8 @@ debug_dir_deleted(const char *relpath,
                   apr_pool_t *scratch_pool)
 {
   debug_diff_tree_baton_t *b = processor->baton;
+
+  b->indent_level--;
 
   SVN_ERR(write_action(b, "dir_deleted", relpath, scratch_pool));
   SVN_ERR(write_action_property_source(b, "left_source",
@@ -187,6 +191,8 @@ debug_dir_changed(const char *relpath,
                   apr_pool_t *scratch_pool)
 {
   debug_diff_tree_baton_t *b = processor->baton;
+
+  b->indent_level--;
 
   SVN_ERR(write_action(b, "dir_changed", relpath, scratch_pool));
   SVN_ERR(write_action_property_source(b, "left_source",
