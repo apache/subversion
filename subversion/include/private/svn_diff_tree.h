@@ -373,6 +373,17 @@ const svn_diff_tree_processor_t *
 svn_diff__tree_processor_debug_create(svn_stream_t *out_stream,
                                       apr_pool_t *result_pool);
 
+
+/* Attaches debug logging for stdout onto @a processor, wraping the tree
+ * processor into a new one that will also call the methods from the original
+ * vtable.
+ *
+ * This is essentially a helper for faster use of
+ * svn_diff__tree_processor_debug_create(). */
+svn_error_t *
+svn_diff__tree_processor_use_debug(const svn_diff_tree_processor_t **processor,
+                                   apr_pool_t *result_pool);
+
 svn_diff_source_t *
 svn_diff__source_create(svn_revnum_t revision,
                         apr_pool_t *result_pool);

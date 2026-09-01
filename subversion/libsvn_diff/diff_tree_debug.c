@@ -371,3 +371,19 @@ svn_diff__tree_processor_debug_create(svn_stream_t *out_stream,
 
   return debug;
 }
+
+svn_error_t *
+svn_diff__tree_processor_use_debug(const svn_diff_tree_processor_t **processor,
+                                   apr_pool_t *result_pool)
+{
+  svn_stream_t *stdout_stream;
+  const svn_diff_tree_processor_t *debug;
+
+  SVN_ERR(svn_stream_for_stdout(&stdout_stream, result_pool));
+
+  debug = svn_diff__tree_processor_debug_create(stdout_stream, result_pool);
+
+  *processor = svn_diff__tree_processor_tee_create(*processor, debug,
+                                                   result_pool);
+  return SVN_NO_ERROR;
+}
