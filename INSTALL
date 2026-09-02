@@ -1045,7 +1045,7 @@ IV.   PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, JAVA)
 
 
 V.    DEPENDENCIES IN DETAIL
-      ========================================================
+      ======================
 
       Subversion depends on a number of third party tools and libraries.
       Some of them are only required to run a Subversion server; others
