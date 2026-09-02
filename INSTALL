@@ -1178,19 +1178,19 @@ V.    DEPENDENCIES IN DETAIL
         --with-utf8proc=internal
 
 
-      5.  autoconf 2.59 or newer (Unix only)
+      5.  autoconf 2.59 or newer  (Unix only)
 
       This is required only if you plan to build from the latest source
       (see section II.B). Generally only developers would be doing this.
 
 
-      6.  libtool 2.0 or newer (Unix only)
+      6.  libtool 2.0 or newer  (Unix only)
 
       This is required only if you plan to build from the latest source
       (see section II.B).
 
 
-      7.  Apache Serf library 1.3.4 or newer (OPTIONAL)
+      7.  Apache Serf library 1.3.4 or newer  (OPTIONAL)
 
       If you want your client to be able to speak to an Apache
       server (via a http:// or https:// URL), you must link against
@@ -1210,7 +1210,7 @@ V.    DEPENDENCIES IN DETAIL
       system or directly from https://serf.apache.org/.
 
 
-      8.  Cyrus SASL library (OPTIONAL)
+      8.  Cyrus SASL library  (OPTIONAL)
 
       If the Simple Authentication and Security Layer (SASL) library
       is detected on your system, then the Subversion client and
@@ -1335,7 +1335,7 @@ V.    DEPENDENCIES IN DETAIL
       then pass the '--with-gnome-keyring' option to `configure`.
 
 
-      17. libmagic (OPTIONAL)
+      17. libmagic  (OPTIONAL)
 
       If the libmagic library is detected at compile time,
       it will be used to determine mime-types of binary files
@@ -1363,7 +1363,7 @@ V.    DEPENDENCIES IN DETAIL
         --with-libmagic
 
 
-      18. LZ4 (REQUIRED)
+      18. LZ4  (REQUIRED)
 
       Subversion uses the LZ4 library for compression.  If it is not
       detected at compile time, a copy bundled with the Subversion sources
@@ -1381,7 +1381,7 @@ V.    DEPENDENCIES IN DETAIL
         --with-lz4=internal
 
 
-      19. py3c (OPTIONAL)
+      19. py3c  (OPTIONAL)
 
       Subversion uses the Python 3 Compatibility Layer for C
       Extensions (py3c) library when building the Python language
