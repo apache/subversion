@@ -78,91 +78,33 @@ I.    INTRODUCTION
 
       Subversion also depends on the following third-party libraries:
 
-      * libapr and libapr-util (REQUIRED for client and server)
+      Required:
 
-         The Apache Portable Runtime (APR) library provides an
-         abstraction of operating-system level services such as file
-         and network I/O, memory management, and so on.  It also
-         provides convenience routines for things like hashtables,
-         checksums, and argument processing.  While it was originally
-         developed for the Apache HTTP server, APR is a standalone
-         library used by Subversion and other products.  It is a
-         critical dependency for all of Subversion; it's the layer
-         that allows Subversion clients and servers to run on
-         different operating systems.
+      * APR and APR-Util 1.4 or later -- the portability layer that allows
+        Subversion to run on different operating systems.
+      * Expat -- XML parsing.
+      * zlib -- compression of binary diffs, used everywhere.
+      * LZ4 r129 or later -- compression.  A bundled copy can be used.
+      * SQLite 2.24.0 or later -- used for some internal databases.  An
+        amalgamation file can be used instead of an installed library.
+      * utf8proc -- UTF-8 support, including Unicode normalization.  A bundled
+        copy can be used.
 
-      * Expat  (REQUIRED for client and server)
+      Optional:
 
-         Subversion uses the Expat library for XML parsing.
-
-      * SQLite  (REQUIRED for client and server)
-
-         Subversion uses SQLite to manage some internal databases.
-
-      * Zlib  (REQUIRED for client and server)
-
-         Subversion uses zlib for compressing binary differences.
-         These diff streams are used everywhere -- over the network,
-         in the repository, and in the client's working copy.
-
-      * LZ4  (REQUIRED for client and server)
-
-         Subversion uses the LZ4 library for compression.  If it is not
-         detected at compile time, a copy bundled with the Subversion sources
-         can be used.
-
-      * utf8proc  (REQUIRED for client and server)
-      
-         Subversion uses utf8proc for UTF-8 support, including Unicode
-         normalization.
-
-      * Apache Serf  (OPTIONAL for client)
-
-         The Apache Serf library enables the Subversion client to access
-         repositories over http:// and https:// URLs.  Apache Serf uses OpenSSL
-         for the encrypted https:// communication.
-
-      * Berkeley DB  (DEPRECATED, TO BE REMOVED IN THE FUTURE)
-
-         Needed only for the deprecated BDB repository backend.  Support for
-         BDB is planned to be removed completely in the future.
-
-         The CMake build system does not support building with BDB.
-
-      * libsasl (OPTIONAL for client and server)
-
-         If the Cyrus SASL library is detected at compile time, then
-         the svn client (and svnserve server) will be able to utilize
-         SASL to do various forms of authentication when speaking the
-         svnserve protocol.
-
-      * Python, Perl, Java, Ruby  (OPTIONAL)
-
-         Subversion is mostly a collection of C libraries with
-         well-defined APIs, with a small collection of programs that
-         use the APIs.  If you want to build Subversion API bindings
-         for other languages, you need to have those languages
-         available at build time.
-
-      * py3c (OPTIONAL, but REQUIRED for Python bindings)
-
-        The Python 3 Compatibility Layer for C Extensions is required
-        to build the Python language bindings.
-
-      * KDE Framework 5, libsecret, GNOME Keyring (OPTIONAL for client)
-
-         Subversion contains optional support for storing passwords in
-         KWallet via KDE Framework 5 libraries (preferred) or kdelibs4,
-         and GNOME Keyring via libsecret (preferred) or GNOME APIs.
-
-      * libmagic (OPTIONAL)
-
-         If the libmagic library is detected at compile time,
-         it will be used to determine mime-types of binary files
-         which are added to version control. Note that mime-types
-         configured via auto-props or the mime-types-file option
-         take precedence.
-
+      * Apache Serf 1.3.4 or later -- access to Subversion repositories over
+        http:// and https:// (client).  Strongly recommended.
+      * Cyrus SASL 2 -- SASL authentication for svn:// (client and svnserve
+        server).
+      * libmagic -- MIME type detection for files added to Subversion.
+      * libsecret -- password storage in GNOME Keyring (client, Unix-only).
+      * KDE Frameworks 5 with Qt 5 and D-Bus -- password storage in KWallet
+        (client, Unix-only).
+      * Python, Perl, Java, Ruby (with py3c for Python) -- the language
+        bindings.
+      * Apache HTTP Server 2.2 or later -- the mod_dav_svn server module.
+      * Berkeley DB 4.0.14 or later -- the deprecated BDB repository backend,
+        to be removed in the futur (server).
 
 
   D. Documentation
@@ -1131,6 +1073,17 @@ V.    DEPENDENCIES IN DETAIL
       Apache Portable Runtime (APR) and the APR Utility (APR-util)
       libraries.
 
+      The Apache Portable Runtime (APR) library provides an
+      abstraction of operating-system level services such as file
+      and network I/O, memory management, and so on.  It also
+      provides convenience routines for things like hashtables,
+      checksums, and argument processing.  While it was originally
+      developed for the Apache HTTP server, APR is a standalone
+      library used by Subversion and other products.  It is a
+      critical dependency for all of Subversion; it's the layer
+      that allows Subversion clients and servers to run on
+      different operating systems.
+
       If you do not have a pre-installed APR and APR-util, you will need
       to get these yourself:
 
@@ -1178,6 +1131,8 @@ V.    DEPENDENCIES IN DETAIL
 
       2.  SQLite  (REQUIRED)
 
+      Subversion uses SQLite to manage some internal databases.
+
       Subversion requires SQLite version 3.24.0 or above.  You can meet this
       dependency several ways:
         * Use an SQLite amalgamation file.
@@ -1194,18 +1149,23 @@ V.    DEPENDENCIES IN DETAIL
 
       3.  Zlib  (REQUIRED)
 
-      Subversion's binary-differencing engine depends on zlib for
-      compression.  Most Unix systems have zlib pre-installed, but if
-      you need it, you can get it from
+      Subversion uses zlib for compressing binary differences.
+      These diff streams are used everywhere -- over the network,
+      in the repository, and in the client's working copy.
+
+      Most Unix systems have zlib pre-installed, but if you need it, you ca
+      get it from
 
           http://www.zlib.net/
 
 
       4.  utf8proc  (REQUIRED)
 
-      Subversion uses utf8proc for UTF-8 support.  Configure will
-      attempt to locate utf8proc by default using pkg-config and known
-      paths.
+      Subversion uses utf8proc for UTF-8 support, including Unicode
+      normalization.
+
+      Configure will attempt to locate utf8proc by default using pkg-config and
+      known paths.
 
       If it is installed in a non-standard location, then use:
 
@@ -1235,6 +1195,8 @@ V.    DEPENDENCIES IN DETAIL
       If you want your client to be able to speak to an Apache
       server (via a http:// or https:// URL), you must link against
       Apache Serf.  Though optional, we strongly recommend this.
+
+      Apache Serf uses OpenSSL for the encrypted https:// communication.
 
       In order to use ra_serf, you must install serf.  Configure will
       attempt to locate libserf by default using pkg-config.
@@ -1375,6 +1337,12 @@ V.    DEPENDENCIES IN DETAIL
 
       17. libmagic (OPTIONAL)
 
+      If the libmagic library is detected at compile time,
+      it will be used to determine mime-types of binary files
+      which are added to version control. Note that mime-types
+      configured via auto-props or the mime-types-file option
+      take precedence.
+
       Subversion's configure script attempts to find libmagic automatically.
       If it is installed in a non-standard location, then use:
 
@@ -1396,6 +1364,10 @@ V.    DEPENDENCIES IN DETAIL
 
 
       18. LZ4 (REQUIRED)
+
+      Subversion uses the LZ4 library for compression.  If it is not
+      detected at compile time, a copy bundled with the Subversion sources
+      can be used.
 
       Subversion uses LZ4 compression library version r129 or above. Configure
       will attempt to locate the system library by default using pkg-config
@@ -1428,3 +1400,14 @@ V.    DEPENDENCIES IN DETAIL
       The library can be downloaded from GitHub:
 
           https://github.com/encukou/py3c
+
+      20. Expat  (REQUIRED for client and server)
+
+      Subversion uses the Expat library for XML parsing.
+
+      21. Berkeley DB  (DEPRECATED, TO BE REMOVED IN THE FUTURE)
+
+      Needed only for the deprecated BDB repository backend.  Support for
+      BDB is planned to be removed completely in the future.
+
+      The CMake build system does not support building with BDB.
