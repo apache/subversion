@@ -1166,10 +1166,6 @@ V.    DEPENDENCIES IN DETAIL
 
       5.  LZ4  (REQUIRED)
 
-      Subversion uses the LZ4 library for compression.  If it is not
-      detected at compile time, a copy bundled with the Subversion sources
-      can be used.
-
       Subversion uses LZ4 compression library version r129 or above. Configure
       will attempt to locate the system library by default using pkg-config
       and known paths.
