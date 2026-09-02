@@ -1129,7 +1129,12 @@ V.    DEPENDENCIES IN DETAIL
         it doesn't recognize the .dsp files.
 
 
-      2.  SQLite  (REQUIRED)
+      2.  Expat  (REQUIRED for client and server)
+
+      Subversion uses the Expat library for XML parsing.
+
+
+      3.  SQLite  (REQUIRED)
 
       Subversion uses SQLite to manage some internal databases.
 
@@ -1147,7 +1152,7 @@ V.    DEPENDENCIES IN DETAIL
           https://www.sqlite.org/download.html
 
 
-      3.  Zlib  (REQUIRED)
+      4.  Zlib  (REQUIRED)
 
       Subversion uses zlib for compressing binary differences.
       These diff streams are used everywhere -- over the network,
@@ -1159,7 +1164,7 @@ V.    DEPENDENCIES IN DETAIL
           http://www.zlib.net/
 
 
-      4.  utf8proc  (REQUIRED)
+      5.  utf8proc  (REQUIRED)
 
       Subversion uses utf8proc for UTF-8 support, including Unicode
       normalization.
@@ -1178,19 +1183,19 @@ V.    DEPENDENCIES IN DETAIL
         --with-utf8proc=internal
 
 
-      5.  autoconf 2.59 or newer  (Unix only)
+      6.  autoconf 2.59 or newer  (Unix only)
 
       This is required only if you plan to build from the latest source
       (see section II.B). Generally only developers would be doing this.
 
 
-      6.  libtool 2.0 or newer  (Unix only)
+      7.  libtool 2.0 or newer  (Unix only)
 
       This is required only if you plan to build from the latest source
       (see section II.B).
 
 
-      7.  Apache Serf library 1.3.4 or newer  (OPTIONAL)
+      8.  Apache Serf library 1.3.4 or newer  (OPTIONAL)
 
       If you want your client to be able to speak to an Apache
       server (via a http:// or https:// URL), you must link against
@@ -1210,7 +1215,7 @@ V.    DEPENDENCIES IN DETAIL
       system or directly from https://serf.apache.org/.
 
 
-      8.  Cyrus SASL library  (OPTIONAL)
+      9.  Cyrus SASL library  (OPTIONAL)
 
       If the Simple Authentication and Security Layer (SASL) library
       is detected on your system, then the Subversion client and
@@ -1221,7 +1226,7 @@ V.    DEPENDENCIES IN DETAIL
          https://www.cyrusimap.org/sasl/
 
 
-      9. Apache Web Server 2.2.X or newer  (OPTIONAL)
+      10. Apache Web Server 2.2.X or newer  (OPTIONAL)
 
           (https://httpd.apache.org/download.cgi)
 
@@ -1234,7 +1239,7 @@ V.    DEPENDENCIES IN DETAIL
       is done: See section III for details.
 
 
-      10. Python 3.x or newer (https://www.python.org/)  (OPTIONAL)
+      11. Python 3.x or newer (https://www.python.org/)  (OPTIONAL)
 
       Subversion does not require Python for its basic operation.
       However, Python is required for building and testing Subversion
@@ -1286,26 +1291,26 @@ V.    DEPENDENCIES IN DETAIL
       section II.B for more about autogen.sh.
 
 
-      11. pkg-config  (Unix only, OPTIONAL)
+      12. pkg-config  (Unix only, OPTIONAL)
 
       Subversion uses pkg-config to find appropriate options used
       at build time.
 
 
-      12. D-Bus  (Unix only, OPTIONAL)
+      13. D-Bus  (Unix only, OPTIONAL)
 
       D-Bus is a message bus system. D-Bus is required for support for KWallet
       and GNOME Keyring. pkg-config is needed to find D-Bus headers and library.
 
 
-      13. Qt 5 or Qt 4  (Unix only, OPTIONAL)
+      14. Qt 5 or Qt 4  (Unix only, OPTIONAL)
 
       Qt is a cross-platform application framework. QtCore, QtDBus and QtGui
       modules are required for support for KWallet. pkg-config is needed
       to find Qt headers and libraries.
 
 
-      14. KDE 5 Framework libraries or KDELibs 4  (Unix only, OPTIONAL)
+      15. KDE 5 Framework libraries or KDELibs 4  (Unix only, OPTIONAL)
 
       Subversion contains optional support for storing passwords in KWallet.
       Subversion will look for KF5Wallet, KF5CoreAddons, KF5I18n APIs by default,
@@ -1321,13 +1326,13 @@ V.    DEPENDENCIES IN DETAIL
           --with-kwallet=/path/to/KDE/prefix
 
 
-      15. GLib 2  (Unix only, OPTIONAL)
+      16. GLib 2  (Unix only, OPTIONAL)
 
       GLib is a general-purpose utility library. GLib is required for support
       for GNOME Keyring. pkg-config is needed to find GLib headers and library.
 
 
-      16. GNOME Keyring  (Unix only, OPTIONAL)
+      17. GNOME Keyring  (Unix only, OPTIONAL)
 
       Subversion contains optional support for storing passwords in GNOME Keyring.
       pkg-config is needed to find GNOME Keyring headers and library. D-Bus and
@@ -1335,7 +1340,7 @@ V.    DEPENDENCIES IN DETAIL
       then pass the '--with-gnome-keyring' option to `configure`.
 
 
-      17. libmagic  (OPTIONAL)
+      18. libmagic  (OPTIONAL)
 
       If the libmagic library is detected at compile time,
       it will be used to determine mime-types of binary files
@@ -1363,7 +1368,7 @@ V.    DEPENDENCIES IN DETAIL
         --with-libmagic
 
 
-      18. LZ4  (REQUIRED)
+      19. LZ4  (REQUIRED)
 
       Subversion uses the LZ4 library for compression.  If it is not
       detected at compile time, a copy bundled with the Subversion sources
@@ -1381,7 +1386,7 @@ V.    DEPENDENCIES IN DETAIL
         --with-lz4=internal
 
 
-      19. py3c  (OPTIONAL)
+      20. py3c  (OPTIONAL)
 
       Subversion uses the Python 3 Compatibility Layer for C
       Extensions (py3c) library when building the Python language
@@ -1401,9 +1406,6 @@ V.    DEPENDENCIES IN DETAIL
 
           https://github.com/encukou/py3c
 
-      20. Expat  (REQUIRED for client and server)
-
-      Subversion uses the Expat library for XML parsing.
 
       21. Berkeley DB  (DEPRECATED, TO BE REMOVED IN THE FUTURE)
 
