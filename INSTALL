@@ -85,7 +85,7 @@ I.    INTRODUCTION
       * Expat -- XML parsing.
       * zlib -- compression of binary diffs, used everywhere.
       * LZ4 r129 or later -- compression.  A bundled copy can be used.
-      * SQLite 2.24.0 or later -- used for some internal databases.  An
+      * SQLite 3.24.0 or later -- used for some internal databases.  An
         amalgamation file can be used instead of an installed library.
       * utf8proc -- UTF-8 support, including Unicode normalization.  A bundled
         copy can be used.
@@ -104,7 +104,7 @@ I.    INTRODUCTION
         bindings.
       * Apache HTTP Server 2.2 or later -- the mod_dav_svn server module.
       * Berkeley DB 4.0.14 or later -- the deprecated BDB repository backend,
-        to be removed in the futur (server).
+        to be removed in the future (server).
 
 
   C. Documentation
