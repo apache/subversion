@@ -1158,7 +1158,7 @@ V.    DEPENDENCIES IN DETAIL
       These diff streams are used everywhere -- over the network,
       in the repository, and in the client's working copy.
 
-      Most Unix systems have zlib pre-installed, but if you need it, you ca
+      Most Unix systems have zlib pre-installed, but if you need it, you can
       get it from
 
           http://www.zlib.net/
