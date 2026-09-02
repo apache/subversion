@@ -1175,6 +1175,7 @@ V.    DEPENDENCIES IN DETAIL
         --with-lz4=/path/to/liblz4
 
       If configure should use the version bundled with the sources, use:
+
         --with-lz4=internal
 
 
