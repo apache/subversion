@@ -5,7 +5,7 @@
 #   https://subversion.apache.org/issue-XXXX
 
 Version 1.15.0
-(12 Aug 2026, from /branches/1.15.x)
+(21 Sep 2026, from /branches/1.15.x)
 https://svn.apache.org/repos/asf/subversion/tags/1.15.0
 
 See the 1.15 release notes for a more verbose overview of the changes since
@@ -62,8 +62,12 @@ the 1.14 release:  https://subversion.apache.org/docs/release-notes/1.15.html
       repository root path (r1926683)
     * svnadmin: Minor optimization in 'svnadmin load' (r1908751)
     * svnserve: Add SIGTERM/SIGINT handling (r1908547, r1934784)
+    * Fix possible crash when parsing malformed repository dumps (r1936337)
 
   - Other tool improvements and bugfixes:
+    * Remove the wc-format.py script (r1936209)
+    * Remove the build-svn-deps-win.pl script (r1936226)
+    * Remove the backport.pl script (r1936310 et al)
     * case-insensitive.py: Update for Python 3 compatibility (r1881774)
     * check-mime-type.pl: Support property-modified files (r1911931)
     * fsfsfixer: Update to work with svnadmin verify versions 1.9+ (r1886928)
@@ -77,7 +81,6 @@ the 1.14 release:  https://subversion.apache.org/docs/release-notes/1.15.html
     * svn_apply_autoprops.py: Update for Python 3 compatibility (r1917446)
     * svn_load_dirs.pl: Update to handle 'svn propget' errors for non-existent
       properties (r1912002, issue #4621)
-    * wc-format.py: Minor update for Python 3 compatibility (r1880178)
 
  Developer-visible changes:
   - General:
@@ -88,6 +91,7 @@ the 1.14 release:  https://subversion.apache.org/docs/release-notes/1.15.html
     * Enable multi-processor compilation (/MP) on Windows (r1906011)
     * Support shared RA modules on Windows with CMake (r1921006 et al)
     * Support running Valgrind during 'make check' (r1908546)
+    * Remove the get-deps.sh script (r1937667)
     * Fix building against static Serf on Windows (r1888560)
     * Fix building with zlib 1.3.2+ on Windows (r1934466)
     * Fix finding libexpat on static library builds on Windows (r1888565)
@@ -103,6 +107,10 @@ the 1.14 release:  https://subversion.apache.org/docs/release-notes/1.15.html
     * Replace obsolete AC_HELP_STRING construct in configure.ac (r1934466)
     * Use snprintf() instead sprintf() if available (r1934788 et al)
     * Guard from accessing uninitialized memory in conflict resolver (r1934787)
+    * Don't use full path in generated config_keys.inc (r1936038, r1936039)
+    * Silence GCC compiler warnings by using const string pointers (r1932158)
+    * Various INSTALL documentation improvements (r1936876, r1936877)
+    * Require --with-junit when configuring with --enable-javahl (r1936939)
     * tests: Allow testing ra_serf using Digest authentication (r1926790)
     * tests: Avoid DNS reverse name lookups during configuration (r1933475)
     * tests: Close file descriptor using the context manager (r1884279)
@@ -113,6 +121,7 @@ the 1.14 release:  https://subversion.apache.org/docs/release-notes/1.15.html
     * tests: Use 2048-bit RSA for the server certificate and key (r1931265)
 
   - Bindings:
+    * Remove the ctypes bindings (r1936775)
     * JavaHL: Fix JNI setup for translateOutputStream (r1886280)
     * JavaHL: Fix test failures with Java 25 on Windows (r1930973, r1934367)
     * JavaHL: Silence warnings about missing bootstrap classpath (r1933796)
