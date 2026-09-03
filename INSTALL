@@ -121,7 +121,7 @@ I.    INTRODUCTION
 II.   INSTALLATION
       ============
 
-      Subversion support three different build systems:
+      Subversion supports three different build systems:
       - Autoconf/make, for Unix builds
       - Visual Studio vcproj, for Windows builds
       - CMake, for both Unix and Windows
