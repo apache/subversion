@@ -125,16 +125,18 @@ II.   INSTALLATION
       - Visual Studio vcproj, for Windows builds
       - CMake, for both Unix and Windows
 
-      The first two have been in use since 2001. Sections A-D below describe
+      The first two have been in use since 2001. Sections A-C below describe
       the classic build system.
 
       The CMake build system was created in 2024 and is still under
       development. It will be included in Subversion 1.15 and is expected to
-      be the default build system starting with Subversion 1.16. Section E
+      be the default build system starting with Subversion 1.16. Section B
       below describes the CMake build system.
 
-  A.  Building from a Tarball
-      ------------------------------
+  A.  Building with autoconf and make (Unix only)
+      -------------------------------------------
+
+  A.1 Building From a Release Tarball
 
       Download the most recent distribution tarball from:
 
@@ -147,11 +149,10 @@ II.   INSTALLATION
           # make install
 
       You can also run the full test suite by running 'make check'.  See the
-      section F for more information.
+      section D for more information.
 
-
-  B.  Building the Latest Source under Unix
-      -------------------------------------
+  A.2  Building from a Working Copy
+       ----------------------------
 
       These instructions assume you have already installed Subversion
       and checked out a working copy of Subversion's own code --
@@ -219,9 +220,8 @@ II.   INSTALLATION
       It probably means that the dynamic loader/linker can't find all
       of the libsvn_* libraries.
 
-
-  C.  Building under Unix in Different Directories
-      --------------------------------------------
+  A.3 Building In a Separate Build Directory
+      --------------------------------------
 
       It is possible to configure and build Subversion on Unix in a
       directory other than the working copy. For example
@@ -267,15 +267,76 @@ II.   INSTALLATION
       into another working copy.
 
 
-  D.  Building the Latest Source under Windows
-      ----------------------------------------
+  B.  Building using CMake (Windows and Unix)
+      ---------------------------------------
+
+      Get the sources, either from a release tarball or by checking out the
+      official repository.
+
+      The process for building on Unix and Windows is the same.
+
+          $ python gen-make.py -t cmake
+          $ cmake -B out [build options]
+          $ cmake --build out
+
+      Note: If you're using the tarball distribution, the first gen-make step
+      can be skipped.
+
+      "out" in the commands above is the build directory used by CMake.
+
+      Build options can be added, for example:
+
+          $ cmake -B out -DCMAKE_INSTALL_PREFIX=/usr/local/subversion -DSVN_ENABLE_TESTS=ON
+
+      Build options can be listed using:
+
+          $ cmake -LH
+
+      Windows tricks:
+
+      - Modern versions of Microsoft Visual Studio provide support for
+        CMake projects out-of-box, including intellisense, integrated
+        options editor, test explorer, and more.
+
+        In order to use it for Subversion, open the source directory with
+        Visual Studio, and the configuration should start automatically.
+        For editing the cache (options), do right-click to the CMakeLists.txt
+        file and clicking `CMake Settings for Subversion` will open the
+        editor. After the required settings are configured, hit `F7` in
+        order to build. For more info, check the article bellow:
+
+            https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio
+
+      - There is a useful tool for bootstrapping the dependencies,
+        vcpkg. It provides ports for the most of the Subversion's
+        dependencies, which then could be installed via a single
+        command.
+
+        To start using it, download the registry from GitHub, bootstrap
+        vcpkg, and install the dependencies:
+
+            $ git clone https://github.com/microsoft/vcpkg
+            $ cd vcpkg && .\bootstrap-vcpkg.bat -disableMetrics
+            $ .\vcpkg install apr apr-util expat zlib sqlite3 serf [any other dependency]
+
+        After this is done, vcpkg can be integrated into CMake by passing
+        the vcpkg toolchain to CMAKE_TOOLCHAIN_FILE option. In order to do
+        it with Visual Studio, open the CMake cache editor as explained in
+        the previous step, and put the following into `CMake toolchain
+        file` field, where VCPKG_ROOT is the path to vcpkg registry:
+
+            <VCPKG_ROOT>/scripts/buildsystems/vcpkg.cmake
+
+
+  C.  Building with vcproj/vcxproj (Windows only, deprecated)
+      -------------------------------------------------------
 
       Windows users may find it easier to build Subversion using CMake and
-      vcpkg (see section E below).
+      vcpkg (see section B above).
 
       The following procedure does not use CMake or vcpkg.
 
-  D.1 Prerequisites
+  C.1 Prerequisites
 
       * Microsoft Visual Studio. Any recent (2005+) version containing the
         Visual C++ component will work (E.g. Professional, Express, Community
@@ -319,7 +380,7 @@ II.   INSTALLATION
         binaries (gettext-0.14.1-bin.zip) and dependencies
         (gettext-0.14.1-dep.zip).
 
-  D.2 Notes
+  C.2 Notes
 
       The Apache Serf library supports secure connections with OpenSSL
       and on-the-wire compression with zlib. If you want to use the
@@ -327,7 +388,7 @@ II.   INSTALLATION
       "--with-openssl" to the gen-make.py script. See Section I.C.7 for
       more details.
 
-  D.3 Preparation
+  C.3 Preparation
 
       This section describes how to unpack the files to make a build tree.
 
@@ -402,7 +463,7 @@ II.   INSTALLATION
         and extract it into SVN\sqlite-amalgamation.
         See I.C.2 for alternatives to using the amalgamation package.
 
-  D.4 Building the Binaries
+  C.4 Building the Binaries
 
       To build the binaries either follow these instructions.
 
@@ -543,7 +604,7 @@ II.   INSTALLATION
 
       The binaries have now been built.
 
-  D.5 Packaging the binaries
+  C.5 Packaging the binaries
 
       You now need to copy the binaries ready to make the release zip
       file. You also need to do this to run the tests as the new binaries
@@ -552,7 +613,7 @@ II.   INSTALLATION
 
       [TBD: Describe how to do this. Note dependencies on zip, jar, doxygen.]
 
-  D.6 Testing the Binaries
+  C.6 Testing the Binaries
       [TBD: It's been a long, long while since it was necessary to move
             binaries around for testing. win-tests.py does that automagically.
             Fix this section accordingly, and probably reorder, putting
@@ -617,68 +678,7 @@ II.   INSTALLATION
       C:>cd ..
 
 
-  E.  Building using CMake
-      --------------------
-
-      Get the sources, either from a release tarball or by checking out the
-      official repository.
-
-      The process for building on Unix and Windows is the same.
-
-          $ python gen-make.py -t cmake
-          $ cmake -B out [build options]
-          $ cmake --build out
-
-      Note: If you're using the tarball distribution, the first gen-make step
-      can be skipped.
-
-      "out" in the commands above is the build directory used by CMake.
-
-      Build options can be added, for example:
-
-          $ cmake -B out -DCMAKE_INSTALL_PREFIX=/usr/local/subversion -DSVN_ENABLE_TESTS=ON
-
-      Build options can be listed using:
-
-          $ cmake -LH
-
-      Windows tricks:
-
-      - Modern versions of Microsoft Visual Studio provide support for
-        CMake projects out-of-box, including intellisense, integrated
-        options editor, test explorer, and more.
-
-        In order to use it for Subversion, open the source directory with
-        Visual Studio, and the configuration should start automatically.
-        For editing the cache (options), do right-click to the CMakeLists.txt
-        file and clicking `CMake Settings for Subversion` will open the
-        editor. After the required settings are configured, hit `F7` in
-        order to build. For more info, check the article bellow:
-
-            https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio
-
-      - There is a useful tool for bootstrapping the dependencies,
-        vcpkg. It provides ports for the most of the Subversion's
-        dependencies, which then could be installed via a single
-        command.
-
-        To start using it, download the registry from GitHub, bootstrap
-        vcpkg, and install the dependencies:
-
-            $ git clone https://github.com/microsoft/vcpkg
-            $ cd vcpkg && .\bootstrap-vcpkg.bat -disableMetrics
-            $ .\vcpkg install apr apr-util expat zlib sqlite3 serf [any other dependency]
-
-        After this is done, vcpkg can be integrated into CMake by passing
-        the vcpkg toolchain to CMAKE_TOOLCHAIN_FILE option. In order to do
-        it with Visual Studio, open the CMake cache editor as explained in
-        the previous step, and put the following into `CMake toolchain
-        file` field, where VCPKG_ROOT is the path to vcpkg registry:
-
-            <VCPKG_ROOT>/scripts/buildsystems/vcpkg.cmake
-
-
-  F.  Running the test suite
+  D.  Running the test suite
       ----------------------
 
       The test suite can be run using any of the build systems above.
@@ -694,7 +694,7 @@ II.   INSTALLATION
       - XPASS means a test which was expected to fail completed successfully.
 
 
-  F.1 Validating XML output
+  D.1 Validating XML output
 
       Some Subversion commands can format their output as XML.  The test suite
       will always verify that the output is valid XML, however it is also
@@ -703,7 +703,7 @@ II.   INSTALLATION
       using the --check-xml-schema argument.
 
 
-  F.2 Running the test suite under the autoconf/make build system
+  D.2 Running the test suite under the autoconf/make build system
 
       Tests can be started with either of the following commands
       - make check [options]
@@ -731,7 +731,7 @@ II.   INSTALLATION
         performed, see the --check-xml-schema option above.
 
 
-  F.3 Running the test suite under the CMake build system
+  D.3 Running the test suite under the CMake build system
 
       Run the ctests command from the build directory.
 
@@ -840,7 +840,7 @@ III.  BUILDING A SUBVERSION SERVER
       if you passed --with-apache-libexecdir to configure).
 
 
-      Section II.D explains how to build the server on Windows.
+      Section II.C explains how to build the server on Windows.
 
 
   C.  Configuring Apache Httpd for Subversion
@@ -1032,7 +1032,7 @@ V.    DEPENDENCIES IN DETAIL
 
       Note: Because previous builds of Subversion may have installed older
       versions of these libraries, you may want to run some of the cleanup
-      commands described in section II.B before installing the following.
+      commands described in section II.A.2 before installing the following.
 
 
       1.  Apache Portable Runtime and APR-util  (REQUIRED)
@@ -1175,7 +1175,7 @@ V.    DEPENDENCIES IN DETAIL
       The minimum supported version is 2.59.
 
       This is required only if you plan to build from the latest source
-      (see section II.B). Generally only developers would be doing this.
+      (see section II.A.2). Generally only developers would be doing this.
 
 
       8.  libtool  (Unix only)
@@ -1183,7 +1183,7 @@ V.    DEPENDENCIES IN DETAIL
       The minimum supported version is 2.0.
 
       This is required only if you plan to build from the latest source
-      (see section II.B).
+      (see section II.A.2).
 
 
       9.  Apache Serf library  (OPTIONAL)
@@ -1252,8 +1252,8 @@ V.    DEPENDENCIES IN DETAIL
       * Use the SWIG Python bindings.
       * Use hook scripts coded in Python.
       * Build Subversion from a tarball on Unix-like systems and run
-        Subversion's test suite as described in section II.B.
-      * Build Subversion on Windows as described in section II.D.
+        Subversion's test suite as described in section II.D.
+      * Build Subversion on Windows as described in section II.C.
       * Build Subversion from a working copy checked out from
         Subversion's own repository (whether or not running the test
         suite).
@@ -1286,7 +1286,7 @@ V.    DEPENDENCIES IN DETAIL
       to build the Python bindings for Python 2, you should rebuild
       the build environment in non-release mode by running
       'sh autogen.sh' before running the ./configure script; see
-      section II.B for more about autogen.sh.
+      section II.A.2 for more about autogen.sh.
 
 
       13. pkg-config  (Unix only, OPTIONAL)
