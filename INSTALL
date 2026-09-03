@@ -1137,10 +1137,10 @@ V.    DEPENDENCIES IN DETAIL
 
       3.  SQLite  (REQUIRED)
 
-      Subversion uses SQLite to manage some internal databases.
+      Subversion requires SQLite 3.24.0 or later.
 
-      Subversion requires SQLite version 3.24.0 or above.  You can meet this
-      dependency several ways:
+      Subversion uses SQLite to manage some internal databases.  You can meet
+      this dependency several ways:
         * Use an SQLite amalgamation file.
         * Specify an SQLite installation to use.
         * Let Subversion find an installed SQLite.
@@ -1167,9 +1167,10 @@ V.    DEPENDENCIES IN DETAIL
 
       5.  LZ4  (REQUIRED)
 
-      Subversion uses LZ4 compression library version r129 or above. Configure
-      will attempt to locate the system library by default using pkg-config
-      and known paths.
+      Subversion requires LZ4 version r129 or later.
+
+      Subversion uses the LZ4 library for compression.  Configure will attempt
+      to locate the system library by default using pkg-config and known paths.
 
       If it is installed in a non-standard location, then use:
 
@@ -1199,19 +1200,25 @@ V.    DEPENDENCIES IN DETAIL
         --with-utf8proc=internal
 
 
-      7.  autoconf 2.59 or newer  (Unix only)
+      7.  autoconf  (Unix only)
+
+      The minimum supported version is 2.59.
 
       This is required only if you plan to build from the latest source
       (see section II.B). Generally only developers would be doing this.
 
 
-      8.  libtool 2.0 or newer  (Unix only)
+      8.  libtool  (Unix only)
+
+      The minimum supported version is 2.0.
 
       This is required only if you plan to build from the latest source
       (see section II.B).
 
 
-      9.  Apache Serf library 1.3.4 or newer  (OPTIONAL)
+      9.  Apache Serf library  (OPTIONAL)
+
+      The minimum supported version is 1.3.4.
 
       If you want your client to be able to speak to an Apache
       server (via a http:// or https:// URL), you must link against
@@ -1242,9 +1249,11 @@ V.    DEPENDENCIES IN DETAIL
          https://www.cyrusimap.org/sasl/
 
 
-      11. Apache Web Server 2.2.X or newer  (OPTIONAL)
+      11. Apache Web Server  (OPTIONAL)
 
           (https://httpd.apache.org/download.cgi)
+
+      The minimum supported version is 2.2.
 
       The Apache httpd server is one of two methods to make your Subversion
       repository available over a network - the other is a custom server
@@ -1255,7 +1264,10 @@ V.    DEPENDENCIES IN DETAIL
       is done: See section III for details.
 
 
-      12. Python 3.x or newer (https://www.python.org/)  (OPTIONAL)
+      12. Python (https://www.python.org/)  (OPTIONAL)
+
+      Python version 3.x is supported and recommended.  Support for Python 2.7
+      is being phased out.
 
       Subversion does not require Python for its basic operation.
       However, Python is required for building and testing Subversion
