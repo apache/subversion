@@ -17,10 +17,9 @@ Contents:
        A. Building from a Tarball
        B. Building the Latest Source under Unix
        C. Building under Unix in Different Directories
-       D. Installing from a Zip or Installer File under Windows
-       E. Building the Latest Source under Windows
-       F. Building using CMake
-       G. Running the test suite
+       D. Building the Latest Source under Windows
+       E. Building using CMake
+       F. Running the test suite
 
    III. BUILDING A SUBVERSION SERVER
        A. Setting Up Apache Httpd
@@ -126,12 +125,12 @@ II.   INSTALLATION
       - Visual Studio vcproj, for Windows builds
       - CMake, for both Unix and Windows
 
-      The first two have been in use since 2001. Sections A-E below describe
+      The first two have been in use since 2001. Sections A-D below describe
       the classic build system.
 
       The CMake build system was created in 2024 and is still under
       development. It will be included in Subversion 1.15 and is expected to
-      be the default build system starting with Subversion 1.16. Section F
+      be the default build system starting with Subversion 1.16. Section E
       below describes the CMake build system.
 
   A.  Building from a Tarball
@@ -148,7 +147,7 @@ II.   INSTALLATION
           # make install
 
       You can also run the full test suite by running 'make check'.  See the
-      section G for more information.
+      section F for more information.
 
 
   B.  Building the Latest Source under Unix
@@ -268,44 +267,15 @@ II.   INSTALLATION
       into another working copy.
 
 
-  D.  Installing from a Zip or Installer File under Windows
-      -----------------------------------------------------
-
-      Of all the ways of getting a Subversion client, this is the
-      easiest.  Download a Zip or self-extracting installer via:
-
-      https://subversion.apache.org/packages.html#windows
-
-      For a Zip file extract the DLLs and EXEs to a directory of your
-      choice. Included in the download are among other tools the SVN
-      client, the SVNADMIN administration tool and the SVNLOOK reporting
-      tool.
-
-      You may want to add the bin directory in the Subversion folder to your
-      PATH environment variable so as to not have to use the full path when
-      running Subversion commands.
-
-      To test the installation, open a DOS box (run either "cmd" or
-      "command" from the Start menu's "Run..." menu option), change to
-      the directory you installed the executables into, and run:
-
-          C:\test>svn co https://svn.apache.org/repos/asf/subversion/trunk svn
-
-      This will get the latest Subversion sources and put them into the
-      "svn" subdirectory.
-
-      If using a self-extracting .exe file, just run it instead of
-      unzipping it, to install Subversion.
-
-  E.  Building the Latest Source under Windows
+  D.  Building the Latest Source under Windows
       ----------------------------------------
 
       Windows users may find it easier to build Subversion using CMake and
-      vcpkg (see section F below).
+      vcpkg (see section E below).
 
       The following procedure does not use CMake or vcpkg.
 
-  E.1 Prerequisites
+  D.1 Prerequisites
 
       * Microsoft Visual Studio. Any recent (2005+) version containing the
         Visual C++ component will work (E.g. Professional, Express, Community
@@ -349,7 +319,7 @@ II.   INSTALLATION
         binaries (gettext-0.14.1-bin.zip) and dependencies
         (gettext-0.14.1-dep.zip).
 
-  E.2 Notes
+  D.2 Notes
 
       The Apache Serf library supports secure connections with OpenSSL
       and on-the-wire compression with zlib. If you want to use the
@@ -357,7 +327,7 @@ II.   INSTALLATION
       "--with-openssl" to the gen-make.py script. See Section I.C.7 for
       more details.
 
-  E.3 Preparation
+  D.3 Preparation
 
       This section describes how to unpack the files to make a build tree.
 
@@ -432,7 +402,7 @@ II.   INSTALLATION
         and extract it into SVN\sqlite-amalgamation.
         See I.C.2 for alternatives to using the amalgamation package.
 
-  E.4 Building the Binaries
+  D.4 Building the Binaries
 
       To build the binaries either follow these instructions.
 
@@ -573,7 +543,7 @@ II.   INSTALLATION
 
       The binaries have now been built.
 
-  E.5 Packaging the binaries
+  D.5 Packaging the binaries
 
       You now need to copy the binaries ready to make the release zip
       file. You also need to do this to run the tests as the new binaries
@@ -582,7 +552,7 @@ II.   INSTALLATION
 
       [TBD: Describe how to do this. Note dependencies on zip, jar, doxygen.]
 
-  E.6 Testing the Binaries
+  D.6 Testing the Binaries
       [TBD: It's been a long, long while since it was necessary to move
             binaries around for testing. win-tests.py does that automagically.
             Fix this section accordingly, and probably reorder, putting
@@ -647,7 +617,7 @@ II.   INSTALLATION
       C:>cd ..
 
 
-  F.  Building using CMake
+  E.  Building using CMake
       --------------------
 
       Get the sources, either from a release tarball or by checking out the
@@ -708,7 +678,7 @@ II.   INSTALLATION
             <VCPKG_ROOT>/scripts/buildsystems/vcpkg.cmake
 
 
-  G.  Running the test suite
+  F.  Running the test suite
       ----------------------
 
       The test suite can be run using any of the build systems above.
@@ -724,7 +694,7 @@ II.   INSTALLATION
       - XPASS means a test which was expected to fail completed successfully.
 
 
-  G.1 Validating XML output
+  F.1 Validating XML output
 
       Some Subversion commands can format their output as XML.  The test suite
       will always verify that the output is valid XML, however it is also
@@ -733,7 +703,7 @@ II.   INSTALLATION
       using the --check-xml-schema argument.
 
 
-  G.2 Running the test suite under the autoconf/make build system
+  F.2 Running the test suite under the autoconf/make build system
 
       Tests can be started with either of the following commands
       - make check [options]
@@ -761,7 +731,7 @@ II.   INSTALLATION
         performed, see the --check-xml-schema option above.
 
 
-  G.3 Running the test suite under the CMake build system
+  F.3 Running the test suite under the CMake build system
 
       Run the ctests command from the build directory.
 
@@ -870,7 +840,7 @@ III.  BUILDING A SUBVERSION SERVER
       if you passed --with-apache-libexecdir to configure).
 
 
-      Section II.E explains how to build the server on Windows.
+      Section II.D explains how to build the server on Windows.
 
 
   C.  Configuring Apache Httpd for Subversion
@@ -1283,7 +1253,7 @@ V.    DEPENDENCIES IN DETAIL
       * Use hook scripts coded in Python.
       * Build Subversion from a tarball on Unix-like systems and run
         Subversion's test suite as described in section II.B.
-      * Build Subversion on Windows as described in section II.E.
+      * Build Subversion on Windows as described in section II.D.
       * Build Subversion from a working copy checked out from
         Subversion's own repository (whether or not running the test
         suite).
