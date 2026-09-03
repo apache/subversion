@@ -123,7 +123,7 @@ II.   INSTALLATION
       - Visual Studio vcproj, for Windows builds
       - CMake, for both Unix and Windows
 
-      The first two have been in use since 2001. Sections A-C below describe
+      The first two have been in use since 2001. Sections A and C below describe
       the classic build system.
 
       The CMake build system was created in 2024 and is still under
@@ -149,8 +149,7 @@ II.   INSTALLATION
       You can also run the full test suite by running 'make check'.  See the
       section D for more information.
 
-  A.2  Building from a Working Copy
-       ----------------------------
+  A.2 Building from a Working Copy
 
       These instructions assume you have already installed Subversion
       and checked out a working copy of Subversion's own code --
@@ -219,7 +218,6 @@ II.   INSTALLATION
       of the libsvn_* libraries.
 
   A.3 Building In a Separate Build Directory
-      --------------------------------------
 
       It is possible to configure and build Subversion on Unix in a
       directory other than the working copy. For example
