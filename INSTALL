@@ -80,8 +80,8 @@ I.    INTRODUCTION
 
       Required:
 
-      * APR 1.4 or later and APR-Util 1.3 or later -- the portability layer
-        that allows Subversion to run on different operating systems.
+      * APR and APR-Util 1.4 or later -- the portability layer that allows
+        Subversion to run on different operating systems.
       * Expat -- XML parsing.
       * zlib -- compression of binary diffs, used everywhere.
       * LZ4 r129 or later -- compression.  A bundled copy can be used.
@@ -1065,10 +1065,7 @@ V.    DEPENDENCIES IN DETAIL
       commands described in section II.B before installing the following.
 
 
-      1.  Apache Portable Runtime and APR-util (REQUIRED)
-
-      Subversion requires APR version 1.4 or later and APR-util version 1.3 or
-      later.
+      1.  Apache Portable Runtime 1.4 or newer  (REQUIRED)
 
       Whenever you want to build any part of Subversion, you need the
       Apache Portable Runtime (APR) and the APR Utility (APR-util)
@@ -1137,10 +1134,10 @@ V.    DEPENDENCIES IN DETAIL
 
       3.  SQLite  (REQUIRED)
 
-      Subversion requires SQLite version 3.24.0 or later.
+      Subversion uses SQLite to manage some internal databases.
 
-      Subversion uses SQLite to manage some internal databases.  You can meet
-      this dependency several ways:
+      Subversion requires SQLite version 3.24.0 or above.  You can meet this
+      dependency several ways:
         * Use an SQLite amalgamation file.
         * Specify an SQLite installation to use.
         * Let Subversion find an installed SQLite.
@@ -1167,9 +1164,7 @@ V.    DEPENDENCIES IN DETAIL
 
       5.  LZ4  (REQUIRED)
 
-      Subversion requires LZ4 version r129 or later.
-
-      Subversion uses the LZ4 library for compression.  Configure
+      Subversion uses LZ4 compression library version r129 or above. Configure
       will attempt to locate the system library by default using pkg-config
       and known paths.
 
