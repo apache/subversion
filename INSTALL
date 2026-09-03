@@ -14,12 +14,10 @@ Contents:
        C. Documentation
 
     II. INSTALLATION
-       A. Building from a Tarball
-       B. Building the Latest Source under Unix
-       C. Building under Unix in Different Directories
-       D. Building the Latest Source under Windows
-       E. Building using CMake
-       F. Running the test suite
+       A. Building with autoconf and make (Unix only)
+       B. Building with CMake (Windows and Unix)
+       C. Building with vcproj/vcxproj (Windows only, deprecated)
+       D. Running the test suite
 
    III. BUILDING A SUBVERSION SERVER
        A. Setting Up Apache Httpd
