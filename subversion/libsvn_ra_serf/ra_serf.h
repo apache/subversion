@@ -943,7 +943,7 @@ svn_ra_serf__keep_only_regular_props(apr_hash_t *props,
                                      apr_pool_t *scratch_pool);
 
 
-/* Callback used via svn_ra_serf__deliver_props2 */
+/* Callback used via svn_ra_serf__create_propfind_handler */
 typedef svn_error_t *
 (*svn_ra_serf__prop_func_t)(void *baton,
                             const char *path,
