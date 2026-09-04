@@ -1,0 +1,23 @@
+The goal of this branch is to try to eliminate svn_ra_reparent() from the RA
+API entirely, by instead using repos_relpath - a path from the root of the
+repository.
+
+An alternative idea is to use absolute URL's instead of repos_relpath. I have
+tried it before, but I didn't like how confusing it sometimes is. Both options
+require roughly the same amount of info, so it's not really worth it. relpath's
+on the other hand automatically limit the operation scope to the specific
+repository.
+
+  THE PLAN:
+1. Update RA modules vtables (we don't care about backward compat here).
+2. Bump versions the majority of API methods to accept a repos_relpath
+   argument.
+3. Implement compat methods through get_session_url/get_repos_root.
+4. Test that new methods have no side effect.
+5. Update & Commit editors need extra attention.
+6. Run the whole test suite using the old API.
+7. Update all usages and run the tests again.
+
+ra_svn protocol has to do reparent anyway. But even current implementation
+contains some optimisations to prevent unnecessary remote calls. We'll it
+there.
