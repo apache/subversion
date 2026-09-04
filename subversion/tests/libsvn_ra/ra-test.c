@@ -1914,6 +1914,70 @@ test_get_deleted_rev_errors(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_reparent(const svn_test_opts_t *opts,
+              apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  const char *repos_url;
+  const char *session_url;
+  svn_node_kind_t kind;
+  svn_ra_callbacks2_t *cbtable;
+
+  SVN_ERR(make_and_open_repos(&ra_session,
+                              "test-repo-reparent", opts, pool));
+  SVN_ERR(svn_ra_get_session_url(ra_session, &repos_url, pool));
+  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
+  SVN_TEST_STRING_ASSERT(session_url, repos_url);
+
+  SVN_ERR(commit_tree(ra_session, pool));
+  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
+  SVN_TEST_STRING_ASSERT(session_url, repos_url);
+
+  SVN_ERR(svn_ra_check_path2(ra_session, "", SVN_INVALID_REVNUM,
+                             &kind, pool));
+  SVN_TEST_STRING_ASSERT(svn_node_kind_to_word(kind), "dir");
+  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
+  SVN_TEST_STRING_ASSERT(session_url, repos_url);
+
+  SVN_ERR(svn_ra_check_path2(ra_session, "A/B/f",
+                             SVN_INVALID_REVNUM, &kind, pool));
+  SVN_TEST_STRING_ASSERT(svn_node_kind_to_word(kind), "file");
+  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
+  SVN_TEST_STRING_ASSERT(session_url, repos_url);
+
+  SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
+  SVN_ERR(svn_test__init_auth_baton(&cbtable->auth_baton, pool));
+
+  SVN_ERR(svn_ra_open5(&ra_session, NULL, NULL,
+                       svn_path_url_add_component2(repos_url, "A/B", pool),
+                       NULL, cbtable, NULL, NULL, pool));
+
+  SVN_ERR(svn_ra_check_path2(ra_session, "A/B",
+                             SVN_INVALID_REVNUM, &kind, pool));
+  SVN_TEST_STRING_ASSERT(svn_node_kind_to_word(kind), "dir");
+  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
+  SVN_TEST_STRING_ASSERT(session_url,
+                         svn_path_url_add_component2(repos_url, "A/B", pool));
+
+  SVN_ERR(svn_ra_check_path2(ra_session, "A/B/f",
+                             SVN_INVALID_REVNUM, &kind, pool));
+  SVN_TEST_STRING_ASSERT(svn_node_kind_to_word(kind), "file");
+  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
+  SVN_TEST_STRING_ASSERT(session_url,
+                         svn_path_url_add_component2(repos_url, "A/B", pool));
+
+  /* Ask /A (out of session URL) */
+  SVN_ERR(svn_ra_check_path2(ra_session, "A",
+                             SVN_INVALID_REVNUM, &kind, pool));
+  SVN_TEST_STRING_ASSERT(svn_node_kind_to_word(kind), "dir");
+  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
+  SVN_TEST_STRING_ASSERT(session_url,
+                         svn_path_url_add_component2(repos_url, "A/B", pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -1954,6 +2018,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test get-deleted-rev no delete"),
     SVN_TEST_OPTS_PASS(test_get_deleted_rev_errors,
                        "test get-deleted-rev errors"),
+    SVN_TEST_OPTS_PASS(test_reparent,
+                       "test session reparent"),
     SVN_TEST_NULL
   };
 
