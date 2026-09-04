@@ -126,10 +126,10 @@ II.   INSTALLATION
       The first two have been in use since 2001. Sections A and C below describe
       the classic build system.
 
-      The CMake build system was created in 2024 and is still under
-      development. It will be included in Subversion 1.15 and is expected to
-      be the default build system starting with Subversion 1.16. Section B
-      below describes the CMake build system.
+      Subversion's CMake-based build system was created in 2024 and is still
+      under development.  It will be included in Subversion 1.15 and is
+      expected to be the default build system for Windows platforms starting
+      with Subversion 1.16.  Section B below describes the CMake build system.
 
   A.  Building with autoconf and make (Unix only)
       -------------------------------------------
