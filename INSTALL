@@ -336,7 +336,7 @@ II.   INSTALLATION
 
       The vcproj/vcxproj files for Visual Studio 2010 - 2022 can be generated
       with gen-make.py.  The required dependencies have to be present in the
-      system (built or installed) before generating the files. Minimal
+      system (built or installed) before generating the files.  A minimal
       gen-make.py command looks like this:
 
           C:\SVN\src>python gen-make.py --vsnet-version=2022 ^
@@ -357,6 +357,7 @@ II.   INSTALLATION
 
       The 'python win-tests.py --help' command prints the list of available
       options.
+
 
   D.  Running the test suite
       ----------------------
