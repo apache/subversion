@@ -78,14 +78,12 @@ static const struct ra_lib_defn {
   const char * const *schemes;
   /* the initialization function if linked in; otherwise, NULL */
   svn_ra__init_func_t initfunc;
-  svn_ra_init_func_t compat_initfunc;
 } ra_libraries[] = {
   {
     "svn",
     svn_schemes,
 #ifdef SVN_LIBSVN_RA_LINKS_RA_SVN
     svn_ra_svn__init,
-    svn_ra_svn__compat_init
 #endif
   },
 
@@ -94,7 +92,6 @@ static const struct ra_lib_defn {
     local_schemes,
 #ifdef SVN_LIBSVN_RA_LINKS_RA_LOCAL
     svn_ra_local__init,
-    svn_ra_local__compat_init
 #endif
   },
 
@@ -103,7 +100,6 @@ static const struct ra_lib_defn {
     dav_schemes,
 #ifdef SVN_LIBSVN_RA_LINKS_RA_SERF
     svn_ra_serf__init,
-    svn_ra_serf__compat_init
 #endif
   },
 
@@ -1535,43 +1531,5 @@ svn_ra_get_ra_library(svn_ra_plugin_t **library,
                       const char *url,
                       apr_pool_t *pool)
 {
-  const struct ra_lib_defn *defn;
-  apr_pool_t *load_pool = ra_baton;
-  apr_hash_t *ht = apr_hash_make(pool);
-
-  /* Figure out which RA library key matches URL. */
-  for (defn = ra_libraries; defn->ra_name != NULL; ++defn)
-    {
-      const char *scheme;
-      if ((scheme = has_scheme_of(defn->schemes, url)))
-        {
-          svn_ra_init_func_t compat_initfunc = defn->compat_initfunc;
-
-          if (! compat_initfunc)
-            {
-              SVN_ERR(load_ra_module
-                      (NULL, &compat_initfunc, defn->ra_name, load_pool));
-            }
-          if (! compat_initfunc)
-            {
-              continue;
-            }
-
-          SVN_ERR(compat_initfunc(SVN_RA_ABI_VERSION, load_pool, ht));
-
-          *library = svn_hash_gets(ht, scheme);
-
-          /* The library may support just a subset of the schemes listed,
-             so we have to check here too. */
-          if (! *library)
-            break;
-
-          return check_ra_version((*library)->get_version(), scheme);
-        }
-    }
-
-  /* Couldn't find a match... */
-  *library = NULL;
-  return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                           _("Unrecognized URL scheme '%s'"), url);
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
 }

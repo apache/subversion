@@ -1989,11 +1989,3 @@ svn_ra_local__init(const svn_version_t *loader_version,
 
   return SVN_NO_ERROR;
 }
-
-/* Compatibility wrapper for the 1.1 and before API. */
-#define NAME "ra_local"
-#define DESCRIPTION RA_LOCAL_DESCRIPTION
-#define VTBL ra_local_vtable
-#define INITFUNC svn_ra_local__init
-#define COMPAT_INITFUNC svn_ra_local__compat_init
-#include "../libsvn_ra/wrapper_template.h"

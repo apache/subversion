@@ -3408,11 +3408,3 @@ svn_ra_svn__init(const svn_version_t *loader_version,
 
   return SVN_NO_ERROR;
 }
-
-/* Compatibility wrapper for the 1.1 and before API. */
-#define NAME "ra_svn"
-#define DESCRIPTION RA_SVN_DESCRIPTION
-#define VTBL ra_svn_vtable
-#define INITFUNC svn_ra_svn__init
-#define COMPAT_INITFUNC svn_ra_svn__compat_init
-#include "../libsvn_ra/wrapper_template.h"
