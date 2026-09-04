@@ -299,7 +299,7 @@ II.   INSTALLATION
         For editing the cache (options), do right-click to the CMakeLists.txt
         file and clicking `CMake Settings for Subversion` will open the
         editor. After the required settings are configured, hit `F7` in
-        order to build. For more info, check the article bellow:
+        order to build. For more info, check the article below:
 
             https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio
 
