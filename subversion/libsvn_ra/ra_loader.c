@@ -866,7 +866,7 @@ svn_error_t *svn_ra_stat2(svn_ra_session_t *session,
 
       svn_error_clear(err);
 
--      SVN_ERR(svn_ra_check_path(session, path, revision, &kind, scratch_pool));
+      SVN_ERR(svn_ra_check_path(session, path, revision, &kind, scratch_pool));
 
       if (kind != svn_node_none)
         {
