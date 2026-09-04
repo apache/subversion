@@ -1051,6 +1051,33 @@ reparent_repos_relpath(const char **path_p,
     return SVN_NO_ERROR;
 }
 
+/* Reparent server to repos_relpath but don't change client location. */
+static svn_error_t *
+reparent_repos_relpath_exact(svn_ra_session_t *ra_session,
+                             const char *repos_relpath,
+                             apr_pool_t *scratch_pool)
+{
+  svn_ra_svn__session_baton_t *sess = ra_session->priv;
+  svn_ra_svn_conn_t *conn = sess->conn;
+  svn_ra_svn__parent_t *parent = sess->parent;
+  const char *url;
+
+  if (! conn->repos_root)
+    return svn_error_create(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
+                            _("Server did not send repository root"));
+
+  url = svn_path_url_add_component2(conn->repos_root, repos_relpath,
+                                    scratch_pool);
+
+  /* No need to reparent if session URL is the same as our resolved URL. */
+  if (strcmp(url, parent->server_url->data) == 0)
+    return SVN_NO_ERROR;
+
+  /* Actually reparent the server. */
+  SVN_ERR(reparent_server(ra_session, url, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
 /* Return a copy of PATHS, containing the same const char * paths but
    adjusted to the RA_SESSION's server parent URL.  Returns NULL if
    PATHS is NULL.  Allocate the result in RESULT_POOL. */
@@ -1750,7 +1777,9 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
 
 static svn_error_t *ra_svn_update(svn_ra_session_t *session,
                                   const svn_ra_reporter3_t **reporter,
-                                  void **report_baton, svn_revnum_t rev,
+                                  void **report_baton,
+                                  const char *repos_relpath,
+                                  svn_revnum_t rev,
                                   const char *target, svn_depth_t depth,
                                   svn_boolean_t send_copyfrom_args,
                                   svn_boolean_t ignore_ancestry,
@@ -1764,7 +1793,7 @@ static svn_error_t *ra_svn_update(svn_ra_session_t *session,
   svn_boolean_t recurse = DEPTH_TO_RECURSE(depth);
 
   /* Callbacks may assume that all data is relative the sessions's URL. */
-  SVN_ERR(ensure_exact_server_parent(session, scratch_pool));
+  SVN_ERR(reparent_repos_relpath_exact(session, repos_relpath, scratch_pool));
 
   /* Tell the server we want to start an update. */
   SVN_ERR(svn_ra_svn__write_cmd_update(conn, pool, rev, target, recurse,
@@ -1782,7 +1811,9 @@ static svn_error_t *ra_svn_update(svn_ra_session_t *session,
 static svn_error_t *
 ra_svn_switch(svn_ra_session_t *session,
               const svn_ra_reporter3_t **reporter,
-              void **report_baton, svn_revnum_t rev,
+              void **report_baton,
+              const char *repos_relpath,
+              svn_revnum_t rev,
               const char *target, svn_depth_t depth,
               const char *switch_url,
               svn_boolean_t send_copyfrom_args,
@@ -1798,7 +1829,7 @@ ra_svn_switch(svn_ra_session_t *session,
   svn_boolean_t recurse = DEPTH_TO_RECURSE(depth);
 
   /* Callbacks may assume that all data is relative the sessions's URL. */
-  SVN_ERR(ensure_exact_server_parent(session, scratch_pool));
+  SVN_ERR(reparent_repos_relpath_exact(session, repos_relpath, scratch_pool));
 
   /* Tell the server we want to start a switch. */
   SVN_ERR(svn_ra_svn__write_cmd_switch(conn, pool, rev, target, recurse,
@@ -1816,6 +1847,7 @@ ra_svn_switch(svn_ra_session_t *session,
 static svn_error_t *ra_svn_status(svn_ra_session_t *session,
                                   const svn_ra_reporter3_t **reporter,
                                   void **report_baton,
+                                  const char *repos_relpath,
                                   const char *target, svn_revnum_t rev,
                                   svn_depth_t depth,
                                   const svn_delta_editor_t *status_editor,
@@ -1826,7 +1858,7 @@ static svn_error_t *ra_svn_status(svn_ra_session_t *session,
   svn_boolean_t recurse = DEPTH_TO_RECURSE(depth);
 
   /* Callbacks may assume that all data is relative the sessions's URL. */
-  SVN_ERR(ensure_exact_server_parent(session, pool));
+  SVN_ERR(reparent_repos_relpath_exact(session, repos_relpath, pool));
 
   /* Tell the server we want to start a status operation. */
   SVN_ERR(svn_ra_svn__write_cmd_status(conn, pool, target, recurse, rev,
@@ -1843,6 +1875,7 @@ static svn_error_t *ra_svn_status(svn_ra_session_t *session,
 static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
                                 const svn_ra_reporter3_t **reporter,
                                 void **report_baton,
+                                const char *repos_relpath,
                                 svn_revnum_t rev, const char *target,
                                 svn_depth_t depth,
                                 svn_boolean_t ignore_ancestry,
@@ -1856,7 +1889,7 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
   svn_boolean_t recurse = DEPTH_TO_RECURSE(depth);
 
   /* Callbacks may assume that all data is relative the sessions's URL. */
-  SVN_ERR(ensure_exact_server_parent(session, pool));
+  SVN_ERR(reparent_repos_relpath_exact(session, repos_relpath, pool));
 
   /* Tell the server we want to start a diff. */
   SVN_ERR(svn_ra_svn__write_cmd_diff(conn, pool, rev, target, recurse,

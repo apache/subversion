@@ -2597,7 +2597,8 @@ make_update_reporter(svn_ra_session_t *ra_session,
   report->text_deltas = text_deltas;
   report->switched_paths = apr_hash_make(report->pool);
 
-  report->source = src_path;
+  SVN_ERR(svn_ra_serf__resolve_path(ra_session, &report->source, src_path,
+                                    result_pool));
   report->destination = dest_path;
   report->update_target = update_target;
 
@@ -2753,6 +2754,7 @@ svn_error_t *
 svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        const svn_ra_reporter3_t **reporter,
                        void **report_baton,
+                       const char *repos_relpath,
                        svn_revnum_t revision_to_update_to,
                        const char *update_target,
                        svn_depth_t depth,
@@ -2763,11 +2765,9 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__session_t *session = ra_session->priv;
-
   SVN_ERR(make_update_reporter(ra_session, reporter, report_baton,
                                revision_to_update_to,
-                               session->session_url.path, NULL, update_target,
+                               repos_relpath, NULL, update_target,
                                depth, ignore_ancestry, TRUE /* text_deltas */,
                                send_copyfrom_args,
                                update_editor, update_baton,
@@ -2779,6 +2779,7 @@ svn_error_t *
 svn_ra_serf__do_diff(svn_ra_session_t *ra_session,
                      const svn_ra_reporter3_t **reporter,
                      void **report_baton,
+                     const char *repos_relpath,
                      svn_revnum_t revision,
                      const char *diff_target,
                      svn_depth_t depth,
@@ -2789,12 +2790,11 @@ svn_ra_serf__do_diff(svn_ra_session_t *ra_session,
                      void *diff_baton,
                      apr_pool_t *pool)
 {
-  svn_ra_serf__session_t *session = ra_session->priv;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   SVN_ERR(make_update_reporter(ra_session, reporter, report_baton,
                                revision,
-                               session->session_url.path, versus_url, diff_target,
+                               repos_relpath, versus_url, diff_target,
                                depth, ignore_ancestry, text_deltas,
                                FALSE /* send_copyfrom */,
                                diff_editor, diff_baton,
@@ -2807,6 +2807,7 @@ svn_error_t *
 svn_ra_serf__do_status(svn_ra_session_t *ra_session,
                        const svn_ra_reporter3_t **reporter,
                        void **report_baton,
+                       const char *repos_relpath,
                        const char *status_target,
                        svn_revnum_t revision,
                        svn_depth_t depth,
@@ -2814,12 +2815,11 @@ svn_ra_serf__do_status(svn_ra_session_t *ra_session,
                        void *status_baton,
                        apr_pool_t *pool)
 {
-  svn_ra_serf__session_t *session = ra_session->priv;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   SVN_ERR(make_update_reporter(ra_session, reporter, report_baton,
                                revision,
-                               session->session_url.path, NULL, status_target,
+                               repos_relpath, NULL, status_target,
                                depth, FALSE, FALSE, FALSE,
                                status_editor, status_baton,
                                pool, scratch_pool));
@@ -2831,6 +2831,7 @@ svn_error_t *
 svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                        const svn_ra_reporter3_t **reporter,
                        void **report_baton,
+                       const char *repos_relpath,
                        svn_revnum_t revision_to_switch_to,
                        const char *switch_target,
                        svn_depth_t depth,
@@ -2842,11 +2843,9 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__session_t *session = ra_session->priv;
-
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision_to_switch_to,
-                              session->session_url.path,
+                              repos_relpath,
                               switch_url, switch_target,
                               depth,
                               ignore_ancestry,

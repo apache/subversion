@@ -1284,7 +1284,7 @@ svn_ra_get_mergeinfo(svn_ra_session_t *session,
  *
  * @a update_target is an optional single path component to restrict
  * the scope of the update to just that entry (in the directory
- * represented by the @a session's URL).  If @a update_target is the
+ * represented by the @a repos_relpath).  If @a update_target is the
  * empty string, the entire directory is updated.
  *
  * Update the target only as deeply as @a depth indicates.
@@ -1324,8 +1324,31 @@ svn_ra_get_mergeinfo(svn_ra_session_t *session,
  * leaving any switched subtrees still switched, whereas switch changes
  * every node in the tree to a child of the same URL.
  *
- * @since New in 1.8.
+ * @since New in 1.16.
  */
+svn_error_t *
+svn_ra_do_update4(svn_ra_session_t *session,
+                  const svn_ra_reporter3_t **reporter,
+                  void **report_baton,
+                  const char *repos_relpath,
+                  svn_revnum_t revision_to_update_to,
+                  const char *update_target,
+                  svn_depth_t depth,
+                  svn_boolean_t send_copyfrom_args,
+                  svn_boolean_t ignore_ancestry,
+                  const svn_delta_editor_t *update_editor,
+                  void *update_baton,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_ra_do_switch4() but origins at session URL instead of
+ * repos_relpath.
+ *
+ * @since New in 1.8.
+ * @deprecated Provided for compatibility with the 1.15 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_do_update3(svn_ra_session_t *session,
                   const svn_ra_reporter3_t **reporter,
@@ -1391,8 +1414,32 @@ svn_ra_do_update(svn_ra_session_t *session,
  * @note Pre Subversion 1.8 svnserve based servers always ignore ancestry
  * and never send copyfrom data.
  *
- * @since New in 1.8.
+ * @since New in 1.16.
  */
+svn_error_t *
+svn_ra_do_switch4(svn_ra_session_t *session,
+                  const svn_ra_reporter3_t **reporter,
+                  void **report_baton,
+                  const char *repos_relpath,
+                  svn_revnum_t revision_to_switch_to,
+                  const char *switch_target,
+                  svn_depth_t depth,
+                  const char *switch_url,
+                  svn_boolean_t send_copyfrom_args,
+                  svn_boolean_t ignore_ancestry,
+                  const svn_delta_editor_t *switch_editor,
+                  void *switch_baton,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_ra_do_switch3() but origins at session URL instead of
+ * repos_relpath.
+ *
+ * @since New in 1.8.
+ * @deprecated Provided for compatibility with the 1.15 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_do_switch3(svn_ra_session_t *session,
                   const svn_ra_reporter3_t **reporter,
@@ -1468,7 +1515,7 @@ svn_ra_do_switch(svn_ra_session_t *session,
  * the working copy were the client to call do_update().
  * @a status_target is an optional single path component will restrict
  * the scope of the status report to an entry in the directory
- * represented by the @a session's URL, or empty if the entire directory
+ * represented by the @a repos_relpath, or empty if the entire directory
  * is meant to be examined.
  *
  * Get status as deeply as @a depth indicates. If @a depth is
@@ -1489,8 +1536,28 @@ svn_ra_do_switch(svn_ra_session_t *session,
  * needed, and sending too much data back, a pre-1.5 'recurse'
  * directive may be sent to the server, based on @a depth.
  *
- * @since New in 1.5.
+ * @since New in 1.16.
  */
+svn_error_t *
+svn_ra_do_status3(svn_ra_session_t *session,
+                  const svn_ra_reporter3_t **reporter,
+                  void **report_baton,
+                  const char *repos_relpath,
+                  const char *status_target,
+                  svn_revnum_t revision,
+                  svn_depth_t depth,
+                  const svn_delta_editor_t *status_editor,
+                  void *status_baton,
+                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_do_status3() but origins at session URL instead of
+ * repos_relpath.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for compatibility with the 1.15 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_do_status2(svn_ra_session_t *session,
                   const svn_ra_reporter3_t **reporter,
@@ -1546,7 +1613,7 @@ svn_ra_do_status(svn_ra_session_t *session,
  *
  * @a diff_target is an optional single path component will restrict
  * the scope of the diff to an entry in the directory represented by
- * the @a session's URL, or empty if the entire directory is meant to be
+ * the @a repos_relpath, or empty if the entire directory is meant to be
  * one of the diff paths.
  *
  * The working copy will be diffed against @a versus_url as it exists
@@ -1579,8 +1646,31 @@ svn_ra_do_status(svn_ra_session_t *session,
  * needed, and sending too much data back, a pre-1.5 'recurse'
  * directive may be sent to the server, based on @a depth.
  *
- * @since New in 1.5.
+ * @since New in 1.16.
  */
+svn_error_t *
+svn_ra_do_diff4(svn_ra_session_t *session,
+                const svn_ra_reporter3_t **reporter,
+                void **report_baton,
+                const char *repos_relpath,
+                svn_revnum_t revision,
+                const char *diff_target,
+                svn_depth_t depth,
+                svn_boolean_t ignore_ancestry,
+                svn_boolean_t text_deltas,
+                const char *versus_url,
+                const svn_delta_editor_t *diff_editor,
+                void *diff_baton,
+                apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_do_diff4() but origins at session URL instead of
+ * repos_relpath.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for compatibility with the 1.15 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_do_diff3(svn_ra_session_t *session,
                 const svn_ra_reporter3_t **reporter,

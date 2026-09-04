@@ -704,9 +704,10 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
 }
 
 svn_error_t *
-svn_ra_do_update3(svn_ra_session_t *session,
+svn_ra_do_update4(svn_ra_session_t *session,
                   const svn_ra_reporter3_t **reporter,
                   void **report_baton,
+                  const char *repos_relpath,
                   svn_revnum_t revision_to_update_to,
                   const char *update_target,
                   svn_depth_t depth,
@@ -719,8 +720,10 @@ svn_ra_do_update3(svn_ra_session_t *session,
 {
   SVN_ERR_ASSERT(svn_path_is_empty(update_target)
                  || svn_path_is_single_path_component(update_target));
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(repos_relpath));
   return session->vtable->do_update(session,
                                     reporter, report_baton,
+                                    repos_relpath,
                                     revision_to_update_to, update_target,
                                     depth, send_copyfrom_args,
                                     ignore_ancestry,
@@ -729,9 +732,10 @@ svn_ra_do_update3(svn_ra_session_t *session,
 }
 
 svn_error_t *
-svn_ra_do_switch3(svn_ra_session_t *session,
+svn_ra_do_switch4(svn_ra_session_t *session,
                   const svn_ra_reporter3_t **reporter,
                   void **report_baton,
+                  const char *repos_relpath,
                   svn_revnum_t revision_to_switch_to,
                   const char *switch_target,
                   svn_depth_t depth,
@@ -745,8 +749,10 @@ svn_ra_do_switch3(svn_ra_session_t *session,
 {
   SVN_ERR_ASSERT(svn_path_is_empty(switch_target)
                  || svn_path_is_single_path_component(switch_target));
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(repos_relpath));
   return session->vtable->do_switch(session,
                                     reporter, report_baton,
+                                    repos_relpath,
                                     revision_to_switch_to, switch_target,
                                     depth, switch_url,
                                     send_copyfrom_args,
@@ -756,9 +762,10 @@ svn_ra_do_switch3(svn_ra_session_t *session,
                                     result_pool, scratch_pool);
 }
 
-svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
+svn_error_t *svn_ra_do_status3(svn_ra_session_t *session,
                                const svn_ra_reporter3_t **reporter,
                                void **report_baton,
+                               const char *repos_relpath,
                                const char *status_target,
                                svn_revnum_t revision,
                                svn_depth_t depth,
@@ -768,15 +775,16 @@ svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
 {
   SVN_ERR_ASSERT(svn_path_is_empty(status_target)
                  || svn_path_is_single_path_component(status_target));
-  return session->vtable->do_status(session,
-                                    reporter, report_baton,
-                                    status_target, revision, depth,
-                                    status_editor, status_baton, pool);
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(repos_relpath));
+  return session->vtable->do_status(session, reporter, report_baton,
+                                    repos_relpath, status_target, revision,
+                                    depth, status_editor, status_baton, pool);
 }
 
-svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
+svn_error_t *svn_ra_do_diff4(svn_ra_session_t *session,
                              const svn_ra_reporter3_t **reporter,
                              void **report_baton,
+                             const char *repos_relpath,
                              svn_revnum_t revision,
                              const char *diff_target,
                              svn_depth_t depth,
@@ -789,9 +797,10 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
 {
   SVN_ERR_ASSERT(svn_path_is_empty(diff_target)
                  || svn_path_is_single_path_component(diff_target));
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(repos_relpath));
   return session->vtable->do_diff(session,
                                   reporter, report_baton,
-                                  revision, diff_target,
+                                  repos_relpath, revision, diff_target,
                                   depth, ignore_ancestry,
                                   text_deltas, versus_url, diff_editor,
                                   diff_baton, pool);
