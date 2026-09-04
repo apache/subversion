@@ -604,9 +604,10 @@ svn_error_t *svn_ra_rev_prop(svn_ra_session_t *session,
   return session->vtable->rev_prop(session, rev, name, value, pool);
 }
 
-svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
+svn_error_t *svn_ra_get_commit_editor4(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
+                                       const char *repos_relpath,
                                        apr_hash_t *revprop_table,
                                        svn_commit_callback2_t commit_callback,
                                        void *commit_baton,
@@ -615,7 +616,7 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        apr_pool_t *pool)
 {
   return session->vtable->get_commit_editor(session, editor, edit_baton,
-                                            revprop_table,
+                                            repos_relpath, revprop_table,
                                             commit_callback, commit_baton,
                                             lock_tokens, keep_locks, pool);
 }

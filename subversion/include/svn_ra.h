@@ -976,8 +976,8 @@ svn_ra_rev_prop(svn_ra_session_t *session,
  * changes to the repository of @a session, setting the revision
  * properties from @a revprop_table.  The revisions being committed
  * against are passed to the editor functions, starting with the rev
- * argument to @c open_root.  The path root of the commit is the @a
- * session's URL.
+ * argument to @c open_root.  The path root of the commit is a path
+ * relative to repository root.
  *
  * @a revprop_table is a hash mapping <tt>const char *</tt> property
  * names to @c svn_string_t property values.  The commit log message
@@ -1010,12 +1010,33 @@ svn_ra_rev_prop(svn_ra_session_t *session,
  *
  * Use @a pool for memory allocation.
  *
- * @since New in 1.5.
+ * @since New in 1.16.
  *
  * @note Like most commit editors, the returned editor requires that the
  * @c copyfrom_path parameter passed to its @c add_file and @c add_directory
  * methods is a URL, not a relative path.
  */
+svn_error_t *
+svn_ra_get_commit_editor4(svn_ra_session_t *session,
+                          const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          const char *repos_relpath,
+                          apr_hash_t *revprop_table,
+                          svn_commit_callback2_t commit_callback,
+                          void *commit_baton,
+                          apr_hash_t *lock_tokens,
+                          svn_boolean_t keep_locks,
+                          apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_ra_get_commit_editor4, but @a path is relative to session
+ * URL.
+ *
+ * @since New in 1.5.
+ *
+ * @deprecated Provided for compatibility with the 1.15 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_commit_editor3(svn_ra_session_t *session,
                           const svn_delta_editor_t **editor,

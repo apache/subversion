@@ -239,6 +239,27 @@ svn_error_t *svn_ra_change_rev_prop(svn_ra_session_t *session,
   return svn_ra_change_rev_prop2(session, rev, name, NULL, value, pool);
 }
 
+svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
+                                       const svn_delta_editor_t **editor,
+                                       void **edit_baton,
+                                       apr_hash_t *revprop_table,
+                                       svn_commit_callback2_t commit_callback,
+                                       void *commit_baton,
+                                       apr_hash_t *lock_tokens,
+                                       svn_boolean_t keep_locks,
+                                       apr_pool_t *pool)
+{
+  const char *session_path;
+  SVN_ERR(get_session_path(session, &session_path, pool));
+
+  return svn_error_trace(
+      svn_ra_get_commit_editor4(session, editor, edit_baton,
+                                session_path, revprop_table,
+                                commit_callback, commit_baton,
+                                lock_tokens, keep_locks, pool)
+      );
+}
+
 svn_error_t *svn_ra_get_commit_editor2(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,

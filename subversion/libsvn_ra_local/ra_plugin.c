@@ -866,6 +866,7 @@ static svn_error_t *
 svn_ra_local__get_commit_editor(svn_ra_session_t *session,
                                 const svn_delta_editor_t **editor,
                                 void **edit_baton,
+                                const char *repos_relpath,
                                 apr_hash_t *revprop_table,
                                 svn_commit_callback2_t callback,
                                 void *callback_baton,
@@ -909,7 +910,7 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
   /* Get the repos commit-editor */
   return svn_repos_get_commit_editor5
          (editor, edit_baton, sess->repos, NULL,
-          svn_path_uri_decode(sess->repos_url, pool), sess->fs_path->data,
+          svn_path_uri_decode(sess->repos_url, pool), repos_relpath,
           revprop_table, deltify_etc, deb, NULL, NULL, pool);
 }
 

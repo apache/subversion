@@ -1331,6 +1331,7 @@ static svn_error_t *ra_svn_end_commit(void *baton)
 static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
                                   const svn_delta_editor_t **editor,
                                   void **edit_baton,
+                                  const char *repos_relpath,
                                   apr_hash_t *revprop_table,
                                   svn_commit_callback2_t callback,
                                   void *callback_baton,
@@ -1388,7 +1389,7 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
     }
 
   /* Callbacks may assume that all data is relative the sessions's URL. */
-  SVN_ERR(ensure_exact_server_parent(session, pool));
+  SVN_ERR(reparent_repos_relpath_exact(session, repos_relpath, pool));
 
   /* Tell the server we're starting the commit.
      Send log message here for backwards compatibility with servers

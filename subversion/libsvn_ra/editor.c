@@ -147,11 +147,11 @@ svn_ra__use_commit_shim(svn_editor_t **editor,
      apply_txdelta drives (ie. against a base rather than <empty>).  */
 
   /* Fetch the RA provider's Ev1 commit editor.  */
-  SVN_ERR(session->vtable->get_commit_editor(session, &deditor, &dedit_baton,
-                                             revprop_table,
-                                             commit_callback, commit_baton,
-                                             lock_tokens, keep_locks,
-                                             result_pool));
+  SVN_ERR(svn_ra_get_commit_editor3(session, &deditor, &dedit_baton,
+                                    revprop_table,
+                                    commit_callback, commit_baton,
+                                    lock_tokens, keep_locks,
+                                    result_pool));
 
   /* Get or calculate the appropriate repos root and base relpath. */
   SVN_ERR(svn_ra_get_repos_root2(session, &repos_root, scratch_pool));
