@@ -19,5 +19,5 @@ repository.
 7. Update all usages and run the tests again.
 
 ra_svn protocol has to do reparent anyway. But even current implementation
-contains some optimisations to prevent unnecessary remote calls. We'll it
+contains some optimisations to prevent unnecessary remote calls. We'll use it
 there.
