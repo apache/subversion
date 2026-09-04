@@ -71,7 +71,12 @@ static svn_error_t *compat_open(void **session_baton,
    * the alternative (creating a new ra_util library) would be massive
    * overkill for the time being.  Just be sure to keep the following
    * line and the code of svn_ra_create_callbacks in sync.  */
+
+  /* Some RA modules (libsvn_ra_serf) want this exact pool configuration and
+   * refuse to work with the same pool as both scratch_pool and result_pool. */
   apr_pool_t *sesspool = svn_pool_create(pool);
+  apr_pool_t *scratch_pool = svn_pool_create(sesspool);
+
   svn_ra_callbacks2_t *callbacks2 = apr_pcalloc(sesspool,
                                                 sizeof(*callbacks2));
 
@@ -93,9 +98,11 @@ static svn_error_t *compat_open(void **session_baton,
   SVN_ERR(VTBL.open_session(sess, &session_url, NULL, repos_URL,
                             callbacks2, callback_baton,
                             callbacks ? callbacks->auth_baton : NULL,
-                            config, sesspool, sesspool));
+                            config, sesspool, scratch_pool));
 
-  if (strcmp(repos_URL, session_url) != 0)
+  svn_pool_destroy(scratch_pool);
+
+  if (session_url && strcmp(repos_URL, session_url) != 0)
     {
       svn_pool_destroy(sesspool);
       return svn_error_createf(SVN_ERR_RA_SESSION_URL_MISMATCH, NULL,

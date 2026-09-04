@@ -23,6 +23,9 @@
 
 
 
+#include "../svn_test.h"
+#include "../svn_test_fs.h"
+
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
@@ -37,8 +40,6 @@
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 
-#include "../svn_test.h"
-#include "../svn_test_fs.h"
 #include "../../libsvn_ra_local/ra_local.h"
 
 /*-------------------------------------------------------------------*/
@@ -1914,6 +1915,49 @@ test_get_deleted_rev_errors(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_compat_vtable(const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  svn_ra_plugin_t *lib;
+  void *ra_baton, *session_baton, *edit_baton, *root_baton, *dir_baton;
+  const svn_delta_editor_t *editor;
+  const char *url;
+  svn_ra_callbacks_t cbtable = { 0 };
+
+  SVN_ERR(svn_test__create_repos2(NULL, &url, NULL, "test_compat_vtable", opts,
+                                  pool, pool));
+  SVN_ERR(svn_ra_initialize(pool));
+
+  SVN_ERR(svn_ra_init_ra_libs(&ra_baton, pool));
+  SVN_ERR(svn_ra_get_ra_library(&lib, ra_baton, url, pool));
+
+  SVN_ERR(svn_test__init_auth_baton(&cbtable.auth_baton, pool));
+  SVN_ERR(lib->open(&session_baton, url, &cbtable, NULL, NULL, pool));
+
+  /* mkdir A */
+  SVN_ERR(lib->get_commit_editor(session_baton, &editor, &edit_baton,
+                                 "r1", NULL, NULL, pool));
+  SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
+                            pool, &root_baton));
+  SVN_ERR(editor->add_directory("A", root_baton, NULL, SVN_INVALID_REVNUM,
+                               pool, &dir_baton));
+  SVN_ERR(editor->close_directory(dir_baton, pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
+  /* delete A */
+  SVN_ERR(lib->get_commit_editor(session_baton, &editor, &edit_baton,
+                                 "r2", NULL, NULL, pool));
+  SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
+                            pool, &root_baton));
+  SVN_ERR(editor->delete_entry("A", SVN_INVALID_REVNUM, root_baton, pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -1954,6 +1998,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test get-deleted-rev no delete"),
     SVN_TEST_OPTS_PASS(test_get_deleted_rev_errors,
                        "test get-deleted-rev errors"),
+    SVN_TEST_OPTS_PASS(test_compat_vtable,
+                       "test compat svn_ra_plugin_t"),
     SVN_TEST_NULL
   };
 
