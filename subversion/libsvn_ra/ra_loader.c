@@ -946,8 +946,8 @@ svn_error_t *svn_ra_stat2(svn_ra_session_t *session,
       svn_pool_clear(scratch_pool);
     }
   else
-    SVN_ERR(err);
 #endif
+    SVN_ERR(err);
 
   return SVN_NO_ERROR;
 }
