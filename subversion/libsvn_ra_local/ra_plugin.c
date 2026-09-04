@@ -1180,38 +1180,36 @@ svn_ra_local__get_log(svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__do_check_path(svn_ra_session_t *session,
-                            const char *path,
+                            const char *repos_relpath,
                             svn_revnum_t revision,
                             svn_node_kind_t *kind,
                             apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   svn_fs_root_t *root;
-  const char *abs_path = svn_fspath__join(sess->fs_path->data, path, pool);
 
   if (! SVN_IS_VALID_REVNUM(revision))
     SVN_ERR(svn_fs_youngest_rev(&revision, sess->fs, pool));
   SVN_ERR(svn_fs_revision_root(&root, sess->fs, revision, pool));
-  return svn_fs_check_path(kind, root, abs_path, pool);
+  return svn_fs_check_path(kind, root, repos_relpath, pool);
 }
 
 
 static svn_error_t *
 svn_ra_local__stat(svn_ra_session_t *session,
-                   const char *path,
+                   const char *repos_relpath,
                    svn_revnum_t revision,
                    svn_dirent_t **dirent,
                    apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   svn_fs_root_t *root;
-  const char *abs_path = svn_fspath__join(sess->fs_path->data, path, pool);
 
   if (! SVN_IS_VALID_REVNUM(revision))
     SVN_ERR(svn_fs_youngest_rev(&revision, sess->fs, pool));
   SVN_ERR(svn_fs_revision_root(&root, sess->fs, revision, pool));
 
-  return svn_repos_stat(dirent, root, abs_path, pool);
+  return svn_repos_stat(dirent, root, repos_relpath, pool);
 }
 
 
@@ -1330,7 +1328,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
                       apr_hash_t **dirents,
                       svn_revnum_t *fetched_rev,
                       apr_hash_t **props,
-                      const char *path,
+                      const char *repos_relpath,
                       svn_revnum_t revision,
                       apr_uint32_t dirent_fields,
                       apr_pool_t *pool)
@@ -1340,7 +1338,6 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path = svn_fspath__join(sess->fs_path->data, path, pool);
 
   /* Open the revision's root. */
   if (! SVN_IS_VALID_REVNUM(revision))
@@ -1357,7 +1354,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
     {
       apr_pool_t *iterpool = svn_pool_create(pool);
       /* Get the dir's entries. */
-      SVN_ERR(svn_fs_dir_entries(&entries, root, abs_path, pool));
+      SVN_ERR(svn_fs_dir_entries(&entries, root, repos_relpath, pool));
 
       /* Loop over the fs dirents, and build a hash of general
          svn_dirent_t's. */
@@ -1376,7 +1373,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
           entryname = (const char *) key;
           fs_entry = (svn_fs_dirent_t *) val;
 
-          fullpath = svn_dirent_join(abs_path, entryname, iterpool);
+          fullpath = svn_dirent_join(repos_relpath, entryname, iterpool);
 
           if (dirent_fields & SVN_DIRENT_KIND)
             {
@@ -1426,7 +1423,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
 
   /* Handle props if requested. */
   if (props)
-    SVN_ERR(get_node_props(props, root, abs_path, sess->uuid, pool, pool));
+    SVN_ERR(get_node_props(props, root, repos_relpath, sess->uuid, pool, pool));
 
   return SVN_NO_ERROR;
 }

@@ -139,12 +139,12 @@ typedef struct svn_ra__vtable_t {
                            svn_revnum_t *fetched_rev,
                            apr_hash_t **props,
                            apr_pool_t *pool);
-  /* See svn_ra_get_dir2(). */
+  /* See svn_ra_get_dir3(). */
   svn_error_t *(*get_dir)(svn_ra_session_t *session,
                           apr_hash_t **dirents,
                           svn_revnum_t *fetched_rev,
                           apr_hash_t **props,
-                          const char *path,
+                          const char *repos_relpath,
                           svn_revnum_t revision,
                           apr_uint32_t dirent_fields,
                           apr_pool_t *pool);
@@ -219,15 +219,15 @@ typedef struct svn_ra__vtable_t {
                           svn_log_entry_receiver_t receiver,
                           void *receiver_baton,
                           apr_pool_t *pool);
-  /* See svn_ra_check_path(). */
+  /* See svn_ra_check_path2(). */
   svn_error_t *(*check_path)(svn_ra_session_t *session,
-                             const char *path,
+                             const char *repos_relpath,
                              svn_revnum_t revision,
                              svn_node_kind_t *kind,
                              apr_pool_t *pool);
-  /* See svn_ra_stat(). */
+  /* See svn_ra_stat2(). */
   svn_error_t *(*stat)(svn_ra_session_t *session,
-                       const char *path,
+                       const char *repos_relpath,
                        svn_revnum_t revision,
                        svn_dirent_t **dirent,
                        apr_pool_t *pool);

@@ -51,7 +51,7 @@
 /* Implements svn_ra__vtable_t.check_path(). */
 svn_error_t *
 svn_ra_serf__check_path(svn_ra_session_t *ra_session,
-                        const char *relpath,
+                        const char *repos_relpath,
                         svn_revnum_t revision,
                         svn_node_kind_t *kind,
                         apr_pool_t *scratch_pool)
@@ -59,28 +59,27 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
   svn_error_t *err;
-  const char *url;
-
-  url = session->session_url.path;
-
-  /* If we have a relative path, append it. */
-  if (relpath)
-    url = svn_path_url_add_component2(url, relpath, scratch_pool);
+  const char *path;
 
   /* If we were given a specific revision, get a URL that refers to that
      specific revision (rather than floating with HEAD).  */
   if (SVN_IS_VALID_REVNUM(revision))
     {
-      SVN_ERR(svn_ra_serf__get_stable_url(&url, NULL /* latest_revnum */,
-                                          session,
-                                          url, revision,
-                                          scratch_pool, scratch_pool));
+      SVN_ERR(svn_ra_serf__get_stable_url2(&path, NULL /* latest_revnum */,
+                                           session,
+                                           repos_relpath, revision,
+                                           scratch_pool, scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(svn_ra_serf__resolve_path(ra_session, &path, repos_relpath,
+                                        scratch_pool));
     }
 
   /* URL is stable, so we use SVN_INVALID_REVNUM since it is now irrelevant.
      Or we started with SVN_INVALID_REVNUM and URL may be floating.  */
   err = svn_ra_serf__fetch_node_props(&props, session,
-                                      url, SVN_INVALID_REVNUM,
+                                      path, SVN_INVALID_REVNUM,
                                       check_path_props,
                                       scratch_pool, scratch_pool);
 
@@ -229,7 +228,7 @@ get_dirent_props(apr_uint32_t dirent_fields,
 /* Implements svn_ra__vtable_t.stat(). */
 svn_error_t *
 svn_ra_serf__stat(svn_ra_session_t *ra_session,
-                  const char *relpath,
+                  const char *repos_relpath,
                   svn_revnum_t revision,
                   svn_dirent_t **dirent,
                   apr_pool_t *pool)
@@ -239,29 +238,28 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
   struct fill_dirent_baton_t fdb;
   svn_tristate_t deadprop_count = svn_tristate_unknown;
   svn_ra_serf__handler_t *handler;
-  const char *url;
-
-  url = session->session_url.path;
-
-  /* If we have a relative path, append it. */
-  if (relpath)
-    url = svn_path_url_add_component2(url, relpath, pool);
+  const char *path;
 
   /* If we were given a specific revision, get a URL that refers to that
      specific revision (rather than floating with HEAD).  */
   if (SVN_IS_VALID_REVNUM(revision))
     {
-      SVN_ERR(svn_ra_serf__get_stable_url(&url, NULL /* latest_revnum */,
-                                          session,
-                                          url, revision,
-                                          pool, pool));
+      SVN_ERR(svn_ra_serf__get_stable_url2(&path, NULL /* latest_revnum */,
+                                           session,
+                                           repos_relpath, revision,
+                                           pool, pool));
+    }
+  else
+    {
+      SVN_ERR(svn_ra_serf__resolve_path(ra_session, &path, repos_relpath,
+                                        pool));
     }
 
   fdb.entry = svn_dirent_create(pool);
   fdb.supports_deadprop_count = &deadprop_count;
   fdb.result_pool = pool;
 
-  SVN_ERR(svn_ra_serf__create_propfind_handler(&handler, session, url,
+  SVN_ERR(svn_ra_serf__create_propfind_handler(&handler, session, path,
                                                SVN_INVALID_REVNUM, "0",
                                                get_dirent_props(SVN_DIRENT_ALL,
                                                                 session,
@@ -408,7 +406,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                      apr_hash_t **dirents,
                      svn_revnum_t *fetched_rev,
                      apr_hash_t **ret_props,
-                     const char *rel_path,
+                     const char *repos_relpath,
                      svn_revnum_t revision,
                      apr_uint32_t dirent_fields,
                      apr_pool_t *result_pool)
@@ -425,25 +423,24 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   gdb.is_directory = FALSE;
   gdb.supports_deadprop_count = svn_tristate_unknown;
 
-  path = session->session_url.path;
-
-  /* If we have a relative path, URI encode and append it. */
-  if (rel_path)
-    {
-      path = svn_path_url_add_component2(path, rel_path, scratch_pool);
-    }
 
   /* If the user specified a peg revision other than HEAD, we have to fetch
      the baseline collection url for that revision. If not, we can use the
      public url. */
   if (SVN_IS_VALID_REVNUM(revision) || fetched_rev)
     {
-      SVN_ERR(svn_ra_serf__get_stable_url(&path, fetched_rev,
-                                          session,
-                                          path, revision,
-                                          scratch_pool, scratch_pool));
+      SVN_ERR(svn_ra_serf__get_stable_url2(&path, fetched_rev,
+                                           session,
+                                           repos_relpath, revision,
+                                           scratch_pool, scratch_pool));
       revision = SVN_INVALID_REVNUM;
     }
+  else
+    {
+      SVN_ERR(svn_ra_serf__resolve_path(ra_session, &path, repos_relpath,
+                                        scratch_pool));
+    }
+
   /* REVISION is always SVN_INVALID_REVNUM  */
   SVN_ERR_ASSERT(!SVN_IS_VALID_REVNUM(revision));
 

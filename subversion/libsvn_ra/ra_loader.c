@@ -637,18 +637,20 @@ svn_error_t *svn_ra_get_file(svn_ra_session_t *session,
                                    fetched_rev, props, pool);
 }
 
-svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
-                             apr_hash_t **dirents,
-                             svn_revnum_t *fetched_rev,
-                             apr_hash_t **props,
-                             const char *path,
-                             svn_revnum_t revision,
-                             apr_uint32_t dirent_fields,
-                             apr_pool_t *pool)
+svn_error_t *
+svn_ra_get_dir3(svn_ra_session_t *session,
+                apr_hash_t **dirents,
+                svn_revnum_t *fetched_rev,
+                apr_hash_t **props,
+                const char *repos_relpath,
+                svn_revnum_t revision,
+                apr_uint32_t dirent_fields,
+                apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(repos_relpath));
   return session->vtable->get_dir(session, dirents, fetched_rev, props,
-                                  path, revision, dirent_fields, pool);
+                                  repos_relpath, revision, dirent_fields,
+                                  pool);
 }
 
 svn_error_t *
@@ -831,26 +833,28 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                                   receiver, receiver_baton, pool);
 }
 
-svn_error_t *svn_ra_check_path(svn_ra_session_t *session,
-                               const char *path,
-                               svn_revnum_t revision,
-                               svn_node_kind_t *kind,
-                               apr_pool_t *pool)
+svn_error_t *svn_ra_check_path2(svn_ra_session_t *session,
+                                const char *repos_relpath,
+                                svn_revnum_t revision,
+                                svn_node_kind_t *kind,
+                                apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
-  return session->vtable->check_path(session, path, revision, kind, pool);
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(repos_relpath));
+  return session->vtable->check_path(session, repos_relpath, revision, kind,
+                                     pool);
 }
 
-svn_error_t *svn_ra_stat(svn_ra_session_t *session,
-                         const char *path,
-                         svn_revnum_t revision,
-                         svn_dirent_t **dirent,
-                         apr_pool_t *pool)
+svn_error_t *svn_ra_stat2(svn_ra_session_t *session,
+                          const char *repos_relpath,
+                          svn_revnum_t revision,
+                          svn_dirent_t **dirent,
+                          apr_pool_t *pool)
 {
   svn_error_t *err;
-  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
-  err = session->vtable->stat(session, path, revision, dirent, pool);
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(repos_relpath));
+  err = session->vtable->stat(session, repos_relpath, revision, dirent, pool);
 
+#if 0
   /* svnserve before 1.2 doesn't support the above, so fall back on
      a far less efficient, but still correct method. */
   if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
@@ -862,7 +866,7 @@ svn_error_t *svn_ra_stat(svn_ra_session_t *session,
 
       svn_error_clear(err);
 
-      SVN_ERR(svn_ra_check_path(session, path, revision, &kind, scratch_pool));
+-      SVN_ERR(svn_ra_check_path(session, path, revision, &kind, scratch_pool));
 
       if (kind != svn_node_none)
         {
@@ -943,6 +947,7 @@ svn_error_t *svn_ra_stat(svn_ra_session_t *session,
     }
   else
     SVN_ERR(err);
+#endif
 
   return SVN_NO_ERROR;
 }

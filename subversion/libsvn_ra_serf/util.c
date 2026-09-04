@@ -2052,6 +2052,30 @@ svn_ra_serf__uri_parse(apr_uri_t *uri,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_ra_serf__resolve_path(svn_ra_session_t *ra_session,
+                          const char **path,
+                          const char *repos_relpath,
+                          apr_pool_t *pool)
+{
+  svn_ra_serf__session_t *session = ra_session->priv;
+  apr_uri_t parsed;
+
+  if (! session->repos_root_str)
+    {
+      const char *vcc_url;
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, pool));
+    }
+
+  SVN_ERR(svn_ra_serf__uri_parse(&parsed, session->repos_root_str, pool));
+
+  *path = svn_urlpath__canonicalize(svn_urlpath__join(parsed.path,
+                                                      repos_relpath,
+                                                      pool),
+                                    pool);
+  return SVN_NO_ERROR;
+}
+
 void
 svn_ra_serf__setup_svndiff_accept_encoding(serf_bucket_t *headers,
                                            svn_ra_serf__session_t *session)

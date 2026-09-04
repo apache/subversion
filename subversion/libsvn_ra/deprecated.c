@@ -215,6 +215,21 @@ svn_error_t *svn_ra_open(svn_ra_session_t **session_p,
                       config, pool);
 }
 
+/* Read session path - session URL relative to the repository root. */
+static svn_error_t *
+get_session_path(svn_ra_session_t *session,
+                 const char **path_p,
+                 apr_pool_t *pool)
+{
+  const char *session_url, *repos_root;
+
+  SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
+  SVN_ERR(svn_ra_get_repos_root2(session, &repos_root, pool));
+
+  *path_p = svn_uri_skip_ancestor(repos_root, session_url, pool);
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_ra_change_rev_prop(svn_ra_session_t *session,
                                     svn_revnum_t rev,
                                     const char *name,
@@ -497,9 +512,66 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
                             apr_pool_t *pool)
 {
   SVN_ERR_ASSERT(*path != '/');
-  return session->vtable->get_dir(session, dirents, fetched_rev, props,
-                                  path, revision, SVN_DIRENT_ALL, pool);
+  return svn_ra_get_dir2(session, dirents, fetched_rev, props,
+                         path, revision, SVN_DIRENT_ALL, pool);
 }
+
+svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
+                             apr_hash_t **dirents,
+                             svn_revnum_t *fetched_rev,
+                             apr_hash_t **props,
+                             const char *path,
+                             svn_revnum_t revision,
+                             apr_uint32_t dirent_fields,
+                             apr_pool_t *pool)
+{
+  const char *session_path;
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
+
+  SVN_ERR(get_session_path(session, &session_path, pool));
+  SVN_ERR(svn_ra_get_dir3(session, dirents, fetched_rev, props,
+                          svn_relpath_join(session_path, path, pool),
+                          revision, dirent_fields, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_stat(svn_ra_session_t *session,
+            const char *path,
+            svn_revnum_t revision,
+            svn_dirent_t **dirent,
+            apr_pool_t *pool)
+{
+  const char *session_path;
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
+
+  SVN_ERR(get_session_path(session, &session_path, pool));
+  SVN_ERR(svn_ra_stat2(session,
+                       svn_relpath_join(session_path, path, pool),
+                       revision, dirent, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_check_path(svn_ra_session_t *session,
+                  const char *path,
+                  svn_revnum_t revision,
+                  svn_node_kind_t *kind,
+                  apr_pool_t *pool)
+{
+  const char *session_path;
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
+
+  SVN_ERR(get_session_path(session, &session_path, pool));
+  SVN_ERR(svn_ra_check_path2(session,
+                             svn_relpath_join(session_path, path, pool),
+                             revision, kind, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* For each libsvn_ra_foo library, provide an implementation of deprecated
    svn_ra_foo_init function that wraps svn_ra_foo__compat_init, or returns

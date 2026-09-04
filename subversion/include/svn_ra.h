@@ -1103,8 +1103,8 @@ svn_ra_get_file(svn_ra_session_t *session,
 
 /**
  * If @a dirents is non @c NULL, set @a *dirents to contain all the entries
- * of directory @a path at @a revision.  The keys of @a dirents will be
- * entry names (<tt>const char *</tt>), and the values dirents
+ * of directory @a repos_relpath at @a revision.  The keys of @a dirents will
+ * be entry names (<tt>const char *</tt>), and the values dirents
  * (<tt>@c svn_dirent_t *</tt>).  Use @a pool for all allocations.
  *
  * @a dirent_fields controls which portions of the <tt>@c svn_dirent_t</tt>
@@ -1112,7 +1112,7 @@ svn_ra_get_file(svn_ra_session_t *session,
  * @c SVN_DIRENT_ALL, otherwise pass the bitwise OR of all the @c SVN_DIRENT_
  * fields you would like to have returned to you.
  *
- * @a path is interpreted relative to the URL in @a session.
+ * @a repos_relpath is interpreted as a path relative to the repository root.
  *
  * If @a revision is @c SVN_INVALID_REVNUM (meaning 'head') and
  * @a fetched_rev is not @c NULL, then this function will set
@@ -1125,8 +1125,26 @@ svn_ra_get_file(svn_ra_session_t *session,
  * #svn_prop_entry_kind properties).  The keys are <tt>const char *</tt>,
  * values are <tt>@c svn_string_t *</tt>.
  *
- * @since New in 1.4.
+ * @since New in 1.16.
  */
+svn_error_t *
+svn_ra_get_dir3(svn_ra_session_t *session,
+                apr_hash_t **dirents,
+                svn_revnum_t *fetched_rev,
+                apr_hash_t **props,
+                const char *repos_relpath,
+                svn_revnum_t revision,
+                apr_uint32_t dirent_fields,
+                apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_ra_get_dir3, but @a path is relative to session URL.
+ *
+ * @since New in 1.4.
+ *
+ * @deprecated Provided for compatibility with the 1.15 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_dir2(svn_ra_session_t *session,
                 apr_hash_t **dirents,
@@ -1716,14 +1734,31 @@ svn_ra_get_log(svn_ra_session_t *session,
                apr_pool_t *pool);
 
 /**
- * Set @a *kind to the node kind associated with @a path at @a revision.
- * If @a path does not exist under @a revision, set @a *kind to
- * @c svn_node_none.  @a path is relative to the @a session's parent URL.
+ * Set @a *kind to the node kind associated with @a repos_relpath at @a
+ * revision.  If @a repos_relpath does not exist under @a revision, set @a *kind
+ * to @c svn_node_none.  @a repos_relpath is a path relative to repository
+ * root.
  *
  * Use @a pool for memory allocation.
  *
- * @since New in 1.2.
+ * @since New in 1.16.
  */
+svn_error_t *
+svn_ra_check_path2(svn_ra_session_t *session,
+                   const char *repos_relpath,
+                   svn_revnum_t revision,
+                   svn_node_kind_t *kind,
+                   apr_pool_t *pool);
+
+
+/**
+ * Similar to @c svn_ra_check_path2, but @a path is relative to session URL.
+ *
+ * @since New in 1.2.
+ *
+ * @deprecated Provided for compatibility with the 1.15 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_check_path(svn_ra_session_t *session,
                   const char *path,
@@ -1732,14 +1767,30 @@ svn_ra_check_path(svn_ra_session_t *session,
                   apr_pool_t *pool);
 
 /**
- * Set @a *dirent to an @c svn_dirent_t associated with @a path at @a
- * revision.  @a path is relative to the @a session's parent's URL.
- * If @a path does not exist in @a revision, set @a *dirent to NULL.
+ * Set @a *dirent to an @c svn_dirent_t associated with @a repos_relpath at @a
+ * revision.  @a repos_relpath is a path relative to the repository root.
+ *
+ * If @a repos_relpath does not exist in @a revision, set @a *dirent to NULL.
  *
  * Use @a pool for memory allocation.
  *
- * @since New in 1.2.
+ * @since New in 1.16.
  */
+svn_error_t *
+svn_ra_stat2(svn_ra_session_t *session,
+             const char *repos_relpath,
+             svn_revnum_t revision,
+             svn_dirent_t **dirent,
+             apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_ra_stat2, but @a path is relative to session URL.
+ *
+ * @since New in 1.2.
+ *
+ * @deprecated Provided for compatibility with the 1.15 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_stat(svn_ra_session_t *session,
             const char *path,

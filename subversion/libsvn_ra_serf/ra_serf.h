@@ -1180,6 +1180,18 @@ svn_ra_serf__get_stable_url(const char **stable_url,
                             apr_pool_t *scratch_pool);
 
 
+/** Similar to svn_ra_serf__get_stable_url, but using a resolved REPOS_RELPATH
+ * instead of URL */
+svn_error_t *
+svn_ra_serf__get_stable_url2(const char **stable_url,
+                             svn_revnum_t *latest_revnum,
+                             svn_ra_serf__session_t *session,
+                             const char *repos_relpath,
+                             svn_revnum_t revision,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
+
 /** RA functions **/
 
 /* Implements svn_ra__vtable_t.reparent(). */
@@ -1596,6 +1608,12 @@ svn_error_t *
 svn_ra_serf__uri_parse(apr_uri_t *uri,
                        const char *url_str,
                        apr_pool_t *result_pool);
+
+svn_error_t *
+svn_ra_serf__resolve_path(svn_ra_session_t *ra_session,
+                          const char **path,
+                          const char *repos_relpath,
+                          apr_pool_t *result_pool);
 
 /* Setup the "Accept-Encoding" header value for requests that expect
    svndiff-encoded deltas, depending on the SESSION state. */

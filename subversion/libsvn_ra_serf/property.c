@@ -876,6 +876,31 @@ svn_ra_serf__get_stable_url(const char **stable_url,
 
 
 svn_error_t *
+svn_ra_serf__get_stable_url2(const char **stable_url,
+                             svn_revnum_t *latest_revnum,
+                             svn_ra_serf__session_t *session,
+                             const char *repos_relpath,
+                             svn_revnum_t revision,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  const char *basecoll_url;
+  svn_revnum_t revnum_used;
+
+  SVN_ERR(get_baseline_info(&basecoll_url, &revnum_used,
+                            session, revision, scratch_pool, scratch_pool));
+
+  *stable_url = svn_path_url_add_component2(basecoll_url, repos_relpath,
+                                            result_pool);
+  if (latest_revnum)
+    *latest_revnum = revnum_used;
+
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
 svn_ra_serf__fetch_dav_prop(const char **value,
                             svn_ra_serf__session_t *session,
                             const char *url,

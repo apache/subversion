@@ -1014,6 +1014,43 @@ reparent_path(svn_ra_session_t *ra_session,
   return svn_relpath_join(parent->path->data, path, result_pool);
 }
 
+/* Returns tweaked and reparented path from URL. */
+static svn_error_t *
+reparent_repos_relpath(const char **path_p,
+                       svn_ra_session_t *ra_session,
+                       const char *repos_relpath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  svn_ra_svn__session_baton_t *sess = ra_session->priv;
+  svn_ra_svn_conn_t *conn = sess->conn;
+  svn_ra_svn__parent_t *parent = sess->parent;
+  const char *relative_to_server, *url;
+
+  if (! conn->repos_root)
+    return svn_error_create(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
+                            _("Server did not send repository root"));
+
+  url = svn_path_url_add_component2(conn->repos_root, repos_relpath,
+                                    scratch_pool);
+
+  relative_to_server = svn_uri_skip_ancestor(parent->server_url->data,
+                                             url, scratch_pool);
+
+  if (! relative_to_server)
+    {
+      SVN_ERR(reparent_server(ra_session, url, scratch_pool));
+
+      relative_to_server = svn_uri_skip_ancestor(parent->server_url->data,
+                                                 url, result_pool);
+
+      SVN_ERR_ASSERT(relative_to_server != NULL);
+    }
+
+    *path_p = apr_pstrdup(result_pool, relative_to_server);
+    return SVN_NO_ERROR;
+}
+
 /* Return a copy of PATHS, containing the same const char * paths but
    adjusted to the RA_SESSION's server parent URL.  Returns NULL if
    PATHS is NULL.  Allocate the result in RESULT_POOL. */
@@ -1549,7 +1586,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
                                    apr_hash_t **dirents,
                                    svn_revnum_t *fetched_rev,
                                    apr_hash_t **props,
-                                   const char *path,
+                                   const char *repos_relpath,
                                    svn_revnum_t rev,
                                    apr_uint32_t dirent_fields,
                                    apr_pool_t *pool)
@@ -1557,9 +1594,11 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   svn_ra_svn__list_t *proplist, *dirlist;
+  const char *path;
   int i;
 
-  path = reparent_path(session, path, pool);
+  SVN_ERR(reparent_repos_relpath(&path, session, repos_relpath, pool, pool));
+
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w(c(?r)bb(!", "get-dir", path,
                                   rev, (props != NULL), (dirents != NULL)));
   SVN_ERR(send_dirent_fields(conn, dirent_fields, pool));
@@ -2111,14 +2150,15 @@ ra_svn_log(svn_ra_session_t *session,
 
 
 static svn_error_t *ra_svn_check_path(svn_ra_session_t *session,
-                                      const char *path, svn_revnum_t rev,
+                                      const char *repos_relpath, svn_revnum_t rev,
                                       svn_node_kind_t *kind, apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   const char *kind_word;
+  const char *path;
 
-  path = reparent_path(session, path, pool);
+  SVN_ERR(reparent_repos_relpath(&path, session, repos_relpath, pool, pool));
   SVN_ERR(svn_ra_svn__write_cmd_check_path(conn, pool, path, rev));
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn__read_cmd_response(conn, pool, "w", &kind_word));
@@ -2140,15 +2180,16 @@ static svn_error_t *handle_unsupported_cmd(svn_error_t *err,
 
 
 static svn_error_t *ra_svn_stat(svn_ra_session_t *session,
-                                const char *path, svn_revnum_t rev,
+                                const char *repos_relpath, svn_revnum_t rev,
                                 svn_dirent_t **dirent, apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   svn_ra_svn__list_t *list = NULL;
   svn_dirent_t *the_dirent;
+  const char *path;
 
-  path = reparent_path(session, path, pool);
+  SVN_ERR(reparent_repos_relpath(&path, session, repos_relpath, pool, pool));
   SVN_ERR(svn_ra_svn__write_cmd_stat(conn, pool, path, rev));
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
                                  N_("'stat' not implemented")));
