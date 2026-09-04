@@ -299,7 +299,7 @@ II.   INSTALLATION
         For editing the cache (options), do right-click to the CMakeLists.txt
         file and clicking `CMake Settings for Subversion` will open the
         editor. After the required settings are configured, hit `F7` in
-        order to build. For more info, check the article bellow:
+        order to build. For more info, check the article below:
 
             https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio
 
@@ -327,351 +327,36 @@ II.   INSTALLATION
   C.  Building with vcproj/vcxproj (Windows only, deprecated)
       -------------------------------------------------------
 
-      Windows users may find it easier to build Subversion using CMake and
-      vcpkg (see section B above).
+      The vcproj/vcxproj-based build system is deprecated since Subversion 1.15
+      and will be removed in a future release.  See
 
-      The following procedure does not use CMake or vcpkg.
+          https://subversion.apache.org/docs/release-notes/1.15.html#vcproj
 
-  C.1 Prerequisites
+      Windows users should build Subversion using CMake (see section B above).
 
-      * Microsoft Visual Studio. Any recent (2005+) version containing the
-        Visual C++ component will work (E.g. Professional, Express, Community
-        Edition). Make sure you enable C++ support during setup.
-      * Python 2.7 or higher, downloaded from https://www.python.org/ which is
-        used to generate the project files.
-      * Perl 5.8 or higher from https://www.perl.org/get.html
-      * Awk is needed to compile Apache. Source code is available in 
-        tools\dev\awk, run the buildwin.bat program to compile.
-      * Apache apr, apr-util, and optionally apr-iconv libraries, version
-        1.4 or later (1.2 for apr-iconv). If you are building from a Subversion
-        checkout and have not downloaded Apache 2, then get these 3 libraries
-        from https://www.apache.org/dist/apr/.
-      * SQLite 3.24.0 or higher from https://www.sqlite.org/download.html
-        (3.39.4 or higher recommended)
-      * ZLib 1.2 or higher is required and can be obtained from
-        http://www.zlib.net/
-      * Either a Subversion client binary from
-        https://subversion.apache.org/packages.html to do the initial checkout
-        of the Subversion source or the zip file source distribution.
+      The vcproj/vcxproj files for Visual Studio 2010 - 2022 can be generated
+      with gen-make.py.  The required dependencies have to be present in the
+      system (built or installed) before generating the files.  A minimal
+      gen-make.py command looks like this:
 
-      Additional Options
+          C:\SVN\src>python gen-make.py --vsnet-version=2022 ^
+              --with-apr "..\myvcpkg\x64-windows" ^
+              --with-apr-util "..\myvcpkg\x64-windows" ^
+              --with-zlib "..\myvcpkg\x64-windows" ^
+              --with-sqlite "..\myvcpkg\x64-windows"
 
-      * [Optional] Apache Httpd 2 source, downloaded from
-        https://httpd.apache.org/download.cgi, these instructions assume
-        version 2.0.58.  This is only needed for building the Subversion
-        server Apache modules.  ### FIXME Apache 2.2 or greater required.
-      * [Optional] Berkeley DB for backend support of the server components
-        are available from
-        http://www.oracle.com/technetwork/database/database-technologies/berkeleydb/downloads/index-082944.html
-        (Version 4.4.20 or in specific cases some higher version recommended)
-      * [Optional] Openssl can be obtained from https://www.openssl.org/source/
-      * [Optional] NASM can be obtained from http://www.nasm.us/
-      * [Optional] A modified version of GNU libintl, called
-        svn-win32-libintl.zip, can be used for displaying localized
-        messages. Available at:
-        http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=2627
-      * [Optional] GNU gettext for generating message catalog (.mo)
-        files from message translations. You can get the latest
-        binaries from http://gnuwin32.sourceforge.net/. You'll need the
-        binaries (gettext-0.14.1-bin.zip) and dependencies
-        (gettext-0.14.1-dep.zip).
+      The command generates the Visual Studio 2022 solution and project files
+      that can be used with Visual Studio and msbuild.
 
-  C.2 Notes
+      The 'python gen-make.py --help' command prints the list of the options
+      available, some of which can be used when generating the project files.
 
-      The Apache Serf library supports secure connections with OpenSSL
-      and on-the-wire compression with zlib. If you want to use the
-      secure connections feature, you should pass the option
-      "--with-openssl" to the gen-make.py script. See Section I.C.7 for
-      more details.
+      To run the test suite, build the target __ALL_TESTS__ and run
 
-  C.3 Preparation
+          C:\SVN\src>python win-tests.py -c -r
 
-      This section describes how to unpack the files to make a build tree.
-
-      * Make a directory SVN and cd into it.
-      * Either checkout Subversion:
-
-          svn co https://svn.apache.org/repos/asf/subversion/trunk src-trunk
-
-        or unpack the zip file distribution and rename the directory to
-        src-trunk.
-
-      * Install Visual Studio Environment. You either have to tell the
-        installer to register environment variables or run VCVARS32.BAT
-        before building anything.  If you are using a newer Visual Studio,
-        use the 'Visual Studio 20xx Command Prompt' on the Start menu.
-      * Install Python and add it to your path
-      * Install Perl (it should add itself to the path)
-        ### Subversion doesn't need perl. Only some dependencies need it
-            (OpenSSL and some apr scripts)
-      * Copy AWK (awk95.exe) to awk.exe (e.g. SVN\awk\awk.exe) and add
-        the directory containing it (e.g. SVN\awk) to the path.
-        ### Subversion doesn't need awk. Only some dependencies need it
-            (some apr scripts)
-      * [Optional] Install NASM and add it to your path
-        ### Subversion doesn't need NASM. Only some dependencies need it
-            optionally (OpenSSL)
-      * [Optional] If you checked out Subversion from the repository and want
-        to build Subversion with http/https access support then install the
-        Apache Serf sources into SVN\src-trunk\serf.
-      * [Optional] If you want BDB backend support, extract the Berkeley DB
-        files into SVN\src-trunk\db4-win32. It's a good idea to add
-        SVN\src-trunk\db4-win32\bin to your PATH, so that Subversion can find
-        the Berkeley DB DLLs.
-
-        [NOTE: This binary package of Berkeley DB is provided for
-            convenience only. Please don't address questions about
-            Berkeley DB that aren't directly related to using Subversion
-            to the project mailing list.]
-
-        If you build Berkeley DB from the source, you will have to copy
-        the file db-x.x.x\build_win32\db.h to
-        SVN\src-trunk\db4-win32\include, and all the import libraries to
-        SVN\src-trunk\db4-win32\lib. Again, the DLLs should be somewhere in
-        your path.
-        ### Just use --with-serf instead of the hardcoded path
-
-      * [Optional] If you want to build the server modules, extract Apache
-        source into SVN\httpd-2.x.x.
-      * If you are building from a checkout of Subversion, and you are NOT
-        building Apache, then you will need the APR libraries.  Depending
-        on how you got your version of APR, either:
-          - Extract the APR, APR-util and APR-iconv source distributions into
-            SVN\apr, SVN\apr-util, and SVN\apr-iconv respectively.
-        Or:
-          - Extract the apr, apr-util and apr-iconv directories from the
-            srclib folder in the Apache httpd source into SVN\apr,
-            SVN\apr-util, and SVN\apr-iconv respectively.
-        ### Just use --with-apr, etc. instead of the hardcoded paths
-      * Extract the ZLib sources into SVN\zlib if you are not using the zlib
-        included in the dependencies zip file.
-        ### Just use --with-zlib instead of the hardcoded path
-      * [Optional] If you want secure connection (https) client support extract
-        OpenSSL into SVN\openssl
-        ### And pass the path to both serf and gen-make.py
-      * [Optional] If you want localized message support, extract
-        svn-win32-libintl.zip into SVN\svn-win32-libintl and extract
-        gettext-x.x.x-bin.zip and gettext-x.x.x-dep.zip into
-        SVN\gettext-x.x.x-bin.
-        Add SVN\gettext-x.x.x-bin\bin to your path.        
-      * Download the SQLite amalgamation from
-        https://www.sqlite.org/download.html
-        and extract it into SVN\sqlite-amalgamation.
-        See I.C.2 for alternatives to using the amalgamation package.
-
-  C.4 Building the Binaries
-
-      To build the binaries either follow these instructions.
-
-      Start in the SVN directory you created.
-
-      Set up the environment (commands should be one line even if wrapped here).
-
-      C:>set VER=trunk
-      C:>set DIR=trunk
-      C:>set BUILD_ROOT=C:\SVN
-      C:>set PYTHONDIR=C:\Python27
-      C:>set AWKDIR=C:\SVN\Awk
-      C:>set ASMDIR=C:\SVN\asm
-      C:>set SDKINC="C:\Program Files\Microsoft SDK\include"
-      C:>set SDKLIB="C:\Program Files\Microsoft SDK\lib"
-      C:>set GETTEXTBIN=C:\SVN\gettext-0.14.1-bin\bin
-      C:>PATH=%PATH%;%BUILD_ROOT%\src-%DIR%\db4-win32;%ASMDIR%;
-              %PYTHONDIR%;%AWKDIR%;%GETTEXTBIN%
-      C:>set INCLUDE=%SDKINC%;%INCLUDE%
-      C:>set LIB=%SDKLIB%;%LIB%
-
-      OpenSSL < 1.1.0
-
-      C:>cd openssl
-      C:>perl Configure VC-WIN32
-  [*] C:>call ms\do_masm
-      C:>nmake -f ms\ntdll.mak
-      C:>cd out32dll
-      C:>call ..\ms\test
-      C:>cd ..\..
-
-      *Note: Use "call ms\do_nasm" if you have nasm instead of MASM, or
-             "call ms\do_ms" if you don't have an assembler.
-             Also if you are using OpenSSL >= 1.0.0 masm is no longer
-             supported. You will have to use do_nasm or do_ms in this case.
-
-      OpenSSL >= 1.1.0
-
-      C:>cd openssl
-      C:>perl Configure VC-WIN32
-      C:>nmake
-      C:>nmake test
-      C:>cd ..
-
-      Apache 2
-
-      This step is only required for building the server dso modules.
-
-      ### FIXME Apache 2.2 or greater required. Old build instructions for VC6.
-
-      C:>set APACHEDIR=C:\Program Files\Apache Group\Apache2
-      C:>msdev httpd-2.0.58\apache.dsw /MAKE "BuildBin - Win32 Release"
-
-      APR
-
-      If you downloaded APR / APR-UTIL / APR_ICONV by source, you will have to
-      build these libraries first.
-      Building these libraries on Windows is straight forward and in most cases
-      as simple as issuing these two commands:
-
-      C:>nmake -f Makefile.win
-      C:>nmake -f Makefile.win install
-
-      Please refer to the build instructions provided by the library source
-      for actual build instructions.
-
-      ZLib
-
-      If you downloaded the zlib source, you will have to build ZLib first.
-      Building ZLib using Visual Studio should be quite simple. Just open the
-      appropriate solution and build the project zlibstat using the IDE.
-
-      Please refer to the build instructions provided by the library source
-      for actual build instructions.
-
-      Note that you'd make sure to define ZLIB_WINAPI in the ZLib config
-      header and move the lib-file into the zlib root-directory.
-
-      Please note that you MUST NOT build ZLib with the included assembler
-      optimized code. It is known to be buggy, see for example the discussion
-      https://svn.haxx.se/dev/archive-2013-10/0109.shtml.
-      This means that you must not define ASMV or ASMINF. Note that the VS
-      projects in contrib\visualstudio define these in the Debug configuration.
-
-      Apache Serf
-
-      ### Section about Apache Serf might be required/useful to add.
-      ### scons is required too and Apache Serf needs to be configured prior to
-      ### be able to build Subversion using:
-      ### scons APR=[PATH_TO_APR] APU=[PATH_TO_APU] OPENSSL=[PATH_TO_OPENSSL]
-      ### ZLIB=[PATH_TO_ZLIB] PREFIX=[PATH_TO_SERF_DEST]
-      ### scons check
-      ### scons install
-
-      Subversion
-
-      Things to note:
-
-      * If you don't want to build mod_dav_svn, omit the --with-httpd
-        option.  The zip file source distribution contains apr, apr-util and
-        apr-iconv in the default build location. If you have downloaded the
-        apr files yourself you will have to tell the generator where to find
-        the APR libraries; the options are --with-apr, --with-apr-util and
-        --with-apr-iconv.
-      * If you would like a debug build substitute Debug for Release in
-        the msbuild command.
-      * There have been rumors that Subversion on Win32 can be built
-        using the latest cygwin, you probably don't want the zip file source
-        distribution though. ymmv.
-      * You will also have to distribute the C runtime dll with the binaries.
-        Also, since Apache/APR do not provide .vcproj files, you will need to
-        convert the Apache/APR .dsp files to .vcproj files with Visual Studio
-        before building -- just open the Apache .dsw file and answer 'Yes To
-        All' when the conversion dialog pops up, or you can open the individual
-        .dsp files and convert them one at a time.
-        The Apache/APR projects required by Subversion are:
-        apr-util\libaprutil.dsp, apr\libapr.dsp,
-        apr-iconv\libapriconv.dsp, apr-util\xml\expat\lib\xml.dsp,
-        apr-iconv\ccs\libapriconv_ccs_modules.dsp, and
-        apr-iconv\ces\libapriconv_ces_modules.dsp.
-      * If the server dso modules are being built and tested Apache must not
-        be running or the copy of the dso modules will fail.
-
-      C:>cd src-%DIR%
-
-      If Apache 2 has been built and the server modules are required then
-      gen-make.py will already have been run. If the source is from the zip
-      file, Apache 2 has not been built so gen-make.py must be run:
-
-      C:>python gen-make.py --vsnet-version=20xx --with-berkeley-db=db4-win32
-          --with-openssl=..\openssl --with-zlib=..\zlib
-          --with-libintl=..\svn-win32-libintl
-
-      Then build subversion:
-
-      C:>msbuild subversion_vcnet.sln /t:__MORE__ /p:Configuration=Release
-      C:>cd ..
-
-      The binaries have now been built.
-
-  C.5 Packaging the binaries
-
-      You now need to copy the binaries ready to make the release zip
-      file. You also need to do this to run the tests as the new binaries
-      need to be in your path. You can use the build/win32/make_dist.py
-      script in the Subversion source directory to do that.
-
-      [TBD: Describe how to do this. Note dependencies on zip, jar, doxygen.]
-
-  C.6 Testing the Binaries
-      [TBD: It's been a long, long while since it was necessary to move
-            binaries around for testing. win-tests.py does that automagically.
-            Fix this section accordingly, and probably reorder, putting
-            the packaging at the end.]
-
-      The build process creates the binary test programs but it does not
-      copy the client tests into the release test area.
-
-      C:>cd src-%DIR%
-      C:>mkdir Release\subversion\tests\cmdline
-      C:>xcopy /S /Y subversion\tests\cmdline Release\subversion\tests\cmdline
-
-      If the server dso modules  have been built then copy the dso files and
-      dlls into the Apache modules directory.
-
-      C:>copy Release\subversion\mod_dav_svn\mod_dav_svn.so "%APACHEDIR%"\modules
-      C:>copy Release\subversion\mod_authz_svn\mod_authz_svn.so
-         "%APACHEDIR%"\modules
-      C:>copy svn-win32-%VER%\bin\intl.dll "%APACHEDIR%\bin"
-      C:>copy svn-win32-%VER%\bin\iconv.dll "%APACHEDIR%\bin"
-      C:>copy svn-win32-%VER%\bin\libdb42.dll "%APACHEDIR%\bin"
-      C:>cd ..
-
-      Put the svn-win32-trunk\bin directory at the start of your path so
-      you run the newly built binaries and not another version you might
-      have installed.
-
-      Then run the client tests:
-
-      C:>PATH=%BUILD_ROOT%\svn-win32-%VER%\bin;%PATH%
-      C:>cd src-%DIR%
-      C:>python win-tests.py -c -r -v
-
-      If the server dso modules were built configure Apache to use the
-      mod_dav_svn and mod_authz_svn modules by making sure these lines appear
-      uncommented in httpd.conf:
-
-        LoadModule dav_module         modules/mod_dav.so
-        LoadModule dav_fs_module      modules/mod_dav_fs.so
-        LoadModule dav_svn_module     modules/mod_dav_svn.so
-        LoadModule authz_svn_module   modules/mod_authz_svn.so
-
-      And further down the file add location directives to point to the
-      test repositories. Change the paths to the SVN directory you created
-      (paths should be on one line even if wrapped here):
-
-        <Location /svn-test-work/repositories>
-         DAV svn
-         SVNParentPath C:/SVN/src-trunk/Release/subversion/tests/cmdline/
-                       svn-test-work/repositories
-        </Location>
-
-        <Location /svn-test-work/local_tmp/repos>
-         DAV svn
-         SVNPath c:/SVN/src-trunk/Release/subversion/tests/cmdline/
-                 svn-test-work/local_tmp/repos
-        </Location>
-
-      Then restart Apache and run the tests:
-
-      C:>python win-tests.py -c -r -v -u http://localhost
-      C:>cd ..
+      The 'python win-tests.py --help' command prints the list of available
+      options.
 
 
   D.  Running the test suite
