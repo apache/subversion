@@ -48,7 +48,7 @@ I.    INTRODUCTION
       available for different operating systems.  Most Linux and BSD
       distributions already have Subversion packages ready to go via
       standard packaging channels, and other volunteers have built
-      'installers' for both Windows and OS X.  Visit this page for
+      'installers' for both Windows and macOS.  Visit this page for
       package links:
 
          https://subversion.apache.org/packages.html
