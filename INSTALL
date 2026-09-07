@@ -123,10 +123,12 @@ II.   INSTALLATION
       Subversion supports three different build systems:
       A. Autoconf/make, for Unix builds
       B. CMake, for both Unix and Windows
-      C. Visual Studio vcproj, for Windows builds
+      C. Visual Studio vcproj, for Windows builds (deprecated)
 
       Sections A and C below describe the classic build systems that have been
-      in use since 2001.
+      in use since 2001.  Note that the Visual Studio vcproj build system is
+      deprecated as of Subversion 1.15 and will be removed in a future release.
+      Windows users should build Subversion with CMake instead.
 
       Subversion's CMake-based build system was created in 2024 and is still
       under development.  It will be included in Subversion 1.15 and is
