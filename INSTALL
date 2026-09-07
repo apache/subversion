@@ -267,8 +267,8 @@ II.   INSTALLATION
       into another working copy.
 
 
-  B.  Building using CMake (Windows and Unix)
-      ---------------------------------------
+  B.  Building with CMake (Windows and Unix)
+      --------------------------------------
 
       Get the sources, either from a release tarball or by checking out the
       official repository.
