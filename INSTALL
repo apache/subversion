@@ -73,7 +73,9 @@ I.    INTRODUCTION
       * a reasonable C compiler (gcc, Visual Studio, etc.)
 
 
-      Subversion also depends on the following third-party libraries:
+      Subversion depends the following third-party libraries.  The easiest way
+      to install dependencies is via your operating system's package management
+      system.
 
       Required:
 
@@ -701,9 +703,6 @@ V.    DEPENDENCIES IN DETAIL
       are necessary just for a Subversion client.  This section explains
       what other tools and libraries will be required so that Subversion
       can be built with the set of features you want.
-
-      The easiest way to install dependencies is via your operating system's
-      package management system.
 
       On Unix systems, the './configure' script will tell you if you are
       missing the correct version of any of the required libraries or
