@@ -290,16 +290,22 @@ II.   INSTALLATION
 
       Windows tips:
 
-      - Modern versions of Microsoft Visual Studio provide support for
-        CMake projects out-of-box, including intellisense, integrated
-        options editor, test explorer, and more.
+      - Modern versions of Microsoft Visual Studio support CMake projects
+        out of the box, including IntelliSense, an integrated CMake Settings
+        Editor, Test Explorer, and more.  To use it for Subversion,
+        open the source directory in Visual Studio, and the configuration
+        should start automatically.
 
-        In order to use it for Subversion, open the source directory with
-        Visual Studio, and the configuration should start automatically.
-        For editing the cache (options), do right-click to the CMakeLists.txt
-        file and clicking `CMake Settings for Subversion` will open the
-        editor. After the required settings are configured, hit `F7` in
-        order to build. For more info, check the article below:
+        To change the build options (the CMake cache variables) in Visual
+        Studio, right-click the CMakeLists.txt file and click
+        'CMake Settings for Subversion' -- this opens the CMake Settings
+        Editor.  Alternatively, you can edit the CMakeSettings.json file
+        directly.
+
+        After configuring the required settings, build the project as usual,
+        for example with Build > Build All.
+
+        See the following page for more information:
 
             https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio
 
