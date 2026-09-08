@@ -288,7 +288,7 @@ II.   INSTALLATION
 
           $ cmake -LH
 
-      Windows tricks:
+      Windows tips:
 
       - Modern versions of Microsoft Visual Studio provide support for
         CMake projects out-of-box, including intellisense, integrated
