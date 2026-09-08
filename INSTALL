@@ -309,23 +309,22 @@ II.   INSTALLATION
 
             https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio
 
-      - There is a useful tool for bootstrapping the dependencies,
-        vcpkg. It provides ports for the most of the Subversion's
-        dependencies, which then could be installed via a single
-        command.
+      - vcpkg is a useful tool for bootstrapping the dependencies.  It provides
+        ports for most of Subversion's dependencies, which can then be
+        installed with a single command.
 
-        To start using it, download the registry from GitHub, bootstrap
+        To start using it, clone the vcpkg repository from GitHub, bootstrap
         vcpkg, and install the dependencies:
 
             $ git clone https://github.com/microsoft/vcpkg
             $ cd vcpkg && .\bootstrap-vcpkg.bat -disableMetrics
             $ .\vcpkg install apr apr-util expat zlib sqlite3 serf [any other dependency]
 
-        After this is done, vcpkg can be integrated into CMake by passing
-        the vcpkg toolchain to CMAKE_TOOLCHAIN_FILE option. In order to do
-        it with Visual Studio, open the CMake cache editor as explained in
-        the previous step, and put the following into `CMake toolchain
-        file` field, where VCPKG_ROOT is the path to vcpkg registry:
+        After this is done, vcpkg can be integrated into CMake by setting the
+        CMAKE_TOOLCHAIN_FILE variable to the path of the vcpkg file.  To do
+        this in Visual Studio, open the CMake Settings Editor as explained in
+        the previous step, and put the following into the 'CMake toolchain
+        file' field, where VCPKG_ROOT is the path to your vcpkg clone:
 
             <VCPKG_ROOT>/scripts/buildsystems/vcpkg.cmake
 
