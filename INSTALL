@@ -901,19 +901,65 @@ V.    DEPENDENCIES IN DETAIL
          https://www.cyrusimap.org/sasl/
 
 
-      11. Apache Web Server  (OPTIONAL)
+      11. Apache HTTP Server (httpd)  (OPTIONAL)
 
           (https://httpd.apache.org/download.cgi)
 
       The minimum supported version is 2.2.
 
-      The Apache httpd server is one of two methods to make your Subversion
-      repository available over a network - the other is a custom server
-      program called svnserve, which requires no extra software packages.
-      Building Subversion, the Apache server, and the modules that Apache
-      needs to communicate with Subversion are complicated enough that there
-      is a whole section at the end of this document that describes how it
-      is done: See section III for details.
+      The Apache HTTP Server (httpd) can be used to make your Subversion
+      repositories available over a network.  To make this happen, Subversion
+      provides two modules for the server:
+
+      - mod_dav_svn -- enables Apache HTTP Server to serve the repositories
+        over HTTP(S).
+      - mod_authz_svn -- enables granular access control for your repositories.
+
+      A third, auxiliary module, mod_dontdothat, is also available.  It's
+      designed to block typically unwanted heavy requests.
+
+      Building the modules requires Apache HTTP Server to be installed in the
+      system and its development headers to be present as well.
+
+      Building the modules with autoconf/make:
+
+      Configure looks for the apxs tool of httpd in the standard locations and
+      builds the modules if it's found.  You can use the "--with-apxs=" option
+      to locate apxs if it's not found automatically:
+
+          $ ./configure --with-apxs=/usr/local/apache2/bin/apxs
+
+      The modules are shared objects, so don't use the '--disable-shared'
+      option.
+
+      By default, 'make install' installs the modules into Subversion's
+      libexecdir (/usr/local/libexec, by default).  Use
+      '--with-apache-libexecdir' to
+      install them into httpd's own module directory
+      (e.g., /usr/lib/apache2/modules) or '--with-apache-libexecdir=SOMEPATH'
+      to install them into SOMEPATH.
+
+      The '--enable-mod-activation' option adds the LoadModule directives
+      to the httpd's configuration files automatically.
+
+      Building the modules with CMake:
+
+      CMake builds the modules when the SVN_ENABLE_APACHE_MODULES option
+      is set to ON (the command-line option is -DSVN_ENABLE_APACHE_MODULES=ON).
+
+      On Windows, the import libraries libhttpd.lib and mod_dav.lib are
+      required.  Point CMake at the httpd installation directory (e.g.,
+      C:\Apache24) using the CMAKE_PREFIX_PATH variable, or specify
+      HTTPD_INCLUDE_DIR, HTTPD_LIBRARY and MOD_DAV_LIBRARY explicitly (e.g.,
+      C:\Apache24\include, C:\Apache24\lib\libhttpd.lib and
+      C:\Apache24\lib\mod_dav.lib respectively).
+
+      Next steps:
+
+      Configuring Apache HTTP Server or svnserve, Subversion's own server
+      program, is described in chapter 6 of the Subversion Book:
+
+          https://svnbook.red-bean.com/en/1.8/svn.serverconfig.html
 
 
       12. Python (https://www.python.org/)  (OPTIONAL)
