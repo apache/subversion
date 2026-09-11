@@ -823,7 +823,7 @@ IV.   DEPENDENCIES IN DETAIL
 
       If libmagic is installed but support for it should not be compiled
       in, then use:
-      
+
         --with-libmagic=no
 
       If configure should fail when libmagic is not present, but only
@@ -837,7 +837,7 @@ IV.   DEPENDENCIES IN DETAIL
       Subversion uses the Python 3 Compatibility Layer for C
       Extensions (py3c) library when building the Python language
       bindings.
-      
+
       As py3c is a header-only library, it is needed only to build the
       bindings, not to use them.
 
