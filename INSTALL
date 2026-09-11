@@ -575,7 +575,7 @@ IV.   DEPENDENCIES IN DETAIL
       Most Unix systems have zlib pre-installed, but if you need it, you can
       get it from
 
-          http://www.zlib.net/
+          https://www.zlib.net/
 
 
       5.  LZ4  (REQUIRED)
