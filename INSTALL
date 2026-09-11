@@ -877,6 +877,8 @@ IV.   DEPENDENCIES IN DETAIL
 
       21. Berkeley DB  (DEPRECATED, TO BE REMOVED IN THE FUTURE)
 
+      The minimum supported version is 4.0.14.
+
       Needed only for the deprecated BDB repository backend.  Support for
       BDB is planned to be removed completely in the future.
 
