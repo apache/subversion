@@ -879,7 +879,15 @@ IV.   DEPENDENCIES IN DETAIL
       (see section II.A.2).
 
 
-      21. pkg-config  (Unix only, OPTIONAL)
+      21. CMake
+
+      The minimum supported version is 3.20.
+
+      This is required only if you plan to use the CMake-based build system
+      (see section II.B).
+
+
+      22. pkg-config  (Unix only, OPTIONAL)
 
       Subversion uses pkg-config to find appropriate options used
       at build time.
