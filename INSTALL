@@ -435,7 +435,7 @@ II.   INSTALLATION
 
       - Apache HTTP Server is a "heavy-duty" server for which the Subversion
         project provides the mod_dav_svn and mod_authz_svn modules.  Please
-        refer to section IV.11 below for more information.
+        refer to section IV.9 below for more information.
 
        SVNBook provides an overview of the server options as well as the steps
        necessary to configure these servers in 'Chapter 6.  Server
@@ -613,23 +613,7 @@ IV.   DEPENDENCIES IN DETAIL
         --with-utf8proc=internal
 
 
-      7.  autoconf  (Unix only)
-
-      The minimum supported version is 2.59.
-
-      This is required only if you plan to build from the latest source
-      (see section II.A.2). Generally only developers would be doing this.
-
-
-      8.  libtool  (Unix only)
-
-      The minimum supported version is 2.0.
-
-      This is required only if you plan to build from the latest source
-      (see section II.A.2).
-
-
-      9.  Apache Serf library  (OPTIONAL)
+      7.  Apache Serf library  (OPTIONAL)
 
       The minimum supported version is 1.3.4.
 
@@ -651,7 +635,7 @@ IV.   DEPENDENCIES IN DETAIL
       system or directly from https://serf.apache.org/.
 
 
-      10. Cyrus SASL library  (OPTIONAL)
+      8.  Cyrus SASL library  (OPTIONAL)
 
       If the Simple Authentication and Security Layer (SASL) library
       is detected on your system, then the Subversion client and
@@ -662,7 +646,7 @@ IV.   DEPENDENCIES IN DETAIL
          https://www.cyrusimap.org/sasl/
 
 
-      11. Apache HTTP Server (httpd)  (OPTIONAL)
+      9.  Apache HTTP Server (httpd)  (OPTIONAL)
 
           (https://httpd.apache.org/download.cgi)
 
@@ -723,7 +707,7 @@ IV.   DEPENDENCIES IN DETAIL
           https://svnbook.red-bean.com/en/1.8/svn.serverconfig.html
 
 
-      12. Python (https://www.python.org/)  (OPTIONAL)
+      10. Python (https://www.python.org/)  (OPTIONAL)
 
       Python version 3.x is supported and recommended.  Support for Python 2.7
       is being phased out.
@@ -777,26 +761,20 @@ IV.   DEPENDENCIES IN DETAIL
       section II.A.2 for more about autogen.sh.
 
 
-      13. pkg-config  (Unix only, OPTIONAL)
-
-      Subversion uses pkg-config to find appropriate options used
-      at build time.
-
-
-      14. D-Bus  (Unix only, OPTIONAL)
+      11. D-Bus  (Unix only, OPTIONAL)
 
       D-Bus is a message bus system. D-Bus is required for support for KWallet
       and GNOME Keyring. pkg-config is needed to find D-Bus headers and library.
 
 
-      15. Qt 5 or Qt 4  (Unix only, OPTIONAL)
+      12. Qt 5 or Qt 4  (Unix only, OPTIONAL)
 
       Qt is a cross-platform application framework. QtCore, QtDBus and QtGui
       modules are required for support for KWallet. pkg-config is needed
       to find Qt headers and libraries.
 
 
-      16. KDE 5 Framework libraries or KDELibs 4  (Unix only, OPTIONAL)
+      13. KDE 5 Framework libraries or KDELibs 4  (Unix only, OPTIONAL)
 
       Subversion contains optional support for storing passwords in KWallet.
       Subversion will look for KF5Wallet, KF5CoreAddons, KF5I18n APIs by default,
@@ -812,13 +790,13 @@ IV.   DEPENDENCIES IN DETAIL
           --with-kwallet=/path/to/KDE/prefix
 
 
-      17. GLib 2  (Unix only, OPTIONAL)
+      14. GLib 2  (Unix only, OPTIONAL)
 
       GLib is a general-purpose utility library. GLib is required for support
       for GNOME Keyring. pkg-config is needed to find GLib headers and library.
 
 
-      18. GNOME Keyring  (Unix only, OPTIONAL)
+      15. GNOME Keyring  (Unix only, OPTIONAL)
 
       Subversion contains optional support for storing passwords in GNOME Keyring.
       pkg-config is needed to find GNOME Keyring headers and library. D-Bus and
@@ -826,7 +804,7 @@ IV.   DEPENDENCIES IN DETAIL
       then pass the '--with-gnome-keyring' option to `configure`.
 
 
-      19. libmagic  (OPTIONAL)
+      16. libmagic  (OPTIONAL)
 
       If the libmagic library is detected at compile time,
       it will be used to determine mime-types of binary files
@@ -854,7 +832,7 @@ IV.   DEPENDENCIES IN DETAIL
         --with-libmagic
 
 
-      20. py3c  (OPTIONAL)
+      17. py3c  (OPTIONAL)
 
       Subversion uses the Python 3 Compatibility Layer for C
       Extensions (py3c) library when building the Python language
@@ -875,7 +853,7 @@ IV.   DEPENDENCIES IN DETAIL
           https://github.com/encukou/py3c
 
 
-      21. Berkeley DB  (DEPRECATED, TO BE REMOVED IN THE FUTURE)
+      18. Berkeley DB  (DEPRECATED, TO BE REMOVED IN THE FUTURE)
 
       The minimum supported version is 4.0.14.
 
@@ -883,3 +861,25 @@ IV.   DEPENDENCIES IN DETAIL
       BDB is planned to be removed completely in the future.
 
       The CMake build system does not support building with BDB.
+
+
+      19. autoconf  (Unix only)
+
+      The minimum supported version is 2.59.
+
+      This is required only if you plan to build from the latest source
+      (see section II.A.2). Generally only developers would be doing this.
+
+
+      20. libtool  (Unix only)
+
+      The minimum supported version is 2.0.
+
+      This is required only if you plan to build from the latest source
+      (see section II.A.2).
+
+
+      21. pkg-config  (Unix only, OPTIONAL)
+
+      Subversion uses pkg-config to find appropriate options used
+      at build time.
