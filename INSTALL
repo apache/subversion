@@ -867,16 +867,20 @@ IV.   DEPENDENCIES IN DETAIL
 
       The minimum supported version is 2.59.
 
-      This is required only if you plan to build from the latest source
-      (see section II.A.2). Generally only developers would be doing this.
+      This is required only if you plan to use the autoconf-based build system
+      and build from a working copy (see section II.A.2).
+
+      Generally only developers would be doing this.
 
 
       20. libtool  (Unix only)
 
       The minimum supported version is 2.0.
 
-      This is required only if you plan to build from the latest source
-      (see section II.A.2).
+      This is required only if you plan to use the autoconf-based build system
+      and build from a working copy (see section II.A.2).
+
+      Generally only developers would be doing this.
 
 
       21. CMake
