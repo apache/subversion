@@ -125,10 +125,11 @@ II.   INSTALLATION
       deprecated as of Subversion 1.15 and will be removed in a future release.
       Windows users should build Subversion with CMake instead.
 
-      Subversion's CMake-based build system was created in 2024 and is still
-      under development.  It will be included in Subversion 1.15 and is
-      expected to be the default build system for Windows platforms starting
-      with Subversion 1.16.  Section B below describes the CMake build system.
+      Subversion's CMake-based build system was created in 2024 and was
+      included in Subversion 1.15.  It is still under development and is
+      expected to become the default build system for Windows platforms
+      staring with Subversion 1.16.  Section B below describes the CMake build
+      system.
 
   A.  Building with autoconf and make (Unix only)
       -------------------------------------------
