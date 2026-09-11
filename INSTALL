@@ -73,22 +73,22 @@ I.    INTRODUCTION
 
       Required:
 
-      * APR 1.4 or later -- the portability layer that allows Subversion to
+      * APR -- the portability layer that allows Subversion to
         run on different operating systems.
-      * APR-util 1.3 or later -- utility library built on top of APR.
+      * APR-util -- utility library built on top of APR.
       * Expat -- XML parsing.
       * zlib -- compression of binary diffs, used everywhere.
-      * LZ4 r129 or later -- compression.  A bundled copy can be used.
-      * SQLite 3.24.0 or later -- used for some internal databases.  An
+      * LZ4 -- compression.  A bundled copy can be used.
+      * SQLite -- used for some internal databases.  An
         amalgamation file can be used instead of an installed library.
       * utf8proc -- UTF-8 support, including Unicode normalization.  A bundled
         copy can be used.
 
       Optional:
 
-      * Apache Serf 1.3.4 or later -- access to Subversion repositories over
+      * Apache Serf -- access to Subversion repositories over
         http:// and https:// (client).  Strongly recommended.
-      * Cyrus SASL 2 -- SASL authentication for svn:// (client and svnserve
+      * Cyrus SASL -- SASL authentication for svn:// (client and svnserve
         server).
       * libmagic -- MIME type detection for files added to Subversion.
       * libsecret -- password storage in GNOME Keyring (client, Unix-only).
@@ -96,8 +96,8 @@ I.    INTRODUCTION
         (client, Unix-only).
       * Python, Perl, Java, Ruby (with py3c for Python) -- the language
         bindings.
-      * Apache HTTP Server 2.2 or later -- the mod_dav_svn server module.
-      * Berkeley DB 4.0.14 or later -- the deprecated BDB repository backend,
+      * Apache HTTP Server -- the mod_dav_svn server module.
+      * Berkeley DB -- the deprecated BDB repository backend,
         to be removed in the future (server).
 
 
