@@ -418,7 +418,9 @@ II.   INSTALLATION
 
   D.3 Running the test suite under the CMake build system
 
-      Run the ctests command from the build directory.
+      The tests are built when the SVN_ENABLE_TESTS option is set to ON.
+
+      Run the ctest command from the build directory to run the tests.
 
 
   E.  Building a Subversion server
