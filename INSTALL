@@ -158,10 +158,6 @@ II.   INSTALLATION
       version of Subversion requires (if you haven't, the ./configure
       step should complain).
 
-      You can discard the directory created by the tarball; you're
-      about to build the latest, greatest Subversion client.  This is
-      the procedure Subversion developers use.
-
       First off, if you have any Subversion libraries lying around
       from previous 'make installs', clean them up first!
 
