@@ -1130,8 +1130,76 @@ cyrus-sasl-clean:
 $(DISTDIR)/$(CYRUS_SASL_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(CYRUS_SASL_URL)
 
+$(CYRUS_SASL_OBJDIR)/lib_md5.patch:
+	echo 'Index: lib/md5.c' > $@
+	echo '--- lib/md5.c.orig' >> $@
+	echo '+++ lib/md5.c' >> $@
+	echo '@@ -59,8 +59,12 @@ static void Encode PROTO_LIST' >> $@
+	echo '        ((unsigned char *, UINT4 *, unsigned int)); ' >> $@
+	echo ' static void Decode PROTO_LIST' >> $@
+	echo '        ((UINT4 *, const unsigned char *, unsigned int)); ' >> $@
+	echo '+#if 0' >> $@
+	echo ' static void MD5_memcpy PROTO_LIST ((POINTER, POINTER, unsigned int));' >> $@
+	echo ' static void MD5_memset PROTO_LIST ((POINTER, int, unsigned int));' >> $@
+	echo '+#endif' >> $@
+	echo '+#define MD5_memcpy memcpy' >> $@
+	echo '+#define MD5_memset memset' >> $@
+	echo ' ' >> $@
+	echo ' static unsigned char PADDING[64] = {' >> $@
+	echo '        0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,' >> $@
+	echo '@@ -317,6 +321,7 @@ unsigned int len;' >> $@
+	echo ' ' >> $@
+	echo '         */' >> $@
+	echo ' ' >> $@
+	echo '+#if 0' >> $@
+	echo ' static void MD5_memcpy (output, input, len)' >> $@
+	echo ' POINTER output;' >> $@
+	echo ' POINTER input;' >> $@
+	echo '@@ -341,6 +346,7 @@ unsigned int len;' >> $@
+	echo '        for (i = 0; i < len; i++) ' >> $@
+	echo '        ((char *)output)[i] = (char)value; ' >> $@
+	echo ' }' >> $@
+	echo '+#endif' >> $@
+	echo ' ' >> $@
+	echo ' void _sasl_hmac_md5_init(HMAC_MD5_CTX *hmac,' >> $@
+	echo ' 			 const unsigned char *key,' >> $@
+	
+$(CYRUS_SASL_OBJDIR)/saslauthd_md5.patch:
+	echo 'Index: saslauthd/md5.c' >> $@
+	echo '--- saslauthd/md5.c.orig' >> $@
+	echo '+++ saslauthd/md5.c' >> $@
+	echo '@@ -59,8 +59,12 @@ static void Encode PROTO_LIST' >> $@
+	echo '        ((unsigned char *, UINT4 *, unsigned int)); ' >> $@
+	echo ' static void Decode PROTO_LIST' >> $@
+	echo '        ((UINT4 *, unsigned char *, unsigned int)); ' >> $@
+	echo '+#if 0' >> $@
+	echo ' static void MD5_memcpy PROTO_LIST ((POINTER, POINTER, unsigned int));' >> $@
+	echo ' static void MD5_memset PROTO_LIST ((POINTER, int, unsigned int));' >> $@
+	echo '+#endif' >> $@
+	echo '+#define MD5_memcpy memcpy' >> $@
+	echo '+#define MD5_memset memset' >> $@
+	echo ' ' >> $@
+	echo ' static unsigned char PADDING[64] = {' >> $@
+	echo '        0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,' >> $@
+	echo '@@ -317,6 +321,7 @@ unsigned int len;' >> $@
+	echo ' ' >> $@
+	echo '         */' >> $@
+	echo ' ' >> $@
+	echo '+#if 0' >> $@
+	echo ' static void MD5_memcpy (output, input, len)' >> $@
+	echo ' POINTER output;' >> $@
+	echo ' POINTER input;' >> $@
+	echo '@@ -341,6 +346,7 @@ unsigned int len;' >> $@
+	echo '        for (i = 0; i < len; i++) ' >> $@
+	echo '        ((char *)output)[i] = (char)value; ' >> $@
+	echo ' }' >> $@
+	echo '+#endif' >> $@
+	echo ' ' >> $@
+	echo ' void _saslauthd_hmac_md5_init(HMAC_MD5_CTX *hmac,' >> $@
+	echo ' 			 const unsigned char *key,' >> $@
+
 # retrieve cyrus-sasl
-$(CYRUS_SASL_OBJDIR)/.retrieved: $(DISTDIR)/$(CYRUS_SASL_DIST)
+$(CYRUS_SASL_OBJDIR)/.retrieved: $(DISTDIR)/$(CYRUS_SASL_DIST) $(CYRUS_SASL_OBJDIR)/lib_md5.patch $(CYRUS_SASL_OBJDIR)/saslauthd_md5.patch 
 	$(call do_check_sha256,$(CYRUS_SASL_DIST))
 	[ -d $(CYRUS_SASL_OBJDIR) ] || mkdir -p $(CYRUS_SASL_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(CYRUS_SASL_DIST)
@@ -1159,6 +1227,9 @@ endif
 	(cd $(CYRUS_SASL_SRCDIR)/saslauthd/ && ln -sf ../cmulocal)
 	# Fix 64-bit time_t format-string issues
 	sed -i 's/t%020ld"/t%020lld"/' $(CYRUS_SASL_SRCDIR)/plugins/otp.c
+	# Fix compilation issues related to MD5_mempcy and MD5_memset
+	(cd $(CYRUS_SASL_SRCDIR) && patch -p0 < $(CYRUS_SASL_OBJDIR)/lib_md5.patch)
+	(cd $(CYRUS_SASL_SRCDIR) && patch -p0 < $(CYRUS_SASL_OBJDIR)/saslauthd_md5.patch)
 	touch $@
 
 # configure cyrus-sasl
