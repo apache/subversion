@@ -1608,14 +1608,9 @@ python2-clean:
 $(DISTDIR)/$(PYTHON2_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(PYTHON2_URL)
 
-# https://bugs.python.org/issue12560
-$(DISTDIR)/python-issue12560.patch:
-	cd $(DISTDIR) && $(FETCH_CMD) -O "$@" \
-		https://bugs.python.org/file22654/python-2.7.2-configure.diff
-
 # retrieve python 2
 #
-$(PYTHON2_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON2_DIST) $(DISTDIR)/python-issue12560.patch
+$(PYTHON2_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON2_DIST)
 	$(call do_check_sha256,$(PYTHON2_DIST))
 	[ -d $(PYTHON2_OBJDIR) ] || mkdir -p $(PYTHON2_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(PYTHON2_DIST)
@@ -1629,7 +1624,6 @@ $(PYTHON2_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON2_DIST) $(DISTDIR)/python-issue
 		> $(PYTHON2_SRCDIR)/setup.py.patched
 	mv $(PYTHON2_SRCDIR)/setup.py.patched $(PYTHON2_SRCDIR)/setup.py
 	chmod +x $(PYTHON2_SRCDIR)/setup.py
-	cd $(PYTHON2_SRCDIR) && patch -p1 < $(DISTDIR)/python-issue12560.patch
 	mkdir -p $(PYTHON2_OBJDIR)/bin
 	ln -sf "`which python2`" $(PYTHON2_OBJDIR)/bin/python
 	touch $@
