@@ -710,8 +710,7 @@ IV.   DEPENDENCIES IN DETAIL
 
       10. Python (https://www.python.org/)  (OPTIONAL)
 
-      Python version 3.x is supported and recommended.  Support for Python 2.7
-      is being phased out.
+      The minimum supported version is 3.6.
 
       Subversion does not require Python for its basic operation.
       However, Python is required for building and testing Subversion
@@ -749,11 +748,11 @@ IV.   DEPENDENCIES IN DETAIL
       * Build Subversion from a tarball on Unix-like systems without
         running Subversion's test suite
 
-      Although this section calls for Python 3.x, Subversion still
-      technically works with Python 2.7.  However, Support for Python
-      2.7 is being phased out.  As of 1 January 2020, Python 2.7 has
-      reached end of life.  All users are strongly encouraged to move
-      to Python 3.
+      Python 2.7 reached end of life on January 1, 2020.  All users are
+      strongly encouraged to move to Python 3.  The SWIG Python bindings can
+      still be built for Python 2.7 with the autoconf-based build system.
+      Please see the file ./subversion/bindings/swig/INSTALL for more
+      information.
 
       Note: If you are using a Subversion distribution tarball and want
       to build the Python bindings for Python 2, you should rebuild
