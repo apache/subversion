@@ -110,7 +110,7 @@ On OpenBSD install the following packages to get dependencies and
 tools not covered by this Makefile:
 
 pkg_add autoconf automake bison coreutils gmake gperf groff libtool \
-	python ruby scons subversion swig wget xmlto
+	python ruby scons subversion swig wget xmlto jdk
 
 Some of these packages are available in several versions. Tested at time
 of writing were: autoconf-2.68 automake-1.19 python-2.7.14 ruby-2.4.2
