@@ -108,7 +108,7 @@ APR_VER		= 1.7.6
 APR_ICONV_VER	= 1.2.1
 GNU_ICONV_VER	= 1.15
 OPENLDAP_VER	= 2.6.10
-APR_UTIL_VER	= 1.6.3
+APR_UTIL_VER	= 1.6.5
 PCRE_VER	= 8.45
 HTTPD_VER	= 2.4.65
 NEON_VER	= 0.32.5
@@ -746,7 +746,7 @@ $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved \
 		--enable-maintainer-mode \
 		--with-apr=$(PREFIX)/apr \
 		--with-berkeley-db=$(PREFIX)/bdb \
-		--with-ldap-includes=$(PREFIX)/openldap/include/ \
+		--with-ldap-include=$(PREFIX)/openldap/include/ \
 		--with-ldap-lib=$(PREFIX)/openldap/lib/ \
 		--with-ldap=yes \
 		$(ICONV_FLAG)
