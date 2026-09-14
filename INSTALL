@@ -169,10 +169,7 @@ II.   INSTALLATION
 
           $ sh ./autogen.sh
 
-      This script will make sure you have all the necessary components
-      available to build Subversion.  If any are missing, you will be
-      told where to get them from.  (See the 'Dependency Overview' in
-      section I.)
+      This script generates the ./configure script.
 
       Note: if the command "autoconf" on your machine does not run
       autoconf 2.59 or later, but you do have a new enough autoconf
