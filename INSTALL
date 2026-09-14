@@ -463,9 +463,7 @@ IV.   DEPENDENCIES IN DETAIL
 
       On Unix systems, the './configure' script will tell you if you are
       missing the correct version of any of the required libraries or
-      tools, so if you are in a real hurry to get building, you can skip
-      straight to section II.  If you want to gather the pieces you will
-      need before starting out, however, you should read the following.
+      tools.
 
       Note: Because previous builds of Subversion may have installed older
       versions of these libraries, you may want to run some of the cleanup
