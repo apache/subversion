@@ -38,15 +38,4 @@ svn_error_t *svn_ra_local__init(const svn_version_t *loader_version,
                                 const svn_ra__vtable_t **vtable,
                                 apr_pool_t *pool);
 
-/**
- * Compatibility wrapper around svn_ra_local__init.
- *
- * Use @a pool for temporary allocations.
- *
- * @return @a hash with the scheme as the key and the vtable as the value.
- */
-svn_error_t *svn_ra_local__compat_init(int abi_version,
-                                       apr_pool_t *pool,
-                                       apr_hash_t *hash);
-
 #endif

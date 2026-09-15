@@ -1130,11 +1130,3 @@ svn_ra_serf__init(const svn_version_t *loader_version,
 
   return SVN_NO_ERROR;
 }
-
-/* Compatibility wrapper for pre-1.2 subversions.  Needed? */
-#define NAME "ra_serf"
-#define DESCRIPTION RA_SERF_DESCRIPTION
-#define VTBL serf_vtable
-#define INITFUNC svn_ra_serf__init
-#define COMPAT_INITFUNC svn_ra_serf__compat_init
-#include "../libsvn_ra/wrapper_template.h"
