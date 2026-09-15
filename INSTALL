@@ -18,17 +18,11 @@ Contents:
        B. Building with CMake (Windows and Unix)
        C. Building with vcproj/vcxproj (Windows only, deprecated)
        D. Running the test suite
+       E. Building a Subversion server
 
-   III. BUILDING A SUBVERSION SERVER
-       A. Setting Up Apache Httpd
-       B. Making and Installing the Subversion Apache Server Module
-       C. Configuring Apache Httpd for Subversion
-       D. Running and Testing
-       E. Alternative:  'svnserve' and ra_svn
+   III. PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, JAVA)
 
-    IV. PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, JAVA)
-
-     V. DEPENDENCIES IN DETAIL
+    IV. DEPENDENCIES IN DETAIL
 
 
 
@@ -48,7 +42,7 @@ I.    INTRODUCTION
       available for different operating systems.  Most Linux and BSD
       distributions already have Subversion packages ready to go via
       standard packaging channels, and other volunteers have built
-      'installers' for both Windows and OS X.  Visit this page for
+      'installers' for both Windows and macOS.  Visit this page for
       package links:
 
          https://subversion.apache.org/packages.html
@@ -73,25 +67,28 @@ I.    INTRODUCTION
       * a reasonable C compiler (gcc, Visual Studio, etc.)
 
 
-      Subversion also depends on the following third-party libraries:
+      Subversion depends on the following third-party libraries.  The easiest
+      way to install dependencies is via your operating system's package
+      management system.
 
       Required:
 
-      * APR 1.4 or later and APR-util 1.3 or later -- the portability layer
-        that allows Subversion to run on different operating systems.
+      * APR -- the portability layer that allows Subversion to
+        run on different operating systems.
+      * APR-util -- utility library built on top of APR.
       * Expat -- XML parsing.
       * zlib -- compression of binary diffs, used everywhere.
-      * LZ4 r129 or later -- compression.  A bundled copy can be used.
-      * SQLite 3.24.0 or later -- used for some internal databases.  An
+      * LZ4 -- compression.  A bundled copy can be used.
+      * SQLite -- used for some internal databases.  An
         amalgamation file can be used instead of an installed library.
       * utf8proc -- UTF-8 support, including Unicode normalization.  A bundled
         copy can be used.
 
       Optional:
 
-      * Apache Serf 1.3.4 or later -- access to Subversion repositories over
+      * Apache Serf -- access to Subversion repositories over
         http:// and https:// (client).  Strongly recommended.
-      * Cyrus SASL 2 -- SASL authentication for svn:// (client and svnserve
+      * Cyrus SASL -- SASL authentication for svn:// (client and svnserve
         server).
       * libmagic -- MIME type detection for files added to Subversion.
       * libsecret -- password storage in GNOME Keyring (client, Unix-only).
@@ -99,8 +96,8 @@ I.    INTRODUCTION
         (client, Unix-only).
       * Python, Perl, Java, Ruby (with py3c for Python) -- the language
         bindings.
-      * Apache HTTP Server 2.2 or later -- the mod_dav_svn server module.
-      * Berkeley DB 4.0.14 or later -- the deprecated BDB repository backend,
+      * Apache HTTP Server -- the mod_dav_svn server module.
+      * Berkeley DB -- the deprecated BDB repository backend,
         to be removed in the future (server).
 
 
@@ -119,17 +116,20 @@ II.   INSTALLATION
       ============
 
       Subversion supports three different build systems:
-      - Autoconf/make, for Unix builds
-      - Visual Studio vcproj, for Windows builds
-      - CMake, for both Unix and Windows
+      A. Autoconf/make, for Unix builds
+      B. CMake, for both Unix and Windows
+      C. Visual Studio vcproj, for Windows builds (deprecated)
 
-      The first two have been in use since 2001. Sections A and C below describe
-      the classic build system.
+      Sections A and C below describe the classic build systems that have been
+      in use since 2001.  Note that the Visual Studio vcproj build system is
+      deprecated as of Subversion 1.15 and will be removed in a future release.
+      Windows users should build Subversion with CMake instead.
 
-      Subversion's CMake-based build system was created in 2024 and is still
-      under development.  It will be included in Subversion 1.15 and is
-      expected to be the default build system for Windows platforms starting
-      with Subversion 1.16.  Section B below describes the CMake build system.
+      Subversion's CMake-based build system was created in 2024 and was
+      included in Subversion 1.15.  It is still under development and is
+      expected to become the default build system for Windows platforms
+      staring with Subversion 1.16.  Section B below describes the CMake build
+      system.
 
   A.  Building with autoconf and make (Unix only)
       -------------------------------------------
@@ -158,10 +158,6 @@ II.   INSTALLATION
       version of Subversion requires (if you haven't, the ./configure
       step should complain).
 
-      You can discard the directory created by the tarball; you're
-      about to build the latest, greatest Subversion client.  This is
-      the procedure Subversion developers use.
-
       First off, if you have any Subversion libraries lying around
       from previous 'make installs', clean them up first!
 
@@ -173,10 +169,7 @@ II.   INSTALLATION
 
           $ sh ./autogen.sh
 
-      This script will make sure you have all the necessary components
-      available to build Subversion.  If any are missing, you will be
-      told where to get them from.  (See the 'Dependency Overview' in
-      section I.)
+      This script generates the ./configure script.
 
       Note: if the command "autoconf" on your machine does not run
       autoconf 2.59 or later, but you do have a new enough autoconf
@@ -263,8 +256,8 @@ II.   INSTALLATION
       into another working copy.
 
 
-  B.  Building using CMake (Windows and Unix)
-      ---------------------------------------
+  B.  Building with CMake (Windows and Unix)
+      --------------------------------------
 
       Get the sources, either from a release tarball or by checking out the
       official repository.
@@ -288,38 +281,43 @@ II.   INSTALLATION
 
           $ cmake -LH
 
-      Windows tricks:
+      Windows tips:
 
-      - Modern versions of Microsoft Visual Studio provide support for
-        CMake projects out-of-box, including intellisense, integrated
-        options editor, test explorer, and more.
+      - Modern versions of Microsoft Visual Studio support CMake projects
+        out of the box, including IntelliSense, an integrated CMake Settings
+        Editor, Test Explorer, and more.  To use it for Subversion,
+        open the source directory in Visual Studio, and the configuration
+        should start automatically.
 
-        In order to use it for Subversion, open the source directory with
-        Visual Studio, and the configuration should start automatically.
-        For editing the cache (options), do right-click to the CMakeLists.txt
-        file and clicking `CMake Settings for Subversion` will open the
-        editor. After the required settings are configured, hit `F7` in
-        order to build. For more info, check the article below:
+        To change the build options (the CMake cache variables) in Visual
+        Studio, right-click the CMakeLists.txt file and click
+        'CMake Settings for Subversion' -- this opens the CMake Settings
+        Editor.  Alternatively, you can edit the CMakeSettings.json file
+        directly.
+
+        After configuring the required settings, build the project as usual,
+        for example with Build > Build All.
+
+        See the following page for more information:
 
             https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio
 
-      - There is a useful tool for bootstrapping the dependencies,
-        vcpkg. It provides ports for the most of the Subversion's
-        dependencies, which then could be installed via a single
-        command.
+      - vcpkg is a useful tool for bootstrapping the dependencies.  It provides
+        ports for most of Subversion's dependencies, which can then be
+        installed with a single command.
 
-        To start using it, download the registry from GitHub, bootstrap
+        To start using it, clone the vcpkg repository from GitHub, bootstrap
         vcpkg, and install the dependencies:
 
             $ git clone https://github.com/microsoft/vcpkg
             $ cd vcpkg && .\bootstrap-vcpkg.bat -disableMetrics
             $ .\vcpkg install apr apr-util expat zlib sqlite3 serf [any other dependency]
 
-        After this is done, vcpkg can be integrated into CMake by passing
-        the vcpkg toolchain to CMAKE_TOOLCHAIN_FILE option. In order to do
-        it with Visual Studio, open the CMake cache editor as explained in
-        the previous step, and put the following into `CMake toolchain
-        file` field, where VCPKG_ROOT is the path to vcpkg registry:
+        After this is done, vcpkg can be integrated into CMake by setting the
+        CMAKE_TOOLCHAIN_FILE variable to the path of the vcpkg file.  To do
+        this in Visual Studio, open the CMake Settings Editor as explained in
+        the previous step, and put the following into the 'CMake toolchain
+        file' field, where VCPKG_ROOT is the path to your vcpkg clone:
 
             <VCPKG_ROOT>/scripts/buildsystems/vcpkg.cmake
 
@@ -414,273 +412,34 @@ II.   INSTALLATION
 
   D.3 Running the test suite under the CMake build system
 
-      Run the ctests command from the build directory.
+      The tests are built when the SVN_ENABLE_TESTS option is set to ON.
 
-
-III.  BUILDING A SUBVERSION SERVER
-      ============================
+      Run the ctest command from the build directory to run the tests.
 
-      Subversion has two servers you can choose from:  svnserve and
-      Apache.  svnserve is a small, lightweight server program that is
-      automatically compiled when you build Subversion's source.  Apache
-      is a more heavyweight HTTP server, but tends to have more features.
 
-      This section primarily focuses on how to build Apache and the
-      accompanying mod_dav_svn server module for it.  If you plan to use
-      svnserve instead, jump right to section E for a quick explanation.
+  E.  Building a Subversion server
+      ----------------------------
 
+      Subversion has two servers you can choose from, svnserve and
+      Apache HTTP Server (httpd):
 
-  A.  Setting Up Apache Httpd
-      -----------------------
+      - svnserve is a small, lightweight server program that makes Subversion
+        repositories available to clients over a custom protocol.  The svnserve
+        server is automatically compiled when you build Subversion's source.
 
-      1.  Obtaining and Installing Apache Httpd 2
+      - Apache HTTP Server is a "heavy-duty" server for which the Subversion
+        project provides the mod_dav_svn and mod_authz_svn modules.  Please
+        refer to section IV.9 below for more information.
 
-      Subversion tries to compile against the latest released version
-      of Apache httpd 2.2+.  The easiest thing for you to do is download
-      a source tarball of the latest release and unpack that.
+       SVNBook provides an overview of the server options as well as the steps
+       necessary to configure these servers in 'Chapter 6.  Server
+       Configuration':
 
-      If you have questions about the Apache httpd 2.2 build, please consult
-      the httpd install documentation:
-
-          https://httpd.apache.org/docs-2.2/install.html
-
-      At the top of the httpd tree:
-
-          $ ./buildconf
-          $ ./configure --enable-dav --enable-so --enable-maintainer-mode
-
-      The first arg says to build mod_dav.
-
-      The second arg says to enable shared module support which is needed
-      for a typical compile of mod_dav_svn (see below).
-
-      The third arg says to include debugging information.  If you
-      built Subversion with --enable-maintainer-mode, then you should
-      do the same for Apache; there can be problems if one was
-      compiled with debugging and the other without.
-
-      Note: if you have multiple db versions installed on your system,
-      Apache might link to a different one than Subversion, causing
-      failures when accessing the repository through Apache.  To prevent
-      this from happening, you have to tell Apache which db version to
-      use and where to find db.  Add --with-dbm=db4 and
-      --with-berkeley-db=/usr/local/BerkeleyDB.4.2 to the configure
-      line.  Make sure this is the same db as the one Subversion uses.
-      This note assumes you have installed Berkeley DB 4.2.52
-      at its default locations.
-
-      You may also want to include other modules in your build. Add
-      --enable-ssl to turn on SSL support, and --enable-deflate to turn on
-      compression support, for example.  Consult the Apache documentation
-      for more details.
-
-      All instructions below assume you configured Apache to install
-      in its default location, /usr/local/apache2/; substitute
-      appropriately if you chose some other location.
-
-      Compile and install apache:
-
-          $ make && make install
-
-
-  B.  Making and Installing the Subversion Apache Server Module
-      ---------------------------------------------------------
-
-      Go back into your subversion working copy and run ./autogen.sh if
-      you need to.  Then, assuming Apache httpd 2.2 is installed in the
-      standard location, run:
-
-          $ ./configure
-
-      Note: do *not* configure subversion with "--disable-shared"!
-      mod_dav_svn *must* be built as a shared library, and it will
-      look for other libsvn_*.so libraries on your system.
-
-      If you see a warning message that the build of mod_dav_svn is
-      being skipped, this may be because you have Apache httpd 2.x
-      installed in a non-standard location.  You can use the
-      "--with-apxs=" option to locate the apxs script:
-
-          $ ./configure --with-apxs=/usr/local/apache2/bin/apxs
-
-      Note: it *is* possible to build mod_dav_svn as a static library
-      and link it directly into Apache. Possible, but painful. Stick
-      with the shared library for now; if you can't, then ask.
-
-          $ rm /usr/local/lib/libsvn*
-
-      If you have old subversion libraries sitting on your system,
-      libtool will link them instead of the `fresh' ones in your tree.
-      Remove them before building subversion.
-
-          $ make clean && make && make install
-
-      After the make install, the Subversion shared libraries are in
-      /usr/local/lib/.  mod_dav_svn.so should be installed in
-      /usr/local/libexec/ (or elsewhere, such as /usr/local/apache2/modules/,
-      if you passed --with-apache-libexecdir to configure).
-
-
-      Section II.C explains how to build the server on Windows.
-
-
-  C.  Configuring Apache Httpd for Subversion
-      ---------------------------------------
-
-      The following section is an abbreviated version of the
-      information in the Subversion Book
-      (https://svnbook.red-bean.com).  Please read chapter 6 for more
-      details.
-
-      The following assumes you have already created a repository.
-      For documentation on how to do that, see README.
-
-      The following also assumes that you have modified
-      /usr/local/apache2/conf/httpd.conf to reflect your setup.
-      At a minimum you should look at the User, Group and ServerName
-      directives.  Full details on setting up apache can be found at:
-      https://httpd.apache.org/docs-2.2/
-
-      First, your httpd.conf needs to load the mod_dav_svn module.
-      If you pass --enable-mod-activation to Subversion's configure,
-      'make install' target should automatically add this line for you.
-      In any case, if Apache HTTPD gives you an error like "Unknown
-      DAV provider: svn", then you may want to verify that this line
-      exists in your httpd.conf:
-
-         LoadModule dav_svn_module     modules/mod_dav_svn.so
-
-      NOTE: if you built mod_dav as a dynamic module as well, make sure
-      the above line appears after the one that loads mod_dav.so.
-
-      Next, add this to the *bottom* of your httpd.conf:
-
-      <Location /svn/repos>
-          DAV svn
-          SVNPath /absolute/path/to/repository
-      </Location>
-
-      This will give anyone unrestricted access to the repository.  If
-      you want limited access, read or write, you add these lines to
-      the Location block:
-
-          AuthType Basic
-          AuthName "Subversion repository"
-          AuthUserFile /my/svn/user/passwd/file
-
-      And:
-
-          a) For a read/write restricted repository:
-
-             Require valid-user
-
-          b) For a write restricted repository:
-
-             <LimitExcept GET PROPFIND OPTIONS REPORT>
-                 Require valid-user
-             </LimitExcept>
-
-          c) For separate restricted read and write access:
-
-             AuthGroupFile /my/svn/group/file
-
-             <LimitExcept GET PROPFIND OPTIONS REPORT>
-                 Require group svn_committers
-             </LimitExcept>
-
-             <Limit GET PROPFIND OPTIONS REPORT>
-                 Require group svn_committers
-                 Require group svn_readers
-             </Limit>
-
-      ### FIXME Tutorials section refers to old 2.0 docs
-      These are only a few simple examples.  For a complete tutorial
-      on Apache access control, please consider taking a look at the
-      tutorials found under "Security" on the following page:
-      https://httpd.apache.org/docs-2.0/misc/tutorials.html
-
-      In order for 'svn cp' to work (which is actually implemented as a
-      DAV COPY command), mod_dav needs to be able to determine the
-      hostname of the server.  A standard way of doing this is to use
-      Apache's ServerName directive to set the server's hostname.  Edit
-      your /usr/local/apache2/conf/httpd.conf to include:
-
-      ServerName svn.myserver.org
-
-      If you are using virtual hosting through Apache's NameVirtualHost
-      directive, you may need to use the ServerAlias directive to specify
-      additional names that your server is known by.
-
-      If you have configured mod_deflate to be in the server, you can enable
-      compression support for your repository by adding the following line
-      to your Location block:
-
-          SetOutputFilter DEFLATE
-
-
-      NOTE: If you are unfamiliar with an Apache directive, or not exactly
-      sure about what it does, don't hesitate to look it up in the
-      documentation: https://httpd.apache.org/docs-2.2/mod/directives.html.
-
-      NOTE: Make sure that the user 'nobody' (or whatever UID the
-      httpd process runs as) has permission to read and write the
-      Berkeley DB files!  This is a very common problem.
-
-
-  D.  Running and Testing
-      -------------------
-
-      Fire up apache 2:
-
-          $ /usr/local/apache2/bin/apachectl stop
-          $ /usr/local/apache2/bin/apachectl start
-
-      Check /usr/local/apache2/logs/error_log to make sure it started
-      up okay.
-
-      Try doing a network checkout from the repository:
-
-          $ svn co http://localhost/svn/repos wc
-
-      The most common reason this might fail is permission problems
-      reading the repository db files.  If the checkout fails, make
-      sure that the httpd process has permission to read and write to
-      the repository.  You can see all of mod_dav_svn's complaints in
-      the Apache error logfile, /usr/local/apache2/logs/error_log.
-
-      To run the regression test suite for networked Subversion, see
-      the instructions in subversion/tests/cmdline/README.
-      For advice about tracing problems, see "Debugging the server" in
-      https://subversion.apache.org/docs/community-guide/.
-
-
-  E.  Alternative:  'svnserve' and ra_svn
-      -----------------------------------
-
-      An alternative network layer is libsvn_ra_svn (on the client
-      side) and the 'svnserve' process on the server.  This is a
-      simple network layer that speaks a custom protocol over plain
-      TCP (documented in libsvn_ra_svn/protocol):
-
-         $ svnserve -d     # becomes a background daemon
-         $ svn checkout svn://localhost/usr/local/svn/repository
-
-      You can use the "-r" option to svnserve to set a logical root
-      for repositories, and the "-R" option to restrict connections to
-      read-only access.  ("Read-only" is a logical term here; svnserve
-      still needs write access to the database in this mode, but will
-      not allow commits or revprop changes.)
-
-      'svnserve' has built-in CRAM-MD5 authentication (so you can use
-      non-system accounts), and can also be tunneled over SSH (so you
-      can use existing system accounts).  It's also capable of using
-      Cyrus SASL if libsasl2 is detected at ./configure time.  Please
-      read chapter 6 in the Subversion Book
-      (https://svnbook.red-bean.com) for details on these features.
+           https://svnbook.red-bean.com/en/1.8/svn.serverconfig.html
 
 
 
-IV.   PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, JAVA)
+III.  PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, JAVA)
       ========================================================
 
       For Python, Perl and Ruby bindings, see the file
@@ -693,7 +452,7 @@ IV.   PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, JAVA)
 
 
 
-V.    DEPENDENCIES IN DETAIL
+IV.   DEPENDENCIES IN DETAIL
       ======================
 
       Subversion depends on a number of third party tools and libraries.
@@ -702,14 +461,9 @@ V.    DEPENDENCIES IN DETAIL
       what other tools and libraries will be required so that Subversion
       can be built with the set of features you want.
 
-      The easiest way to install dependencies is via your operating system's
-      package management system.
-
       On Unix systems, the './configure' script will tell you if you are
       missing the correct version of any of the required libraries or
-      tools, so if you are in a real hurry to get building, you can skip
-      straight to section II.  If you want to gather the pieces you will
-      need before starting out, however, you should read the following.
+      tools.
 
       Note: Because previous builds of Subversion may have installed older
       versions of these libraries, you may want to run some of the cleanup
@@ -813,7 +567,7 @@ V.    DEPENDENCIES IN DETAIL
       Most Unix systems have zlib pre-installed, but if you need it, you can
       get it from
 
-          http://www.zlib.net/
+          https://www.zlib.net/
 
 
       5.  LZ4  (REQUIRED)
@@ -851,23 +605,7 @@ V.    DEPENDENCIES IN DETAIL
         --with-utf8proc=internal
 
 
-      7.  autoconf  (Unix only)
-
-      The minimum supported version is 2.59.
-
-      This is required only if you plan to build from the latest source
-      (see section II.A.2). Generally only developers would be doing this.
-
-
-      8.  libtool  (Unix only)
-
-      The minimum supported version is 2.0.
-
-      This is required only if you plan to build from the latest source
-      (see section II.A.2).
-
-
-      9.  Apache Serf library  (OPTIONAL)
+      7.  Apache Serf library  (OPTIONAL)
 
       The minimum supported version is 1.3.4.
 
@@ -889,7 +627,7 @@ V.    DEPENDENCIES IN DETAIL
       system or directly from https://serf.apache.org/.
 
 
-      10. Cyrus SASL library  (OPTIONAL)
+      8.  Cyrus SASL library  (OPTIONAL)
 
       If the Simple Authentication and Security Layer (SASL) library
       is detected on your system, then the Subversion client and
@@ -900,25 +638,70 @@ V.    DEPENDENCIES IN DETAIL
          https://www.cyrusimap.org/sasl/
 
 
-      11. Apache Web Server  (OPTIONAL)
+      9.  Apache HTTP Server (httpd)  (OPTIONAL)
 
           (https://httpd.apache.org/download.cgi)
 
       The minimum supported version is 2.2.
 
-      The Apache httpd server is one of two methods to make your Subversion
-      repository available over a network - the other is a custom server
-      program called svnserve, which requires no extra software packages.
-      Building Subversion, the Apache server, and the modules that Apache
-      needs to communicate with Subversion are complicated enough that there
-      is a whole section at the end of this document that describes how it
-      is done: See section III for details.
+      The Apache HTTP Server (httpd) can be used to make your Subversion
+      repositories available over a network.  To make this happen, Subversion
+      provides two modules for the server:
+
+      - mod_dav_svn -- enables Apache HTTP Server to serve the repositories
+        over HTTP(S).
+      - mod_authz_svn -- enables granular access control for your repositories.
+
+      A third, auxiliary module, mod_dontdothat, is also available.  It's
+      designed to block typically unwanted heavy requests.
+
+      Building the modules requires Apache HTTP Server to be installed in the
+      system and its development headers to be present as well.
+
+      Building the modules with autoconf/make:
+
+      Configure looks for the apxs tool of httpd in the standard locations and
+      builds the modules if it's found.  You can use the "--with-apxs=" option
+      to locate apxs if it's not found automatically:
+
+          $ ./configure --with-apxs=/usr/local/apache2/bin/apxs
+
+      The modules are shared objects, so don't use the '--disable-shared'
+      option.
+
+      By default, 'make install' installs the modules into Subversion's
+      libexecdir (/usr/local/libexec, by default).  Use
+      '--with-apache-libexecdir' to
+      install them into httpd's own module directory
+      (e.g., /usr/lib/apache2/modules) or '--with-apache-libexecdir=SOMEPATH'
+      to install them into SOMEPATH.
+
+      The '--enable-mod-activation' option adds the LoadModule directives
+      to the httpd's configuration files automatically.
+
+      Building the modules with CMake:
+
+      CMake builds the modules when the SVN_ENABLE_APACHE_MODULES option
+      is set to ON (the command-line option is -DSVN_ENABLE_APACHE_MODULES=ON).
+
+      On Windows, the import libraries libhttpd.lib and mod_dav.lib are
+      required.  Point CMake at the httpd installation directory (e.g.,
+      C:\Apache24) using the CMAKE_PREFIX_PATH variable, or specify
+      HTTPD_INCLUDE_DIR, HTTPD_LIBRARY and MOD_DAV_LIBRARY explicitly (e.g.,
+      C:\Apache24\include, C:\Apache24\lib\libhttpd.lib and
+      C:\Apache24\lib\mod_dav.lib respectively).
+
+      Next steps:
+
+      Configuring Apache HTTP Server or svnserve, Subversion's own server
+      program, is described in chapter 6 of the Subversion Book:
+
+          https://svnbook.red-bean.com/en/1.8/svn.serverconfig.html
 
 
-      12. Python (https://www.python.org/)  (OPTIONAL)
+      10. Python (https://www.python.org/)  (OPTIONAL)
 
-      Python version 3.x is supported and recommended.  Support for Python 2.7
-      is being phased out.
+      The minimum supported version is 3.6.
 
       Subversion does not require Python for its basic operation.
       However, Python is required for building and testing Subversion
@@ -939,7 +722,6 @@ V.    DEPENDENCIES IN DETAIL
         Subversion's own repository (whether or not running the test
         suite).
       * Build the SWIG Python bindings.
-      * Testing as described in section III.D.
 
       The Python bindings are used by:
 
@@ -957,11 +739,11 @@ V.    DEPENDENCIES IN DETAIL
       * Build Subversion from a tarball on Unix-like systems without
         running Subversion's test suite
 
-      Although this section calls for Python 3.x, Subversion still
-      technically works with Python 2.7.  However, Support for Python
-      2.7 is being phased out.  As of 1 January 2020, Python 2.7 has
-      reached end of life.  All users are strongly encouraged to move
-      to Python 3.
+      Python 2.7 reached end of life on January 1, 2020.  All users are
+      strongly encouraged to move to Python 3.  The SWIG Python bindings can
+      still be built for Python 2.7 with the autoconf-based build system.
+      Please see the file ./subversion/bindings/swig/INSTALL for more
+      information.
 
       Note: If you are using a Subversion distribution tarball and want
       to build the Python bindings for Python 2, you should rebuild
@@ -970,26 +752,20 @@ V.    DEPENDENCIES IN DETAIL
       section II.A.2 for more about autogen.sh.
 
 
-      13. pkg-config  (Unix only, OPTIONAL)
-
-      Subversion uses pkg-config to find appropriate options used
-      at build time.
-
-
-      14. D-Bus  (Unix only, OPTIONAL)
+      11. D-Bus  (Unix only, OPTIONAL)
 
       D-Bus is a message bus system. D-Bus is required for support for KWallet
       and GNOME Keyring. pkg-config is needed to find D-Bus headers and library.
 
 
-      15. Qt 5 or Qt 4  (Unix only, OPTIONAL)
+      12. Qt 5 or Qt 4  (Unix only, OPTIONAL)
 
       Qt is a cross-platform application framework. QtCore, QtDBus and QtGui
       modules are required for support for KWallet. pkg-config is needed
       to find Qt headers and libraries.
 
 
-      16. KDE 5 Framework libraries or KDELibs 4  (Unix only, OPTIONAL)
+      13. KDE 5 Framework libraries or KDELibs 4  (Unix only, OPTIONAL)
 
       Subversion contains optional support for storing passwords in KWallet.
       Subversion will look for KF5Wallet, KF5CoreAddons, KF5I18n APIs by default,
@@ -1005,13 +781,13 @@ V.    DEPENDENCIES IN DETAIL
           --with-kwallet=/path/to/KDE/prefix
 
 
-      17. GLib 2  (Unix only, OPTIONAL)
+      14. GLib 2  (Unix only, OPTIONAL)
 
       GLib is a general-purpose utility library. GLib is required for support
       for GNOME Keyring. pkg-config is needed to find GLib headers and library.
 
 
-      18. GNOME Keyring  (Unix only, OPTIONAL)
+      15. GNOME Keyring  (Unix only, OPTIONAL)
 
       Subversion contains optional support for storing passwords in GNOME Keyring.
       pkg-config is needed to find GNOME Keyring headers and library. D-Bus and
@@ -1019,7 +795,7 @@ V.    DEPENDENCIES IN DETAIL
       then pass the '--with-gnome-keyring' option to `configure`.
 
 
-      19. libmagic  (OPTIONAL)
+      16. libmagic  (OPTIONAL)
 
       If the libmagic library is detected at compile time,
       it will be used to determine mime-types of binary files
@@ -1038,7 +814,7 @@ V.    DEPENDENCIES IN DETAIL
 
       If libmagic is installed but support for it should not be compiled
       in, then use:
-      
+
         --with-libmagic=no
 
       If configure should fail when libmagic is not present, but only
@@ -1047,12 +823,12 @@ V.    DEPENDENCIES IN DETAIL
         --with-libmagic
 
 
-      20. py3c  (OPTIONAL)
+      17. py3c  (OPTIONAL)
 
       Subversion uses the Python 3 Compatibility Layer for C
       Extensions (py3c) library when building the Python language
       bindings.
-      
+
       As py3c is a header-only library, it is needed only to build the
       bindings, not to use them.
 
@@ -1068,9 +844,45 @@ V.    DEPENDENCIES IN DETAIL
           https://github.com/encukou/py3c
 
 
-      21. Berkeley DB  (DEPRECATED, TO BE REMOVED IN THE FUTURE)
+      18. Berkeley DB  (DEPRECATED, TO BE REMOVED IN THE FUTURE)
+
+      The minimum supported version is 4.0.14.
 
       Needed only for the deprecated BDB repository backend.  Support for
       BDB is planned to be removed completely in the future.
 
       The CMake build system does not support building with BDB.
+
+
+      19. autoconf  (Unix only)
+
+      The minimum supported version is 2.59.
+
+      This is required only if you plan to use the autoconf-based build system
+      and build from a working copy (see section II.A.2).
+
+      Generally only developers would be doing this.
+
+
+      20. libtool  (Unix only)
+
+      The minimum supported version is 2.0.
+
+      This is required only if you plan to use the autoconf-based build system
+      and build from a working copy (see section II.A.2).
+
+      Generally only developers would be doing this.
+
+
+      21. CMake
+
+      The minimum supported version is 3.20.
+
+      This is required only if you plan to use the CMake-based build system
+      (see section II.B).
+
+
+      22. pkg-config  (Unix only, OPTIONAL)
+
+      Subversion uses pkg-config to find appropriate options used
+      at build time.
