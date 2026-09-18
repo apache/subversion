@@ -134,7 +134,7 @@ typedef struct svn_ra__vtable_t {
                                     apr_pool_t *pool);
   /* See svn_ra_get_file(). */
   svn_error_t *(*get_file)(svn_ra_session_t *session,
-                           const char *path,
+                           const char *repos_relpath,
                            svn_revnum_t revision,
                            svn_stream_t *stream,
                            svn_revnum_t *fetched_rev,
@@ -247,13 +247,13 @@ typedef struct svn_ra__vtable_t {
   /* See svn_ra_get_locations(). */
   svn_error_t *(*get_locations)(svn_ra_session_t *session,
                                 apr_hash_t **locations,
-                                const char *path,
+                                const char *repos_relpath,
                                 svn_revnum_t peg_revision,
                                 const apr_array_header_t *location_revisions,
                                 apr_pool_t *pool);
   /* See svn_ra_get_location_segments(). */
   svn_error_t *(*get_location_segments)(svn_ra_session_t *session,
-                                        const char *path,
+                                        const char *repos_relpath,
                                         svn_revnum_t peg_revision,
                                         svn_revnum_t start_rev,
                                         svn_revnum_t end_rev,
@@ -262,7 +262,7 @@ typedef struct svn_ra__vtable_t {
                                         apr_pool_t *pool);
   /* See svn_ra_get_file_revs2(). */
   svn_error_t *(*get_file_revs)(svn_ra_session_t *session,
-                                const char *path,
+                                const char *repos_relpath,
                                 svn_revnum_t start,
                                 svn_revnum_t end,
                                 svn_boolean_t include_merged_revisions,
@@ -287,12 +287,12 @@ typedef struct svn_ra__vtable_t {
   /* See svn_ra_get_lock(). */
   svn_error_t *(*get_lock)(svn_ra_session_t *session,
                            svn_lock_t **lock,
-                           const char *path,
+                           const char *repos_relpath,
                            apr_pool_t *pool);
   /* See svn_ra_get_locks2(). */
   svn_error_t *(*get_locks)(svn_ra_session_t *session,
                             apr_hash_t **locks,
-                            const char *path,
+                            const char *repos_relpath,
                             svn_depth_t depth,
                             apr_pool_t *pool);
   /* See svn_ra_replay(). */
@@ -321,7 +321,7 @@ typedef struct svn_ra__vtable_t {
                   apr_pool_t *pool);
   /* See svn_ra_get_deleted_rev(). */
   svn_error_t *(*get_deleted_rev)(svn_ra_session_t *session,
-                                  const char *path,
+                                  const char *repos_relpath,
                                   svn_revnum_t peg_revision,
                                   svn_revnum_t end_revision,
                                   svn_revnum_t *revision_deleted,
@@ -329,7 +329,7 @@ typedef struct svn_ra__vtable_t {
   /* See svn_ra_get_inherited_props(). */
   svn_error_t *(*get_inherited_props)(svn_ra_session_t *session,
                                       apr_array_header_t **iprops,
-                                      const char *path,
+                                      const char *repos_relpath,
                                       svn_revnum_t revision,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
@@ -341,7 +341,7 @@ typedef struct svn_ra__vtable_t {
 
   /* See svn_ra_list(). */
   svn_error_t *(*list)(svn_ra_session_t *session,
-                       const char *path,
+                       const char *repos_relpath,
                        svn_revnum_t revision,
                        const apr_array_header_t *patterns,
                        svn_depth_t depth,
@@ -352,7 +352,7 @@ typedef struct svn_ra__vtable_t {
 
   /* See svn_ra_fetch_file_contents(). */
   svn_error_t *(*fetch_file_contents)(svn_ra_session_t *session,
-                                      const char *path,
+                                      const char *repos_relpath,
                                       svn_revnum_t revision,
                                       svn_stream_t *stream,
                                       apr_pool_t *scratch_pool);

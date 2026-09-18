@@ -721,7 +721,7 @@ svn_ra_local__get_latest_revnum(svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__get_file_revs(svn_ra_session_t *session,
-                            const char *path,
+                            const char *repos_relpath,
                             svn_revnum_t start,
                             svn_revnum_t end,
                             svn_boolean_t include_merged_revisions,
@@ -730,8 +730,8 @@ svn_ra_local__get_file_revs(svn_ra_session_t *session,
                             apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path = svn_fspath__join(sess->fs_path->data, path, pool);
-  return svn_repos_get_file_revs2(sess->repos, abs_path, start, end,
+  repos_relpath = svn_fspath__join("/", repos_relpath, pool);
+  return svn_repos_get_file_revs2(sess->repos, repos_relpath, start, end,
                                   include_merged_revisions, NULL, NULL,
                                   handler, handler_baton, pool);
 }
@@ -1265,7 +1265,7 @@ get_node_props(apr_hash_t **props,
 /* Getting just one file. */
 static svn_error_t *
 get_file(svn_ra_session_t *session,
-         const char *path,
+         const char *repos_relpath,
          svn_revnum_t revision,
          svn_stream_t *stream,
          svn_revnum_t *fetched_rev,
@@ -1276,7 +1276,6 @@ get_file(svn_ra_session_t *session,
   svn_stream_t *contents;
   svn_revnum_t youngest_rev;
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path = svn_fspath__join(sess->fs_path->data, path, pool);
   svn_node_kind_t node_kind;
 
   /* Open the revision's root. */
@@ -1290,22 +1289,22 @@ get_file(svn_ra_session_t *session,
   else
     SVN_ERR(svn_fs_revision_root(&root, sess->fs, revision, pool));
 
-  SVN_ERR(svn_fs_check_path(&node_kind, root, abs_path, pool));
+  SVN_ERR(svn_fs_check_path(&node_kind, root, repos_relpath, pool));
   if (node_kind == svn_node_none)
     {
       return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                               _("'%s' path not found"), abs_path);
+                               _("'%s' path not found"), repos_relpath);
     }
   else if (node_kind != svn_node_file)
     {
       return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
-                               _("'%s' is not a file"), abs_path);
+                               _("'%s' is not a file"), repos_relpath);
     }
 
   if (stream)
     {
       /* Get a stream representing the file's contents. */
-      SVN_ERR(svn_fs_file_contents(&contents, root, abs_path, pool));
+      SVN_ERR(svn_fs_file_contents(&contents, root, repos_relpath, pool));
 
       /* Now push data from the fs stream back at the caller's stream.
          Note that this particular RA layer does not computing a
@@ -1325,7 +1324,8 @@ get_file(svn_ra_session_t *session,
 
   /* Handle props if requested. */
   if (props)
-    SVN_ERR(get_node_props(props, root, abs_path, sess->uuid, pool, pool));
+    SVN_ERR(get_node_props(props, root, repos_relpath, sess->uuid,
+                           pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1442,14 +1442,14 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
 static svn_error_t *
 svn_ra_local__get_locations(svn_ra_session_t *session,
                             apr_hash_t **locations,
-                            const char *path,
+                            const char *repos_relpath,
                             svn_revnum_t peg_revision,
                             const apr_array_header_t *location_revisions,
                             apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path = svn_fspath__join(sess->fs_path->data, path, pool);
-  return svn_repos_trace_node_locations(sess->fs, locations, abs_path,
+  repos_relpath = svn_fspath__join("/", repos_relpath, pool);
+  return svn_repos_trace_node_locations(sess->fs, locations, repos_relpath,
                                         peg_revision, location_revisions,
                                         NULL, NULL, pool);
 }
@@ -1457,7 +1457,7 @@ svn_ra_local__get_locations(svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__get_location_segments(svn_ra_session_t *session,
-                                    const char *path,
+                                    const char *repos_relpath,
                                     svn_revnum_t peg_revision,
                                     svn_revnum_t start_rev,
                                     svn_revnum_t end_rev,
@@ -1466,8 +1466,8 @@ svn_ra_local__get_location_segments(svn_ra_session_t *session,
                                     apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path = svn_fspath__join(sess->fs_path->data, path, pool);
-  return svn_repos_node_location_segments(sess->repos, abs_path,
+  repos_relpath = svn_fspath__join("/", repos_relpath, pool);
+  return svn_repos_node_location_segments(sess->repos, repos_relpath,
                                           peg_revision, start_rev, end_rev,
                                           receiver, receiver_baton,
                                           NULL, NULL, pool);
@@ -1602,12 +1602,12 @@ svn_ra_local__unlock(svn_ra_session_t *session,
 static svn_error_t *
 svn_ra_local__get_lock(svn_ra_session_t *session,
                        svn_lock_t **lock,
-                       const char *path,
+                       const char *repos_relpath,
                        apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path = svn_fspath__join(sess->fs_path->data, path, pool);
-  return svn_fs_get_lock(lock, sess->fs, abs_path, pool);
+  repos_relpath = svn_fspath__join("/", repos_relpath, pool);
+  return svn_fs_get_lock(lock, sess->fs, repos_relpath, pool);
 }
 
 
@@ -1615,16 +1615,16 @@ svn_ra_local__get_lock(svn_ra_session_t *session,
 static svn_error_t *
 svn_ra_local__get_locks(svn_ra_session_t *session,
                         apr_hash_t **locks,
-                        const char *path,
+                        const char *repos_relpath,
                         svn_depth_t depth,
                         apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path = svn_fspath__join(sess->fs_path->data, path, pool);
+  repos_relpath = svn_fspath__join("/", repos_relpath, pool);
 
   /* Kinda silly to call the repos wrapper, since we have no authz
      func to give it.  But heck, why not. */
-  return svn_repos_fs_get_locks2(locks, sess->repos, abs_path, depth,
+  return svn_repos_fs_get_locks2(locks, sess->repos, repos_relpath, depth,
                                  NULL, NULL, pool);
 }
 
@@ -1705,17 +1705,17 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__get_deleted_rev(svn_ra_session_t *session,
-                              const char *path,
+                              const char *repos_relpath,
                               svn_revnum_t peg_revision,
                               svn_revnum_t end_revision,
                               svn_revnum_t *revision_deleted,
                               apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path = svn_fspath__join(sess->fs_path->data, path, pool);
+  repos_relpath = svn_fspath__join("/", repos_relpath, pool);
 
   SVN_ERR(svn_repos_deleted_rev(sess->fs,
-                                abs_path,
+                                repos_relpath,
                                 peg_revision,
                                 end_revision,
                                 revision_deleted,
@@ -1727,29 +1727,29 @@ svn_ra_local__get_deleted_rev(svn_ra_session_t *session,
 static svn_error_t *
 svn_ra_local__get_inherited_props(svn_ra_session_t *session,
                                   apr_array_header_t **iprops,
-                                  const char *path,
+                                  const char *repos_relpath,
                                   svn_revnum_t revision,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
   svn_fs_root_t *root;
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path = svn_fspath__join(sess->fs_path->data, path,
-                                          scratch_pool);
   svn_node_kind_t node_kind;
+
+  repos_relpath = svn_fspath__join("/", repos_relpath, scratch_pool);
 
   /* Open the revision's root. */
   SVN_ERR(svn_fs_revision_root(&root, sess->fs, revision, scratch_pool));
 
-  SVN_ERR(svn_fs_check_path(&node_kind, root, abs_path, scratch_pool));
+  SVN_ERR(svn_fs_check_path(&node_kind, root, repos_relpath, scratch_pool));
   if (node_kind == svn_node_none)
     {
       return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                               _("'%s' path not found"), abs_path);
+                               _("'%s' path not found"), repos_relpath);
     }
 
   return svn_error_trace(
-                svn_repos_fs_get_inherited_props(iprops, root, abs_path,
+                svn_repos_fs_get_inherited_props(iprops, root, repos_relpath,
                                                  NULL /* propname */,
                                                  NULL, NULL /* auth */,
                                                  result_pool, scratch_pool));
@@ -1843,7 +1843,7 @@ dirent_receiver(const char *rel_path,
 
 static svn_error_t *
 svn_ra_local__list(svn_ra_session_t *session,
-                   const char *path,
+                   const char *repos_relpath,
                    svn_revnum_t revision,
                    const apr_array_header_t *patterns,
                    svn_depth_t depth,
@@ -1860,9 +1860,10 @@ svn_ra_local__list(svn_ra_session_t *session,
   baton.receiver = receiver;
   baton.receiver_baton = receiver_baton;
 
+  repos_relpath = svn_fspath__join("/", repos_relpath, pool);
+
   SVN_ERR(svn_fs_revision_root(&root, sess->fs, revision, pool));
-  path = svn_dirent_join(sess->fs_path->data, path, pool);
-  return svn_error_trace(svn_repos_list(root, path, patterns, depth,
+  return svn_error_trace(svn_repos_list(root, repos_relpath, patterns, depth,
                                         path_info_only, NULL, NULL,
                                         dirent_receiver, &baton,
                                         sess->callbacks
@@ -1873,7 +1874,7 @@ svn_ra_local__list(svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__get_file(svn_ra_session_t *session,
-                       const char *path,
+                       const char *repos_relpath,
                        svn_revnum_t revision,
                        svn_stream_t *stream,
                        svn_revnum_t *fetched_rev,
@@ -1884,7 +1885,9 @@ svn_ra_local__get_file(svn_ra_session_t *session,
   if (stream)
     stream = svn_stream_disown(stream, pool);
 
-  SVN_ERR(get_file(session, path, revision, stream, fetched_rev,
+  repos_relpath = svn_fspath__join("/", repos_relpath, pool);
+
+  SVN_ERR(get_file(session, repos_relpath, revision, stream, fetched_rev,
                    props, pool));
 
   return SVN_NO_ERROR;
@@ -1892,12 +1895,14 @@ svn_ra_local__get_file(svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__fetch_file_contents(svn_ra_session_t *session,
-                                  const char *path,
+                                  const char *repos_relpath,
                                   svn_revnum_t revision,
                                   svn_stream_t *stream,
                                   apr_pool_t *scratch_pool)
 {
-  SVN_ERR(get_file(session, path, revision, stream, NULL,
+  repos_relpath = svn_fspath__join("/", repos_relpath, scratch_pool);
+
+  SVN_ERR(get_file(session, repos_relpath, revision, stream, NULL,
                    NULL, scratch_pool));
 
   return SVN_NO_ERROR;

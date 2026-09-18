@@ -1502,7 +1502,8 @@ parse_iproplist(apr_array_header_t **inherited_props,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *get_file(svn_ra_session_t *session, const char *path,
+static svn_error_t *get_file(svn_ra_session_t *session,
+                             const char *repos_relpath,
                              svn_revnum_t rev, svn_stream_t *stream,
                              svn_revnum_t *fetched_rev,
                              apr_hash_t **props,
@@ -1515,8 +1516,9 @@ static svn_error_t *get_file(svn_ra_session_t *session, const char *path,
   svn_checksum_t *expected_checksum = NULL;
   svn_checksum_ctx_t *checksum_ctx;
   apr_pool_t *iterpool;
+  const char *path;
 
-  path = reparent_path(session, path, pool);
+  SVN_ERR(reparent_repos_relpath(&path, session, repos_relpath, pool, pool));
   SVN_ERR(svn_ra_svn__write_cmd_get_file(conn, pool, path, rev,
                                          (props != NULL), (stream != NULL)));
   SVN_ERR(handle_auth_request(sess_baton, pool));
@@ -2261,7 +2263,7 @@ static svn_error_t *ra_svn_stat(svn_ra_session_t *session,
 
 static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
                                          apr_hash_t **locations,
-                                         const char *path,
+                                         const char *repos_relpath,
                                          svn_revnum_t peg_revision,
                                          const apr_array_header_t *location_revisions,
                                          apr_pool_t *pool)
@@ -2271,9 +2273,10 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
   svn_revnum_t revision;
   svn_boolean_t is_done;
   apr_pool_t *iterpool;
+  const char *path;
   int i;
 
-  path = reparent_path(session, path, pool);
+  SVN_ERR(reparent_repos_relpath(&path, session, repos_relpath, pool, pool));
 
   /* Transmit the parameters. */
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w(cr(!",
@@ -2406,7 +2409,7 @@ perform_get_location_segments(svn_error_t **outer_error,
 
 static svn_error_t *
 ra_svn_get_location_segments(svn_ra_session_t *session,
-                             const char *path,
+                             const char *repos_relpath,
                              svn_revnum_t peg_revision,
                              svn_revnum_t start_rev,
                              svn_revnum_t end_rev,
@@ -2416,8 +2419,10 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
 {
   svn_error_t *outer_err = SVN_NO_ERROR;
   svn_error_t *err;
+  const char *path;
 
-  path = reparent_path(session, path, pool);
+  SVN_ERR(reparent_repos_relpath(&path, session, repos_relpath, pool, pool));
+
   err = svn_error_trace(
             perform_get_location_segments(&outer_err, session, path,
                                           peg_revision, start_rev, end_rev,
@@ -2426,7 +2431,7 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
 }
 
 static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
-                                         const char *path,
+                                         const char *repos_relpath,
                                          svn_revnum_t start, svn_revnum_t end,
                                          svn_boolean_t include_merged_revisions,
                                          svn_file_rev_handler_t handler,
@@ -2436,13 +2441,14 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
   apr_pool_t *rev_pool, *chunk_pool;
   svn_boolean_t has_txdelta;
   svn_boolean_t had_revision = FALSE;
+  const char *path;
 
   /* One sub-pool for each revision and one for each txdelta chunk.
      Note that the rev_pool must live during the following txdelta. */
   rev_pool = svn_pool_create(pool);
   chunk_pool = svn_pool_create(pool);
 
-  path = reparent_path(session, path, pool);
+  SVN_ERR(reparent_repos_relpath(&path, session, repos_relpath, pool, pool));
   SVN_ERR(svn_ra_svn__write_cmd_get_file_revs(sess_baton->conn, pool,
                                               path, start, end,
                                               include_merged_revisions));
@@ -2919,14 +2925,15 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
 
 static svn_error_t *ra_svn_get_lock(svn_ra_session_t *session,
                                     svn_lock_t **lock,
-                                    const char *path,
+                                    const char *repos_relpath,
                                     apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess = session->priv;
   svn_ra_svn_conn_t* conn = sess->conn;
   svn_ra_svn__list_t *list;
+  const char *path;
 
-  path = reparent_path(session, path, pool);
+  SVN_ERR(reparent_repos_relpath(&path, session, repos_relpath, pool, pool));
   SVN_ERR(svn_ra_svn__write_cmd_get_lock(conn, pool, path));
 
   /* Servers before 1.2 doesn't support locking.  Check this here. */
@@ -2964,21 +2971,17 @@ static svn_error_t *path_relative_to_root(svn_ra_session_t *session,
 
 static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
                                      apr_hash_t **locks,
-                                     const char *path,
+                                     const char *repos_relpath,
                                      svn_depth_t depth,
                                      apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess = session->priv;
   svn_ra_svn_conn_t* conn = sess->conn;
   svn_ra_svn__list_t *list;
-  const char *full_url, *abs_path;
+  const char *path;
   int i;
 
-  /* Figure out the repository abspath from PATH. */
-  full_url = svn_path_url_add_component2(sess->parent->client_url->data,
-                                         path, pool);
-  SVN_ERR(path_relative_to_root(session, &abs_path, full_url, pool));
-  abs_path = svn_fspath__canonicalize(abs_path, pool);
+  SVN_ERR(reparent_repos_relpath(&path, session, repos_relpath, pool, pool));
 
   SVN_ERR(svn_ra_svn__write_cmd_get_locks(conn, pool, path, depth));
 
@@ -3010,14 +3013,18 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
          b) we've asked for a fully recursive answer, or
          c) we've asked for depth=files or depth=immediates, and this
             lock is on an immediate child of our query path.
+
+         Because repos_relpath is a relpath, while lock->path is an fspath,
+         move lock->path forward.
       */
-      if ((strcmp(abs_path, lock->path) == 0) || (depth == svn_depth_infinity))
+      if ((strcmp(repos_relpath, lock->path + 1) == 0) || (depth == svn_depth_infinity))
         {
           svn_hash_sets(*locks, lock->path, lock);
         }
       else if ((depth == svn_depth_files) || (depth == svn_depth_immediates))
         {
-          const char *relpath = svn_fspath__skip_ancestor(abs_path, lock->path);
+          const char *relpath = svn_relpath_skip_ancestor(repos_relpath,
+                                                          lock->path + 1);
           if (relpath && (svn_path_component_count(relpath) == 1))
             svn_hash_sets(*locks, lock->path, lock);
         }
@@ -3177,7 +3184,7 @@ ra_svn_has_capability(svn_ra_session_t *session,
 
 static svn_error_t *
 ra_svn_get_deleted_rev(svn_ra_session_t *session,
-                       const char *path,
+                       const char *repos_relpath,
                        svn_revnum_t peg_revision,
                        svn_revnum_t end_revision,
                        svn_revnum_t *revision_deleted,
@@ -3187,8 +3194,9 @@ ra_svn_get_deleted_rev(svn_ra_session_t *session,
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   svn_error_t *err;
+  const char *path;
 
-  path = reparent_path(session, path, pool);
+  SVN_ERR(reparent_repos_relpath(&path, session, repos_relpath, pool, pool));
 
   /* Transmit the parameters. */
   SVN_ERR(svn_ra_svn__write_cmd_get_deleted_rev(conn, pool, path,
@@ -3229,7 +3237,7 @@ ra_svn_register_editor_shim_callbacks(svn_ra_session_t *session,
 static svn_error_t *
 ra_svn_get_inherited_props(svn_ra_session_t *session,
                            apr_array_header_t **iprops,
-                           const char *path,
+                           const char *repos_relpath,
                            svn_revnum_t revision,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
@@ -3238,8 +3246,11 @@ ra_svn_get_inherited_props(svn_ra_session_t *session,
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   svn_ra_svn__list_t *iproplist;
   svn_boolean_t iprop_capable;
+  const char *path;
 
-  path = reparent_path(session, path, scratch_pool);
+  SVN_ERR(reparent_repos_relpath(&path, session, repos_relpath, scratch_pool,
+                                 scratch_pool));
+
   SVN_ERR(ra_svn_has_capability(session, &iprop_capable,
                                 SVN_RA_CAPABILITY_INHERITED_PROPS,
                                 scratch_pool));
@@ -3261,7 +3272,7 @@ ra_svn_get_inherited_props(svn_ra_session_t *session,
 
 static svn_error_t *
 ra_svn_list(svn_ra_session_t *session,
-            const char *path,
+            const char *repos_relpath,
             svn_revnum_t revision,
             const apr_array_header_t *patterns,
             svn_depth_t depth,
@@ -3274,8 +3285,10 @@ ra_svn_list(svn_ra_session_t *session,
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  const char *path;
 
-  path = reparent_path(session, path, scratch_pool);
+  SVN_ERR(reparent_repos_relpath(&path, session, repos_relpath, scratch_pool,
+                                 scratch_pool));
 
   /* Send the list request. */
   SVN_ERR(svn_ra_svn__write_tuple(conn, scratch_pool, "w(c(?r)w(!", "list",
@@ -3336,7 +3349,8 @@ ra_svn_list(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
+static svn_error_t *ra_svn_get_file(svn_ra_session_t *session,
+                                    const char *repos_relpath,
                                     svn_revnum_t rev, svn_stream_t *stream,
                                     svn_revnum_t *fetched_rev,
                                     apr_hash_t **props,
@@ -3346,19 +3360,19 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   if (stream)
     stream = svn_stream_disown(stream, pool);
 
-  SVN_ERR(get_file(session, path, rev, stream, fetched_rev,
+  SVN_ERR(get_file(session, repos_relpath, rev, stream, fetched_rev,
                    props, pool));
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *ra_svn_fetch_file_contents(svn_ra_session_t *session,
-                                               const char *path,
+                                               const char *repos_relpath,
                                                svn_revnum_t rev,
                                                svn_stream_t *stream,
                                                apr_pool_t *scratch_pool)
 {
-  SVN_ERR(get_file(session, path, rev, stream, NULL,
+  SVN_ERR(get_file(session, repos_relpath, rev, stream, NULL,
                    NULL, scratch_pool));
 
   return SVN_NO_ERROR;

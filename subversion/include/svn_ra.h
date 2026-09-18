@@ -1089,10 +1089,10 @@ svn_ra_get_commit_editor(svn_ra_session_t *session,
                          apr_pool_t *pool);
 
 /**
- * Fetch the contents and properties of file @a path at @a revision.
+ * Fetch the contents and properties of file @a repos_relpath at @a revision.
  * @a revision may be SVN_INVALID_REVNUM, indicating that the HEAD
- * revision should be used.  Interpret @a path relative to the URL in
- * @a session.  Use @a pool for all allocations.
+ * revision should be used.  Interpret @a repos_relpath relative to the
+ * repository root in.  Use @a pool for all allocations.
  *
  * If @a revision is @c SVN_INVALID_REVNUM and @a fetched_rev is not
  * @c NULL, then set @a *fetched_rev to the actual revision that was
@@ -1111,7 +1111,22 @@ svn_ra_get_commit_editor(svn_ra_session_t *session,
  * The stream handlers for @a stream may not perform any RA
  * operations using @a session.
  *
+ * @since New in 1.16.
+ */
+svn_error_t *
+svn_ra_get_file2(svn_ra_session_t *session,
+                 const char *repos_relpath,
+                 svn_revnum_t revision,
+                 svn_stream_t *stream,
+                 svn_revnum_t *fetched_rev,
+                 apr_hash_t **props,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_ra_get_file2, but @a path is relative to session URL.
+ *
  * @since New in 1.2.
+ * @deprecated Provided for compatibility with the 1.15 API.
  */
 svn_error_t *
 svn_ra_get_file(svn_ra_session_t *session,
@@ -1216,12 +1231,12 @@ typedef svn_error_t *(* svn_ra_dirent_receiver_t)(const char *rel_path,
  * Efficiently list everything within a sub-tree.  Specify a glob pattern
  * to search for specific files and folders.
  *
- * In @a session, walk the sub-tree starting at @a path at @a revision down
- * to the given @a depth.  For each directory entry found, @a receiver will
- * be called with @a receiver_baton.  The starting @a path will be reported
- * as well.  Because retrieving elements of a #svn_dirent_t can be
- * expensive, you need to select them individually via flags set in
- * @a dirent_fields.
+ * In @a session, walk the sub-tree starting at @a repos_relpath at @a revision
+ * down to the given @a depth.  For each directory entry found, @a receiver
+ * will be called with @a receiver_baton.  The starting @a repos_relpath will
+ * be reported as well.  Because retrieving elements of a #svn_dirent_t can be
+ * expensive, you need to select them individually via flags set in @a
+ * dirent_fields.
  *
  * @a patterns is an optional array of <tt>const char *</tt>.  If it is
  * not @c NULL, only those directory entries will be reported whose last
@@ -1229,7 +1244,7 @@ typedef svn_error_t *(* svn_ra_dirent_receiver_t)(const char *rel_path,
  * apr_fnmatch() for glob matching and requiring '.' to matched by dots
  * in the path.
  *
- * @a path must point to a directory and @a depth must be at least
+ * @a repos_relpath must point to a directory and @a depth must be at least
  * #svn_depth_empty.
  *
  * If the server doesn't support the 'list' command, return
@@ -1238,7 +1253,24 @@ typedef svn_error_t *(* svn_ra_dirent_receiver_t)(const char *rel_path,
  *
  * Use @a scratch_pool for temporary memory allocation.
  *
- * @since New in 1.10.
+ * @since New in 1.16.
+ */
+svn_error_t *
+svn_ra_list2(svn_ra_session_t *session,
+             const char *repos_relpath,
+             svn_revnum_t revision,
+             const apr_array_header_t *patterns,
+             svn_depth_t depth,
+             apr_uint32_t dirent_fields,
+             svn_ra_dirent_receiver_t receiver,
+             void *receiver_baton,
+             apr_pool_t *scratch_pool);
+
+/**
+ * Similar to @c svn_ra_get_file2, but @a path is relative to session URL.
+ *
+ * @since New in 1.2.
+ * @deprecated Provided for compatibility with the 1.15 API.
  */
 svn_error_t *
 svn_ra_list(svn_ra_session_t *session,
@@ -1961,9 +1993,9 @@ svn_ra_get_repos_root(svn_ra_session_t *session,
 
 /**
  * Set @a *locations to the locations (at the repository revisions
- * @a location_revisions) of the file identified by @a path in
+ * @a location_revisions) of the file identified by @a repos_relpath in
  * @a peg_revision (passing @c SVN_INVALID_REVNUM is an error).
- * @a path is relative to the URL to which @a session was opened.
+ * @a repos_relpath is relative repository root.
  * @a location_revisions is an array of @c svn_revnum_t's.
  * @a *locations will be a mapping from the revisions to
  * their appropriate absolute paths.  If the file doesn't exist in a
@@ -1971,7 +2003,21 @@ svn_ra_get_repos_root(svn_ra_session_t *session,
  *
  * Use @a pool for all allocations.
  *
+ * @since New in 1.16.
+ */
+svn_error_t *
+svn_ra_get_locations2(svn_ra_session_t *session,
+                      apr_hash_t **locations,
+                      const char *path,
+                      svn_revnum_t peg_revision,
+                      const apr_array_header_t *location_revisions,
+                      apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_ra_get_locations2, but @a path is relative to session URL.
+ *
  * @since New in 1.2.
+ * @deprecated Provided for compatibility with the 1.15 API.
  */
 svn_error_t *
 svn_ra_get_locations(svn_ra_session_t *session,
@@ -1984,8 +2030,8 @@ svn_ra_get_locations(svn_ra_session_t *session,
 
 /**
  * Call @a receiver (with @a receiver_baton) for each segment in the
- * location history of @a path in @a peg_revision, working backwards in
- * time from @a start_rev to @a end_rev.
+ * location history of @a repos_relpath in @a peg_revision, working backwards
+ * in time from @a start_rev to @a end_rev.
  *
  * @a end_rev may be @c SVN_INVALID_REVNUM to indicate that you want
  * to trace the history of the object to its origin.
@@ -1999,7 +2045,24 @@ svn_ra_get_locations(svn_ra_session_t *session,
  *
  * Use @a pool for all allocations.
  *
+ * @since New in 1.16.
+ */
+svn_error_t *
+svn_ra_get_location_segments2(svn_ra_session_t *session,
+                              const char *repos_relpath,
+                              svn_revnum_t peg_revision,
+                              svn_revnum_t start_rev,
+                              svn_revnum_t end_rev,
+                              svn_location_segment_receiver_t receiver,
+                              void *receiver_baton,
+                              apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_ra_get_location_segments2, but @a path is relative to
+ * session URL.
+ *
  * @since New in 1.5.
+ * @deprecated Provided for compatibility with the 1.15 API.
  */
 svn_error_t *
 svn_ra_get_location_segments(svn_ra_session_t *session,
@@ -2012,7 +2075,7 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
                              apr_pool_t *pool);
 
 /**
- * Retrieve a subset of the interesting revisions of a file @a path
+ * Retrieve a subset of the interesting revisions of a file @a repos_relpath
  * as seen in revision @a end (see svn_fs_history_prev() for a
  * definition of "interesting revisions").  Invoke @a handler with
  * @a handler_baton as its first argument for each such revision.
@@ -2049,6 +2112,22 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
  * the current and the previous call.
  *
  * @since New in 1.5.
+ */
+svn_error_t *
+svn_ra_get_file_revs3(svn_ra_session_t *session,
+                      const char *repos_relpath,
+                      svn_revnum_t start,
+                      svn_revnum_t end,
+                      svn_boolean_t include_merged_revisions,
+                      svn_file_rev_handler_t handler,
+                      void *handler_baton,
+                      apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_ra_get_file_revs3, but @a path is relative to session URL.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for compatibility with the 1.15 API.
  */
 svn_error_t *
 svn_ra_get_file_revs2(svn_ra_session_t *session,
@@ -2150,15 +2229,28 @@ svn_ra_unlock(svn_ra_session_t *session,
               apr_pool_t *pool);
 
 /**
- * If @a path is locked, set @a *lock to an svn_lock_t which
+ * If @a repos_relpath is locked, set @a *lock to an svn_lock_t which
  * represents the lock, allocated in @a pool.
  *
- * If @a path is not locked or does not exist in HEAD, set @a *lock to NULL.
+ * If @a repos_relpath is not locked or does not exist in HEAD, set @a *lock to
+ * NULL.
  *
  * @note Before 1.9, this function could return SVN_ERR_FS_NOT_FOUND
- * when @a path didn't exist in HEAD on specific ra layers.
+ * when @a repos_relpath didn't exist in HEAD on specific ra layers.
+ *
+ * @since New in 1.16.
+ */
+svn_error_t *
+svn_ra_get_lock2(svn_ra_session_t *session,
+                 svn_lock_t **lock,
+                 const char *path,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_ra_get_lock, but @a path is relative to session URL.
  *
  * @since New in 1.2.
+ * @deprecated Provided for compatibility with the 1.15 API.
  */
 svn_error_t *
 svn_ra_get_lock(svn_ra_session_t *session,
@@ -2168,10 +2260,10 @@ svn_ra_get_lock(svn_ra_session_t *session,
 
 /**
  * Set @a *locks to a hashtable which represents all locks on or
- * below @a path.
+ * below @a repos_relpath.
  *
  * @a depth limits the returned locks to those associated with paths
- * within the specified depth of @a path, and must be one of the
+ * within the specified depth of @a repos_relpath, and must be one of the
  * following values:  #svn_depth_empty, #svn_depth_files,
  * #svn_depth_immediates, or #svn_depth_infinity.
  *
@@ -2187,6 +2279,19 @@ svn_ra_get_lock(svn_ra_session_t *session,
  * returned.
  *
  * @since New in 1.7.
+ */
+svn_error_t *
+svn_ra_get_locks3(svn_ra_session_t *session,
+                  apr_hash_t **locks,
+                  const char *repos_relpath,
+                  svn_depth_t depth,
+                  apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_ra_get_file2, but @a path is relative to session URL.
+ *
+ * @since New in 1.2.
+ * @deprecated Provided for compatibility with the 1.15 API.
  */
 svn_error_t *
 svn_ra_get_locks2(svn_ra_session_t *session,
@@ -2276,19 +2381,35 @@ svn_ra_replay(svn_ra_session_t *session,
               apr_pool_t *pool);
 
 /**
- * Given @a path at revision @a peg_revision, set @a *revision_deleted to the
- * revision @a path was first deleted, within the inclusive revision range
- * defined by @a peg_revision and @a end_revision.  @a path is relative
- * to the URL in @a session.
+ * Given @a repos_relpath at revision @a peg_revision, set @a *revision_deleted
+ * to the revision @a repos_relpath was first deleted, within the inclusive
+ * revision range defined by @a peg_revision and @a end_revision.  @a path is
+ * relative to the repository root.
  *
- * If @a path does not exist at @a peg_revision or was not deleted within
- * the specified range, then set @a *revision_deleted to @c SVN_INVALID_REVNUM.
- * If @a peg_revision or @a end_revision are invalid or if @a peg_revision is
- * greater than @a end_revision, then return @c SVN_ERR_CLIENT_BAD_REVISION.
+ * If @a repos_relpath does not exist at @a peg_revision or was not deleted
+ * within the specified range, then set @a *revision_deleted to @c
+ * SVN_INVALID_REVNUM. If @a peg_revision or @a end_revision are invalid or if
+ * @a peg_revision is greater than @a end_revision, then return @c
+ * SVN_ERR_CLIENT_BAD_REVISION.
  *
  * Use @a pool for all allocations.
  *
+ * @since New in 1.16.
+ */
+svn_error_t *
+svn_ra_get_deleted_rev2(svn_ra_session_t *session,
+                        const char *repos_relpath,
+                        svn_revnum_t peg_revision,
+                        svn_revnum_t end_revision,
+                        svn_revnum_t *revision_deleted,
+                        apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_ra_get_deleted_rev2, but @a path is relative to session
+ * URL.
+ *
  * @since New in 1.6.
+ * @deprecated Provided for compatibility with the 1.15 API.
  */
 svn_error_t *
 svn_ra_get_deleted_rev(svn_ra_session_t *session,
@@ -2301,11 +2422,10 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
 /**
  * Set @a *inherited_props to a depth-first ordered array of
  * #svn_prop_inherited_item_t * structures representing the properties
- * inherited by @a path at @a revision (or the 'head' revision if
- * @a revision is @c SVN_INVALID_REVNUM).  Interpret @a path relative to
- * the URL in @a session.  Use @a pool for all allocations.  If no
- * inheritable properties are found, then set @a *inherited_props to
- * an empty array.
+ * inherited by @a repos_relpath at @a revision (or the 'head' revision if
+ * @a revision is @c SVN_INVALID_REVNUM).  Interpret @a repos_relpath relative
+ * to the repository root.  Use @a pool for all allocations.  If no inheritable
+ * properties are found, then set @a *inherited_props to an empty array.
  *
  * The #svn_prop_inherited_item_t->path_or_url members of the
  * #svn_prop_inherited_item_t * structures in @a *inherited_props are
@@ -2315,7 +2435,22 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
  * Allocate @a *inherited_props in @a result_pool.  Use @a scratch_pool
  * for temporary allocations.
  *
+ * @since New in 1.16.
+ */
+svn_error_t *
+svn_ra_get_inherited_props2(svn_ra_session_t *session,
+                            apr_array_header_t **inherited_props,
+                            const char *repos_relpath,
+                            svn_revnum_t revision,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+/**
+ * Similar to @c svn_ra_get_inherited_props2, but @a path is relative to
+ * session URL.
+ *
  * @since New in 1.8.
+ * @deprecated Provided for compatibility with the 1.15 API.
  */
 svn_error_t *
 svn_ra_get_inherited_props(svn_ra_session_t *session,
@@ -2324,11 +2459,10 @@ svn_ra_get_inherited_props(svn_ra_session_t *session,
                            svn_revnum_t revision,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
-
 /**
- * Fetch the contents of file @a path at @a revision.  Interpret @a path
- * relative to the URL in @a session.  @a revision must be a valid revision
- * number.  Use @a scratch_pool for scratch allocations.
+ * Fetch the contents of file @a repos_relpath at @a revision.  Interpret @a
+ * repos_relpath relative to the repository root.  @a revision must be a
+ * valid revision number.  Use @a scratch_pool for scratch allocations.
  *
  * The contents of the file will be pushed to @a stream, and the stream will
  * be closed when finished.  If the closure is not desired, then you can use
@@ -2339,7 +2473,21 @@ svn_ra_get_inherited_props(svn_ra_session_t *session,
  * endpoint, rather from any local caches such as the one provided by
  * #svn_ra_get_wc_contents_func_t.
  *
+ * @since New in 1.16.
+ */
+svn_error_t *
+svn_ra_fetch_file_contents2(svn_ra_session_t *session,
+                            const char *repos_relpath,
+                            svn_revnum_t revision,
+                            svn_stream_t *stream,
+                            apr_pool_t *scratch_pool);
+
+/**
+ * Similar to @c svn_ra_fetch_file_contents2, but @a path is relative to
+ * session URL.
+ *
  * @since New in 1.15.
+ * @deprecated Provided for compatibility with the 1.15 API.
  */
 svn_error_t *
 svn_ra_fetch_file_contents(svn_ra_session_t *session,
@@ -2347,7 +2495,6 @@ svn_ra_fetch_file_contents(svn_ra_session_t *session,
                            svn_revnum_t revision,
                            svn_stream_t *stream,
                            apr_pool_t *scratch_pool);
-
 /**
  * @defgroup Capabilities Dynamically query the server's capabilities.
  *
