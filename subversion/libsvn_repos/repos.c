@@ -1411,7 +1411,7 @@ fs_upgrade_notify(void *baton,
         break;
 
       case svn_fs_upgrade_format_bumped:
-        notify->revision = number;
+        notify->revision = (svn_revnum_t)number;
         notify->action = svn_repos_notify_format_bumped;
         break;
 
