@@ -378,11 +378,11 @@ obtain_eol_and_keywords_for_file(apr_hash_t **keywords,
                                  apr_pool_t *scratch_pool)
 {
   apr_hash_t *props;
-  svn_string_t *keywords_val, *eol_style_val;
+  const char *keywords_val, *eol_style_val;
 
   SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, local_abspath,
                             scratch_pool, scratch_pool));
-  keywords_val = svn_hash_gets(props, SVN_PROP_KEYWORDS);
+  keywords_val = svn_prop_get_value(props, SVN_PROP_KEYWORDS);
   if (keywords_val)
     {
       svn_revnum_t changed_rev;
@@ -408,19 +408,14 @@ obtain_eol_and_keywords_for_file(apr_hash_t **keywords,
                                         scratch_pool);
 
       SVN_ERR(svn_subst_build_keywords3(keywords,
-                                        keywords_val->data,
+                                        keywords_val,
                                         rev_str, url, repos_root_url,
                                         changed_date,
                                         author, result_pool));
     }
 
-  eol_style_val = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
-  if (eol_style_val)
-    {
-      svn_subst_eol_style_from_value(eol_style,
-                                     eol_str,
-                                     eol_style_val->data);
-    }
+  eol_style_val = svn_prop_get_value(props, SVN_PROP_EOL_STYLE);
+  svn_subst_eol_style_from_value(eol_style, eol_str, eol_style_val);
 
   return SVN_NO_ERROR;
 }

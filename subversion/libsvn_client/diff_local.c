@@ -305,8 +305,8 @@ translate_if_necessary(const char **local_abspath,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  const svn_string_t *eol_style_val;
-  const svn_string_t *keywords_val;
+  const char *eol_style_val;
+  const char *keywords_val;
   svn_subst_eol_style_t eol_style;
   const char *eol;
   apr_hash_t *keywords;
@@ -316,19 +316,13 @@ translate_if_necessary(const char **local_abspath,
   /* if (svn_hash_gets(props, SVN_PROP_SPECIAL))
       ### TODO: Implement */
 
-  eol_style_val = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
-  keywords_val = svn_hash_gets(props, SVN_PROP_KEYWORDS);
+  eol_style_val = svn_prop_get_value(props, SVN_PROP_EOL_STYLE);
+  keywords_val = svn_prop_get_value(props, SVN_PROP_KEYWORDS);
 
-  if (eol_style_val)
-    svn_subst_eol_style_from_value(&eol_style, &eol, eol_style_val->data);
-  else
-    {
-      eol = NULL;
-      eol_style = svn_subst_eol_style_none;
-    }
+  svn_subst_eol_style_from_value(&eol_style, &eol, eol_style_val);
 
   if (keywords_val)
-    SVN_ERR(svn_subst_build_keywords3(&keywords, keywords_val->data,
+    SVN_ERR(svn_subst_build_keywords3(&keywords, keywords_val,
                                       APR_STRINGIFY(SVN_INVALID_REVNUM),
                                       "", "", 0, "", scratch_pool));
   else

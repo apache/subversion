@@ -120,7 +120,7 @@ send_file_contents(svn_checksum_t **result_md5_checksum_p,
                    apr_pool_t *pool)
 {
   svn_stream_t *contents;
-  const svn_string_t *eol_style_val = NULL, *keywords_val = NULL;
+  const char *eol_style_val, *keywords_val;
   svn_boolean_t special = FALSE;
   svn_subst_eol_style_t eol_style;
   const char *eol;
@@ -128,26 +128,15 @@ send_file_contents(svn_checksum_t **result_md5_checksum_p,
   open_txdelta_stream_baton_t baton = { 0 };
 
   /* If there are properties, look for EOL-style and keywords ones. */
-  if (properties)
-    {
-      eol_style_val = apr_hash_get(properties, SVN_PROP_EOL_STYLE,
-                                   sizeof(SVN_PROP_EOL_STYLE) - 1);
-      keywords_val = apr_hash_get(properties, SVN_PROP_KEYWORDS,
-                                  sizeof(SVN_PROP_KEYWORDS) - 1);
-      if (svn_hash_gets(properties, SVN_PROP_SPECIAL))
-        special = TRUE;
-    }
-
-  if (eol_style_val)
-    svn_subst_eol_style_from_value(&eol_style, &eol, eol_style_val->data);
-  else
-    {
-      eol = NULL;
-      eol_style = svn_subst_eol_style_none;
-    }
+  eol_style_val = svn_prop_get_value(properties, SVN_PROP_EOL_STYLE);
+  keywords_val = svn_prop_get_value(properties, SVN_PROP_KEYWORDS);
+  if (svn_prop_get_value(properties, SVN_PROP_SPECIAL))
+    special = TRUE;
+ 
+  svn_subst_eol_style_from_value(&eol_style, &eol, eol_style_val);
 
   if (keywords_val)
-    SVN_ERR(svn_subst_build_keywords3(&keywords, keywords_val->data,
+    SVN_ERR(svn_subst_build_keywords3(&keywords, keywords_val,
                                       APR_STRINGIFY(SVN_INVALID_REVNUM),
                                       "", "", 0, "", pool));
   else
@@ -174,7 +163,7 @@ send_file_contents(svn_checksum_t **result_md5_checksum_p,
                                     SVN_PROP_EOL_STYLE,
                                     svn_dirent_local_style(local_abspath,
                                                            pool),
-                                    eol_style_val->data);
+                                    eol_style_val);
 
           /* We're importing, so translate files with 'native' eol-style to
            * repository-normal form, not to this platform's native EOL. */

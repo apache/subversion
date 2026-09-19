@@ -60,7 +60,7 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
   apr_hash_t *kw = NULL;
   svn_subst_eol_style_t style;
   apr_hash_t *props;
-  svn_string_t *eol_style, *keywords, *special;
+  const char *eol_style, *keywords, *special;
   const char *eol = NULL;
   svn_boolean_t local_mod = FALSE;
   svn_stream_t *input;
@@ -110,12 +110,11 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
         local_mod = TRUE;
     }
 
-  eol_style = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
-  keywords = svn_hash_gets(props, SVN_PROP_KEYWORDS);
-  special = svn_hash_gets(props, SVN_PROP_SPECIAL);
+  eol_style = svn_prop_get_value(props, SVN_PROP_EOL_STYLE);
+  keywords = svn_prop_get_value(props, SVN_PROP_KEYWORDS);
+  special = svn_prop_get_value(props, SVN_PROP_SPECIAL);
 
-  if (eol_style)
-    svn_subst_eol_style_from_value(&style, &eol, eol_style->data);
+  svn_subst_eol_style_from_value(&style, &eol, eol_style);
 
   if (keywords)
     {
@@ -158,7 +157,7 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
           rev_str = apr_psprintf(scratch_pool, "%ld", changed_rev);
         }
 
-      SVN_ERR(svn_subst_build_keywords3(&kw, keywords->data, rev_str, url,
+      SVN_ERR(svn_subst_build_keywords3(&kw, keywords, rev_str, url,
                                         repos_root_url, tm, author,
                                         scratch_pool));
     }
@@ -188,8 +187,8 @@ svn_client_cat3(apr_hash_t **returned_props,
 {
   svn_ra_session_t *ra_session;
   svn_client__pathrev_t *loc;
-  svn_string_t *eol_style;
-  svn_string_t *keywords;
+  const char *eol_style;
+  const char *keywords;
   apr_hash_t *props = NULL;
   const char *repos_root_url;
   svn_stream_t *output = out;
@@ -271,8 +270,8 @@ svn_client_cat3(apr_hash_t **returned_props,
         }
     }
 
-  eol_style = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
-  keywords = svn_hash_gets(props, SVN_PROP_KEYWORDS);
+  eol_style = svn_prop_get_value(props, SVN_PROP_EOL_STYLE);
+  keywords = svn_prop_get_value(props, SVN_PROP_KEYWORDS);
 
   if (eol_style || keywords)
     {
@@ -281,31 +280,23 @@ svn_client_cat3(apr_hash_t **returned_props,
       const char *eol_str;
       apr_hash_t *kw;
 
-      if (eol_style)
-        svn_subst_eol_style_from_value(&eol, &eol_str, eol_style->data);
-      else
-        {
-          eol = svn_subst_eol_style_none;
-          eol_str = NULL;
-        }
-
+      svn_subst_eol_style_from_value(&eol, &eol_str, eol_style);
 
       if (keywords && expand_keywords)
         {
-          svn_string_t *cmt_rev, *cmt_date, *cmt_author;
+          const char *cmt_rev, *cmt_date, *cmt_author;
           apr_time_t when = 0;
 
-          cmt_rev = svn_hash_gets(props, SVN_PROP_ENTRY_COMMITTED_REV);
-          cmt_date = svn_hash_gets(props, SVN_PROP_ENTRY_COMMITTED_DATE);
-          cmt_author = svn_hash_gets(props, SVN_PROP_ENTRY_LAST_AUTHOR);
+          cmt_rev = svn_prop_get_value(props, SVN_PROP_ENTRY_COMMITTED_REV);
+          cmt_date = svn_prop_get_value(props, SVN_PROP_ENTRY_COMMITTED_DATE);
+          cmt_author = svn_prop_get_value(props, SVN_PROP_ENTRY_LAST_AUTHOR);
           if (cmt_date)
-            SVN_ERR(svn_time_from_cstring(&when, cmt_date->data, scratch_pool));
+            SVN_ERR(svn_time_from_cstring(&when, cmt_date, scratch_pool));
 
-          SVN_ERR(svn_subst_build_keywords3(&kw, keywords->data,
-                                            cmt_rev->data, loc->url,
+          SVN_ERR(svn_subst_build_keywords3(&kw, keywords,
+                                            cmt_rev, loc->url,
                                             repos_root_url, when,
-                                            cmt_author ?
-                                              cmt_author->data : NULL,
+                                            cmt_author,
                                             scratch_pool));
         }
       else
