@@ -1395,32 +1395,33 @@ fs_upgrade_notify(void *baton,
                   apr_pool_t *pool)
 {
   struct fs_upgrade_notify_baton_t *fs_baton = baton;
+  svn_repos_notify_t *notify;
 
-  svn_repos_notify_t *notify = svn_repos_notify_create(
-                                svn_repos_notify_mutex_acquired, pool);
   switch(action)
     {
       case svn_fs_upgrade_pack_revprops:
+        notify = svn_repos_notify_create(svn_repos_notify_pack_revprops, pool);
         notify->shard = number;
-        notify->action = svn_repos_notify_pack_revprops;
+        fs_baton->notify_func(fs_baton->notify_baton, notify, pool);
         break;
 
       case svn_fs_upgrade_cleanup_revprops:
+        notify = svn_repos_notify_create(svn_repos_notify_cleanup_revprops,
+                                         pool);
         notify->shard = number;
-        notify->action = svn_repos_notify_cleanup_revprops;
+        fs_baton->notify_func(fs_baton->notify_baton, notify, pool);
         break;
 
       case svn_fs_upgrade_format_bumped:
+        notify = svn_repos_notify_create(svn_repos_notify_format_bumped, pool);
         notify->revision = (svn_revnum_t)number;
-        notify->action = svn_repos_notify_format_bumped;
+        fs_baton->notify_func(fs_baton->notify_baton, notify, pool);
         break;
 
       default:
         /* unknown notification */
         SVN_ERR_MALFUNCTION();
     }
-
-  fs_baton->notify_func(fs_baton->notify_baton, notify, pool);
 
   return SVN_NO_ERROR;
 }
