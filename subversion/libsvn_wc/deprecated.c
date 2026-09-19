@@ -3669,8 +3669,8 @@ svn_wc_add_repos_file2(const char *dst_path,
             }
 
           svn_subst_eol_style_from_value(&eol_style, &eol_str,
-                                         svn_hash_gets(new_props,
-                                                       SVN_PROP_EOL_STYLE));
+                                         svn_prop_get_value(
+                                           new_props, SVN_PROP_EOL_STYLE));
 
           if (svn_subst_translation_required(eol_style, eol_str, keywords,
                                              FALSE, FALSE))
