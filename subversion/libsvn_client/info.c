@@ -163,7 +163,7 @@ build_info_from_dirent(svn_client_info2_t **info,
 }
 
 
-/* The dirent fields we care about for our calls to svn_ra_get_dir2. */
+/* The dirent fields we care about for our calls to svn_ra_get_dir3. */
 #define DIRENT_FIELDS (SVN_DIRENT_KIND        | \
                        SVN_DIRENT_CREATED_REV | \
                        SVN_DIRENT_TIME        | \
@@ -184,7 +184,7 @@ build_info_from_dirent(svn_client_info2_t **info,
 static svn_error_t *
 push_dir_info(svn_ra_session_t *ra_session,
               const svn_client__pathrev_t *pathrev,
-              const char *dir,
+              const char *repos_relpath,
               svn_client_info_receiver2_t receiver,
               void *receiver_baton,
               svn_depth_t depth,
@@ -196,8 +196,9 @@ push_dir_info(svn_ra_session_t *ra_session,
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_ra_get_dir2(ra_session, &tmpdirents, NULL, NULL,
-                          dir, pathrev->rev, DIRENT_FIELDS, pool));
+  SVN_ERR(svn_ra_get_dir3(ra_session, &tmpdirents, NULL, NULL,
+                          repos_relpath, pathrev->rev, DIRENT_FIELDS,
+                          pool));
 
   for (hi = apr_hash_first(pool, tmpdirents); hi; hi = apr_hash_next(hi))
     {
@@ -213,7 +214,7 @@ push_dir_info(svn_ra_session_t *ra_session,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      path = svn_relpath_join(dir, name, subpool);
+      path = svn_relpath_join(repos_relpath, name, subpool);
       child_pathrev = svn_client__pathrev_join_relpath(pathrev, name, subpool);
       fs_path = svn_client__pathrev_fspath(child_pathrev, subpool);
 
@@ -244,7 +245,7 @@ push_dir_info(svn_ra_session_t *ra_session,
 
 /* Set *SAME_P to TRUE if URL exists in the head of the repository and
    refers to the same resource as it does in REV, using POOL for
-   temporary allocations.  RA_SESSION is an open RA session for URL.  */
+   temporary allocations. */
 static svn_error_t *
 same_resource_in_head(svn_boolean_t *same_p,
                       const char *url,
@@ -346,6 +347,7 @@ svn_client_info4(const char *abspath_or_url,
   svn_dirent_t *the_ent;
   svn_client_info2_t *info;
   svn_error_t *err;
+  const char *repos_relpath;
 
   if (depth == svn_depth_unknown)
     depth = svn_depth_empty;
@@ -392,8 +394,12 @@ svn_client_info4(const char *abspath_or_url,
                                             revision, ctx, pool));
   base_name = svn_uri_basename(pathrev->url, pool);
 
+  repos_relpath = svn_uri_skip_ancestor(pathrev->repos_root_url,
+                                        pathrev->url, pool);
+
   /* Get the dirent for the URL itself. */
-  SVN_ERR(svn_ra_stat(ra_session, "", pathrev->rev, &the_ent, pool));
+  SVN_ERR(svn_ra_stat2(ra_session, repos_relpath,
+                       pathrev->rev, &the_ent, pool));
 
   if (! the_ent)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
@@ -412,7 +418,7 @@ svn_client_info4(const char *abspath_or_url,
                                 ra_session, ctx, pool));
   if (related)
     {
-      err = svn_ra_get_lock(ra_session, &lock, "", pool);
+      err = svn_ra_get_lock2(ra_session, &lock, repos_relpath, pool);
 
       /* An old mod_dav_svn will always work; there's nothing wrong with
          doing a PROPFIND for a property named "DAV:supportedlock". But
@@ -439,7 +445,7 @@ svn_client_info4(const char *abspath_or_url,
 
       if (peg_revision->kind == svn_opt_revision_head)
         {
-          err = svn_ra_get_locks2(ra_session, &locks, "", depth,
+          err = svn_ra_get_locks3(ra_session, &locks, repos_relpath, depth,
                                   pool);
 
           /* Catch specific errors thrown by old mod_dav_svn or svnserve. */
@@ -454,7 +460,7 @@ svn_client_info4(const char *abspath_or_url,
       else
         locks = apr_hash_make(pool); /* use an empty hash */
 
-      SVN_ERR(push_dir_info(ra_session, pathrev, "",
+      SVN_ERR(push_dir_info(ra_session, pathrev, repos_relpath,
                             receiver, receiver_baton,
                             depth, ctx, locks, pool));
     }
