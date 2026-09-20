@@ -47,15 +47,13 @@ textbase_fetch_cb(void *baton,
                   apr_pool_t *scratch_pool)
 {
   struct textbase_fetch_baton_t *b = baton;
-  const char *url;
-  const char *old_url;
-
-  url = svn_path_url_add_component2(repos_root_url, repos_relpath,
-                                    scratch_pool);
 
   if (!b->ra_session)
     {
       svn_ra_session_t *session;
+      const char *url = svn_path_url_add_component2(repos_root_url,
+                                                    repos_relpath,
+                                                    scratch_pool);
 
       SVN_ERR(svn_client__open_ra_session_internal(&session, NULL,
                                                    url, b->base_abspath,
@@ -64,10 +62,9 @@ textbase_fetch_cb(void *baton,
       b->ra_session = session;
     }
 
-  SVN_ERR(svn_client__ensure_ra_session_url(&old_url, b->ra_session, url,
-                                            scratch_pool));
-  SVN_ERR(svn_ra_fetch_file_contents(b->ra_session, "", revision, contents,
-                                     scratch_pool));
+
+  SVN_ERR(svn_ra_fetch_file_contents2(b->ra_session, repos_relpath, revision,
+                                      contents, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -83,7 +80,6 @@ svn_client__textbase_sync(svn_ra_session_t **ra_session_p,
                           apr_pool_t *scratch_pool)
 {
   textbase_fetch_baton_t fetch_baton = {0};
-  const char *old_session_url = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -99,18 +95,12 @@ svn_client__textbase_sync(svn_ra_session_t **ra_session_p,
   fetch_baton.ctx = ctx;
   fetch_baton.ra_session = ra_session;
 
-  if (ra_session)
-    SVN_ERR(svn_ra_get_session_url(ra_session, &old_session_url, scratch_pool));
-
   SVN_ERR(svn_wc_textbase_sync(ctx->wc_ctx, local_abspath,
                                allow_hydrate, allow_dehydrate,
                                textbase_fetch_cb, &fetch_baton,
                                ctx->cancel_func, ctx->cancel_baton,
                                ctx->notify_func2, ctx->notify_baton2,
                                scratch_pool));
-
-  if (ra_session)
-    SVN_ERR(svn_ra_reparent(ra_session, old_session_url, scratch_pool));
 
   if (ra_session_p)
     *ra_session_p = fetch_baton.ra_session;

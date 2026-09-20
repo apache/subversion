@@ -191,7 +191,7 @@ svn_client_cat3(apr_hash_t **returned_props,
   svn_string_t *eol_style;
   svn_string_t *keywords;
   apr_hash_t *props = NULL;
-  const char *repos_root_url;
+  const char *repos_root_url, *repos_relpath;
   svn_stream_t *output = out;
   svn_error_t *err;
 
@@ -253,10 +253,13 @@ svn_client_cat3(apr_hash_t **returned_props,
   /* Find the repos root URL */
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, scratch_pool));
 
+  /* Resolve relative path in a repository */
+  repos_relpath = svn_uri_skip_ancestor(repos_root_url, loc->url, scratch_pool);
+
   /* Grab some properties we need to know in order to figure out if anything
      special needs to be done with this file. */
-  err = svn_ra_get_file(ra_session, "", loc->rev, NULL, NULL, &props,
-                        result_pool);
+  err = svn_ra_get_file2(ra_session, repos_relpath, loc->rev, NULL, NULL,
+                         &props, result_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_NOT_FILE)
@@ -336,8 +339,8 @@ svn_client_cat3(apr_hash_t **returned_props,
       *returned_props = props;
     }
 
-  SVN_ERR(svn_ra_get_file(ra_session, "", loc->rev, output, NULL, NULL,
-                          scratch_pool));
+  SVN_ERR(svn_ra_get_file2(ra_session, repos_relpath, loc->rev, output, NULL,
+                           NULL, scratch_pool));
 
   if (out != output)
     /* Close the interjected stream */
