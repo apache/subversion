@@ -2115,7 +2115,7 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
  * NULL unless there is an actual difference in the file contents between
  * the current and the previous call.
  *
- * @since New in 1.5.
+ * @since New in 1.16.
  */
 svn_error_t *
 svn_ra_get_file_revs3(svn_ra_session_t *session,
@@ -2284,7 +2284,7 @@ svn_ra_get_lock(svn_ra_session_t *session,
  * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
  * returned.
  *
- * @since New in 1.7.
+ * @since New in 1.16.
  */
 svn_error_t *
 svn_ra_get_locks3(svn_ra_session_t *session,
