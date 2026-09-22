@@ -1128,6 +1128,7 @@ svn_ra_get_file2(svn_ra_session_t *session,
  * @since New in 1.2.
  * @deprecated Provided for compatibility with the 1.15 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_file(svn_ra_session_t *session,
                 const char *path,
@@ -1272,6 +1273,7 @@ svn_ra_list2(svn_ra_session_t *session,
  * @since New in 1.2.
  * @deprecated Provided for compatibility with the 1.15 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_list(svn_ra_session_t *session,
             const char *path,
@@ -2019,6 +2021,7 @@ svn_ra_get_locations2(svn_ra_session_t *session,
  * @since New in 1.2.
  * @deprecated Provided for compatibility with the 1.15 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_locations(svn_ra_session_t *session,
                      apr_hash_t **locations,
@@ -2064,6 +2067,7 @@ svn_ra_get_location_segments2(svn_ra_session_t *session,
  * @since New in 1.5.
  * @deprecated Provided for compatibility with the 1.15 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_location_segments(svn_ra_session_t *session,
                              const char *path,
@@ -2129,6 +2133,7 @@ svn_ra_get_file_revs3(svn_ra_session_t *session,
  * @since New in 1.5.
  * @deprecated Provided for compatibility with the 1.15 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_file_revs2(svn_ra_session_t *session,
                       const char *path,
@@ -2252,6 +2257,7 @@ svn_ra_get_lock2(svn_ra_session_t *session,
  * @since New in 1.2.
  * @deprecated Provided for compatibility with the 1.15 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_lock(svn_ra_session_t *session,
                 svn_lock_t **lock,
@@ -2293,6 +2299,7 @@ svn_ra_get_locks3(svn_ra_session_t *session,
  * @since New in 1.2.
  * @deprecated Provided for compatibility with the 1.15 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_locks2(svn_ra_session_t *session,
                   apr_hash_t **locks,
@@ -2411,6 +2418,7 @@ svn_ra_get_deleted_rev2(svn_ra_session_t *session,
  * @since New in 1.6.
  * @deprecated Provided for compatibility with the 1.15 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_deleted_rev(svn_ra_session_t *session,
                        const char *path,
@@ -2452,6 +2460,7 @@ svn_ra_get_inherited_props2(svn_ra_session_t *session,
  * @since New in 1.8.
  * @deprecated Provided for compatibility with the 1.15 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_inherited_props(svn_ra_session_t *session,
                            apr_array_header_t **inherited_props,
@@ -2489,6 +2498,7 @@ svn_ra_fetch_file_contents2(svn_ra_session_t *session,
  * @since New in 1.15.
  * @deprecated Provided for compatibility with the 1.15 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_fetch_file_contents(svn_ra_session_t *session,
                            const char *path,
