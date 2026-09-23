@@ -1504,11 +1504,14 @@ stream_translated(svn_stream_t *stream,
                hi; hi = apr_hash_next(hi))
             {
               const void *key;
+              apr_ssize_t klen;
               void *val;
 
-              apr_hash_this(hi, &key, NULL, &val);
-              svn_hash_sets(copy, apr_pstrdup(result_pool, key),
-                            svn_string_dup(val, result_pool));
+              apr_hash_this(hi, &key, &klen, &val);
+              apr_hash_set(copy,
+                           apr_pstrmemdup(result_pool, key, klen),
+                           klen,
+                           svn_string_dup(val, result_pool));
             }
           svn_pool_destroy(subpool);
 

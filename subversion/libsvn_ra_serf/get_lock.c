@@ -62,8 +62,6 @@ enum {
 typedef struct lock_info_t {
   apr_pool_t *pool;
 
-  const char *path;
-
   svn_lock_t *lock;
 
   svn_boolean_t read_headers;
@@ -283,7 +281,6 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
 
   lock_ctx = apr_pcalloc(scratch_pool, sizeof(*lock_ctx));
   lock_ctx->pool = result_pool;
-  lock_ctx->path = req_url;
   lock_ctx->lock = svn_lock_create(result_pool);
   lock_ctx->lock->path = apr_pstrdup(result_pool, path);
 

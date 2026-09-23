@@ -185,8 +185,7 @@ export_node(void *baton,
   apr_hash_t *kw;
   svn_subst_eol_style_t style;
   apr_hash_t *props;
-  svn_string_t *eol_style, *keywords, *executable, *special;
-  const char *eol_style_val;
+  const char *eol_style, *keywords, *executable, *special;
   const char *eol;
   svn_boolean_t local_mod = FALSE;
   apr_time_t tm;
@@ -342,17 +341,12 @@ export_node(void *baton,
         local_mod = TRUE;
     }
 
-  special = svn_hash_gets(props, SVN_PROP_SPECIAL);
-  eol_style = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
-  keywords = svn_hash_gets(props, SVN_PROP_KEYWORDS);
-  executable = svn_hash_gets(props, SVN_PROP_EXECUTABLE);
+  special = svn_prop_get_value(props, SVN_PROP_SPECIAL);
+  eol_style = svn_prop_get_value(props, SVN_PROP_EOL_STYLE);
+  keywords = svn_prop_get_value(props, SVN_PROP_KEYWORDS);
+  executable = svn_prop_get_value(props, SVN_PROP_EXECUTABLE);
 
-  if (eol_style)
-    eol_style_val = eol_style->data;
-  else
-    eol_style_val = NULL;
-
-  SVN_ERR(get_eol_style(&style, &eol, eol_style_val, eib->native_eol));
+  SVN_ERR(get_eol_style(&style, &eol, eol_style, eib->native_eol));
 
   if (local_mod)
     {
@@ -387,7 +381,7 @@ export_node(void *baton,
           suffix = "";
         }
 
-      SVN_ERR(svn_subst_build_keywords3(&kw, keywords->data,
+      SVN_ERR(svn_subst_build_keywords3(&kw, keywords,
                                         apr_psprintf(scratch_pool, "%ld%s",
                                                      changed_rev, suffix),
                                         url, status->repos_root_url, tm,
