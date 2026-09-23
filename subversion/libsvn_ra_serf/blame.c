@@ -336,7 +336,7 @@ setup_headers(serf_bucket_t *headers,
 
 svn_error_t *
 svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
-                           const char *path,
+                           const char *repos_relpath,
                            svn_revnum_t start,
                            svn_revnum_t end,
                            svn_boolean_t include_merged_revisions,
@@ -353,7 +353,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   blame_ctx = apr_pcalloc(pool, sizeof(*blame_ctx));
   blame_ctx->pool = pool;
-  blame_ctx->path = path;
+  blame_ctx->path = "";
   blame_ctx->file_rev = rev_handler;
   blame_ctx->file_rev_baton = rev_handler_baton;
   blame_ctx->start = start;
@@ -368,10 +368,10 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   else
     peg_rev = start;
 
-  SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                      session,
-                                      NULL /* url */, peg_rev,
-                                      pool, pool));
+  SVN_ERR(svn_ra_serf__get_stable_url2(&req_url, NULL /* latest_revnum */,
+                                       session,
+                                       repos_relpath, peg_rev,
+                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(blame_ttable,
                                            blame_opened,

@@ -233,14 +233,12 @@ typedef struct iprop_rq_info_t
 static svn_error_t *
 get_iprops_via_more_requests(svn_ra_session_t *ra_session,
                              apr_array_header_t **iprops,
-                             const char *session_url,
-                             const char *path,
+                             const char *repos_relpath,
                              svn_revnum_t revision,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
-  const char *url;
   const char *relpath;
   apr_array_header_t *rq_info;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -250,12 +248,7 @@ get_iprops_via_more_requests(svn_ra_session_t *ra_session,
 
   rq_info = apr_array_make(scratch_pool, 16, sizeof(iprop_rq_info_t *));
 
-  if (!svn_path_is_empty(path))
-    url = svn_path_url_add_component2(session_url, path, scratch_pool);
-  else
-    url = session_url;
-
-  relpath = svn_uri_skip_ancestor(session->repos_root_str, url, scratch_pool);
+  relpath = repos_relpath;
 
   /* Create all requests */
   while (relpath[0] != '\0')
@@ -267,12 +260,9 @@ get_iprops_via_more_requests(svn_ra_session_t *ra_session,
       rq->relpath = relpath;
       rq->props = apr_hash_make(scratch_pool);
 
-      SVN_ERR(svn_ra_serf__get_stable_url(&rq->urlpath, NULL, session,
-                                          svn_path_url_add_component2(
-                                                session->repos_root.path,
-                                                relpath, scratch_pool),
-                                          revision,
-                                          scratch_pool, scratch_pool));
+      SVN_ERR(svn_ra_serf__get_stable_url2(&rq->urlpath, NULL, session,
+                                           relpath, revision, scratch_pool,
+                                           scratch_pool));
 
       SVN_ERR(svn_ra_serf__create_propfind_handler(
                                           &rq->handler, session,
@@ -348,7 +338,7 @@ get_iprops_via_more_requests(svn_ra_session_t *ra_session,
 svn_error_t *
 svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
                                  apr_array_header_t **iprops,
-                                 const char *path,
+                                 const char *repos_relpath,
                                  svn_revnum_t revision,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
@@ -366,40 +356,19 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
 
   if (!iprop_capable)
     {
-      svn_error_t *err;
-      const char *reparent_uri = NULL;
-      const char *session_uri;
-      const char *repos_root_url;
+      SVN_ERR(get_iprops_via_more_requests(ra_session, iprops, repos_relpath,
+                                           revision, result_pool,
+                                           scratch_pool));
 
-      SVN_ERR(svn_ra_serf__get_repos_root(ra_session, &repos_root_url,
-                                          scratch_pool));
-
-      session_uri = apr_pstrdup(scratch_pool, session->session_url_str);
-      if (strcmp(repos_root_url, session->session_url_str) != 0)
-        {
-          reparent_uri  = session_uri;
-          SVN_ERR(svn_ra_serf__reparent(ra_session, repos_root_url,
-                                        scratch_pool));
-        }
-
-      err = get_iprops_via_more_requests(ra_session, iprops, session_uri, path,
-                                         revision, result_pool, scratch_pool);
-
-      if (reparent_uri)
-        err = svn_error_compose_create(err,
-                                       svn_ra_serf__reparent(ra_session,
-                                                             reparent_uri ,
-                                                             scratch_pool));
-
-      return svn_error_trace(err);
+      return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_ra_serf__get_stable_url(&req_url,
-                                      NULL /* latest_revnum */,
-                                      session,
-                                      NULL /* url */,
-                                      revision,
-                                      scratch_pool, scratch_pool));
+  SVN_ERR(svn_ra_serf__get_stable_url2(&req_url,
+                                       NULL /* latest_revnum */,
+                                       session,
+                                       repos_relpath,
+                                       revision,
+                                       scratch_pool, scratch_pool));
 
   SVN_ERR_ASSERT(session->repos_root_str);
 
@@ -410,7 +379,7 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
   iprops_ctx->curr_iprop = NULL;
   iprops_ctx->iprops = apr_array_make(result_pool, 1,
                                        sizeof(svn_prop_inherited_item_t *));
-  iprops_ctx->path = path;
+  iprops_ctx->path = "";
   iprops_ctx->revision = revision;
 
   xmlctx = svn_ra_serf__xml_context_create(iprops_table,

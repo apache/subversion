@@ -316,7 +316,7 @@ get_file_prop_cb(void *baton,
 
 svn_error_t *
 svn_ra_serf__get_file(svn_ra_session_t *ra_session,
-                      const char *path,
+                      const char *repos_relpath,
                       svn_revnum_t revision,
                       svn_stream_t *stream,
                       svn_revnum_t *fetched_rev,
@@ -332,20 +332,22 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
 
   /* Fetch properties. */
 
-  fetch_url = svn_path_url_add_component2(session->session_url.path, path,
-                                          scratch_pool);
-
-  /* The simple case is if we want HEAD - then a GET on the fetch_url is fine.
-   *
-   * Otherwise, we need to get the baseline version for this particular
-   * revision and then fetch that file.
-   */
-  if (SVN_IS_VALID_REVNUM(revision) || fetched_rev)
+  if (!SVN_IS_VALID_REVNUM(revision) && fetched_rev == NULL)
     {
-      SVN_ERR(svn_ra_serf__get_stable_url(&fetch_url, fetched_rev,
-                                          session,
-                                          fetch_url, revision,
-                                          scratch_pool, scratch_pool));
+      /* The simple case is if we want HEAD - then a GET on the fetch_url is
+       * fine. */
+      SVN_ERR(svn_ra_serf__resolve_path(ra_session, &fetch_url, repos_relpath,
+                                        scratch_pool));
+    }
+  else
+    {
+      /*
+       * Otherwise, we need to get the baseline version for this particular
+       * revision and then fetch that file.
+       */
+      SVN_ERR(svn_ra_serf__get_stable_url2(&fetch_url, fetched_rev, session,
+                                           repos_relpath, revision,
+                                           scratch_pool, scratch_pool));
       revision = SVN_INVALID_REVNUM;
     }
   /* REVISION is always SVN_INVALID_REVNUM  */
@@ -431,7 +433,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
 
 svn_error_t *
 svn_ra_serf__fetch_file_contents(svn_ra_session_t *ra_session,
-                                 const char *path,
+                                 const char *repos_relpath,
                                  svn_revnum_t revision,
                                  svn_stream_t *stream,
                                  apr_pool_t *scratch_pool)
@@ -442,12 +444,9 @@ svn_ra_serf__fetch_file_contents(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_error_t *err;
 
-  fetch_url = svn_path_url_add_component2(session->session_url.path, path,
-                                          scratch_pool);
-
-  SVN_ERR(svn_ra_serf__get_stable_url(&fetch_url, NULL, session,
-                                      fetch_url, revision,
-                                      scratch_pool, scratch_pool));
+  SVN_ERR(svn_ra_serf__get_stable_url2(&fetch_url, NULL, session,
+                                       repos_relpath, revision,
+                                       scratch_pool, scratch_pool));
 
   /* Create the fetch context. */
   stream_ctx = apr_pcalloc(scratch_pool, sizeof(*stream_ctx));

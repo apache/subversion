@@ -155,7 +155,7 @@ create_get_locations_body(serf_bucket_t **body_bkt,
 svn_error_t *
 svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
                            apr_hash_t **locations,
-                           const char *path,
+                           const char *repos_relpath,
                            svn_revnum_t peg_revision,
                            const apr_array_header_t *location_revisions,
                            apr_pool_t *pool)
@@ -168,16 +168,16 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   loc_ctx = apr_pcalloc(pool, sizeof(*loc_ctx));
   loc_ctx->pool = pool;
-  loc_ctx->path = path;
+  loc_ctx->path = "";
   loc_ctx->peg_revision = peg_revision;
   loc_ctx->location_revisions = location_revisions;
   loc_ctx->paths = apr_hash_make(loc_ctx->pool);
 
   *locations = loc_ctx->paths;
 
-  SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                      session,  NULL /* url */, peg_revision,
-                                      pool, pool));
+  SVN_ERR(svn_ra_serf__get_stable_url2(&req_url, NULL /* latest_revnum */,
+                                       session, repos_relpath, peg_revision,
+                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(getloc_ttable,
                                            NULL, getloc_closed, NULL,

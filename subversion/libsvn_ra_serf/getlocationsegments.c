@@ -155,7 +155,7 @@ create_gls_body(serf_bucket_t **body_bkt,
 
 svn_error_t *
 svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
-                                   const char *path,
+                                   const char *repos_relpath,
                                    svn_revnum_t peg_revision,
                                    svn_revnum_t start_rev,
                                    svn_revnum_t end_rev,
@@ -171,16 +171,16 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   svn_error_t *err;
 
   gls_ctx = apr_pcalloc(pool, sizeof(*gls_ctx));
-  gls_ctx->path = path;
+  gls_ctx->path = "";
   gls_ctx->peg_revision = peg_revision;
   gls_ctx->start_rev = start_rev;
   gls_ctx->end_rev = end_rev;
   gls_ctx->receiver = receiver;
   gls_ctx->receiver_baton = receiver_baton;
 
-  SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                      session, NULL /* url */, peg_revision,
-                                      pool, pool));
+  SVN_ERR(svn_ra_serf__get_stable_url2(&req_url, NULL /* latest_revnum */,
+                                       session, repos_relpath, peg_revision,
+                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(gls_ttable,
                                            NULL, gls_closed, NULL,

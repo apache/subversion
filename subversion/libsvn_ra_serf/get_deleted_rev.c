@@ -129,7 +129,7 @@ create_getdrev_body(serf_bucket_t **body_bkt,
 
 svn_error_t *
 svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
-                             const char *path,
+                             const char *repos_relpath,
                              svn_revnum_t peg_revision,
                              svn_revnum_t end_revision,
                              svn_revnum_t *revision_deleted,
@@ -143,14 +143,14 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
   svn_error_t *err;
 
   drev_ctx = apr_pcalloc(pool, sizeof(*drev_ctx));
-  drev_ctx->path = path;
+  drev_ctx->path = "";
   drev_ctx->peg_revision = peg_revision;
   drev_ctx->end_revision = end_revision;
   drev_ctx->revision_deleted = revision_deleted;
 
-  SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                      ras, NULL /* url */, peg_revision,
-                                      pool, pool));
+  SVN_ERR(svn_ra_serf__get_stable_url2(&req_url, NULL /* latest_revnum */,
+                                       ras, repos_relpath, peg_revision,
+                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(getdrev_ttable,
                                            NULL, getdrev_closed, NULL,

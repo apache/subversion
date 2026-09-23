@@ -230,7 +230,7 @@ create_list_body(serf_bucket_t **body_bkt,
 
 svn_error_t *
 svn_ra_serf__list(svn_ra_session_t *ra_session,
-                  const char *path,
+                  const char *repos_relpath,
                   svn_revnum_t revision,
                   const apr_array_header_t *patterns,
                   svn_depth_t depth,
@@ -249,7 +249,7 @@ svn_ra_serf__list(svn_ra_session_t *ra_session,
   list_ctx->pool = scratch_pool;
   list_ctx->receiver = receiver;
   list_ctx->receiver_baton = receiver_baton;
-  list_ctx->path = path;
+  list_ctx->path = "";
   list_ctx->revision = revision;
   list_ctx->patterns = patterns;
   list_ctx->depth = depth;
@@ -261,10 +261,10 @@ svn_ra_serf__list(svn_ra_session_t *ra_session,
   /* At this point, we may have a deleted file.  So, we'll match ra_neon's
    * behavior and use the larger of start or end as our 'peg' rev.
    */
-  SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                      session,
-                                      NULL /* url */, revision,
-                                      scratch_pool, scratch_pool));
+  SVN_ERR(svn_ra_serf__get_stable_url2(&req_url, NULL /* latest_revnum */,
+                                       session, repos_relpath,
+                                       revision,
+                                       scratch_pool, scratch_pool));
 
   xmlctx = svn_ra_serf__xml_context_create(log_ttable,
                                            NULL, item_closed, NULL,
