@@ -494,6 +494,71 @@ svn_ra_get_locks2(svn_ra_session_t *session,
 }
 
 svn_error_t *
+svn_ra_lock(svn_ra_session_t *session,
+            apr_hash_t *path_revs,
+            const char *comment,
+            svn_boolean_t steal_lock,
+            svn_ra_lock_callback_t lock_func,
+            void *lock_baton,
+            apr_pool_t *pool)
+{
+  apr_hash_t *abs_path_revs = apr_hash_make(pool);
+  apr_hash_index_t *hi;
+  const char *session_path;
+
+  SVN_ERR(get_session_path(session, &session_path, pool));
+
+  for (hi = apr_hash_first(pool, path_revs);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *path = apr_hash_this_key(hi);
+      const char *value = apr_hash_this_val(hi);
+
+      svn_hash_sets(abs_path_revs,
+                    svn_relpath_join(session_path, path, pool),
+                    value);
+    }
+
+  SVN_ERR(svn_ra_lock2(session, abs_path_revs, comment, steal_lock, lock_func,
+                       lock_baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_unlock(svn_ra_session_t *session,
+              apr_hash_t *path_tokens,
+              svn_boolean_t break_lock,
+              svn_ra_lock_callback_t lock_func,
+              void *lock_baton,
+              apr_pool_t *pool)
+{
+  apr_hash_t *abs_path_tokens = apr_hash_make(pool);
+  apr_hash_index_t *hi;
+  const char *session_path;
+
+  SVN_ERR(get_session_path(session, &session_path, pool));
+
+  for (hi = apr_hash_first(pool, path_tokens);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *path = apr_hash_this_key(hi);
+      const char *value = apr_hash_this_val(hi);
+
+      svn_hash_sets(abs_path_tokens,
+                    svn_relpath_join(session_path, path, pool),
+                    value);
+    }
+
+  SVN_ERR(svn_ra_unlock2(session, abs_path_tokens, break_lock, lock_func,
+                         lock_baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_ra_do_update3(svn_ra_session_t *session,
                   const svn_ra_reporter3_t **reporter,
                   void **report_baton,

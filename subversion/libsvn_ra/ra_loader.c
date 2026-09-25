@@ -1089,13 +1089,13 @@ svn_error_t *svn_ra_get_file_revs3(svn_ra_session_t *session,
   return svn_error_trace(err);
 }
 
-svn_error_t *svn_ra_lock(svn_ra_session_t *session,
-                         apr_hash_t *path_revs,
-                         const char *comment,
-                         svn_boolean_t steal_lock,
-                         svn_ra_lock_callback_t lock_func,
-                         void *lock_baton,
-                         apr_pool_t *pool)
+svn_error_t *svn_ra_lock2(svn_ra_session_t *session,
+                          apr_hash_t *path_revs,
+                          const char *comment,
+                          svn_boolean_t steal_lock,
+                          svn_ra_lock_callback_t lock_func,
+                          void *lock_baton,
+                          apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
 
@@ -1115,12 +1115,12 @@ svn_error_t *svn_ra_lock(svn_ra_session_t *session,
                                lock_func, lock_baton, pool);
 }
 
-svn_error_t *svn_ra_unlock(svn_ra_session_t *session,
-                           apr_hash_t *path_tokens,
-                           svn_boolean_t break_lock,
-                           svn_ra_lock_callback_t lock_func,
-                           void *lock_baton,
-                           apr_pool_t *pool)
+svn_error_t *svn_ra_unlock2(svn_ra_session_t *session,
+                            apr_hash_t *path_tokens,
+                            svn_boolean_t break_lock,
+                            svn_ra_lock_callback_t lock_func,
+                            void *lock_baton,
+                            apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
 

@@ -1078,6 +1078,57 @@ reparent_repos_relpath_exact(svn_ra_session_t *ra_session,
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+reparent_repos_relpath_hash(svn_ra_session_t *ra_session,
+                            apr_hash_t *paths,
+                            apr_hash_t *result,
+                            apr_pool_t *scratch_pool,
+                            apr_pool_t *result_pool)
+{
+  svn_ra_svn__session_baton_t *sess = ra_session->priv;
+  const char *common_ancestor = NULL;
+  const char *dummy, *reparented;
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, paths);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *path = apr_hash_this_key(hi);
+
+      if (common_ancestor)
+        common_ancestor = svn_relpath_get_longest_ancestor(common_ancestor,
+                                                           path, scratch_pool);
+      else
+        common_ancestor = path;
+    }
+
+
+  SVN_ERR(reparent_repos_relpath(&dummy, ra_session, common_ancestor,
+                                 scratch_pool, scratch_pool));
+
+  reparented = svn_uri_skip_ancestor(sess->conn->repos_root,
+                                     sess->parent->server_url->data,
+                                     result_pool);
+
+  for (hi = apr_hash_first(scratch_pool, paths);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *path, *newpath;
+
+      path = apr_hash_this_key(hi);
+      newpath = svn_relpath_skip_ancestor(reparented, path);
+
+      svn_hash_sets(result,
+                    apr_pstrdup(result_pool, newpath),
+                    apr_hash_this_val(hi));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Return a copy of PATHS, containing the same const char * paths but
    adjusted to the RA_SESSION's server parent URL.  Returns NULL if
    PATHS is NULL.  Allocate the result in RESULT_POOL. */
@@ -1097,33 +1148,6 @@ reparent_path_array(svn_ra_session_t *ra_session,
     {
       const char **path = &APR_ARRAY_IDX(result, i, const char *);
       *path = reparent_path(ra_session, *path, result_pool);
-    }
-
-  return result;
-}
-
-/* Return a copy of PATHS, containing the same paths for keys but adjusted
-   to the RA_SESSION's server parent URL.  Keeps the values as-are and
-   returns NULL if PATHS is NULL.  Allocate the result in RESULT_POOL. */
-static apr_hash_t *
-reparent_path_hash(svn_ra_session_t *ra_session,
-                   apr_hash_t *paths,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
-{
-  apr_hash_t *result;
-  apr_hash_index_t *hi;
-
-  if (!paths)
-    return NULL;
-
-  result = svn_hash__make(result_pool);
-  for (hi = apr_hash_first(scratch_pool, paths); hi; hi = apr_hash_next(hi))
-    {
-      const char *path = apr_hash_this_key(hi);
-      svn_hash_sets(result,
-                    reparent_path(ra_session, path, result_pool),
-                    apr_hash_this_val(hi));
     }
 
   return result;
@@ -2683,15 +2707,17 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess = session->priv;
   svn_ra_svn_conn_t *conn = sess->conn;
+  apr_hash_t *reparented = apr_hash_make(pool);
   apr_hash_index_t *hi;
   svn_error_t *err;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
-  path_revs = reparent_path_hash(session, path_revs, pool, pool);
+  SVN_ERR(reparent_repos_relpath_hash(session, path_revs, reparented,
+                                      pool, pool));
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w((?c)b(!", "lock-many",
                                   comment, steal_lock));
 
-  for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, reparented); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       const char *path;
@@ -2715,7 +2741,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
   if (err && err->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD)
     {
       svn_error_clear(err);
-      return ra_svn_lock_compat(session, path_revs, comment, steal_lock,
+      return ra_svn_lock_compat(session, reparented, comment, steal_lock,
                                 lock_func, lock_baton, pool);
     }
 
@@ -2723,7 +2749,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
     return err;
 
   /* Loop over responses to get lock information. */
-  for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, reparented); hi; hi = apr_hash_next(hi))
     {
       svn_ra_svn__item_t *elt;
       const void *key;
@@ -2807,16 +2833,18 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess = session->priv;
   svn_ra_svn_conn_t *conn = sess->conn;
+  apr_hash_t *reparented = apr_hash_make(pool);
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_error_t *err;
   const char *path;
 
-  path_tokens = reparent_path_hash(session, path_tokens, pool, pool);
+  SVN_ERR(reparent_repos_relpath_hash(session, path_tokens, reparented,
+                                      pool, pool));
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w(b(!", "unlock-many",
                                   break_lock));
 
-  for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, reparented); hi; hi = apr_hash_next(hi))
     {
       void *val;
       const void *key;
@@ -2844,7 +2872,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
   if (err && err->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD)
     {
       svn_error_clear(err);
-      return ra_svn_unlock_compat(session, path_tokens, break_lock, lock_func,
+      return ra_svn_unlock_compat(session, reparented, break_lock, lock_func,
                                   lock_baton, pool);
     }
 
@@ -2852,7 +2880,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
     return err;
 
   /* Loop over responses to unlock files. */
-  for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, reparented); hi; hi = apr_hash_next(hi))
     {
       svn_ra_svn__item_t *elt;
       const void *key;

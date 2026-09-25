@@ -2191,7 +2191,24 @@ svn_ra_get_file_revs(svn_ra_session_t *session,
  *
  * Use @a pool for temporary allocations.
  *
+ * @since New in 1.16.
+ */
+svn_error_t *
+svn_ra_lock2(svn_ra_session_t *session,
+             apr_hash_t *path_revs,
+             const char *comment,
+             svn_boolean_t steal_lock,
+             svn_ra_lock_callback_t lock_func,
+             void *lock_baton,
+             apr_pool_t *pool);
+
+
+/**
+ * Similar to @c svn_ra_lock, but @a path_revs specify paths relative to
+ * session URL.
+ *
  * @since New in 1.2.
+ * @deprecated Provided for compatibility with the 1.15 API.
  */
 svn_error_t *
 svn_ra_lock(svn_ra_session_t *session,
@@ -2223,7 +2240,23 @@ svn_ra_lock(svn_ra_session_t *session,
  *
  * Use @a pool for temporary allocations.
  *
+ * @since New in 1.16.
+ */
+svn_error_t *
+svn_ra_unlock2(svn_ra_session_t *session,
+               apr_hash_t *path_tokens,
+               svn_boolean_t break_lock,
+               svn_ra_lock_callback_t lock_func,
+               void *lock_baton,
+               apr_pool_t *pool);
+
+
+/**
+ * Similar to @c svn_ra_unlock, but @a path_tokens specify paths relative to
+ * session URL.
+ *
  * @since New in 1.2.
+ * @deprecated Provided for compatibility with the 1.15 API.
  */
 svn_error_t *
 svn_ra_unlock(svn_ra_session_t *session,

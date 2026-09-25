@@ -1523,7 +1523,7 @@ svn_ra_local__lock(svn_ra_session_t *session,
 
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
-      const char *abs_path = svn_fspath__join(sess->fs_path->data,
+      const char *abs_path = svn_fspath__join("/",
                                               apr_hash_this_key(hi), pool);
       svn_revnum_t current_rev = *(svn_revnum_t *)apr_hash_this_val(hi);
       svn_fs_lock_target_t *target = svn_fs_lock_target_create(NULL,
@@ -1573,7 +1573,7 @@ svn_ra_local__unlock(svn_ra_session_t *session,
 
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
-      const char *abs_path = svn_fspath__join(sess->fs_path->data,
+      const char *abs_path = svn_fspath__join("/",
                                               apr_hash_this_key(hi), pool);
       const char *token = apr_hash_this_val(hi);
 
