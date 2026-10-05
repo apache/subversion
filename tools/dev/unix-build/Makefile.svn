@@ -944,6 +944,7 @@ $(HTTPD_CONF):
 	echo >>$@.tmp 'LoadModule authn_file_module modules/mod_authn_file.so'
 	echo >>$@.tmp 'LoadModule authz_core_module modules/mod_authz_core.so'
 	echo >>$@.tmp 'LoadModule authz_user_module modules/mod_authz_user.so'
+	echo >>$@.tmp 'LoadModule authz_host_module modules/mod_authz_host.so'
 	echo >>$@.tmp 'LoadModule authz_groupfile_module modules/mod_authz_groupfile.so'
 	echo >>$@.tmp 'LoadModule auth_basic_module modules/mod_auth_basic.so'
 	echo >>$@.tmp 'LoadModule dav_module modules/mod_dav.so'
@@ -958,7 +959,8 @@ $(HTTPD_CONF):
 	echo >>$@.tmp '<Location /repos>'
 	echo >>$@.tmp '    DAV svn'
 	echo >>$@.tmp '    SVNPath /tmp/svn-sandbox/repos'
-	echo >>$@.tmp '    Require ip localhost'
+	echo >>$@.tmp '    Require ip 127.0.0.1'
+	echo >>$@.tmp '    Require ip ::1'
 	echo >>$@.tmp '</Location>'
 	mv -f $@.tmp $@
 
