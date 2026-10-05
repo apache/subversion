@@ -1754,6 +1754,9 @@ $(GETTEXT_OBJDIR)/.retrieved: $(DISTDIR)/$(GETTEXT_DIST)
 	$(call do_check_sha256,$(GETTEXT_DIST))
 	[ -d $(GETTEXT_OBJDIR) ] || mkdir -p $(GETTEXT_OBJDIR)
 	xzcat $(DISTDIR)/$(GETTEXT_DIST) | tar -C $(SRCDIR) -xf -
+	# Workaround for old compilers which do not inline properly (gcc 4.8):
+	sed -i -e 's/GL_STRING_DESC_INLINE/static/' \
+		$(GETTEXT_SRCDIR)/gettext-tools/gnulib-lib/xstring-desc.h
 	touch $@
 
 # (gettext won't compile outside its source tree)
