@@ -299,6 +299,10 @@ SVN_OBJDIR	= $(OBJDIR)/$(SVN_REL_WC)
 # builds!
 svn_builddir	?=$(SVN_WC)
 
+# Using zero optimizations makes callstack traces and line-by-line
+# stepping in gdb a lot more useful.
+DEFAULT_CFLAGS=-O0 -g
+
 ifdef PROFILE
 PROFILE_CFLAGS=-pg
 endif
@@ -409,7 +413,8 @@ $(BDB_OBJDIR)/.retrieved: $(DISTDIR)/$(BDB_DIST)
 # configure bdb
 $(BDB_OBJDIR)/.configured: $(BDB_OBJDIR)/.retrieved
 	cd $(BDB_SRCDIR)/build_unix \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		&& env CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS)" \
+		GREP="`which grep`" \
 		CC=$(CC) CXX=$(CXX) \
 		../dist/configure \
 		--prefix=$(PREFIX)/bdb \
@@ -467,7 +472,8 @@ endif
 $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved $(BDB_OBJDIR)/.installed
 	cd $(APR_SRCDIR) && ./buildconf
 	cd $(APR_OBJDIR) \
-		&& env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		&& env CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS)" \
+		GREP="`which grep`" \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		CC=$(CC) CXX=$(CXX) \
 		$(APR_SRCDIR)/configure \
@@ -517,7 +523,7 @@ $(APR_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(APR_ICONV_DIST)
 $(APR_ICONV_OBJDIR)/.configured: $(APR_ICONV_OBJDIR)/.retrieved \
 	$(APR_OBJDIR)/.installed
 	cd $(APR_ICONV_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+		&& env CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 		CC=$(CC) CXX=$(CXX) \
 		GREP="`which grep`" \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
@@ -529,7 +535,8 @@ $(APR_ICONV_OBJDIR)/.configured: $(APR_ICONV_OBJDIR)/.retrieved \
 # compile apr-iconv
 $(APR_ICONV_OBJDIR)/.compiled: $(APR_ICONV_OBJDIR)/.configured
 	(cd $(APR_ICONV_OBJDIR) \
-		&& env MAKEFLAGS= make CPPFLAGS="-D_OSD_POSIX" CFLAGS="-g -O0 $(PROFILE_CFLAGS)" -j${MAKE_JOBS})
+		&& env MAKEFLAGS= make CPPFLAGS="-D_OSD_POSIX" \
+		CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS)" -j${MAKE_JOBS})
 	touch $@
 
 # install apr-iconv
@@ -605,7 +612,8 @@ $(GNU_ICONV_OBJDIR)/.configured: $(GNU_ICONV_OBJDIR)/.retrieved
 	cd $(SRCDIR)/libiconv-${GNU_ICONV_VER} && \
 		${MAKE} -f Makefile.devel lib/aliases.h
 	cd $(GNU_ICONV_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		&& env CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS)" \
+		GREP="`which grep`"\
 		CC=$(CC) CXX=$(CXX) \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(GNU_ICONV_SRCDIR)/configure \
@@ -671,7 +679,7 @@ $(OPENLDAP_OBJDIR)/.configured: $(OPENLDAP_OBJDIR)/.retrieved \
 	$(CYRUS_SASL_OBJDIR)/.installed
 	cd $(OPENLDAP_OBJDIR) \
 		&& env PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
-			CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
+			CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS)" \
 			CPPFLAGS="-I$(PREFIX)/cyrus-sasl/include" \
 			LDFLAGS="-L$(PREFIX)/cyrus-sasl/lib" \
 			CC=$(CC) CXX=$(CXX) \
@@ -768,7 +776,7 @@ $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved \
 	cd $(APR_UTIL_OBJDIR) \
 		&& env LD_LIBRARY_PATH=$(PREFIX)/bdb/lib \
 			PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
-			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+			CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 			CC=$(CC) CXX=$(CXX) \
 			GREP="`which grep`" \
 			$(APR_UTIL_SRCDIR)/configure \
@@ -821,7 +829,7 @@ $(PCRE_OBJDIR)/.retrieved: $(DISTDIR)/$(PCRE_DIST)
 # configure pcre
 $(PCRE_OBJDIR)/.configured: $(PCRE_OBJDIR)/.retrieved
 	cd $(PCRE_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
+		&& env CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS)" \
 		CC=$(CC) CXX=$(CXX) \
 		GREP="`which grep`" \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
@@ -903,7 +911,7 @@ $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 		--with-apr="$(PREFIX)/apr/bin/apr-1-config" \
 		--with-apr-util="$(PREFIX)/apr/bin/apu-1-config"
 	cd $(HTTPD_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+		&& env CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 		CC=$(CC) CXX=$(CXX) \
 		GREP="`which grep`" \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
@@ -1004,7 +1012,8 @@ $(NEON_OBJDIR)/.configured: $(NEON_OBJDIR)/.retrieved
 		chmod +x $(NEON_OBJDIR)/krb5-config; \
 	fi
 	cd $(NEON_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		&& env CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS)" \
+		GREP="`which grep`" \
 		CC=$(CC) CXX=$(CXX) \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(NEON_SRCDIR)/configure \
@@ -1070,7 +1079,7 @@ $(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved \
 	$(APR_UTIL_OBJDIR)/.installed
 	cd $(SERF_SRCDIR) && \
 		scons -j${MAKE_JOBS} DEBUG=1 \
-			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -fPIC -DAPR_POOL_DEBUG" \
+			CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS) -fPIC -DAPR_POOL_DEBUG" \
 			CC=$(CC) CXX=$(CXX) \
 			APR=$(PREFIX)/apr \
 			APU=$(PREFIX)/apr \
@@ -1125,7 +1134,8 @@ endif
 # configure sqlite
 $(SQLITE_OBJDIR)/.configured: $(SQLITE_OBJDIR)/.retrieved
 	cd $(SQLITE_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		&& env CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS)" \
+		GREP="`which grep`" \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		CC=$(CC) CXX=$(CXX) \
 		$(SQLITE_SRCDIR)/configure \
@@ -1268,7 +1278,7 @@ endif
 $(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved \
 	$(BDB_OBJDIR)/.installed $(SQLITE_OBJDIR)/.installed
 	cd $(CYRUS_SASL_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
+		&& env CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS)" \
 		CC=$(CC) CXX=$(CXX) MAKE=$(MAKE) \
 		GREP="`which grep`" \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
@@ -1322,7 +1332,8 @@ $(LIBMAGIC_OBJDIR)/.retrieved: $(DISTDIR)/$(LIBMAGIC_DIST)
 # configure libmagic
 $(LIBMAGIC_OBJDIR)/.configured: $(LIBMAGIC_OBJDIR)/.retrieved
 	cd $(LIBMAGIC_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		&& env CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS)" \
+		GREP="`which grep`"\
 		CC=$(CC) CXX=$(CXX) \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(LIBMAGIC_SRCDIR)/configure \
@@ -1454,7 +1465,8 @@ endif
 # configure ruby
 $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 	cd $(RUBY_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		&& env CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS)" \
+		GREP="`which grep`"\
 		CC=$(CC) CXX=$(CXX) \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(RUBY_SRCDIR)/configure \
@@ -1505,7 +1517,8 @@ $(BZ2_OBJDIR)/.retrieved: $(DISTDIR)/$(BZ2_DIST)
 # compile bz2
 $(BZ2_OBJDIR)/.compiled: $(BZ2_OBJDIR)/.retrieved
 	(cd $(BZ2_SRCDIR) && env MAKEFLAGS= make CC=$(CC) CXX=$(CXX) \
-		CFLAGS="-g $(PROFILE_CFLAGS) -fPIC" -j${MAKE_JOBS})
+		CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS) -fPIC" \
+		-j${MAKE_JOBS})
 	touch $@
 
 # install bz2
@@ -1589,8 +1602,9 @@ $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved \
 	$(BZ2_OBJDIR)/.installed
 	if [ "`uname`" = "OpenBSD" ]; then cd $(PYTHON_SRCDIR) && autoconf; fi
 	cd $(PYTHON_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
-		CC=$(CC) CXX=$(CXX) \
+		&& env CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS)" \
+		GREP="`which grep`" \
+		CC=$(CC) CXX=$(CXX) OPT="" \
 		CPPFLAGS="-I$(PREFIX)/bz2/include" \
 		LDFLAGS="-Wl,-rpath=$(PREFIX)/python/lib -L$(PREFIX)/bz2/lib" \
 		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$(PREFIX)/python/lib:$$LD_LIBRARY_PATH" \
@@ -1667,8 +1681,9 @@ endif
 $(PYTHON2_OBJDIR)/.configured: $(PYTHON2_OBJDIR)/.retrieved \
 	$(BZ2_OBJDIR)/.installed
 	cd $(PYTHON2_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
-		CC=$(CC) CXX=$(CXX) \
+		&& env CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS)" \
+		GREP="`which grep`" \
+		CC=$(CC) CXX=$(CXX) OPT="" \
 		CPPFLAGS="-I$(PREFIX)/bz2/include" \
 		LDFLAGS="-Wl,-rpath=$(PREFIX)/python2/lib -L$(PREFIX)/bz2/lib" \
 		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$(PREFIX)/python2/lib:$$LD_LIBRARY_PATH" \
@@ -1765,7 +1780,8 @@ $(GETTEXT_OBJDIR)/.retrieved: $(DISTDIR)/$(GETTEXT_DIST)
 # configure gettext
 $(GETTEXT_OBJDIR)/.configured: $(GETTEXT_OBJDIR)/.retrieved
 	cd $(GETTEXT_SRCDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		&& env CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS)" \
+		GREP="`which grep`"\
 		CC=$(CC) CXX=$(CXX) \
 		LDFLAGS="-L$(PREFIX)/iconv/lib" \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
@@ -1872,7 +1888,8 @@ endif
 $(SWIG_OBJDIR)/.configured: $(SWIG_OBJDIR)/.retrieved
 ifneq ($(SWIG_VER),)
 	cd $(SWIG_SRCDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		&& env CFLAGS="$(DEFAULT_CFLAGS) $(PROFILE_CFLAGS)" \
+		GREP="`which grep`"\
 		CC=$(CC) CXX=$(CXX) \
 		LDFLAGS="-L$(PREFIX)/iconv/lib" \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
