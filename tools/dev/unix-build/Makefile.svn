@@ -1173,6 +1173,7 @@ $(DISTDIR)/$(CYRUS_SASL_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(CYRUS_SASL_URL)
 
 $(CYRUS_SASL_OBJDIR)/lib_md5.patch:
+	mkdir -p $(dir $@)
 	echo 'Index: lib/md5.c' > $@
 	echo '--- lib/md5.c.orig' >> $@
 	echo '+++ lib/md5.c' >> $@
@@ -1207,6 +1208,7 @@ $(CYRUS_SASL_OBJDIR)/lib_md5.patch:
 	echo ' 			 const unsigned char *key,' >> $@
 	
 $(CYRUS_SASL_OBJDIR)/saslauthd_md5.patch:
+	mkdir -p $(dir $@)
 	echo 'Index: saslauthd/md5.c' >> $@
 	echo '--- saslauthd/md5.c.orig' >> $@
 	echo '+++ saslauthd/md5.c' >> $@
