@@ -104,10 +104,11 @@ log_message(logger_t *logger,
 
       /* 8192 from MAX_STRING_LEN in from httpd-2.2.4/include/httpd.h */
       const apr_size_t errstr_size = 8192;
-      char *errstr = apr_palloc(logger->pool, errstr_size);
+      char *errstr;
 
       svn_error_clear(svn_mutex__lock(logger->mutex));
 
+      errstr = apr_palloc(logger->pool, errstr_size);
       timestr = svn_time_to_cstring(apr_time_now(), logger->pool);
       remote_host = client_info && client_info->remote_host
                   ? client_info->remote_host
