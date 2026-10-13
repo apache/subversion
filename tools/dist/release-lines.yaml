@@ -26,6 +26,6 @@ tool_versions:
   'trunk': *TOOL_VERSIONS_1_15
 
 # The version that is our current recommended release
-recommended_release: '1.14'
+recommended_release: '1.15'
 # For clean-dist, a whitelist of artifacts to keep, by version.
-supported_release_lines: ['1.14']
+supported_release_lines: ['1.14', '1.15']
