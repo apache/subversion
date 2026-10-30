@@ -89,7 +89,7 @@ Candidate changes:
   Justification:
     Subversion shouldn't crash even if the dump file is corrupt
   Votes:
-    +1: dsahlberg
+    +1: dsahlberg, stsp
 
 Veto-blocked changes:
 =====================
