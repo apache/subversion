@@ -512,7 +512,7 @@ convert_to_stringbuf(xlate_handle_node_t *node,
   apr_size_t buflen;
   apr_status_t apr_err;
   apr_size_t srclen = src_length;
-  apr_size_t destlen = buflen;
+  apr_size_t destlen;
 
   /* Not only does it not make sense to convert an empty string, but
      apr-iconv is quite unreasonable about not allowing that. */
@@ -528,6 +528,7 @@ convert_to_stringbuf(xlate_handle_node_t *node,
      to be enough, we'll grow the buffer again, sizing it based on a
      1:3 ratio of the remainder of the string. */
   buflen = src_length * 2;
+  destlen = buflen;
   *dest = svn_stringbuf_create_ensure(buflen + 1, pool);
 
   do
