@@ -509,22 +509,26 @@ convert_to_stringbuf(xlate_handle_node_t *node,
   apr_err = svn_subr__win32_xlate_to_stringbuf(node->handle, src_data,
                                                src_length, dest, pool);
 #else
-  apr_size_t buflen = src_length * 2;
+  apr_size_t buflen;
   apr_status_t apr_err;
   apr_size_t srclen = src_length;
   apr_size_t destlen = buflen;
+
+  /* Not only does it not make sense to convert an empty string, but
+     apr-iconv is quite unreasonable about not allowing that. */
+  if (src_length == 0)
+    {
+      *dest = svn_stringbuf_create_empty(pool);
+      return SVN_NO_ERROR;
+    }
 
   /* Initialize *DEST to an empty stringbuf.
      A 1:2 ratio of input bytes to output bytes (as assigned above)
      should be enough for most translations, and if it turns out not
      to be enough, we'll grow the buffer again, sizing it based on a
      1:3 ratio of the remainder of the string. */
+  buflen = src_length * 2;
   *dest = svn_stringbuf_create_ensure(buflen + 1, pool);
-
-  /* Not only does it not make sense to convert an empty string, but
-     apr-iconv is quite unreasonable about not allowing that. */
-  if (src_length == 0)
-    return SVN_NO_ERROR;
 
   do
     {
