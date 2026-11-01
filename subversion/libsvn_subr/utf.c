@@ -500,25 +500,27 @@ static svn_error_t *
 convert_to_stringbuf(xlate_handle_node_t *node,
                      const char *src_data,
                      apr_size_t src_length,
-                     svn_stringbuf_t **dest,
+                     svn_stringbuf_t **dest_p,
                      apr_pool_t *pool)
 {
 #ifdef WIN32
   apr_status_t apr_err;
+  svn_stringbuf_t *dest;
 
   apr_err = svn_subr__win32_xlate_to_stringbuf(node->handle, src_data,
-                                               src_length, dest, pool);
+                                               src_length, &dest, pool);
 #else
   apr_size_t buflen;
   apr_status_t apr_err;
   apr_size_t srclen = src_length;
   apr_size_t destlen;
+  svn_stringbuf_t *dest;
 
   /* Not only does it not make sense to convert an empty string, but
      apr-iconv is quite unreasonable about not allowing that. */
   if (src_length == 0)
     {
-      *dest = svn_stringbuf_create_empty(pool);
+      *dest_p = svn_stringbuf_create_empty(pool);
       return SVN_NO_ERROR;
     }
 
@@ -529,28 +531,28 @@ convert_to_stringbuf(xlate_handle_node_t *node,
      1:3 ratio of the remainder of the string. */
   buflen = src_length * 2;
   destlen = buflen;
-  *dest = svn_stringbuf_create_ensure(buflen + 1, pool);
+  dest = svn_stringbuf_create_ensure(buflen + 1, pool);
 
   do
     {
       /* Set up state variables for xlate. */
-      destlen = buflen - (*dest)->len;
+      destlen = buflen - dest->len;
 
       /* Attempt the conversion. */
       apr_err = apr_xlate_conv_buffer(node->handle,
                                       src_data + (src_length - srclen),
                                       &srclen,
-                                      (*dest)->data + (*dest)->len,
+                                      dest->data + dest->len,
                                       &destlen);
 
       /* Now, update the *DEST->len to track the amount of output data
          churned out so far from this loop. */
-      (*dest)->len += ((buflen - (*dest)->len) - destlen);
+      dest->len += ((buflen - dest->len) - destlen);
       buflen += srclen * 3; /* 3 is middle ground, 2 wasn't enough
                                for all characters in the buffer, 4 is
                                maximum character size (currently) */
 
-      svn_stringbuf_ensure(*dest, buflen);
+      svn_stringbuf_ensure(dest, buflen);
 
     } while (apr_err == APR_SUCCESS && srclen != 0);
 #endif
@@ -582,8 +584,9 @@ convert_to_stringbuf(xlate_handle_node_t *node,
     }
   /* Else, exited due to success.  Trim the result buffer down to the
      right length. */
-  (*dest)->data[(*dest)->len] = '\0';
+  dest->data[dest->len] = '\0';
 
+  *dest_p = dest;
   return SVN_NO_ERROR;
 }
 
