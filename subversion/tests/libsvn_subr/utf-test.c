@@ -1339,7 +1339,47 @@ test_utf8_align(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+#ifdef WIN32
+static svn_error_t *
+test_utf8_to_utf16(apr_pool_t *pool)
+{
+  const WCHAR *actual;
 
+  SVN_ERR(svn_utf__win32_utf8_to_utf16(&actual, "", NULL, pool));
+  SVN_TEST_ASSERT(wcscmp(L"", actual) == 0);
+
+  SVN_ERR(svn_utf__win32_utf8_to_utf16(&actual, "simple", NULL, pool));
+  SVN_TEST_ASSERT(wcscmp(L"simple", actual) == 0);
+
+  SVN_ERR(svn_utf__win32_utf8_to_utf16(&actual, "", L"prefix-", pool));
+  SVN_TEST_ASSERT(wcscmp(L"prefix-", actual) == 0);
+
+  SVN_ERR(svn_utf__win32_utf8_to_utf16(&actual, "simple", L"prefix-", pool));
+  SVN_TEST_ASSERT(wcscmp(L"prefix-simple", actual) == 0);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_utf16_to_utf8(apr_pool_t *pool)
+{
+  const char *actual;
+
+  SVN_ERR(svn_utf__win32_utf16_to_utf8(&actual, L"", NULL, pool));
+  SVN_TEST_STRING_ASSERT(actual, "");
+
+  SVN_ERR(svn_utf__win32_utf16_to_utf8(&actual, L"simple", NULL, pool));
+  SVN_TEST_STRING_ASSERT(actual, "simple");
+
+  SVN_ERR(svn_utf__win32_utf16_to_utf8(&actual, L"", "prefix-", pool));
+  SVN_TEST_STRING_ASSERT(actual, "prefix-");
+
+  SVN_ERR(svn_utf__win32_utf16_to_utf8(&actual, L"simple", "prefix-", pool));
+  SVN_TEST_STRING_ASSERT(actual, "prefix-simple");
+
+  return SVN_NO_ERROR;
+}
+#endif
 
 
 /* The test table.  */
@@ -1381,6 +1421,12 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test grapheme-aware left trim"),
     SVN_TEST_PASS2(test_utf8_align,
                    "test utf8 alignment"),
+#ifdef WIN32
+    SVN_TEST_PASS2(test_utf8_to_utf16,
+                   "test svn_utf__win32_utf8_to_utf16"),
+    SVN_TEST_PASS2(test_utf16_to_utf8,
+                   "test svn_utf__win32_utf16_to_utf8"),
+#endif
     SVN_TEST_NULL
   };
 
