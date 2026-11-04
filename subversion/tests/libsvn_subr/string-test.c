@@ -1067,6 +1067,55 @@ test_cstring_join(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_svn_cstring_strtoui64(apr_pool_t *pool)
+{
+  apr_uint64_t actual;
+
+  SVN_ERR(svn_cstring_strtoui64(&actual, "0", 0, 100, 10));
+
+  SVN_TEST_ASSERT_ERROR_MSG(
+    svn_cstring_strtoui64(&actual, "101", 0, 100, 10),
+    SVN_ERR_INCORRECT_PARAMS,
+    "Number '101' is out of range '[0, 100]'");
+
+  /* 9223372036854775807 is APR_INT64_MAX */
+  SVN_ERR(svn_cstring_strtoui64(&actual, "9223372036854775807",
+                                0, APR_UINT64_MAX, 10));
+
+  /* 9223372036854775808 is APR_INT64_MAX + 1 */
+  /* ## The error message should be improved. */
+  SVN_TEST_ASSERT_ERROR_MSG(
+    svn_cstring_strtoui64(&actual, "9223372036854775808", 0,
+                          APR_UINT64_MAX, 10),
+    SVN_ERR_INCORRECT_PARAMS,
+    "Number '9223372036854775808' is out of range '[0, 18446744073709551615]'");
+
+  /* 18446744073709551615 is APR_UINT64_MAX */
+  /* ## The error message should be improved.  */
+  SVN_TEST_ASSERT_ERROR_MSG(
+    svn_cstring_strtoui64(&actual, "18446744073709551615", 0,
+                          APR_UINT64_MAX, 10),
+    SVN_ERR_INCORRECT_PARAMS,
+    "Number '18446744073709551615' is out of range '[0, 18446744073709551615]'");
+
+  /* 18446744073709551615 is APR_UINT64_MAX */
+  /* ## The error message should be improved. */
+  SVN_TEST_ASSERT_ERROR_MSG(svn_cstring_strtoui64(&actual,
+                                                  "18446744073709551615", 0,
+                                                  APR_UINT64_MAX, 10),
+                            SVN_ERR_INCORRECT_PARAMS,
+                            "Number '18446744073709551615' is out of range "
+                            "'[0, 18446744073709551615]'");
+
+  SVN_TEST_ASSERT_ERROR_MSG(
+    svn_cstring_strtoui64(&actual, "-1", 0, APR_UINT64_MAX, 10),
+    SVN_ERR_INCORRECT_PARAMS,
+    "Number '-1' is out of range '[0, 18446744073709551615]'");
+
+  return SVN_NO_ERROR;
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -1151,6 +1200,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_stringbuf_set()"),
     SVN_TEST_PASS2(test_cstring_join,
                    "test svn_cstring_join2()"),
+    SVN_TEST_PASS2(test_svn_cstring_strtoui64,
+                   "test svn_cstring_strtoui64()"),
     SVN_TEST_NULL
   };
 

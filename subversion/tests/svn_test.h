@@ -191,6 +191,27 @@ extern "C" {
       }                                                           \
   } while(0)
 
+/** Same SVN_TEST_ASSERT_ERROR but also tests expected message
+ */
+#define SVN_TEST_ASSERT_ERROR_MSG(expr, expected_err, expected_msg)           \
+  do                                                                          \
+    {                                                                         \
+      svn_error_t *err__ = (expr);                                            \
+      SVN_ERR_ASSERT((expected_err));                                         \
+      if (err__ == SVN_NO_ERROR || err__->apr_err != (expected_err))          \
+        return err__ ? svn_error_createf(                                     \
+                           SVN_ERR_TEST_FAILED, err__,                        \
+                           "Expected error %s but got %s",                    \
+                           svn_error_symbolic_name(expected_err),             \
+                           svn_error_symbolic_name(err__->apr_err))           \
+                     : svn_error_createf(SVN_ERR_TEST_FAILED, err__,          \
+                                         "Expected error %s but got %s",      \
+                                         svn_error_symbolic_name(expected_err), \
+                                         "SVN_NO_ERROR");                     \
+  SVN_TEST_STRING_ASSERT(err__->message, expected_msg);                       \
+  svn_error_clear(err__);                                                     \
+}                                                                             \
+while (0)
 
 /* Baton for any arguments that need to be passed from main() to svn
  * test functions.
