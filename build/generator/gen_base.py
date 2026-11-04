@@ -703,11 +703,6 @@ class TargetLib(TargetLinked):
     self.msvc_static = options.get('msvc-static') == 'yes' # is a static lib
     self.msvc_export = options.get('msvc-export', '').split()
 
-  def disable_shared(self):
-    "tries to disable building as a shared library,"
-
-    self.msvc_static = True
-
 class TargetApacheMod(TargetLib):
 
   def __init__(self, name, options, gen_obj):
@@ -868,12 +863,6 @@ class TargetSWIGLib(TargetLib):
       if target.lang == self.target.lang:
         return [ self.target ]
       return [ ]
-
-  def disable_shared(self):
-    "disables building shared libraries"
-
-    return # Explicit NO-OP
-
 
 class TargetProject(Target):
   def __init__(self, name, options, gen_obj):
