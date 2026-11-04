@@ -903,6 +903,8 @@ svn_error_t *svn_txdelta_send_stream(svn_stream_t *stream,
 
   if (digest)
     md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  else
+    md5_checksum_ctx = NULL;
 
   while (1)
     {
@@ -926,7 +928,7 @@ svn_error_t *svn_txdelta_send_stream(svn_stream_t *stream,
 
       SVN_ERR(handler(&delta_window, handler_baton));
 
-      if (digest)
+      if (md5_checksum_ctx)
         SVN_ERR(svn_checksum_update(md5_checksum_ctx, read_buf, read_len));
 
       if (read_len < SVN__STREAM_CHUNK_SIZE)
@@ -934,7 +936,7 @@ svn_error_t *svn_txdelta_send_stream(svn_stream_t *stream,
     }
   SVN_ERR(handler(NULL, handler_baton));
 
-  if (digest)
+  if (md5_checksum_ctx)
     {
       svn_checksum_t *md5_checksum;
 
