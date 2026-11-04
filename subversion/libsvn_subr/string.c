@@ -1070,6 +1070,11 @@ svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
 
   /* ### We're throwing away half the number range here.
    * ### APR needs a apr_strtoui64() function. */
+  if (maxval > APR_INT64_MAX)
+    {
+      maxval = APR_INT64_MAX;
+    }
+
   val = apr_strtoi64(str, &endptr, base);
   if (errno == EINVAL || endptr == str || str[0] == '\0' || *endptr != '\0')
     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,

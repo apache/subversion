@@ -1089,29 +1089,27 @@ test_svn_cstring_strtoui64(apr_pool_t *pool)
     svn_cstring_strtoui64(&actual, "9223372036854775808", 0,
                           APR_UINT64_MAX, 10),
     SVN_ERR_INCORRECT_PARAMS,
-    "Number '9223372036854775808' is out of range '[0, 18446744073709551615]'");
+    "Number '9223372036854775808' is out of range '[0, 9223372036854775807]'");
 
   /* 18446744073709551615 is APR_UINT64_MAX */
-  /* ## The error message should be improved.  */
   SVN_TEST_ASSERT_ERROR_MSG(
     svn_cstring_strtoui64(&actual, "18446744073709551615", 0,
                           APR_UINT64_MAX, 10),
     SVN_ERR_INCORRECT_PARAMS,
-    "Number '18446744073709551615' is out of range '[0, 18446744073709551615]'");
+    "Number '18446744073709551615' is out of range '[0, 9223372036854775807]'");
 
   /* 18446744073709551615 is APR_UINT64_MAX */
-  /* ## The error message should be improved. */
   SVN_TEST_ASSERT_ERROR_MSG(svn_cstring_strtoui64(&actual,
                                                   "18446744073709551615", 0,
                                                   APR_UINT64_MAX, 10),
                             SVN_ERR_INCORRECT_PARAMS,
                             "Number '18446744073709551615' is out of range "
-                            "'[0, 18446744073709551615]'");
+                            "'[0, 9223372036854775807]'");
 
   SVN_TEST_ASSERT_ERROR_MSG(
     svn_cstring_strtoui64(&actual, "-1", 0, APR_UINT64_MAX, 10),
     SVN_ERR_INCORRECT_PARAMS,
-    "Number '-1' is out of range '[0, 18446744073709551615]'");
+    "Number '-1' is out of range '[0, 9223372036854775807]'");
 
   return SVN_NO_ERROR;
 }
