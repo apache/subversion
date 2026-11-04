@@ -41,6 +41,39 @@
 
 #include "svn_private_config.h"
 
+#ifdef WIN32
+static svn_error_t *
+win32_nls_init(apr_pool_t *scratch_pool)
+{
+  WCHAR ucs2_path[MAX_PATH];
+  const char *utf8_path;
+  const char *internal_path;
+
+  /* get exe name - our locale info will be in '../share/locale' */
+  GetModuleFileNameW(NULL, ucs2_path,
+                     sizeof(ucs2_path) / sizeof(ucs2_path[0]));
+  if (apr_get_os_error())
+    {
+      return svn_error_wrap_apr(apr_get_os_error(),
+                                _("Can't get module file name"));
+    }
+
+  SVN_ERR(svn_utf__win32_utf16_to_utf8(&utf8_path, ucs2_path, NULL,
+                                       scratch_pool));
+
+  internal_path = svn_dirent_internal_style(utf8_path, scratch_pool);
+  /* get base path name */
+  internal_path = svn_dirent_dirname(internal_path, scratch_pool);
+  internal_path = svn_dirent_join(internal_path, SVN_LOCALE_RELATIVE_PATH,
+                                  scratch_pool);
+  SVN_ERR(svn_dirent_get_absolute(&internal_path, internal_path,
+                                  scratch_pool));
+  bindtextdomain(PACKAGE_NAME, internal_path);
+
+  return SVN_NO_ERROR;
+}
+#endif /* WIN32 */
+
 svn_error_t *
 svn_nls_init(void)
 {
@@ -54,37 +87,9 @@ svn_nls_init(void)
   else
     {
 #ifdef WIN32
-      WCHAR ucs2_path[MAX_PATH];
-      const char* utf8_path;
-      const char* internal_path;
-      apr_pool_t* scratch_pool;
+      apr_pool_t* scratch_pool = svn_pool_create(NULL);
 
-      scratch_pool = svn_pool_create(NULL);
-      /* get exe name - our locale info will be in '../share/locale' */
-      GetModuleFileNameW(NULL, ucs2_path,
-          sizeof(ucs2_path) / sizeof(ucs2_path[0]));
-      if (apr_get_os_error())
-        {
-          err = svn_error_wrap_apr(apr_get_os_error(),
-                                   _("Can't get module file name"));
-        }
-
-      if (! err)
-        err = svn_utf__win32_utf16_to_utf8(&utf8_path, ucs2_path,
-                                           NULL, scratch_pool);
-
-      if (! err)
-        {
-          internal_path = svn_dirent_internal_style(utf8_path, scratch_pool);
-          /* get base path name */
-          internal_path = svn_dirent_dirname(internal_path, scratch_pool);
-          internal_path = svn_dirent_join(internal_path,
-                                          SVN_LOCALE_RELATIVE_PATH,
-                                          scratch_pool);
-          SVN_ERR(svn_dirent_get_absolute(&internal_path, internal_path,
-                                          scratch_pool));
-          bindtextdomain(PACKAGE_NAME, internal_path);
-        }
+      err = win32_nls_init(scratch_pool);
 
       svn_pool_destroy(scratch_pool);
     }
