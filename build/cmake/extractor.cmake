@@ -27,7 +27,14 @@
 separate_arguments(EXPORT_HEADER_FILE_PATHS)
 separate_arguments(EXPORT_BLACKLIST)
 
-# see build/generator/extractor.py
+#
+# This parses the following two types of declarations:
+#
+#    void
+#    svn_foo_bar (args)
+# or
+#    void svn_foo_bar (args)
+#
 set(func_regex "(^|\n)((([A-Za-z0-9_]+|[*]) )+[*]?)?((svn|apr)_[A-Za-z0-9_]+)[ \t\r\n]*\\(")
 
 set(defs)

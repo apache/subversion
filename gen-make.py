@@ -49,7 +49,6 @@ sys.path.insert(1, 'build')
 gen_modules = {
   'cmake' : ('gen_cmake', 'CMake build system'),
   'make' : ('gen_make', 'Makefiles for POSIX systems'),
-  'vcproj' : ('gen_vcnet_vcproj', 'VC.Net project files'),
   }
 
 def main(fname, gentype, verfname=None,
@@ -130,96 +129,6 @@ def _usage_exit(err=None):
   print("           Comma-separated list of Subversion libraries to find")
   print("           pre-installed instead of building (probably only")
   print("           useful for packagers)")
-  print("")
-  print("  Windows-specific options:")
-  print("")
-  print("  --with-apr=DIR")
-  print("           the APR sources are in DIR")
-  print("")
-  print("  --with-apr-util=DIR")
-  print("           the APR-Util sources are in DIR")
-  print("")
-  print("  --with-apr-iconv=DIR")
-  print("           the APR-Iconv sources are in DIR")
-  print("")
-  print("  --with-berkeley-db=DIR")
-  print("           look for Berkeley DB headers and libs in")
-  print("           DIR")
-  print("")
-  print("  --with-serf=DIR")
-  print("           the Serf sources are in DIR")
-  print("")
-  print("  --with-httpd=DIR")
-  print("           the httpd sources and binaries required")
-  print("           for building mod_dav_svn are in DIR;")
-  print("           implies --with-apr{-util, -iconv}, but")
-  print("           you can override them")
-  print("")
-  print("  --with-libintl=DIR")
-  print("           look for GNU libintl headers and libs in DIR;")
-  print("           implies --enable-nls")
-  print("")
-  print("  --with-openssl=DIR")
-  print("           tell serf to look for OpenSSL headers")
-  print("           and libs in DIR")
-  print("")
-  print("  --with-zlib=DIR")
-  print("           tell Subversion to look for ZLib headers and")
-  print("           libs in DIR")
-  print("")
-  print("  --with-jdk=DIR")
-  print("           look for the java development kit here")
-  print("")
-  print("  --with-junit=DIR")
-  print("           look for the junit jar here")
-  print("           junit is for testing the java bindings")
-  print("")
-  print("  --with-swig=DIR")
-  print("           look for the swig program in DIR")
-  print("  --with-py3c=DIR")
-  print("           look for the py3c library in DIR")
-  print("")
-  print("  --with-sqlite=DIR")
-  print("           look for sqlite in DIR")
-  print("")
-  print("  --with-sasl=DIR")
-  print("           look for the sasl headers and libs in DIR")
-  print("")
-  print("  --enable-pool-debug")
-  print("           turn on APR pool debugging")
-  print("")
-  print("  --enable-purify")
-  print("           add support for Purify instrumentation;")
-  print("           implies --enable-pool-debug")
-  print("")
-  print("  --enable-quantify")
-  print("           add support for Quantify instrumentation")
-  print("")
-  print("  --enable-nls")
-  print("           add support for gettext localization")
-  print("")
-  print("  --disable-shared")
-  print("           only build static libraries")
-  print("")
-  print("  --with-static-apr")
-  print("           Use static apr and apr-util")
-  print("")
-  print("  --with-static-openssl")
-  print("           Use static openssl")
-  print("")
-  print("  --with-shared-serf")
-  print("           Use shared library version of serf")
-  print("")
-  print("  --vsnet-version=VER")
-  print("           generate for VS.NET version VER (2005-2017 or 9.0-15.0)")
-  print("           [implies '-t vcproj']")
-  print("")
-  print(" -D NAME[=value]")
-  print("           define NAME macro during compilation")
-  print("           [only valid in combination with '-t vcproj']")
-  print("")
-  print("  --with-apr_memcache=DIR")
-  print("           the apr_memcache sources are in DIR")
   sys.exit(1)
 
 
@@ -243,32 +152,7 @@ if __name__ == '__main__':
                             'release',
                             'reload',
                             'assume-shared-libs',
-                            'with-apr=',
-                            'with-apr-util=',
-                            'with-apr-iconv=',
-                            'with-berkeley-db=',
-                            'with-serf=',
-                            'with-httpd=',
-                            'with-libintl=',
-                            'with-openssl=',
-                            'with-zlib=',
-                            'with-jdk=',
-                            'with-junit=',
-                            'with-swig=',
-                            'with-py3c=',
-                            'with-sqlite=',
-                            'with-sasl=',
-                            'with-apr_memcache=',
-                            'with-static-apr',
-                            'with-static-openssl',
-                            'with-shared-serf',
-                            'enable-pool-debug',
-                            'enable-purify',
-                            'enable-quantify',
-                            'enable-nls',
-                            'disable-shared',
                             'installed-libs=',
-                            'vsnet-version=',
                             ])
     if len(args) > 1:
       _usage_exit("Too many arguments")
@@ -307,16 +191,6 @@ if __name__ == '__main__':
       skip = 1
     elif opt == '-t':
       gentype = val
-    elif opt == '--vsnet-version':
-      gentype = 'vcproj'
-    else:
-      if opt == '--with-httpd':
-        rest.add('--with-apr', os.path.join(val, 'srclib', 'apr'),
-                 overwrite=False)
-        rest.add('--with-apr-util', os.path.join(val, 'srclib', 'apr-util'),
-                 overwrite=False)
-        rest.add('--with-apr-iconv', os.path.join(val, 'srclib', 'apr-iconv'),
-                 overwrite=False)
 
   # Remember all options so that --reload and other scripts can use them
   opt_conf = open('gen-make.opts', 'w')
