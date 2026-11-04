@@ -29,6 +29,7 @@
 #include "svn_ra.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_sorts.h"
 
 #include "private/svn_client_private.h"
 #include "private/svn_sorts_private.h"
@@ -245,23 +246,20 @@ svn_browse__model_move_selection(svn_browse__model_t *model, int delta)
   return SVN_NO_ERROR;
 }
 
-#define min(a, b) ((a) < (b)) ? (a) : (b)
-#define max(a, b) ((a) > (b)) ? (a) : (b)
-
 svn_error_t *
 svn_browse__model_scroll_in_view(svn_browse__model_t *model,
                                  int scroller_height)
 {
   svn_browse__state_t *state = model->current;
 
-  state->scroller_offset = max(state->scroller_offset,
+  state->scroller_offset = MAX(state->scroller_offset,
                                state->selection - scroller_height + 1);
 
-  state->scroller_offset = min(state->scroller_offset,
+  state->scroller_offset = MIN(state->scroller_offset,
                                state->selection);
 
   /* forbid scrolling into negatives */
-  state->scroller_offset = max(state->scroller_offset, 0);
+  state->scroller_offset = MAX(state->scroller_offset, 0);
 
   return SVN_NO_ERROR;
 }
