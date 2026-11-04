@@ -702,7 +702,6 @@ class TargetLib(TargetLinked):
     self.link_cmd = options.get('link-cmd', '$(LINK_LIB)')
 
     self.msvc_static = options.get('msvc-static') == 'yes' # is a static lib
-    self.msvc_fake = options.get('msvc-fake') == 'yes' # has fake target
     self.msvc_export = options.get('msvc-export', '').split()
 
   def disable_shared(self):
