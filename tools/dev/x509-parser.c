@@ -141,39 +141,48 @@ get_der_cert_from_stream(const svn_string_t **der_cert, svn_stream_t *in,
                           _("Couldn't find certificate in input data"));
 }
 
-int main (int argc, const char *argv[])
+static svn_error_t *
+sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
+{
+  svn_stream_t *in;
+  const svn_string_t *der_cert;
+
+  if (argc == 2)
+    {
+      const char *target = svn_dirent_canonicalize(argv[1], pool);
+      SVN_ERR(svn_stream_open_readonly(&in, target, pool, pool));
+    }
+  else if (argc == 1)
+    {
+      SVN_ERR(svn_stream_for_stdin2(&in, TRUE, pool));
+    }
+  else
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("Too many arguments"));
+
+  SVN_ERR(get_der_cert_from_stream(&der_cert, in, pool));
+  SVN_ERR(show_cert(der_cert, pool));
+
+  return SVN_NO_ERROR;
+}
+
+int main(int argc, const char *argv[])
 {
   apr_pool_t *pool = NULL;
+  int exit_code = EXIT_SUCCESS;
   svn_error_t *err;
-  svn_stream_t *in;
 
   apr_initialize();
   atexit(apr_terminate);
 
   pool = svn_pool_create(NULL);
 
-  if (argc == 2)
-    {
-      const char *target = svn_dirent_canonicalize(argv[1], pool);
-      err = svn_stream_open_readonly(&in, target, pool, pool);
-    }
-  else if (argc == 1)
-    {
-      err = svn_stream_for_stdin2(&in, TRUE, pool);
-    }
-  else
-    err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, _("Too many arguments"));
-
-  if (!err)
-    {
-      const svn_string_t *der_cert;
-      err = get_der_cert_from_stream(&der_cert, in, pool);
-      if (!err)
-        err = show_cert(der_cert, pool);
-    }
+  err = sub_main(&exit_code, argc, argv, pool);
 
   if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "x509-parser: ");
+    {
+      return svn_cmdline_handle_exit_error(err, pool, "x509-parser: ");
+    }
 
-  return 0;
+  return exit_code;
 }
