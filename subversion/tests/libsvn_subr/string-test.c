@@ -554,7 +554,7 @@ sub_test_base36(apr_uint64_t value, const char *base36)
   SVN_TEST_STRING_ASSERT(buffer, base36);
 
   result = svn__base36toui64(&end, buffer);
-  SVN_TEST_ASSERT(end - buffer == length);
+  SVN_TEST_ASSERT(end == buffer + length);
   SVN_TEST_ASSERT(result == value);
 
   result = svn__base36toui64(NULL, buffer);
