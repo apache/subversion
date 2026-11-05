@@ -179,7 +179,7 @@ public:
    * Returns the wrapped JNI environment reference.
    *
    * This method is present for compatibility with the old-style
-   * native implmentation that needs the raw pointer, and will be
+   * native implementation that needs the raw pointer, and will be
    * removed presently. Do not use it in new-style code.
    */
   ::JNIEnv* get() const
