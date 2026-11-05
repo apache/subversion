@@ -25,6 +25,20 @@
 #include "svn_checksum.h"
 #include "private/svn_cmdline_private.h"
 
+#include "svn_private_config.h"
+
+#if defined(SVN_CHECKSUM_BACKEND_APR)
+#define CHECKSUM_BACKEND "apr"
+#elif defined(SVN_CHECKSUM_BACKEND_OPENSSL)
+#define CHECKSUM_BACKEND "openssl"
+#elif defined(SVN_CHECKSUM_BACKEND_BCRYPT)
+#define CHECKSUM_BACKEND "bcrypt"
+#elif defined(SVN_CHECKSUM_BACKEND_XDIGEST)
+#define CHECKSUM_BACKEND "xdigest"
+#else
+#error Cannot determine checksum backend.
+#endif
+
 static apr_uint32_t
 test_rand(apr_uint32_t *seed)
 {
@@ -104,6 +118,9 @@ sub_main(int *exit_code,
          const svn_cmdline__argv_char_t *cmdline_argv[],
          apr_pool_t *pool)
 {
+  SVN_ERR(svn_cmdline_fputs("Checksum backend: " CHECKSUM_BACKEND "\n",
+                            stdout, pool));
+
   SVN_ERR(test_checksum_performance(pool));
 
   return SVN_NO_ERROR;
