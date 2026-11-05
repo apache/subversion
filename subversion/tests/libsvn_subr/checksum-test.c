@@ -81,12 +81,40 @@ test_checksum_empty(apr_pool_t *pool)
     {
       svn_checksum_t *checksum;
       char data = '\0';
+      const char *actual_checksum_str;
 
       checksum = svn_checksum_empty_checksum(kind, pool);
       SVN_TEST_ASSERT(svn_checksum_is_empty_checksum(checksum));
 
       SVN_ERR(svn_checksum(&checksum, kind, &data, 0, pool));
       SVN_TEST_ASSERT(svn_checksum_is_empty_checksum(checksum));
+
+      actual_checksum_str = svn_checksum_to_cstring_display(checksum, pool);
+
+      switch (kind)
+        {
+        case svn_checksum_md5:
+          SVN_TEST_STRING_ASSERT(actual_checksum_str,
+                                 "d41d8cd98f00b204e9800998ecf8427e");
+          break;
+
+        case svn_checksum_sha1:
+          SVN_TEST_STRING_ASSERT(actual_checksum_str,
+                                 "da39a3ee5e6b4b0d3255bfef95601890afd80709");
+          break;
+
+        case svn_checksum_fnv1a_32:
+          SVN_TEST_STRING_ASSERT(actual_checksum_str, "811c9dc5");
+          break;
+
+        case svn_checksum_fnv1a_32x4:
+          SVN_TEST_STRING_ASSERT(actual_checksum_str, "cd6d9a85");
+          break;
+
+        default:
+          return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                   "Unknown checksum kind '%d", kind);
+        }
     }
 
   return SVN_NO_ERROR;
@@ -308,6 +336,7 @@ test_checksummed_stream_read(apr_pool_t *pool)
       svn_stream_t *stream;
       svn_checksum_t *expected_checksum;
       svn_checksum_t *actual_checksum;
+      const char *actual_checksum_str;
       char buf[64];
       apr_size_t len;
 
@@ -323,6 +352,32 @@ test_checksummed_stream_read(apr_pool_t *pool)
       SVN_ERR(svn_checksum(&expected_checksum, kind,
                            str->data, str->len, pool));
       SVN_TEST_ASSERT(svn_checksum_match(expected_checksum, actual_checksum));
+
+      actual_checksum_str = svn_checksum_to_cstring_display(actual_checksum,
+                                                            pool);
+
+      switch (kind)
+        {
+        case svn_checksum_md5:
+          SVN_TEST_STRING_ASSERT(actual_checksum_str, "ab56b4d92b40713acc5af89985d4b786");
+          break;
+
+        case svn_checksum_sha1:
+          SVN_TEST_STRING_ASSERT(actual_checksum_str, "03de6c570bfe24bfc328ccd7ca46b76eadaf4334");
+          break;
+
+        case svn_checksum_fnv1a_32:
+          SVN_TEST_STRING_ASSERT(actual_checksum_str, "749bcf08");
+          break;
+
+        case svn_checksum_fnv1a_32x4:
+          SVN_TEST_STRING_ASSERT(actual_checksum_str, "e13e78c4");
+          break;
+
+        default:
+          return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                   "Unknown checksum kind '%d", kind);
+        }
     }
 
   return SVN_NO_ERROR;
