@@ -82,9 +82,8 @@ Other candidate changes:
   Justification:
     Documentation correctness
   Votes:
-    +1: hartmannathan (without 1937573-1937577, 1937693 and newer revisions)
     +1: dsahlberg (without 1937696 and newer revisions)
-    +1: ivan
+    +1: ivan, hartmannathan
 
 * r1937538
    Fix a memory corruption in utf.c:convert_to_stringbuf().
