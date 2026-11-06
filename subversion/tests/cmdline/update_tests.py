@@ -1098,7 +1098,7 @@ def update_deleted_missing_dir(sbox):
     'A/D/H/chi'         : Item(verb='Restored'),
     'A/B/E/beta'        : Item(verb='Restored'),
     'A/B/E/alpha'       : Item(verb='Restored'),
-    # A/B/E and A/D/H are also restored, but are then overriden by the delete
+    # A/B/E and A/D/H are also restored, but are then overridden by the delete
     'A/B/E'             : Item(status='D ', prev_verb='Restored'),
     'A/D/H'             : Item(status='D ', prev_verb='Restored'),
   })
