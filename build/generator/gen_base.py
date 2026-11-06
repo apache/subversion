@@ -101,8 +101,6 @@ class GeneratorBase:
         parser.get('options', 'private-built-includes').split()
     self.scripts = \
         _collect_paths(parser.get('options', 'test-scripts'))
-    self.bdb_scripts = \
-        _collect_paths(parser.get('options', 'bdb-test-scripts'))
 
     self.include_wildcards = \
       parser.get('options', 'include-wildcards').split()
@@ -120,8 +118,6 @@ class GeneratorBase:
     self.test_deps = []      # Non-BDB dependent items to build for the tests
     self.test_progs = []     # Subset of the above to actually execute
     self.test_helpers = []   # $ {test_deps} \setminus {test_progs} $
-    self.bdb_test_deps = []  # BDB-dependent items to build for the tests
-    self.bdb_test_progs = [] # Subset of the above to actually execute
     self.target_dirs = []    # Directories in which files are built
     self.manpages = []       # Manpages
 
@@ -668,10 +664,6 @@ class TargetExe(TargetLinked):
         self.gen_obj.test_progs.append(self.filename)
       else:
         self.gen_obj.test_helpers.append(self.filename)
-    elif self.install == 'bdb-test':
-      self.gen_obj.bdb_test_deps.append(self.filename)
-      if self.testing != 'skip':
-        self.gen_obj.bdb_test_progs.append(self.filename)
 
     self.gen_obj.manpages.extend(self.manpages.split())
 

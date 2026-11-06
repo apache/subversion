@@ -1023,7 +1023,7 @@ def create_parser():
   parser.add_option('-u', '--url', action='store',
                     help='Base url to the repos (e.g. svn://localhost)')
   parser.add_option('-f', '--fs-type', action='store',
-                    help='Subversion file system type (fsfs(-v[46]), bdb or fsx)')
+                    help='Subversion file system type (fsfs(-v[46]) or fsx)')
   parser.add_option('-g', '--global-scheduler', action='store_true',
                     help='Run tests from all scripts together')
   parser.add_option('--http-library', action='store',
