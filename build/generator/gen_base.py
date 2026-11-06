@@ -115,7 +115,7 @@ class GeneratorBase:
     self.projects = []
 
     # Lists of pathnames of various kinds
-    self.test_deps = []      # Non-BDB dependent items to build for the tests
+    self.test_deps = []      # Items to build for the tests
     self.test_progs = []     # Subset of the above to actually execute
     self.test_helpers = []   # $ {test_deps} \setminus {test_progs} $
     self.target_dirs = []    # Directories in which files are built
