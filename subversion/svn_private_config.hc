@@ -58,13 +58,6 @@
 /* The default HTTP library to use */
 #define DEFAULT_HTTP_LIBRARY "serf"
 
-/* Define to the Python/C API format character suitable for apr_int64_t */
-#if defined(_WIN64)
-# define SVN_APR_INT64_T_PYCFMT "l"
-#elif defined(_WIN32)
-# define SVN_APR_INT64_T_PYCFMT "L"
-#endif
-
 /* Setup gettext macros */
 #define N_(x) x
 #define U_(x) x
