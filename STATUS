@@ -68,6 +68,19 @@ Other candidate changes:
   Votes:
     +1: dsahlberg
 
+* r1937538
+   Fix a memory corruption in utf.c:convert_to_stringbuf().
+  Justification:
+    Don't crash...
+  Votes:
+    +1: rinrab
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
 * r1936884, r1936949, r1936953, r1936955, r1936956, r1936958, r1936959,
   r1936961, r1936962, r1936963, r1936965, r1937573, r1937576, r1937577,
   r1937693, r1937696, r1937697, r1937748, r1937749, r1937761, r1937763,
@@ -84,16 +97,3 @@ Other candidate changes:
   Votes:
     +1: dsahlberg (without 1937696 and newer revisions)
     +1: ivan, hartmannathan
-
-* r1937538
-   Fix a memory corruption in utf.c:convert_to_stringbuf().
-  Justification:
-    Don't crash...
-  Votes:
-    +1: rinrab
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
