@@ -75,6 +75,12 @@ Other candidate changes:
   Votes:
     +1: rinrab
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
 * r1938215, r1938214, r1938205, r1938203
   INSTALL: Corrections and cleanups follow-up
   Justification:
@@ -84,9 +90,4 @@ Other candidate changes:
     See https://lists.apache.org/thread.html/1stgkyrsx0ndfnckogwozk56dbkwngdp
   Votes:
     +1: lyalyakin (my vote is formally non-binding, though)
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+    +1: ivan
