@@ -60,7 +60,6 @@
    to the create and open functions and these init functions (as well
    as the open and create functions) are globally serialized so that
    they have exclusive access to the common_pool. */
-#include "../libsvn_fs_base/fs_init.h"
 #include "../libsvn_fs_fs/fs_init.h"
 #include "../libsvn_fs_x/fs_init.h"
 
@@ -105,19 +104,6 @@ struct fs_type_defn {
   struct fs_type_defn *next;
 };
 
-static struct fs_type_defn base_defn =
-  {
-    SVN_FS_TYPE_BDB, "base",
-#ifdef SVN_LIBSVN_FS_LINKS_FS_BASE
-    svn_fs_base__init,
-#else
-    NULL,
-#endif
-    NULL,
-    NULL /* End of static list: this needs to be reset to NULL if the
-            common_pool used when setting it has been cleared. */
-  };
-
 static struct fs_type_defn fsx_defn =
   {
     SVN_FS_TYPE_FSX, "x",
@@ -127,7 +113,8 @@ static struct fs_type_defn fsx_defn =
     NULL,
 #endif
     NULL,
-    &base_defn
+    NULL /* End of static list: this needs to be reset to NULL if the
+            common_pool used when setting it has been cleared. */
   };
 
 static struct fs_type_defn fsfs_defn =
@@ -419,7 +406,7 @@ static svn_error_t *
 synchronized_initialize(void *baton, apr_pool_t *pool)
 {
   common_pool = svn_pool_create(pool);
-  base_defn.next = NULL;
+  fsx_defn.next = NULL;
   SVN_ERR(svn_mutex__init(&common_pool_lock, TRUE, common_pool));
 
   /* ### This won't work if POOL is NULL and libsvn_fs is loaded as a DSO

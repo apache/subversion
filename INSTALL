@@ -97,8 +97,6 @@ I.    INTRODUCTION
       * Python, Perl, Java, Ruby (with py3c for Python) -- the language
         bindings.
       * Apache HTTP Server -- the mod_dav_svn server module.
-      * Berkeley DB -- the deprecated BDB repository backend,
-        to be removed in the future (server).
 
 
   C. Documentation
@@ -844,17 +842,7 @@ IV.   DEPENDENCIES IN DETAIL
           https://github.com/encukou/py3c
 
 
-      18. Berkeley DB  (DEPRECATED, TO BE REMOVED IN THE FUTURE)
-
-      The minimum supported version is 4.0.14.
-
-      Needed only for the deprecated BDB repository backend.  Support for
-      BDB is planned to be removed completely in the future.
-
-      The CMake build system does not support building with BDB.
-
-
-      19. autoconf  (Unix only)
+      18. autoconf  (Unix only)
 
       The minimum supported version is 2.59.
 
@@ -864,7 +852,7 @@ IV.   DEPENDENCIES IN DETAIL
       Generally only developers would be doing this.
 
 
-      20. libtool  (Unix only)
+      19. libtool  (Unix only)
 
       The minimum supported version is 2.0.
 
@@ -874,7 +862,7 @@ IV.   DEPENDENCIES IN DETAIL
       Generally only developers would be doing this.
 
 
-      21. CMake
+      20. CMake
 
       The minimum supported version is 3.20.
 
@@ -882,7 +870,7 @@ IV.   DEPENDENCIES IN DETAIL
       (see section II.B).
 
 
-      22. pkg-config  (Unix only, OPTIONAL)
+      21. pkg-config  (Unix only, OPTIONAL)
 
       Subversion uses pkg-config to find appropriate options used
       at build time.

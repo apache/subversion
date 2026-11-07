@@ -43,7 +43,6 @@ SCHEMA_DIR = subversion/svn/schema
 SVN_APR_LIBS = @SVN_APR_LIBS@
 SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
 SVN_APR_MEMCACHE_LIBS = @SVN_APR_MEMCACHE_LIBS@
-SVN_DB_LIBS = @SVN_DB_LIBS@
 SVN_GPG_AGENT_LIBS = @SVN_GPG_AGENT_LIBS@
 SVN_GNOME_KEYRING_LIBS = @SVN_GNOME_KEYRING_LIBS@
 SVN_KWALLET_LIBS = @SVN_KWALLET_LIBS@
@@ -67,7 +66,6 @@ exec_prefix = @exec_prefix@
 libdir = @libdir@
 fsmod_libdir = @libdir@
 ramod_libdir = @libdir@
-bdb_libdir = @libdir@
 gnome_keyring_libdir = @libdir@
 gpg_agent_libdir = @libdir@
 kwallet_libdir = @libdir@
@@ -136,7 +134,7 @@ LT_CXX_LIBADD = @LT_CXX_LIBADD@
 
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_APR_MEMCACHE_INCLUDES@ \
-           @SVN_DB_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ \
+           @SVN_GNOME_KEYRING_INCLUDES@ \
            @SVN_KWALLET_INCLUDES@ @SVN_MAGIC_INCLUDES@ \
            @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ @SVN_SQLITE_INCLUDES@ \
            @SVN_XML_INCLUDES@ @SVN_ZLIB_INCLUDES@ @SVN_LZ4_INCLUDES@ \
@@ -290,7 +288,6 @@ libsvn_client_LDFLAGS = @libsvn_client_LDFLAGS@
 libsvn_delta_LDFLAGS = @libsvn_delta_LDFLAGS@
 libsvn_diff_LDFLAGS = @libsvn_diff_LDFLAGS@
 libsvn_fs_LDFLAGS = @libsvn_fs_LDFLAGS@
-libsvn_fs_base_LDFLAGS = @libsvn_fs_base_LDFLAGS@
 libsvn_fs_fs_LDFLAGS = @libsvn_fs_fs_LDFLAGS@
 libsvn_fs_x_LDFLAGS = @libsvn_fs_x_LDFLAGS@
 libsvn_fs_util_LDFLAGS = @libsvn_fs_util_LDFLAGS@
@@ -321,7 +318,6 @@ INSTALL_LIB = $(LIBTOOL) --mode=install $(INSTALL)
 INSTALL_FSMOD_LIB = $(INSTALL_LIB)
 INSTALL_RAMOD_LIB = $(INSTALL_LIB)
 INSTALL_APR_MEMCACHE_LIB = $(INSTALL_LIB)
-INSTALL_BDB_LIB = $(INSTALL_LIB)
 INSTALL_GPG_AGENT_LIB = $(INSTALL_LIB)
 INSTALL_GNOME_KEYRING_LIB = $(INSTALL_LIB)
 INSTALL_KWALLET_LIB = $(INSTALL_LIB)
@@ -425,7 +421,7 @@ RDOC = @RDOC@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 
-TESTS = $(TEST_PROGRAMS) @BDB_TEST_PROGRAMS@
+TESTS = $(TEST_PROGRAMS)
 
 all: mkdir-init local-all
 clean: local-clean
@@ -558,7 +554,7 @@ check-svnxx: svnxx-tests
 # "make check CLEANUP=true" will clean up directories for successful tests.
 # "make check TESTS=subversion/tests/cmdline/basic_tests.py"
 #  will perform only basic tests (likewise for other tests).
-check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
+check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS)
 	@if test "$(PYTHON)" != "none"; then                                 \
 	  if test "$(CLEANUP)" != ""; then                                   \
 	    flags="--cleanup $$flags";                                       \
@@ -664,39 +660,36 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 
 # First, set up Apache as documented in
 # subversion/tests/cmdline/README.
-davcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod mod_dontdothat
+davcheck: bin $(TEST_DEPS) apache-mod mod_dontdothat
 	@$(MAKE) check BASE_URL=http://localhost
 
 # Automatically configure and run Apache httpd on a random port, and then
 # run make check.
-davautocheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod mod_dontdothat
+davautocheck: bin $(TEST_DEPS) apache-mod mod_dontdothat
 	@# Takes MODULE_PATH, USE_HTTPV1 and SVN_PATH_AUTHZ in the environment.
 	@APXS=$(APXS) MAKE=$(MAKE) PYTHON=$(PYTHON) $(SHELL) $(top_srcdir)/subversion/tests/cmdline/davautocheck.sh
 
 # First, run:
 #   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
-svncheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
+svncheck: bin $(TEST_DEPS)
 	@$(MAKE) check BASE_URL=svn://127.0.0.1
 
 # 'make svnserveautocheck' runs svnserve for you and kills it.
-svnserveautocheck: svnserve bin $(TEST_DEPS) @BDB_TEST_DEPS@
+svnserveautocheck: svnserve bin $(TEST_DEPS)
 	@env PYTHON=$(PYTHON) THREADED=$(THREADED) MAKE=$(MAKE) \
 	  $(SHELL) $(top_srcdir)/subversion/tests/cmdline/svnserveautocheck.sh
 
 # First, run:
 #   subversion/svnserve/svnserve --listen-host "::1" -d -r `pwd`/subversion/tests/cmdline
 
-svncheck6: bin $(TEST_DEPS) @BDB_TEST_DEPS@
+svncheck6: bin $(TEST_DEPS)
 	@$(MAKE) check BASE_URL=svn://\[::1\]
 
 # First make sure you can ssh to localhost and that "svnserve" is in
 # the path of the resulting shell.
-svnsshcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
+svnsshcheck: bin $(TEST_DEPS)
 	@$(MAKE) check \
 	  BASE_URL=svn+ssh://localhost`pwd`/subversion/tests/cmdline
-
-bdbcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
-	@$(MAKE) check FS_TYPE=bdb
 
 # Produce the clang compilation database as the compile_commands.json file
 # in the srcdir.  This is used by tools such as the YouCompleteMe vim plugin
@@ -728,7 +721,6 @@ check-clean: gcov-clean
 	  rm -rf subversion/tests/cmdline/svn-test-work/*;     \
 	fi
 	rm -rf subversion/tests/libsvn_fs/test-repo-*          \
-	       subversion/tests/libsvn_fs_base/test-repo-*     \
 	       subversion/tests/libsvn_fs_fs/test-repo-*       \
 	       subversion/tests/libsvn_fs_x/test-repo-*        \
 	       subversion/tests/libsvn_ra_local/test-repo-*    \

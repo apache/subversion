@@ -138,7 +138,7 @@ class Generator(gen_base.GeneratorBase):
 
     # write a list of directories in which things are built
     #   get all the test scripts' directories
-    script_dirs = list(map(build_path_dirname, self.scripts + self.bdb_scripts))
+    script_dirs = list(map(build_path_dirname, self.scripts))
 
     #   remove duplicate directories between targets and tests
     build_dirs = unique(self.target_dirs + script_dirs + self.swig_dirs)
@@ -146,8 +146,6 @@ class Generator(gen_base.GeneratorBase):
 
     # write lists of test files
     # deps = all, progs = not including those marked "testing = skip"
-    data.bdb_test_deps = self.bdb_test_deps + self.bdb_scripts
-    data.bdb_test_progs = self.bdb_test_progs + self.bdb_scripts
     data.test_deps = self.test_deps + self.scripts
     data.test_progs = self.test_progs + self.scripts
     data.test_helpers = self.test_helpers
@@ -410,7 +408,7 @@ class Generator(gen_base.GeneratorBase):
                           fullname=file.filename, dirname=dirname,
                           name=name, filename=fname, when=file.when)
 
-      if area != 'test' and area != 'bdb-test':
+      if area != 'test':
         data.areas.append(ezt_area)
 
         area_var = area.replace('-', '_')

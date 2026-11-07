@@ -33,11 +33,6 @@
 #define SVN_BUILD_HOST "@SVN_BUILD_HOST@"
 #define SVN_BUILD_TARGET "@SVN_BUILD_TARGET@"
 
-/* The minimal version of Berkeley DB we want */
-#define SVN_FS_WANT_DB_MAJOR    4
-#define SVN_FS_WANT_DB_MINOR    0
-#define SVN_FS_WANT_DB_PATCH    14
-
 /* Path separator for local filesystem */
 #ifdef WIN32
 # define SVN_PATH_LOCAL_SEPARATOR '\\'
@@ -110,9 +105,3 @@
 #define SVN_UNUSED(v) ( (void)(v) )
 
 #endif /* SVN_PRIVATE_CONFIG_HW */
-
-/* Inclusion of Berkeley DB header */
-#ifdef SVN_WANT_BDB
-# define APU_WANT_DB
-# include <apu_want.h>
-#endif

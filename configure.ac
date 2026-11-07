@@ -577,41 +577,6 @@ fi
 AC_SUBST(SVN_XML_INCLUDES)
 AC_SUBST(SVN_XML_LIBS)
 
-dnl Berkeley DB -------------------
-
-# Berkeley DB on SCO OpenServer needs -lsocket
-AC_CHECK_LIB(socket, socket)
-
-# Build the BDB filesystem library only if we have an appropriate
-# version of Berkeley DB.
-case "$host" in
-powerpc-apple-darwin*)
-    # Berkeley DB 4.0 does not work on OS X.
-    SVN_FS_WANT_DB_MAJOR=4
-    SVN_FS_WANT_DB_MINOR=1
-    SVN_FS_WANT_DB_PATCH=25
-    ;;
-*)
-    SVN_FS_WANT_DB_MAJOR=4
-    SVN_FS_WANT_DB_MINOR=0
-    SVN_FS_WANT_DB_PATCH=14
-    ;;
-esac
-db_alt_version="5.x"
-# Look for libdb4.so first:
-SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
-                    $SVN_FS_WANT_DB_PATCH, [db4 db])
-
-AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MAJOR,
-                   [The desired major version for the Berkeley DB])
-AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MINOR, $SVN_FS_WANT_DB_MINOR,
-                   [The desired minor version for the Berkeley DB])
-AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_PATCH, $SVN_FS_WANT_DB_PATCH,
-                   [The desired patch version for the Berkeley DB])
-
-AC_SUBST(SVN_DB_INCLUDES)
-AC_SUBST(SVN_DB_LIBS)
-
 SVN_LIB_SASL
 
 if test "$svn_lib_sasl" = "yes"; then
@@ -1004,14 +969,6 @@ INSTALL_RULES="install-fsmod-lib install-ramod-lib install-lib install-include i
 INSTALL_RULES="$INSTALL_RULES $INSTALL_APACHE_RULE"
 BUILD_RULES="fsmod-lib ramod-lib lib bin tui test sub-test $BUILD_APACHE_RULE tools"
 
-if test "$svn_lib_berkeley_db" = "yes"; then
-  BUILD_RULES="$BUILD_RULES bdb-lib bdb-test"
-  INSTALL_RULES="`echo $INSTALL_RULES | $SED 's/install-fsmod-lib/install-fsmod-lib install-bdb-lib/'`"
-  INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-bdb-lib"
-  BDB_TEST_DEPS="\$(BDB_TEST_DEPS)"
-  BDB_TEST_PROGRAMS="\$(BDB_TEST_PROGRAMS)"
-fi
-
 if test "$svn_lib_serf" = "yes"; then
   BUILD_RULES="$BUILD_RULES serf-lib"
   INSTALL_RULES="`echo $INSTALL_RULES | $SED 's/install-ramod-lib/install-ramod-lib install-serf-lib/'`"
@@ -1038,8 +995,6 @@ fi
 AC_SUBST(BUILD_RULES)
 AC_SUBST(INSTALL_STATIC_RULES)
 AC_SUBST(INSTALL_RULES)
-AC_SUBST(BDB_TEST_DEPS)
-AC_SUBST(BDB_TEST_PROGRAMS)
 
 dnl Check for header files ----------------
 
@@ -1135,7 +1090,6 @@ AC_SUBST([libsvn_client_LDFLAGS])
 AC_SUBST([libsvn_delta_LDFLAGS])
 AC_SUBST([libsvn_diff_LDFLAGS])
 AC_SUBST([libsvn_fs_LDFLAGS])
-AC_SUBST([libsvn_fs_base_LDFLAGS])
 AC_SUBST([libsvn_fs_fs_LDFLAGS])
 AC_SUBST([libsvn_fs_x_LDFLAGS])
 AC_SUBST([libsvn_fs_util_LDFLAGS])
@@ -1661,14 +1615,6 @@ if test "$svn_enable_shared" = "no" || test "$use_dso" != "yes"; then
 dnl  FSFS already installs fsmod
 dnl  svn_fs_lib_install_deps="$svn_fs_lib_install_deps install-fsmod-lib"
 
-  if test "$svn_lib_berkeley_db" = "yes"; then
-  AC_DEFINE(SVN_LIBSVN_FS_LINKS_FS_BASE, 1,
-      [Defined if libsvn_fs should link against libsvn_fs_base])
-    svn_fs_lib_deps="$svn_fs_lib_deps \$(FS_BASE_DEPS)"
-    svn_fs_lib_install_deps="$svn_fs_lib_install_deps install-bdb-lib"
-    svn_fs_lib_link="$svn_fs_lib_link \$(FS_BASE_LINK)"
-  fi
-
   SVN_FS_LIB_DEPS=$svn_fs_lib_deps
   SVN_FS_LIB_INSTALL_DEPS=$svn_fs_lib_install_deps
   SVN_FS_LIB_LINK=$svn_fs_lib_link
@@ -1918,29 +1864,3 @@ fi
 dnl Configure is long - users tend to miss warnings printed during it.
 dnl Hence, print a warnings about what we did and didn't configure at the 
 dnl end, where people will actually see them.
-
-if test "$svn_have_berkeley_db" = "no6" && test "$enable_bdb6" != "no"; then
-  AC_MSG_WARN([We have configured without BDB filesystem support
-
-
-Berkeley DB 6 was found, but not used.  Please re-run configure (see
-./config.nice) with the '--enable-bdb6' flag to use it,
-or explicitly specify '--disable-bdb6' or '--without-berkeley-db'
-to silence this warning.
-
-Please note that some versions of Berkeley DB 6+ are under the GNU Affero
-General Public License, version 3:
-https://oss.oracle.com/pipermail/bdb/2013-June/000056.html
-
-The AGPL-3.0 licence may impose special requirements for making available
-source code of server-side software.  The text of the licence is:
-https://www.gnu.org/licenses/agpl-3.0.html
-http://opensource.org/licenses/AGPL-3.0
-
-The Berkeley DB backend to Subversion is deprecated; see
-https://subversion.apache.org/docs/release-notes/1.8#bdb-deprecated
-
-The Subversion developers have not tested Subversion with Berkeley DB 6 for
-technical problems or bugs.
-])
-fi

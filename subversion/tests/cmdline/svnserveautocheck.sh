@@ -30,7 +30,7 @@
 # This script should be run from the top level of the Subversion
 # distribution; it's easiest to just run it as "make svnserveautocheck".
 # Like "make check", you can specify further options like
-# "make svnserveautocheck FS_TYPE=bdb TESTS=subversion/tests/cmdline/basic.py".
+# "make svnserveautocheck FS_TYPE=fsfs TESTS=subversion/tests/cmdline/basic.py".
 #
 # Other environment variables that can be passed:
 #

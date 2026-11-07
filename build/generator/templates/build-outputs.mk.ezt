@@ -31,10 +31,6 @@
 [end]
 BUILD_DIRS =[for build_dirs] [build_dirs][end]
 
-BDB_TEST_DEPS =[for bdb_test_deps] [bdb_test_deps][end]
-
-BDB_TEST_PROGRAMS =[for bdb_test_progs] [bdb_test_progs][end]
-
 TEST_DEPS =[for test_deps] [test_deps][end]
 
 TEST_PROGRAMS =[for test_progs] [test_progs][end]
