@@ -80,14 +80,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
-* r1938215, r1938214, r1938205, r1938203
-  INSTALL: Corrections and cleanups follow-up
-  Justification:
-    Documentation correctness.
-    Following up the r1940132 backport: these four revisions were not nominated
-    among the rest and are still pending)
-    See https://lists.apache.org/thread.html/1stgkyrsx0ndfnckogwozk56dbkwngdp
-  Votes:
-    +1: lyalyakin (my vote is formally non-binding, though)
-    +1: ivan, dsahlberg
