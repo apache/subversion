@@ -1384,6 +1384,7 @@ class Config:
 
   def _prep_groups(self, groups, repos_dir, default_params):
     self._group_re = [ ]
+    self._last_group_re = [ ]
 
     ### does it arrive as an abspath?
     repos_dir = os.path.abspath(repos_dir)
@@ -1442,32 +1443,48 @@ class Config:
         search_logmsg_re = re.compile(search_logmsg)
       else:
         search_logmsg_re = None
-
-      self._group_re.append((group,
-                             re.compile(for_paths),
-                             exclude_paths_re,
-                             params,
-                             search_logmsg_re))
+      suppress_if_match = getattr(sub, 'suppress_if_match', None)
+      if suppress_if_match == 'yes':
+        self._last_group_re.append((group,
+                                    re.compile(for_paths),
+                                    exclude_paths_re,
+                                    params,
+                                    search_logmsg_re,
+                                    True)) # Ignore if already matched
+      else:
+        self._group_re.append((group,
+                               re.compile(for_paths),
+                               exclude_paths_re,
+                               params,
+                               search_logmsg_re,
+                               False))
 
     # after all the groups are done, add in the default group
     try:
-      self._group_re.append((None,
+      self._last_group_re.append((None,
                              re.compile(self.defaults.for_paths),
                              None,
                              self._default_params,
-                             None))
+                             None,
+                             False))
     except AttributeError:
       # there is no self.defaults.for_paths
       pass
 
+    self._group_re = self._group_re + self._last_group_re
+
   def which_groups(self, path, logmsg):
     "Return the path's associated groups."
     groups = []
-    for group, pattern, exclude_pattern, repos_params, search_logmsg_re in self._group_re:
+    seen = False
+    for group, pattern, exclude_pattern, repos_params, search_logmsg_re, ignore in self._group_re:
+      if ignore and seen:
+        continue
       match = pattern.match(path)
       if match:
         if exclude_pattern and exclude_pattern.match(path):
           continue
+        seen = True
         params = repos_params.copy()
         params.update(match.groupdict())
 
