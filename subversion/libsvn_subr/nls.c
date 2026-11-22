@@ -41,7 +41,7 @@
 
 #include "svn_private_config.h"
 
-#ifdef WIN32
+#if defined(WIN32) && defined(ENABLE_NLS)
 static svn_error_t *
 win32_nls_init(apr_pool_t *scratch_pool)
 {
