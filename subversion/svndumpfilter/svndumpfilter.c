@@ -539,7 +539,14 @@ new_node_record(void **node_baton,
       nb->has_prop_delta = FALSE;
       nb->has_text_delta = FALSE;
       nb->writing_begun = FALSE;
-      nb->tcl = tcl ? svn__atoui64(tcl) : 0;
+      if (tcl)
+        {
+          SVN_ERR(svn_cstring_strtoi64(&nb->tcl, tcl, 0, APR_INT64_MAX, 10));
+        }
+      else
+        {
+          nb->tcl = 0;
+        }
       nb->headers = svn_repos__dumpfile_headers_create(pool);
       nb->props = svn_stringbuf_create_empty(pool);
       nb->node_path = apr_pstrdup(pool, node_path);

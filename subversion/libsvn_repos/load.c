@@ -707,15 +707,27 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
           const char *delta = svn_hash_gets(headers,
                                             SVN_REPOS_DUMPFILE_PROP_DELTA);
           svn_boolean_t is_delta = (delta && strcmp(delta, "true") == 0);
+          svn_filesize_t prop_block_length;
 
           /* First, remove all node properties, unless this is a delta
              property block. */
           if (found_node && !is_delta)
             SVN_ERR(parse_fns->remove_node_props(node_baton));
 
+          if (prop_cl)
+            {
+              SVN_ERR(svn_cstring_strtoi64(&prop_block_length, prop_cl, 0,
+                                           APR_INT64_MAX, 10));
+            }
+          else
+            {
+              SVN_ERR(svn_cstring_strtoi64(&prop_block_length, content_length,
+                                           0, APR_INT64_MAX, 10));
+            }
+
           SVN_ERR(parse_property_block
                   (stream,
-                   svn__atoui64(prop_cl ? prop_cl : content_length),
+                   prop_block_length,
                    parse_fns,
                    found_node ? node_baton : rev_baton,
                    parse_baton,
@@ -730,11 +742,15 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
           const char *delta = svn_hash_gets(headers,
                                             SVN_REPOS_DUMPFILE_TEXT_DELTA);
           svn_boolean_t is_delta = FALSE;
+          svn_filesize_t text_block_length;
+
           if (! deltas_are_text)
             is_delta = (delta && strcmp(delta, "true") == 0);
 
+          SVN_ERR(svn_cstring_strtoi64(&text_block_length, text_cl, 0,
+                                       APR_INT64_MAX, 10));
           SVN_ERR(parse_text_block(stream,
-                                   svn__atoui64(text_cl),
+                                   text_block_length,
                                    is_delta,
                                    parse_fns,
                                    found_node ? node_baton : rev_baton,
@@ -759,8 +775,11 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
                and so has an absent text block.
           */
           const char *node_kind;
-          svn_filesize_t cl_value = svn__atoui64(content_length)
-                                    - actual_prop_length;
+          svn_filesize_t cl_value;
+
+          SVN_ERR(svn_cstring_strtoi64(&cl_value, content_length, 0,
+                                       APR_INT64_MAX, 10));
+          cl_value -= actual_prop_length;
 
           if (cl_value ||
               ((node_kind = svn_hash_gets(headers,
@@ -784,11 +803,25 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
       if (content_length && ! old_v1_with_cl)
         {
           apr_size_t rlen, num_to_read;
-          svn_filesize_t remaining =
-            svn__atoui64(content_length) -
-            (prop_cl ? svn__atoui64(prop_cl) : 0) -
-            (text_cl ? svn__atoui64(text_cl) : 0);
+          svn_filesize_t remaining;
 
+          SVN_ERR(svn_cstring_strtoi64(&remaining, content_length, 0,
+                                       APR_INT64_MAX, 10));
+          if (prop_cl)
+            {
+              svn_filesize_t prop_cl_value;
+              SVN_ERR(svn_cstring_strtoi64(&prop_cl_value, prop_cl, 0,
+                                           APR_INT64_MAX, 10));
+              remaining -= prop_cl_value;
+            }
+
+          if (text_cl)
+            {
+              svn_filesize_t text_cl_value;
+              SVN_ERR(svn_cstring_strtoi64(&text_cl_value, text_cl, 0,
+                                           APR_INT64_MAX, 10));
+              remaining -= text_cl_value;
+            }
 
           if (remaining < 0)
             return svn_error_create(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
