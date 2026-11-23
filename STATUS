@@ -82,6 +82,13 @@ Other candidate changes:
   Votes:
     +1: ivan
 
+* r1938822
+  Fix a race condition in svnserve logging when running in threaded mode.
+  Justification:
+    Don't crash. User reported issue.
+  Votes:
+    +1: ivan
+
 Veto-blocked changes:
 =====================
 
