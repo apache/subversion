@@ -600,7 +600,7 @@ to block typically unwanted heavy requests.
 Building the modules requires Apache HTTP Server to be installed in the system
 and its development headers to be present as well.
 
-Building the modules with autoconf/make:
+#### Building the modules with autoconf/make
 
 Configure looks for the `apxs` tool of httpd in the standard locations and builds
 the modules if it's found.  You can use the `--with-apxs=` option to locate
@@ -618,7 +618,7 @@ them into httpd's own module directory (e.g., `/usr/lib/apache2/modules`) or
 The `--enable-mod-activation` option adds the `LoadModule` directives to the
 httpd's configuration files automatically.
 
-Building the modules with CMake:
+#### Building the modules with CMake
 
 CMake builds the modules when the `SVN_ENABLE_APACHE_MODULES` option is set to
 `ON` (the command-line option is `-DSVN_ENABLE_APACHE_MODULES=ON`).
@@ -630,7 +630,7 @@ required.  Point CMake at the httpd installation directory (e.g.,
 `C:\Apache24\include`, `C:\Apache24\lib\libhttpd.lib` and
 `C:\Apache24\lib\mod_dav.lib` respectively).
 
-Next steps:
+#### Next steps
 
 Configuring Apache HTTP Server or svnserve, Subversion's own server
 program, is described in
