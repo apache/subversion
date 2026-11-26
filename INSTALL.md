@@ -4,23 +4,23 @@ $LastChangedDate$
 
 ## Contents
 
-1. [INTRODUCTION][introduction]
+1. [Introduction][introduction]
    - [Audience][audience]
    - [Dependency Overview][dependency-overview]
    - [Documentation][documentation]
 
-2. [INSTALLATION][installation]
+2. [Installation][installation]
    - [Building with autoconf and make (Unix only)][autoconf-build]
    - [Building with CMake (Windows and Unix)][cmake-build]
    - [Building with vcproj/vcxproj (Windows only, deprecated)][vcproj-build]
    - [Running the test suite][test-suite]
    - [Building a Subversion server][subversion-server]
 
-3. [PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, JAVA)][bindings]
+3. [Programming language bindings (Python, Perl, Ruby, Java)][bindings]
 
-4. [DEPENDENCIES IN DETAIL][dependencies-in-detail]
+4. [Dependencies in detail][dependencies-in-detail]
 
-## INTRODUCTION
+## Introduction
 
 ### Audience
 
@@ -90,7 +90,7 @@ The primary documentation for Subversion is the free book
 Various additional documentation exists in the `doc/` subdirectory of the
 Subversion source.  See the file `doc/README` for more information.
 
-## INSTALLATION
+## Installation
 
 Subversion supports three different build systems:
 - [Autoconf/make, for Unix builds][autoconf-build]
@@ -410,7 +410,7 @@ SVNBook provides an overview of the server options as well as the steps
 necessary to configure these servers in
 [Chapter 6.  Server Configuration](https://svnbook.red-bean.com/en/1.8/svn.serverconfig.html).
 
-## PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, JAVA)
+## Programming language bindings (Python, Perl, Ruby, Java)
 
 For Python, Perl and Ruby bindings, see the file
 
@@ -420,7 +420,7 @@ For Java bindings, see the file
 
     ./subversion/bindings/javahl/README
 
-## DEPENDENCIES IN DETAIL
+## Dependencies in detail
 
 Subversion depends on a number of third party tools and libraries.
 Some of them are only required to run a Subversion server; others
