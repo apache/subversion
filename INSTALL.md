@@ -637,7 +637,7 @@ Configuring Apache HTTP Server or svnserve, Subversion's own server
 program, is described in
 [chapter 6 of the Subversion Book](https://svnbook.red-bean.com/en/1.8/svn.serverconfig.html).
 
-### Python (https://www.python.org/)  (OPTIONAL)
+### Python  (OPTIONAL)
 
 Subversion does not require Python for its basic operation.
 However, Python is required for building and testing Subversion
