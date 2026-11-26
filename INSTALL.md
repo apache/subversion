@@ -60,27 +60,28 @@ You'll need the following build tools to compile Subversion:
 Subversion depends on the following third-party libraries.  The easiest way to
 install dependencies is via your operating system's package management system.
 
-| Dependency | Description |
-|    ---     |     ---     |
-| APR        | The portability layer that allows Subversion to run on different operating systems. |
-| APR-util   | Utility library built on top of APR. |
-| Expat      | XML parsing. |
-| zlib       | Compression of binary diffs, used everywhere. |
-| LZ4        | Compression.  A bundled copy can be used. |
-| SQLite     | Used for some internal databases.  An amalgamation file can be used instead of an installed library. |
-| utf8proc   | UTF-8 support, including Unicode normalization.  A bundled copy can be used. |
+- APR - The portability layer that allows Subversion to run on different
+  operating systems.
+- APR-util - Utility library built on top of APR.
+- Expat - XML parsing.
+- zlib - Compression of binary diffs, used everywhere.
+- LZ4 - Compression.  A bundled copy can be used.
+- SQLite - Used for some internal databases.  An amalgamation file can be used
+  instead of an installed library.
+- utf8proc - UTF-8 support, including Unicode normalization.  A bundled copy
+  can be used.
 
 #### Optional dependencies
 
-| Dependency | Description |
-| --- | ---  |
-| Apache Serf | Access to Subversion repositories over `http://` and `https://` (client).  Strongly recommended. |
-| Cyrus SASL  | SASL authentication for svn:// (client and svnserve server). |
-| libmagic    | MIME type detection for files added to Subversion. |
-| libsecret   | Password storage in GNOME Keyring (client, Unix-only). |
-| KDE Frameworks 5 <br>with Qt 5 and D-Bus | Password storage in KWallet (client, Unix-only). |
-| Python, Perl, Java, Ruby <br>(with py3c for Python) | The language bindings. |
-| Apache HTTP Server | The `mod_dav_svn` server module. |
+- Apache Serf - Access to Subversion repositories over `http://` and `https://`
+  (client).  Strongly recommended.
+- Cyrus SASL - SASL authentication for svn:// (client and svnserve server).
+- libmagic - MIME type detection for files added to Subversion.
+- libsecret - Password storage in GNOME Keyring (client, Unix-only).
+- KDE Frameworks 5 with Qt 5 and D-Bus - Password storage in KWallet (client,
+  Unix-only).
+- Python, Perl, Java, Ruby (with py3c for Python) - The language bindings.
+- Apache HTTP Server - The `mod_dav_svn` server module.
 
 ### Documentation
 
