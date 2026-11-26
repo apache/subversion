@@ -440,8 +440,6 @@ tools.
 
 ### Apache Portable Runtime and APR-util  (REQUIRED)
 
-Subversion requires APR 1.4 or later and APR-util 1.3 or later.
-
 Whenever you want to build any part of Subversion, you need the Apache Portable
 Runtime (APR) and the APR Utility (APR-util) libraries.
 
@@ -502,8 +500,6 @@ Subversion uses the Expat library for XML parsing.
 
 ### SQLite  (REQUIRED)
 
-Subversion requires SQLite 3.24.0 or later.
-
 Subversion uses SQLite to manage some internal databases.  You can meet this
 dependency several ways:
 
@@ -530,8 +526,6 @@ from
 https://www.zlib.net/
 
 ### LZ4  (REQUIRED)
-
-Subversion requires LZ4 version r129 or later.
 
 Subversion uses the LZ4 library for compression.  Configure will attempt to
 locate the system library by default using `pkg-config` and known paths.
@@ -562,8 +556,6 @@ Subversion sources.  If configure should use the bundled copy, use:
 
 ### Apache Serf library  (OPTIONAL)
 
-The minimum supported version is 1.3.4.
-
 If you want your client to be able to speak to an Apache server (via a `http://`
 or `https://` URL), you must link against Apache Serf.  Though optional, we
 strongly recommend this.
@@ -592,8 +584,6 @@ https://www.cyrusimap.org/sasl/
 ### Apache HTTP Server (httpd)  (OPTIONAL)
 
 (https://httpd.apache.org/download.cgi)
-
-The minimum supported version is 2.2.
 
 The Apache HTTP Server (httpd) can be used to make your Subversion repositories
 available over a network.  To make this happen, Subversion provides two modules
@@ -647,8 +637,6 @@ program, is described in
 [chapter 6 of the Subversion Book](https://svnbook.red-bean.com/en/1.8/svn.serverconfig.html).
 
 ### Python (https://www.python.org/)  (OPTIONAL)
-
-The minimum supported version is 3.6.
 
 Subversion does not require Python for its basic operation.
 However, Python is required for building and testing Subversion
@@ -787,8 +775,6 @@ https://github.com/encukou/py3c
 
 ### autoconf  (Unix only)
 
-The minimum supported version is 2.59.
-
 This is required only if you plan to use the autoconf-based build system
 and build from a working copy (see
 [Building from a Working Copy][working-copy]).
@@ -797,8 +783,6 @@ Generally only developers would be doing this.
 
 ### libtool  (Unix only)
 
-The minimum supported version is 2.0.
-
 This is required only if you plan to use the autoconf-based build system
 and build from a working copy (see
 [Building from a Working Copy][working-copy]).
@@ -806,8 +790,6 @@ and build from a working copy (see
 Generally only developers would be doing this.
 
 ### CMake
-
-The minimum supported version is 3.20.
 
 This is required only if you plan to use the CMake-based build system
 (see [Building with CMake][cmake-build]).
