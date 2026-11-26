@@ -142,7 +142,7 @@ Step 1a: Install py3c library if building Python SWIG bindings.
 
 Step 2:  Build and Install Subversion.
 
-  See Subversion's own INSTALL file for details.
+  See Subversion's own INSTALL.md file for details.
 
   If you are using a Subversion distribution tarball and want to rebuild
   the SWIG language bindings C source files with your installed SWIG,
@@ -324,7 +324,7 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
                                       --with-py3c="C:\SVN\py3c"
 
    4.  If you haven't already built Subversion, you should do so now.
-       Instructions are in the main INSTALL file.
+       Instructions are in the main INSTALL.md file.
 
    5.  Build the bindings. Open the Subversion workspace in Visual C++
        (subversion_msvc.dsw or subversion_vcnet.sln) and build one or more
