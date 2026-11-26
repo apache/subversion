@@ -29,14 +29,14 @@ code.  Normally, the only people who do this are Subversion developers and
 package maintainers.
 
 If neither of these labels fits you, we recommend you find an appropriate
-binary package of Subversion and install that.  While the Subversion project
-doesn't officially release binary packages, a number of volunteers have made
-such packages available for different operating systems.  Most Linux and BSD
-distributions already have Subversion packages ready to go via standard
-packaging channels, and other volunteers have built 'installers' for both
-Windows and macOS.  Visit this page for package links:
+binary package of Subversion and install that. Visit the
+[**Apache Subversion Binary Packages**](https://subversion.apache.org/packages.html) page for package links.
 
-https://subversion.apache.org/packages.html
+While the Subversion project doesn't officially release binary packages, a
+number of volunteers have made such packages available for different operating
+systems.  Most Linux and BSD distributions already have Subversion packages
+ready to go via standard packaging channels, and other volunteers have built
+'installers' for both Windows and macOS.
 
 For those of you who still wish to build from source, Subversion
 follows the Unix convention of `./configure && make`, but it has
