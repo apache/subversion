@@ -55,10 +55,10 @@ You'll need the following build tools to compile Subversion:
 
 - a reasonable C compiler (gcc, Visual Studio, etc.)
 
+#### Required dependencies
+
 Subversion depends on the following third-party libraries.  The easiest way to
 install dependencies is via your operating system's package management system.
-
-Required:
 
 | Dependency | Description |
 |    ---     |     ---     |
@@ -70,7 +70,7 @@ Required:
 | SQLite     | Used for some internal databases.  An amalgamation file can be used instead of an installed library. |
 | utf8proc   | UTF-8 support, including Unicode normalization.  A bundled copy can be used. |
 
-Optional:
+#### Optional dependencies
 
 | Dependency | Description |
 | --- | ---  |
