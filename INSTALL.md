@@ -496,7 +496,7 @@ Notes on Windows platforms:
   Otherwise Visual Studio will complain that it doesn't recognize the `.dsp`
   files.
 
-### Expat  (REQUIRED for client and server)
+### Expat  (REQUIRED)
 
 Subversion uses the Expat library for XML parsing.
 
