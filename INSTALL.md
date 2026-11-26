@@ -84,9 +84,8 @@ Optional:
 
 ### Documentation
 
-The primary documentation for Subversion is the free book "Version Control with
-Subversion", a.k.a. "The Subversion Book", obtainable from
-https://svnbook.red-bean.com/.
+The primary documentation for Subversion is the free book
+["Version Control with Subversion", a.k.a. "The Subversion Book"](https://svnbook.red-bean.com/).
 
 Various additional documentation exists in the `doc/` subdirectory of the
 Subversion source.  See the file `doc/README` for more information.
@@ -408,9 +407,8 @@ Apache HTTP Server (httpd):
   information.
 
 SVNBook provides an overview of the server options as well as the steps
-necessary to configure these servers in 'Chapter 6.  Server Configuration':
-
-https://svnbook.red-bean.com/en/1.8/svn.serverconfig.html
+necessary to configure these servers in
+[Chapter 6.  Server Configuration](https://svnbook.red-bean.com/en/1.8/svn.serverconfig.html).
 
 ## PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, JAVA)
 
@@ -645,9 +643,10 @@ required.  Point CMake at the httpd installation directory (e.g.,
 Next steps:
 
 Configuring Apache HTTP Server or svnserve, Subversion's own server
-program, is described in chapter 6 of the Subversion Book:
+program, is described in
+[chapter 6 of the Subversion Book](https://svnbook.red-bean.com/en/1.8/svn.serverconfig.html).
 
-https://svnbook.red-bean.com/en/1.8/svn.serverconfig.html
+
 
 ### Python (https://www.python.org/)  (OPTIONAL)
 
