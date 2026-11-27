@@ -78,7 +78,7 @@ install dependencies is via your operating system's package management system.
 - Cyrus SASL - SASL authentication for svn:// (client and svnserve server).
 - libmagic - MIME type detection for files added to Subversion.
 - libsecret - Password storage in GNOME Keyring (client, Unix-only).
-- KDE Frameworks 5 with Qt 5 and D-Bus - Password storage in KWallet (client,
+- KDE Frameworks, Qt and D-Bus - Password storage in KWallet (client,
   Unix-only).
 - Python, Perl, Java, Ruby (with py3c for Python) - The language bindings.
 - Apache HTTP Server - The `mod_dav_svn` server module.
@@ -705,22 +705,22 @@ information.
 D-Bus is a message bus system. D-Bus is required for support for KWallet
 and GNOME Keyring. `pkg-config` is needed to find D-Bus headers and library.
 
-### Qt 5 or Qt 4
+### Qt
 *(Unix only, OPTIONAL)*
 
 Qt is a cross-platform application framework. QtCore, QtDBus and QtGui
 modules are required for support for KWallet. pkg-config is needed
 to find Qt headers and libraries.
 
-### KDE 5 Framework libraries or KDELibs 4
+### KDE Framework libraries or KDELibs
 *(Unix only, OPTIONAL)*
 
 Subversion contains optional support for storing passwords in KWallet.
 Subversion will look for KF5Wallet, KF5CoreAddons, KF5I18n APIs by default,
-and needs `kf5-config` to find them. The KDELibs 4 api is also supported.
+and needs `kf5-config` to find them. The KDELibs api is also supported.
 KDELibs contains core KDE libraries. Subversion uses libkdecore and libkdeui
 libraries when support for KWallet is enabled. `kde4-config` is used to get
-some necessary options. `pkg-config`, D-Bus and Qt 4 are also required.
+some necessary options. `pkg-config`, D-Bus and Qt are also required.
 
 If you want to build support for KWallet, then pass the `--with-kwallet`
 option to `configure`. If KDE is installed in a non-standard prefix, then
