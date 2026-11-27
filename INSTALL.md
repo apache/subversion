@@ -91,7 +91,7 @@ Subversion source.  See the file `doc/README` for more information.
 
 ## Installation
 
-Subversion supports three different build systems:
+Subversion supports two different build systems:
 - [Autoconf/make, for Unix builds][autoconf-build]
 - [CMake, for both Unix and Windows][cmake-build]
 
