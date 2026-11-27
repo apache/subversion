@@ -99,9 +99,8 @@ The [autoconf/make][autoconf-build] section describes the classic build system
 that have been in use since 2001.
 
 The [CMake-based build system][cmake-build] was introduced in 2024 and was
-included in Subversion 1.15.  It is still under development and is expected to
-become the default build system for Windows platforms starting with Subversion
-1.16.
+included in Subversion 1.15.  Starting with Subversion 1.16, it replaces the
+previous vcproj/vcxproj-based build system on Windows.
 
 ### Building with autoconf and make (Unix only)
 
