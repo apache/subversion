@@ -37,6 +37,7 @@
 #include <dbus/dbus.h>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QString>
+#include <QtGlobal>
 
 #include <kaboutdata.h>
 #include <klocalizedstring.h>
@@ -55,7 +56,7 @@
 
 #include "svn_private_config.h"
 
-#ifndef SVN_HAVE_KF5
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
 #include <kcmdlineargs.h>
 #include <kcomponentdata.h>
 #endif
@@ -223,7 +224,7 @@ kwallet_password_get(svn_boolean_t *done,
       app = new QCoreApplication(argc, q_argv);
     }
 
-#if SVN_HAVE_KF5
+#if QT_VERSION >= QT_VERSION(5, 0, 0)
   KLocalizedString::setApplicationDomain("subversion"); /* translation domain */
 
   /* componentName appears in KDE GUI prompts */
@@ -305,7 +306,7 @@ kwallet_password_set(svn_boolean_t *done,
       app = new QCoreApplication(argc, q_argv);
     }
 
-#if SVN_HAVE_KF5
+#if QT_VERSION >= QT_VERSION(5, 0, 0)
   KLocalizedString::setApplicationDomain("subversion"); /* translation domain */
 
   /* componentName appears in KDE GUI prompts */

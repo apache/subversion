@@ -115,9 +115,6 @@ int main()
                     AC_MSG_RESULT([yes])
                     CXXFLAGS="$old_CXXFLAGS"
                     LIBS="$old_LIBS"
-                    if test "$kde_config_name" = "kf5-config"; then
-                      AC_DEFINE([SVN_HAVE_KF5], [1], [Defined if KF5 available])
-                    fi
                   else
                     AC_MSG_RESULT([no])
                     AC_MSG_ERROR([cannot find KWallet])

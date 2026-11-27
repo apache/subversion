@@ -805,7 +805,6 @@ if(SVN_ENABLE_AUTH_KWALLET)
     Qt5::Core
     dbus-1
   )
-  target_compile_definitions(external-kwallet INTERFACE SVN_HAVE_KF5)
 
   add_private_config_definition(
     "Defined if KWallet support is enabled"
