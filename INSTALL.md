@@ -29,7 +29,7 @@ code.  Normally, the only people who do this are Subversion developers and
 package maintainers.
 
 If neither of these labels fits you, we recommend you find an appropriate
-binary package of Subversion and install that. Visit the
+binary package of Subversion and install that.  Visit the
 [**Apache Subversion Binary Packages**](https://subversion.apache.org/packages.html) page for package links.
 
 While the Subversion project doesn't officially release binary packages, a
@@ -101,7 +101,7 @@ Subversion supports three different build systems:
 The [autoconf/make][autoconf-build] and [Visual Studio vcproj][vcproj-build]
 sections describe the classic build systems that have been in use since 2001.
 Note that the Visual Studio vcproj build system is deprecated as of Subversion
-1.15 and will be removed in a future release. Windows users should build
+1.15 and will be removed in a future release.  Windows users should build
 Subversion with CMake instead.
 
 Subversion's CMake-based build system was created in 2024 and was included in
@@ -172,10 +172,10 @@ other things) and most Subversion developers use it.)
 
 Since the resulting binary depends on shared libraries, the
 destination library directory must be identified in your
-operating system's library search path. That is in either
+operating system's library search path.  That is in either
 `/etc/ld.so.conf` or `$LD_LIBRARY_PATH` for Linux systems and in
 `/etc/rc.conf` for FreeBSD, followed by a run of the `ldconfig`
-program. Check your system documentation for details. By identifying the
+program. Check your system documentation for details.  By identifying the
 destination directory, Subversion will be able to dynamically load repository
 access plugins.  If you try to do a checkout and see an error like:
 
@@ -188,7 +188,7 @@ It probably means that the dynamic loader/linker can't find all of the
 #### Building In a Separate Build Directory
 
 It is possible to configure and build Subversion on Unix in a directory other
-than the working copy. For example
+than the working copy.  For example
 
     $ svn co https://svn.apache.org/repos/asf/subversion/trunk svn
     $ cd svn
@@ -474,7 +474,7 @@ the `apr-config` script in the standard location under that directory
 (e.g. `${prefix}/bin`).
 
 Similarly, you can specify the location of APR-util using the
-`--with-apr-util=` option to `./configure`. It will look for the
+`--with-apr-util=` option to `./configure`.  It will look for the
 `apu-config` script relative to that directory.
 
 For example, if you want to use the APR libraries you built with the Apache
@@ -487,7 +487,7 @@ Notes on Windows platforms:
 
 - Do not use APR version 1.7.3 as that release contains a bug that makes it
   impossible for Subversion to use it properly.  This issue only affects APR
-  builds on Windows.  This issue was fixed in APR version 1.7.4. See:
+  builds on Windows.  This issue was fixed in APR version 1.7.4.  See:
   https://lists.apache.org/thread/xd5t922jvb9423ph4j84rsp5fxks1k0z
 
 - If you check out APR and APR-util sources from their Subversion repository, be
@@ -702,14 +702,14 @@ information.
 ### D-Bus
 *(Unix only, OPTIONAL)*
 
-D-Bus is a message bus system. D-Bus is required for support for KWallet
-and GNOME Keyring. `pkg-config` is needed to find D-Bus headers and library.
+D-Bus is a message bus system.  D-Bus is required for support for KWallet
+and GNOME Keyring.  `pkg-config` is needed to find D-Bus headers and library.
 
 ### Qt
 *(Unix only, OPTIONAL)*
 
-Qt is a cross-platform application framework. QtCore, QtDBus and QtGui
-modules are required for support for KWallet. pkg-config is needed
+Qt is a cross-platform application framework.  QtCore, QtDBus and QtGui
+modules are required for support for KWallet.  pkg-config is needed
 to find Qt headers and libraries.
 
 ### KDE Framework libraries or KDELibs
@@ -717,13 +717,13 @@ to find Qt headers and libraries.
 
 Subversion contains optional support for storing passwords in KWallet.
 Subversion will look for KF5Wallet, KF5CoreAddons, KF5I18n APIs by default,
-and needs `kf5-config` to find them. The KDELibs api is also supported.
-KDELibs contains core KDE libraries. Subversion uses libkdecore and libkdeui
-libraries when support for KWallet is enabled. `kde4-config` is used to get
-some necessary options. `pkg-config`, D-Bus and Qt are also required.
+and needs `kf5-config` to find them.  The KDELibs api is also supported.
+KDELibs contains core KDE libraries.  Subversion uses libkdecore and libkdeui
+libraries when support for KWallet is enabled.  `kde4-config` is used to get
+some necessary options.  `pkg-config`, D-Bus and Qt are also required.
 
 If you want to build support for KWallet, then pass the `--with-kwallet`
-option to `configure`. If KDE is installed in a non-standard prefix, then
+option to `configure`.  If KDE is installed in a non-standard prefix, then
 use:
 
     --with-kwallet=/path/to/KDE/prefix
@@ -731,15 +731,15 @@ use:
 ### GLib 2
 *(Unix only, OPTIONAL)*
 
-GLib is a general-purpose utility library. GLib is required for support
-for GNOME Keyring. pkg-config is needed to find GLib headers and library.
+GLib is a general-purpose utility library.  GLib is required for support
+for GNOME Keyring.  pkg-config is needed to find GLib headers and library.
 
 ### GNOME Keyring
 *(Unix only, OPTIONAL)*
 
 Subversion contains optional support for storing passwords in GNOME Keyring.
-pkg-config is needed to find GNOME Keyring headers and library. D-Bus and
-GLib are also required. If you want to build support for GNOME Keyring,
+pkg-config is needed to find GNOME Keyring headers and library.  D-Bus and
+GLib are also required.  If you want to build support for GNOME Keyring,
 then pass the `--with-gnome-keyring` option to `configure`.
 
 ### libmagic
@@ -747,7 +747,7 @@ then pass the `--with-gnome-keyring` option to `configure`.
 
 If the libmagic library is detected at compile time,
 it will be used to determine mime-types of binary files
-which are added to version control. Note that mime-types
+which are added to version control.  Note that mime-types
 configured via `auto-props` or the `mime-types-file` option
 take precedence.
 
@@ -757,7 +757,7 @@ If it is installed in a non-standard location, then use:
     --with-libmagic=/path/to/libmagic/prefix
 
 The files `include/magic.h` and `lib/libmagic.so.1.0` (or similar)
-are expected beneath this prefix directory. If they cannot be
+are expected beneath this prefix directory.  If they cannot be
 found Subversion will be compiled without support for libmagic.
 
 If libmagic is installed but support for it should not be compiled
