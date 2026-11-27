@@ -12,7 +12,6 @@ $LastChangedDate$
 2. [Installation][installation]
    - [Building with autoconf and make (Unix only)][autoconf-build]
    - [Building with CMake (Windows and Unix)][cmake-build]
-   - [Building with vcproj/vcxproj (Windows only, deprecated)][vcproj-build]
    - [Running the test suite][test-suite]
    - [Building a Subversion server][subversion-server]
 
@@ -96,18 +95,14 @@ Subversion source.  See the file `doc/README` for more information.
 Subversion supports three different build systems:
 - [Autoconf/make, for Unix builds][autoconf-build]
 - [CMake, for both Unix and Windows][cmake-build]
-- [Visual Studio vcproj, for Windows builds (deprecated)][vcproj-build]
 
-The [autoconf/make][autoconf-build] and [Visual Studio vcproj][vcproj-build]
-sections describe the classic build systems that have been in use since 2001.
-Note that the Visual Studio vcproj build system is deprecated as of Subversion
-1.15 and will be removed in a future release.  Windows users should build
-Subversion with CMake instead.
+The [autoconf/make][autoconf-build] section describes the classic build system
+that have been in use since 2001.
 
-Subversion's CMake-based build system was created in 2024 and was included in
-Subversion 1.15.  It is still under development and is expected to become the
-default build system for Windows platforms starting with Subversion 1.16.
-The [CMake build instructions][cmake-build] describe this build system.
+The [CMake-based build system][cmake-build] was introduced in 2024 and was
+included in Subversion 1.15.  It is still under development and is expected to
+become the default build system for Windows platforms starting with Subversion
+1.16.
 
 ### Building with autoconf and make (Unix only)
 
@@ -287,38 +282,6 @@ Windows tips:
   where `VCPKG_ROOT` is the path to your vcpkg clone:
 
       <VCPKG_ROOT>/scripts/buildsystems/vcpkg.cmake
-
-### Building with vcproj/vcxproj (Windows only, deprecated)
-
-The vcproj/vcxproj-based build system is deprecated since Subversion 1.15 and
-will be removed in a future release.  See
-
-https://subversion.apache.org/docs/release-notes/1.15.html#vcproj
-
-Windows users should [build Subversion using CMake][cmake-build].
-
-The vcproj/vcxproj files for Visual Studio 2010 - 2022 can be generated with
-`gen-make.py`.  The required dependencies have to be present in the system
-(built or installed) before generating the files.  A minimal `gen-make.py`
-command looks like this:
-
-    C:\SVN\src>python gen-make.py --vsnet-version=2022 ^
-        --with-apr "..\myvcpkg\x64-windows" ^
-        --with-apr-util "..\myvcpkg\x64-windows" ^
-        --with-zlib "..\myvcpkg\x64-windows" ^
-        --with-sqlite "..\myvcpkg\x64-windows"
-
-The command generates the Visual Studio 2022 solution and project files that can
-be used with Visual Studio and `msbuild`.
-
-The `python gen-make.py --help` command prints the list of the options
-available, some of which can be used when generating the project files.
-
-To run the test suite, build the target `__ALL_TESTS__` and run
-
-    C:\SVN\src>python win-tests.py -c -r
-
-The `python win-tests.py --help` command prints the list of available options.
 
 ### Running the test suite
 
@@ -663,8 +626,6 @@ In more detail, Python is required to do any of the following:
 - Use hook scripts coded in Python.
 - Build Subversion from a tarball on Unix-like systems and run
   Subversion's test suite as described in [Running the test suite][test-suite].
-- Build Subversion on Windows as described in
-  [Building with vcproj/vcxproj][vcproj-build].
 - Build Subversion from a working copy checked out from
   Subversion's own repository (whether or not running the test
   suite).
@@ -827,7 +788,6 @@ at build time.
 [installation]: #installation
 [autoconf-build]: #building-with-autoconf-and-make-unix-only
 [cmake-build]: #building-with-cmake-windows-and-unix
-[vcproj-build]: #building-with-vcprojvcxproj-windows-only-deprecated
 [test-suite]: #running-the-test-suite
 [subversion-server]: #building-a-subversion-server
 [bindings]: #programming-language-bindings-python-perl-ruby-java
