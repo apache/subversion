@@ -30,6 +30,7 @@ on:
       - CHANGES
       - COMMITTERS
       - INSTALL
+      - INSTALL.md
       - STATUS
       - README
   pull_request:
@@ -40,6 +41,7 @@ on:
       - CHANGES
       - COMMITTERS
       - INSTALL
+      - INSTALL.md
       - STATUS
       - README
 
