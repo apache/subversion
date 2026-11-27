@@ -37,9 +37,8 @@ systems.  Most Linux and BSD distributions already have Subversion packages
 ready to go via standard packaging channels, and other volunteers have built
 'installers' for both Windows and macOS.
 
-For those of you who still wish to build from source, Subversion
-follows the Unix convention of `./configure && make`, but it has
-a number of dependencies.
+For those of you who still wish to build from source, this document describes
+the required dependencies and build process.
 
 ### Dependency Overview
 
