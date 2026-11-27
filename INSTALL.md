@@ -439,7 +439,8 @@ tools.
 > commands described in [Building from a Working Copy][working-copy] before
 > installing the following.
 
-### Apache Portable Runtime and APR-util  (REQUIRED)
+### Apache Portable Runtime and APR-util
+*(REQUIRED)*
 
 Whenever you want to build any part of Subversion, you need the Apache Portable
 Runtime (APR) and the APR Utility (APR-util) libraries.
@@ -495,11 +496,13 @@ Notes on Windows platforms:
   Otherwise Visual Studio will complain that it doesn't recognize the `.dsp`
   files.
 
-### Expat  (REQUIRED)
+### Expat
+*(REQUIRED)*
 
 Subversion uses the Expat library for XML parsing.
 
-### SQLite  (REQUIRED)
+### SQLite
+*(REQUIRED)*
 
 Subversion uses SQLite to manage some internal databases.  You can meet this
 dependency several ways:
@@ -515,7 +518,8 @@ website:
 
 https://www.sqlite.org/download.html
 
-### Zlib  (REQUIRED)
+### Zlib
+*(REQUIRED)*
 
 Subversion uses zlib for compressing binary differences.  These diff streams are
 used everywhere -- over the network, in the repository, and in the client's
@@ -526,7 +530,8 @@ from
 
 https://www.zlib.net/
 
-### LZ4  (REQUIRED)
+### LZ4
+*(REQUIRED)*
 
 Subversion uses the LZ4 library for compression.  Configure will attempt to
 locate the system library by default using `pkg-config` and known paths.
@@ -539,7 +544,8 @@ If `configure` should use the version bundled with the sources, use:
 
     --with-lz4=internal
 
-### utf8proc  (REQUIRED)
+### utf8proc
+*(REQUIRED)*
 
 Subversion uses utf8proc for UTF-8 support, including Unicode normalization.
 
@@ -555,7 +561,8 @@ Subversion sources.  If configure should use the bundled copy, use:
 
     --with-utf8proc=internal
 
-### Apache Serf library  (OPTIONAL)
+### Apache Serf library
+*(OPTIONAL)*
 
 If you want your client to be able to speak to an Apache server (via a `http://`
 or `https://` URL), you must link against Apache Serf.  Though optional, we
@@ -573,7 +580,8 @@ then use:
 Apache Serf can be obtained via your system's package distribution
 system or directly from https://serf.apache.org/.
 
-### Cyrus SASL library  (OPTIONAL)
+### Cyrus SASL library
+*(OPTIONAL)*
 
 If the Simple Authentication and Security Layer (SASL) library is detected on
 your system, then the Subversion client and svnserve server can utilize its
@@ -582,7 +590,8 @@ get the source code, visit:
 
 https://www.cyrusimap.org/sasl/
 
-### Apache HTTP Server (httpd)  (OPTIONAL)
+### Apache HTTP Server (httpd)
+*(OPTIONAL)*
 
 (https://httpd.apache.org/download.cgi)
 
@@ -637,7 +646,8 @@ Configuring Apache HTTP Server or svnserve, Subversion's own server
 program, is described in
 [chapter 6 of the Subversion Book](https://svnbook.red-bean.com/en/1.8/svn.serverconfig.html).
 
-### Python  (OPTIONAL)
+### Python
+*(OPTIONAL)*
 
 Subversion does not require Python for its basic operation.
 However, Python is required for building and testing Subversion
@@ -689,18 +699,21 @@ information.
 > `sh autogen.sh` before running the `./configure` script; see
 > [Building from a Working Copy][working-copy] for more about `autogen.sh`.
 
-### D-Bus  (Unix only, OPTIONAL)
+### D-Bus
+*(Unix only, OPTIONAL)*
 
 D-Bus is a message bus system. D-Bus is required for support for KWallet
 and GNOME Keyring. `pkg-config` is needed to find D-Bus headers and library.
 
-### Qt 5 or Qt 4  (Unix only, OPTIONAL)
+### Qt 5 or Qt 4
+*(Unix only, OPTIONAL)*
 
 Qt is a cross-platform application framework. QtCore, QtDBus and QtGui
 modules are required for support for KWallet. pkg-config is needed
 to find Qt headers and libraries.
 
-### KDE 5 Framework libraries or KDELibs 4  (Unix only, OPTIONAL)
+### KDE 5 Framework libraries or KDELibs 4
+*(Unix only, OPTIONAL)*
 
 Subversion contains optional support for storing passwords in KWallet.
 Subversion will look for KF5Wallet, KF5CoreAddons, KF5I18n APIs by default,
@@ -715,19 +728,22 @@ use:
 
     --with-kwallet=/path/to/KDE/prefix
 
-### GLib 2  (Unix only, OPTIONAL)
+### GLib 2
+*(Unix only, OPTIONAL)*
 
 GLib is a general-purpose utility library. GLib is required for support
 for GNOME Keyring. pkg-config is needed to find GLib headers and library.
 
-### GNOME Keyring  (Unix only, OPTIONAL)
+### GNOME Keyring
+*(Unix only, OPTIONAL)*
 
 Subversion contains optional support for storing passwords in GNOME Keyring.
 pkg-config is needed to find GNOME Keyring headers and library. D-Bus and
 GLib are also required. If you want to build support for GNOME Keyring,
 then pass the `--with-gnome-keyring` option to `configure`.
 
-### libmagic  (OPTIONAL)
+### libmagic
+*(OPTIONAL)*
 
 If the libmagic library is detected at compile time,
 it will be used to determine mime-types of binary files
@@ -754,7 +770,8 @@ the default locations should be searched, then use:
 
     --with-libmagic
 
-### py3c  (OPTIONAL)
+### py3c
+*(OPTIONAL)*
 
 Subversion uses the Python 3 Compatibility Layer for C
 Extensions (py3c) library when building the Python language
@@ -774,7 +791,8 @@ The library can be downloaded from GitHub:
 
 https://github.com/encukou/py3c
 
-### autoconf  (Unix only)
+### autoconf
+*(Unix only)*
 
 This is required only if you plan to use the autoconf-based build system
 and build from a working copy (see
@@ -782,7 +800,8 @@ and build from a working copy (see
 
 Generally only developers would be doing this.
 
-### libtool  (Unix only)
+### libtool
+*(Unix only)*
 
 This is required only if you plan to use the autoconf-based build system
 and build from a working copy (see
@@ -795,7 +814,8 @@ Generally only developers would be doing this.
 This is required only if you plan to use the CMake-based build system
 (see [Building with CMake][cmake-build]).
 
-### pkg-config  (Unix only, OPTIONAL)
+### pkg-config
+*(Unix only, OPTIONAL)*
 
 Subversion uses `pkg-config` to find appropriate options used
 at build time.
@@ -813,4 +833,4 @@ at build time.
 [bindings]: #programming-language-bindings-python-perl-ruby-java
 [dependencies-in-detail]: #dependencies-in-detail
 [working-copy]: #building-from-a-working-copy
-[apache-http-server]: #apache-http-server-httpd--optional
+[apache-http-server]: #apache-http-server-httpd
