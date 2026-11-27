@@ -224,7 +224,7 @@ kwallet_password_get(svn_boolean_t *done,
       app = new QCoreApplication(argc, q_argv);
     }
 
-#if QT_VERSION >= QT_VERSION(5, 0, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
   KLocalizedString::setApplicationDomain("subversion"); /* translation domain */
 
   /* componentName appears in KDE GUI prompts */
@@ -306,7 +306,7 @@ kwallet_password_set(svn_boolean_t *done,
       app = new QCoreApplication(argc, q_argv);
     }
 
-#if QT_VERSION >= QT_VERSION(5, 0, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
   KLocalizedString::setApplicationDomain("subversion"); /* translation domain */
 
   /* componentName appears in KDE GUI prompts */
